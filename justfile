@@ -1,4 +1,11 @@
 # nano-pm — Django + Datastar Gantt PM tool
+#
+# Settings read DJANGO_DEBUG / DJANGO_SECRET_KEY / DJANGO_ALLOWED_HOSTS from
+# the env. The recipes below set safe dev values; production deploys must set
+# their own (see PRODUCTION_READINESS.md).
+
+export DJANGO_DEBUG := "true"
+export DJANGO_ALLOWED_HOSTS := "localhost,127.0.0.1"
 
 # Run the development server (optionally specify port, default 8000)
 run port="8000":

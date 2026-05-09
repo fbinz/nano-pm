@@ -29,6 +29,14 @@ module.exports = defineConfig({
     url: BASE_URL + '/accounts/login/',
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
+    env: {
+      // Required by settings.py — DEBUG for static-file serving in
+      // runserver, ENABLE_TEST_RESET so the suite's /__reset__/ fixture
+      // endpoint is mounted.
+      DJANGO_DEBUG: 'true',
+      DJANGO_ALLOWED_HOSTS: 'localhost,127.0.0.1',
+      DJANGO_ENABLE_TEST_RESET: 'true',
+    },
   },
   projects: [
     {
