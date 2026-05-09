@@ -30,9 +30,7 @@ class Command(BaseCommand):
         today = date.today()
 
         for username, builder in [("alice", build_alice), ("bob", build_bob)]:
-            user, created = User.objects.get_or_create(
-                username=username, defaults={"is_staff": True}
-            )
+            user, created = User.objects.get_or_create(username=username)
             if created or not user.has_usable_password():
                 user.set_password(username)
                 user.save()

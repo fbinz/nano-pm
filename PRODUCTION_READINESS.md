@@ -50,23 +50,22 @@ open internet — most importantly, password validators, HTTPS, and CSP.
 
 ## Auth & account flows
 
-- [ ] **No registration / invite flow.** Users can only be created via
-  `manage.py createsuperuser` or shell. Add either a self-serve sign-up or
-  an invitation flow — depending on whether the product is single-tenant
-  or multi-tenant.
-- [ ] **No password-reset flow.** No email backend configured; `auth_views`
-  has the views but no URL route or template. Add `password_reset/`,
-  `password_reset_done/`, `password_reset_confirm/`, `password_reset_complete/`
-  + matching templates + `EMAIL_BACKEND` config (SMTP or a transactional
-  provider).
-- [ ] **No email verification on accounts.**
-- [ ] **No way to change one's password from the UI.** Add a
-  `password_change/` route + template.
-- [ ] **No account/profile screen.** Currently the only place a user
-  appears is the username pill in the topbar.
-- [ ] **`is_staff=True` on seeded accounts.** They can browse `/admin/` —
-  including all other users' data via `Project.objects.all()` etc. Drop
-  `is_staff` for seeded users; reserve it for actual admins.
+User management (create, password change, deactivate, role assignment)
+happens **only via Django admin** at `/admin/`. No self-serve flows are
+planned — registration, password reset, email verification, and
+password-change-from-UI are intentionally out of scope. An admin (a real
+superuser created via `manage.py createsuperuser`) handles all of it.
+
+- [x] **`is_staff=True` on seeded accounts.** Removed from `seed_data` and
+  `populate_demo`; existing dev-DB users updated. Seeded users are now
+  regular users with no admin access.
+- [ ] **`/admin/` is at the predictable default URL.** Low-priority hardening:
+  consider relocating to `/{secret-slug}/admin/` (set via env) so casual
+  scanners don't probe it. The admin is already gated by Django auth, so
+  this is defence-in-depth rather than a real vulnerability.
+- [ ] **No password-strength enforcement when an admin sets a password.**
+  Once `AUTH_PASSWORD_VALIDATORS` is restored (see the Critical section),
+  the admin's "set password" form picks them up automatically.
 
 ## Deployment & operations
 

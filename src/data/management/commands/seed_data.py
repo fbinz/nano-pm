@@ -20,10 +20,7 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         User = get_user_model()
-        user, created = User.objects.get_or_create(
-            username="demo",
-            defaults={"is_staff": True},  # so they can browse the admin
-        )
+        user, created = User.objects.get_or_create(username="demo")
         if created or not user.has_usable_password():
             user.set_password("demo")
             user.save()
