@@ -1,0 +1,68 @@
+{% load static %}
+<c-vars vm zoom user />
+<c-layouts.base title="nano-pm">
+  <div id="topbar">
+    <div class="brand">nano-pm</div>
+    <div class="spacer"></div>
+    <div id="zoom-controls">
+      <a href="?zoom=day"     class="{% if zoom == 'day' %}active{% endif %}">Day</a>
+      <a href="?zoom=week"    class="{% if zoom == 'week' %}active{% endif %}">Week</a>
+      <a href="?zoom=month"   class="{% if zoom == 'month' %}active{% endif %}">Month</a>
+      <a href="?zoom=quarter" class="{% if zoom == 'quarter' %}active{% endif %}">Quarter</a>
+    </div>
+    <button class="topbar-btn" data-on:click="nano.scrollToToday()" title="Jump to today (T)">Today</button>
+    <button class="topbar-btn"
+            data-on:click="@get('/people/modal/')">People</button>
+    <button class="topbar-btn"
+            data-on:click="@post('/projects/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">+ Project</button>
+    <span class="user-pill">{{ user.username }}</span>
+    <form method="post" action="{% url 'logout' %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="topbar-btn">Sign out</button>
+    </form>
+  </div>
+
+  <c-screens.gantt.chart :vm="vm" />
+
+  {# Containers Datastar will patch into via SSE. #}
+  <div id="popover-slot"></div>
+  <div id="modal-slot"></div>
+  <div id="toast-slot"></div>
+
+  {% comment %}
+    Bridge for client-side gestures (drag move/resize, dep-handle,
+    rubber-band, milestone drag): the gesture handlers in nano.js dispatch
+    a custom event with { url, data }; Datastar populates this form, fires
+    @post for real, and applies the SSE chart-fragment patch. Keeps the
+    round-trip handling on Datastar so nano.js doesn't need a hand-rolled
+    SSE parser.
+  {% endcomment %}
+  <form id="nano-bridge" hidden
+        data-on:submit__prevent="@post(el.action, { contentType: 'form' })">
+    {% csrf_token %}
+    <input name="start">
+    <input name="end">
+    <input name="predecessor">
+    <input name="successor">
+    <input name="project_id">
+    <input name="title">
+    <input name="date">
+  </form>
+  <div data-on:nano-commit__window="
+    const f = document.getElementById('nano-bridge');
+    f.action = evt.detail.url;
+    ['start','end','predecessor','successor','project_id','title','date'].forEach(k => {
+      const i = f.querySelector(`[name='${k}']`);
+      if (i) i.value = (evt.detail.data && evt.detail.data[k] != null) ? String(evt.detail.data[k]) : '';
+    });
+    f.requestSubmit();
+  "></div>
+
+  {% comment %}
+    GET bridge for popover-open helpers (openTaskPopover etc.). Same shape
+    as nano-commit but routes through Datastar's @get instead of @post.
+  {% endcomment %}
+  <div data-on:nano-fetch__window="@get(evt.detail.url)"></div>
+
+  <script src="{% static 'js/nano.js' %}"></script>
+</c-layouts.base>

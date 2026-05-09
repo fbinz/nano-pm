@@ -1,0 +1,17 @@
+<c-vars bar />
+<div
+  id="bar-{{ bar.id }}"
+  class="bar {{ bar.status }}{% if bar.overdue %} overdue{% endif %}{% if bar.text_dark %} dark-text{% endif %}"
+  style="left:{{ bar.x }}px;width:{{ bar.w }}px;--bar-bg:{{ bar.color }};color:{{ bar.text_color }};"
+  data-task-id="{{ bar.id }}"
+  data-project-id="{{ bar.project_id }}"
+  data-start="{{ bar.start_iso }}"
+  data-end="{{ bar.end_iso }}"
+  data-on:mousedown="evt.target.closest('[data-task-id]') && nano.barMouseDown(evt, {{ bar.id }})"
+  title="{{ bar.title }}  {{ bar.start_iso }} → {{ bar.end_iso }}"
+>
+  <span class="bar-label">{% if bar.is_done %}✓ {% endif %}{{ bar.title }}</span>
+  <div class="resize-handle resize-start" data-on:mousedown="nano.resizeStart(evt, {{ bar.id }})"></div>
+  <div class="resize-handle resize-end" data-on:mousedown="nano.resizeEnd(evt, {{ bar.id }})"></div>
+  <div class="dep-handle" data-on:mousedown="nano.depHandle(evt, {{ bar.id }})"></div>
+</div>

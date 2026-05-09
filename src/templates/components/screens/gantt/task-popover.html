@@ -1,0 +1,88 @@
+{# Task editor popover. Anchored client-side via nano.placePopover after merge. #}
+<c-vars task projects people preds succs anchor_x=0 anchor_y=0 />
+<div id="popover-slot">
+  <form
+    id="task-popover"
+    class="popover"
+    style="left:{{ anchor_x }}px;top:{{ anchor_y }}px;"
+    data-init="nano.anchorPopover(el, '#bar-{{ task.id }}', {{ anchor_x }}, {{ anchor_y }})"
+    data-on:keyup="evt.key === 'Escape' && nano.closePopover()"
+    data-on:submit__prevent="@post('/tasks/{{ task.id }}/update/', { contentType: 'form' })"
+  >
+    {% csrf_token %}
+    <div>
+      <label>Title</label>
+      <input type="text" name="title" value="{{ task.title }}" autofocus>
+    </div>
+    <div class="row">
+      <div>
+        <label>Start</label>
+        <input type="date" name="start" value="{{ task.start|date:'Y-m-d' }}">
+      </div>
+      <div>
+        <label>End</label>
+        <input type="date" name="end" value="{{ task.end|date:'Y-m-d' }}">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Status</label>
+        <select name="status">
+          <option value="planned"     {% if task.status == 'planned' %}selected{% endif %}>Planned</option>
+          <option value="in-progress" {% if task.status == 'in-progress' %}selected{% endif %}>In progress</option>
+          <option value="blocked"     {% if task.status == 'blocked' %}selected{% endif %}>Blocked</option>
+          <option value="done"        {% if task.status == 'done' %}selected{% endif %}>Done</option>
+        </select>
+      </div>
+      <div>
+        <label>Project</label>
+        <select name="project_id">
+          {% for p in projects %}
+            <option value="{{ p.id }}" {% if p.id == task.project_id %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div>
+      <label>Assignees</label>
+      <select name="assignee_ids" multiple size="3">
+        {% for p in people %}
+          {% if p.id in task.assignee_ids %}
+            <option value="{{ p.id }}" selected>{{ p.name }}</option>
+          {% else %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endif %}
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Dependencies</label>
+      <div class="deps-list">
+        {% for d in preds %}
+          <div class="dep-row">
+            <span class="dep-arrow">↑ depends on</span>
+            <span class="dep-name">{{ d.predecessor.title }}</span>
+            <button type="button" class="dep-remove" title="Remove dependency"
+                    data-on:click="@post('/dependencies/{{ d.predecessor_id }}/{{ d.successor_id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">×</button>
+          </div>
+        {% endfor %}
+        {% for d in succs %}
+          <div class="dep-row">
+            <span class="dep-arrow">↓ blocks</span>
+            <span class="dep-name">{{ d.successor.title }}</span>
+            <button type="button" class="dep-remove" title="Remove dependency"
+                    data-on:click="@post('/dependencies/{{ d.predecessor_id }}/{{ d.successor_id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">×</button>
+          </div>
+        {% endfor %}
+        {% if not preds and not succs %}
+          <div class="deps-empty">No dependencies. Drag from a bar's right-edge handle onto another bar to create one.</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" class="danger"
+              data-on:click="confirm('Delete this task?') && @post('/tasks/{{ task.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">Delete</button>
+      <button type="submit" class="primary">Done</button>
+    </div>
+  </form>
+</div>

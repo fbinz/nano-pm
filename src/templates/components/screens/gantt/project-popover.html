@@ -1,0 +1,44 @@
+<c-vars project anchor_x=0 anchor_y=0 colors />
+<div id="popover-slot">
+  <form
+    id="project-popover"
+    class="popover"
+    style="left:{{ anchor_x }}px;top:{{ anchor_y }}px;"
+    data-init="nano.anchorPopover(el, '#proj-{{ project.id }}', {{ anchor_x }}, {{ anchor_y }})"
+    data-on:keyup="evt.key === 'Escape' && nano.closePopover()"
+    data-on:submit__prevent="@post('/projects/{{ project.id }}/update/', { contentType: 'form' })"
+  >
+    {% csrf_token %}
+    <div>
+      <label>Name</label>
+      <input type="text" name="name" value="{{ project.name }}" autofocus>
+    </div>
+    <div>
+      <label>Color</label>
+      <input type="hidden" name="color" value="{{ project.color }}" id="proj-color-input">
+      <div class="colors">
+        {% for c in colors %}
+          <button type="button"
+                  class="{% if c == project.color %}active{% endif %}"
+                  style="background:{{ c }}"
+                  data-on:click="document.getElementById('proj-color-input').value = '{{ c }}'; el.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); el.classList.add('active')"></button>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="row">
+      <button type="button" class="topbar-btn"
+              data-on:click="@post('/projects/{{ project.id }}/move/?dir=-1', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">↑ move up</button>
+      <button type="button" class="topbar-btn"
+              data-on:click="@post('/projects/{{ project.id }}/move/?dir=1', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">↓ move down</button>
+    </div>
+    <div class="row">
+      <button type="button" id="pp-add-milestone" class="topbar-btn"
+              data-on:click="nano.addMilestone({{ project.id }})">+ Add milestone</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="danger"
+              data-on:click="confirm('Delete project &quot;{{ project.name|escapejs }}&quot; and all its tasks?') && @post('/projects/{{ project.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">Delete project</button>
+      <button type="submit" class="primary">Done</button>
+    </div>
+  </form>
+</div>

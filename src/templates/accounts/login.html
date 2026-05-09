@@ -1,0 +1,20 @@
+<c-layouts.base title="Sign in — nano-pm">
+  <main class="login-page">
+    <form method="post" class="login-card">
+      {% csrf_token %}
+      <h1>nano-pm</h1>
+      <p class="hint">Sign in to your projects.</p>
+      {% if form.errors %}
+        <div class="error">Invalid username or password.</div>
+      {% endif %}
+      <label>Username
+        <input type="text" name="username" autocomplete="username" autofocus required>
+      </label>
+      <label>Password
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit">Sign in</button>
+      <p class="hint small">Seed data ships with user <code>demo</code> / password <code>demo</code>.</p>
+    </form>
+  </main>
+</c-layouts.base>

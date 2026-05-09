@@ -2,5 +2,16 @@ node_modules/
 test-results/
 playwright-report/
 .playwright/
+e2e/test-results/
+e2e/playwright-report/
 *.log
 .DS_Store
+
+# Python / Django / uv
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+db.sqlite3
+db.sqlite3-journal
+.python-version

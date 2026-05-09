@@ -1,0 +1,406 @@
+:root {
+  --bar-h: 24px;
+  --row-h: 32px;
+  --proj-row-h: 36px;
+  --topbar-h: 52px;
+  --axis-h: 48px;
+  --left-w: 240px;
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --line-soft: #f1f3f5;
+  --bg: #ffffff;
+  --bg-soft: #fafafa;
+  --bg-proj: #f4f5f7;
+  --accent: #dc2626;
+  --primary: #1a1a1a;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body {
+  margin: 0; height: 100%;
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--fg); background: var(--bg);
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+
+/* === topbar === */
+#topbar {
+  height: var(--topbar-h);
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  position: relative; z-index: 50;
+}
+.brand { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+.spacer { flex: 1; }
+.topbar-btn {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: var(--fg);
+}
+.topbar-btn:hover { background: var(--bg-soft); }
+.topbar-btn.danger { color: var(--accent); border-color: var(--accent); }
+
+#zoom-controls { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+#zoom-controls a, #zoom-controls button {
+  border: 0; background: var(--bg); padding: 5px 10px;
+  border-right: 1px solid var(--line);
+  text-decoration: none;
+}
+#zoom-controls > *:last-child { border-right: 0; }
+#zoom-controls .active { background: var(--fg); color: white; }
+
+.user-pill {
+  color: var(--muted); font-size: 12px; padding: 0 6px;
+}
+
+/* === grid === */
+#grid-scroll {
+  height: calc(100vh - var(--topbar-h));
+  overflow: auto; position: relative; background: var(--bg);
+}
+#grid {
+  display: grid;
+  grid-template-columns: var(--left-w) max-content;
+  background: var(--bg);
+  /* width:max-content (rather than the previous min-width:100%) makes the
+     grid's bounding box actually match its content. min-width:100% was
+     clipping the box to the scroll container's width — sticky-left then
+     only worked within that 1400px slice and the sidebar fell off-screen
+     as soon as you scrolled past it. */
+  width: max-content;
+  /* Offset parent for #overlay so the overlay can size to the grid (i.e.
+     full chart-rows height) via top + bottom anchoring. */
+  position: relative;
+}
+.corner {
+  position: sticky; top: 0; left: 0; z-index: 4;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  height: var(--axis-h);
+  display: flex; align-items: center; padding: 0 12px;
+  color: var(--muted); font-size: 12px;
+}
+#time-axis-cell {
+  position: sticky; top: 0; z-index: 3;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  height: var(--axis-h);
+}
+#time-axis { position: relative; height: 100%; }
+.axis-major {
+  position: absolute; top: 4px; height: 18px;
+  font-size: 12px; font-weight: 600; color: var(--fg);
+  padding: 0 6px; white-space: nowrap;
+  border-left: 1px solid var(--line);
+}
+.axis-minor {
+  position: absolute; bottom: 0; height: 22px;
+  font-size: 11px; color: var(--muted);
+  padding: 4px 4px 0;
+  border-left: 1px solid var(--line-soft);
+  white-space: nowrap; overflow: hidden;
+}
+.axis-minor.weekend { background: var(--bg-soft); }
+
+.left-cell {
+  position: sticky; left: 0; z-index: 2;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-soft);
+  padding: 0 12px;
+  display: flex; align-items: center; gap: 8px;
+  overflow: hidden;
+}
+.left-cell.proj {
+  background: var(--bg-proj);
+  height: var(--proj-row-h);
+  font-weight: 600;
+  cursor: pointer;
+  /* Stay pinned under the time axis when scrolling vertically past this
+     project's tasks — the user shouldn't lose track of which project
+     they're looking at. position: sticky here is "doubly sticky" — it
+     also stays pinned to left:0 (already set on .left-cell). */
+  top: var(--axis-h);
+  z-index: 3;
+}
+.left-cell.proj:hover { background: #ebedf0; }
+.left-cell.proj .swatch {
+  width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0;
+}
+.left-cell.proj .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.left-cell.proj .actions { color: var(--muted); font-size: 11px; }
+.left-cell.task {
+  height: var(--row-h);
+  padding-left: 28px;
+  color: #374151;
+  font-size: 12px;
+}
+.left-cell.task .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.left-cell.task .assignees { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+
+.chart-row {
+  position: relative;
+  border-bottom: 1px solid var(--line-soft);
+  height: var(--row-h);
+}
+.chart-row.proj {
+  height: var(--proj-row-h);
+  background: var(--bg-proj);
+  cursor: crosshair;
+  /* Match .left-cell.proj — same sticky-top so the row pair stays aligned. */
+  position: sticky;
+  top: var(--axis-h);
+  z-index: 2;
+}
+.chart-row .weekend-tile {
+  position: absolute; top: 0; bottom: 0;
+  background: rgba(0,0,0,0.025);
+  pointer-events: none;
+}
+
+.bar {
+  position: absolute;
+  height: var(--bar-h);
+  top: calc((var(--row-h) - var(--bar-h)) / 2);
+  border-radius: 4px;
+  cursor: grab;
+  user-select: none;
+  display: flex; align-items: center;
+  font-size: 11px;
+  /* `color` and `--bar-bg` are set inline by the template; the project's
+     color is used through the variable so status variants can color-mix it
+     without losing the value. */
+  background-color: var(--bar-bg);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.25);
+  overflow: visible;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.15);
+}
+.bar.dark-text { text-shadow: none; }
+
+/* Status variants tint the *background* via color-mix, leaving the text at
+   full opacity. Whole-bar `opacity` made text gray-on-yellow / white-on-pale-blue
+   unreadable; this keeps text contrast intact in both directions:
+   - dark-text bars (amber/lime) lighten on planned → dark text stays readable
+   - light-text bars (blue/violet/etc.) darken on planned → white text stays readable */
+.bar.dark-text.planned    { background-color: color-mix(in srgb, var(--bar-bg), white 30%); }
+.bar:not(.dark-text).planned { background-color: color-mix(in srgb, var(--bar-bg), black 25%); }
+.bar.dark-text.done       { background-color: color-mix(in srgb, var(--bar-bg), #888 50%); }
+.bar:not(.dark-text).done { background-color: color-mix(in srgb, var(--bar-bg), #444 45%); }
+
+.bar.blocked {
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.35) 5px, rgba(255,255,255,0.35) 10px);
+  box-shadow: 0 0 0 2px var(--accent), inset 0 -1px 0 rgba(0,0,0,0.15);
+}
+.bar.overdue { box-shadow: -3px 0 0 var(--accent), inset 0 -1px 0 rgba(0,0,0,0.15); }
+.bar.dragging { cursor: grabbing; opacity: 0.9; z-index: 20; box-shadow: 0 4px 10px rgba(0,0,0,0.25), inset 0 -1px 0 rgba(0,0,0,0.15); }
+.bar.selected { outline: 2px solid var(--fg); outline-offset: 2px; }
+.bar-label {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 0 10px; pointer-events: none;
+}
+.bar .resize-handle {
+  position: absolute; top: 0; bottom: 0; width: 6px;
+  cursor: ew-resize; z-index: 2;
+}
+.bar .resize-handle.resize-start { left: 0; }
+.bar .resize-handle.resize-end { right: 0; }
+.bar:hover .resize-handle::after,
+.bar.dragging .resize-handle::after {
+  content: ''; position: absolute;
+  left: 1.5px; right: 1.5px; top: 25%; bottom: 25%;
+  background: rgba(255,255,255,0.7);
+  border-radius: 1.5px;
+}
+.bar .dep-handle {
+  /* Left edge sits exactly at the bar's right edge (right:-12px + width:12px),
+     so dragging the cursor from inside the bar onto the handle never crosses
+     a "no element" gap that would drop bar:hover and disable the handle. The
+     handle still ends up entirely outside the bar visually, so it doesn't
+     fight resize-end (which lives at right:0 width:6 inside the bar). */
+  position: absolute; right: -12px; top: 50%;
+  width: 12px; height: 12px; margin-top: -6px;
+  border-radius: 50%; background: white; border: 2px solid var(--fg);
+  cursor: crosshair; opacity: 0; pointer-events: none;
+  transition: opacity .12s; z-index: 5;
+}
+.bar:hover .dep-handle { opacity: 1; pointer-events: auto; }
+
+.milestone {
+  position: absolute;
+  width: 14px; height: 14px;
+  top: 50%; margin-top: -7px;
+  transform: rotate(45deg);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px white, 0 1px 2px rgba(0,0,0,0.3);
+}
+.milestone.overdue { box-shadow: 0 0 0 2px var(--accent), 0 1px 2px rgba(0,0,0,0.3); }
+.milestone.selected { outline: 2px solid var(--fg); outline-offset: 2px; }
+.milestone-label {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  font-size: 11px; color: var(--fg);
+  white-space: nowrap; pointer-events: none; padding-left: 4px;
+}
+
+#today-line {
+  position: absolute; top: 0; bottom: 0; width: 0;
+  border-left: 1px dashed var(--accent);
+  pointer-events: none; z-index: 1;
+}
+#overlay {
+  /* Sit immediately below the (sticky) time axis so y=0 inside the SVG aligns
+     with the top of the first project header row — matches the y-centers
+     pre-computed in chart_view.build_chart_vm. Anchoring bottom:0 makes the
+     overlay span exactly the chart-rows height (no 9999px sentinel needed). */
+  position: absolute;
+  top: var(--axis-h); bottom: 0; left: var(--left-w);
+  pointer-events: none;
+}
+#arrows {
+  /* SVG is a replaced element and falls back to its intrinsic 300×150 if you
+     try to size it with top/bottom. Use explicit height:100% instead. */
+  position: absolute; top: 0; left: 0;
+  height: 100%;
+  overflow: visible; pointer-events: none;
+}
+#arrows path { fill: none; stroke: #475569; stroke-width: 1.5; pointer-events: none; }
+#arrows path.selected { stroke: var(--accent); stroke-width: 2; }
+#arrows .hit { fill: none; stroke: transparent; stroke-width: 8; pointer-events: stroke; cursor: pointer; }
+
+#rubber-band {
+  position: absolute; pointer-events: none;
+  background: rgba(59,130,246,0.18);
+  border: 1px dashed #3b82f6;
+  border-radius: 3px; z-index: 30;
+}
+
+/* === popovers === */
+.popover {
+  position: fixed; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  padding: 12px; z-index: 100; min-width: 280px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.popover label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px; }
+.popover input[type=text], .popover input[type=date], .popover select {
+  width: 100%; padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg);
+}
+.popover .row { display: flex; gap: 8px; }
+.popover .row > div { flex: 1; }
+.popover .actions { display: flex; justify-content: space-between; margin-top: 4px; }
+.popover .actions .danger { color: var(--accent); border: 0; background: transparent; }
+.popover .actions .primary { background: var(--fg); color: white; border: 0; padding: 5px 12px; border-radius: 5px; }
+
+.deps-list { display: flex; flex-direction: column; gap: 4px; }
+.dep-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 6px; background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 4px; font-size: 11px;
+}
+.dep-row .dep-arrow { color: var(--muted); font-size: 10px; flex-shrink: 0; }
+.dep-row .dep-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dep-row .dep-remove {
+  border: 0; background: transparent; color: var(--muted);
+  padding: 0 4px; font-size: 14px; line-height: 1; cursor: pointer; border-radius: 3px;
+}
+.dep-row .dep-remove:hover { color: var(--accent); background: rgba(220,38,38,0.08); }
+.deps-empty { color: var(--muted); font-size: 11px; padding: 2px 0; }
+
+.assignees-area { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 5px; min-height: 30px; align-items: center; }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 6px; background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 10px; font-size: 11px;
+}
+.chip button { border: 0; background: transparent; padding: 0; line-height: 1; color: var(--muted); cursor: pointer; }
+
+.colors { display: flex; gap: 4px; flex-wrap: wrap; }
+.colors button {
+  width: 22px; height: 22px; border: 2px solid transparent;
+  border-radius: 4px; padding: 0;
+}
+.colors button.active { border-color: var(--fg); }
+
+/* === modal === */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+.modal {
+  background: var(--bg); border-radius: 10px; padding: 20px;
+  min-width: 360px; max-width: 90vw; max-height: 80vh; overflow: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal h2 { margin: 0 0 8px 0; font-size: 18px; }
+.modal p { color: var(--muted); margin: 0 0 16px 0; }
+
+.people-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.people-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px;
+}
+.people-row input { flex: 1; border: 0; background: transparent; padding: 0; }
+.people-row .remove { border: 0; background: transparent; color: var(--muted); }
+.modal .add-row { display: flex; gap: 8px; }
+.modal .add-row input { flex: 1; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; }
+.modal .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.modal .modal-actions button { padding: 6px 12px; border-radius: 5px; border: 1px solid var(--line); background: var(--bg); }
+.modal .modal-actions .primary { background: var(--fg); color: white; border-color: var(--fg); }
+
+/* === empty state === */
+.empty-cta {
+  position: absolute; left: 50%; top: 40%;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--muted); pointer-events: auto;
+}
+.empty-cta button {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 6px;
+  padding: 8px 14px; font-size: 13px;
+}
+
+/* === login === */
+.login-page {
+  height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-soft);
+}
+.login-card {
+  background: var(--bg);
+  padding: 32px; border-radius: 12px;
+  width: 320px; box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.login-card h1 { margin: 0; font-size: 22px; }
+.login-card .hint { margin: 0; color: var(--muted); font-size: 13px; }
+.login-card .hint.small { font-size: 11px; margin-top: 4px; }
+.login-card label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.login-card input { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.login-card button {
+  background: var(--fg); color: white; border: 0;
+  padding: 8px 12px; border-radius: 6px; font-size: 14px; cursor: pointer;
+}
+.login-card .error {
+  color: var(--accent); font-size: 12px; padding: 6px 10px;
+  background: rgba(220,38,38,0.08); border-radius: 5px;
+}
+
+/* === toasts === */
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  color: white; padding: 8px 14px; border-radius: 6px;
+  font-size: 13px; z-index: 300; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  background: #1a1a1a;  /* neutral default for client-side hints */
+}
+.toast.error { background: var(--accent); }
+.toast.success { background: #16a34a; }

@@ -388,7 +388,7 @@
   <div id="topbar">
     <div class="brand">nano-pm</div>
     <div id="autosave-banner" hidden>
-      <span>Autosave isn't set up.</span>
+      <span id="autosave-banner-text">Autosave isn't set up.</span>
       <button id="enable-autosave">Click to enable</button>
       <button class="dismiss" id="dismiss-banner" title="Dismiss">×</button>
     </div>
@@ -403,7 +403,7 @@
     <button class="topbar-btn" id="today-btn" title="Jump to today (T)">Today</button>
     <button class="topbar-btn" id="people-btn">People</button>
     <button class="topbar-btn" id="add-project-btn" title="Add project">+ Project</button>
-    <button class="topbar-btn" id="save-btn" hidden>Save</button>
+    <button class="topbar-btn" id="save-btn">Save</button>
   </div>
 
   <div id="grid-scroll">
@@ -541,7 +541,8 @@ let redoStack = [];
 let isDirty = false;
 let lastSavedAt = null;
 
-let saveHandle = null;       // FileSystemFileHandle
+let saveHandle = null;       // FileSystemFileHandle, permission granted, autosave active
+let rememberedHandle = null; // FileSystemFileHandle from a prior session whose permission has lapsed
 const hasFsApi = typeof window.showOpenFilePicker === 'function';
 
 // ============================================================================
@@ -2088,6 +2089,7 @@ function updateSaveStatus() {
     el.textContent = '';
     document.title = 'nano-pm';
   }
+  el.title = saveHandle ? `Autosaving to ${saveHandle.name}` : '';
 }
 
 const scheduleSave = debounce(() => save(), SAVE_DEBOUNCE_MS);
@@ -2099,38 +2101,59 @@ async function save() {
   } catch (e) { /* quota; ignore */ }
 
   if (saveHandle) {
+    console.log('[nano-pm] save: writing to', saveHandle.name);
     try {
       const writable = await saveHandle.createWritable();
-      await writable.write(buildFileString());
+      const content = buildFileString();
+      console.log('[nano-pm] save: writing', content.length, 'bytes');
+      await writable.write(content);
       await writable.close();
       isDirty = false;
       lastSavedAt = new Date();
       updateSaveStatus();
+      console.log('[nano-pm] save: ok');
+      return true;
     } catch (err) {
-      console.warn('FS save failed', err);
-      // Fall back to download
+      console.warn('[nano-pm] FS save failed', err);
+      flashError(`Save failed: ${err.message || err.name || 'unknown error'}`);
+      if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
+        rememberedHandle = saveHandle;
+        saveHandle = null;
+        setupSavePath();
+      }
+      return false;
     }
   }
-  // For download mode, save() does nothing; the user clicks Save manually.
+  // No handle and FS API mode: nothing to do silently.
+  return false;
+}
+
+// User-initiated save (Save button). Forces an immediate write and gives
+// visible feedback. If autosave isn't set up yet, falls back to enabling it
+// (or downloading, depending on environment).
+async function manualSave() {
+  if (saveHandle) {
+    const ok = await save();
+    if (ok) flashSuccess(`Saved to ${saveHandle.name}`);
+    return;
+  }
+  if (!hasFsApi) { await downloadSave(); return; }
+  // No handle — same path as the autosave banner.
+  await enableAutosave();
 }
 
 function buildFileString() {
-  // Strip transient runtime UI before serialization so the saved file is clean.
+  // Detach the chart-arrows/today-line overlay and the flash-error toast for
+  // serialization — those are pure runtime UI and shouldn't bloat the saved file.
+  // Critically, do NOT mutate popovers or modals here: an autosave can fire
+  // while the user is editing in a popover, and clobbering its DOM mid-edit
+  // looks like the change was lost. The init() path on the next page load
+  // hides any popover that happened to be open at save time.
   const ov = document.getElementById('overlay');
   if (ov) ov.remove();
   const flash = document.getElementById('flash-error');
   if (flash) flash.remove();
-  // Hide any open popovers / modals so they don't reopen on reload.
-  for (const id of ['popover', 'project-popover']) {
-    const el = document.getElementById(id);
-    if (el) { el.hidden = true; el.innerHTML = ''; }
-  }
-  for (const id of ['welcome', 'people-modal']) {
-    const el = document.getElementById(id);
-    if (el && !el.hidden && id !== 'welcome') el.hidden = true;
-  }
   const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  // Re-attach overlay (and re-render arrows/today line so live UI keeps working).
   if (ov) {
     document.getElementById('grid').appendChild(ov);
   }
@@ -2187,14 +2210,15 @@ async function setupFsHandle() {
   if (!hasFsApi) return;
   try {
     const stored = await idbGet('main');
-    if (stored) {
-      // Verify permission
-      const perm = await stored.queryPermission({ mode: 'readwrite' });
-      if (perm === 'granted') {
-        saveHandle = stored;
-        return;
-      }
-      // Otherwise, will require a click to re-grant (browsers block silent prompts).
+    if (!stored) return;
+    // Browsers don't persist permission across reloads; re-granting requires a
+    // user gesture. Stash the handle as "remembered" so the banner click can
+    // call requestPermission on it directly (one click, no file picker).
+    const perm = await stored.queryPermission({ mode: 'readwrite' });
+    if (perm === 'granted') {
+      saveHandle = stored;
+    } else {
+      rememberedHandle = stored;
     }
   } catch (e) { /* IDB might be blocked */ }
 }
@@ -2205,6 +2229,23 @@ async function enableAutosave() {
     return;
   }
   try {
+    // Fast path: a handle is remembered from a prior session, just lapsed
+    // permission. requestPermission shows a small "Allow this site to edit
+    // <file>?" prompt — no file picker, no re-navigation.
+    if (rememberedHandle) {
+      const perm = await rememberedHandle.requestPermission({ mode: 'readwrite' });
+      if (perm === 'granted') {
+        saveHandle = rememberedHandle;
+        rememberedHandle = null;
+        document.getElementById('autosave-banner').hidden = true;
+        await save();
+        return;
+      }
+      // Permission explicitly denied — bail rather than escalating to picker.
+      flashError('Autosave permission denied.');
+      return;
+    }
+    // First-time setup: prompt for the file.
     const [handle] = await window.showOpenFilePicker({
       multiple: false,
       types: [{ description: 'HTML', accept: { 'text/html': ['.html', '.htm'] } }],
@@ -2218,7 +2259,6 @@ async function enableAutosave() {
     await idbSet('main', handle);
     document.getElementById('autosave-banner').hidden = true;
     document.getElementById('save-btn').hidden = true;
-    // Save immediately
     await save();
   } catch (e) {
     if (e.name !== 'AbortError') console.warn(e);
@@ -2226,15 +2266,33 @@ async function enableAutosave() {
 }
 
 function setupSavePath() {
+  // The Save button is always visible. In FS-API mode it forces an immediate
+  // autosave; in download mode it triggers a download. The banner only shows
+  // up when autosave isn't set up or its permission has lapsed.
+  const banner = document.getElementById('autosave-banner');
+  const text = document.getElementById('autosave-banner-text');
+  const enableBtn = document.getElementById('enable-autosave');
+  document.getElementById('save-btn').hidden = false;
   if (hasFsApi) {
-    document.getElementById('save-btn').hidden = true;
-    if (!saveHandle && localStorage.getItem(LS_BANNER_KEY) !== '1') {
-      document.getElementById('autosave-banner').hidden = false;
+    if (saveHandle) {
+      banner.hidden = true;
+      return;
     }
+    if (rememberedHandle) {
+      text.textContent = `Autosave to "${rememberedHandle.name}" needs to be re-enabled.`;
+      enableBtn.textContent = 'Click to re-enable';
+      banner.hidden = false;
+      return;
+    }
+    if (localStorage.getItem(LS_BANNER_KEY) === '1') {
+      banner.hidden = true;
+      return;
+    }
+    text.textContent = "Autosave isn't set up.";
+    enableBtn.textContent = 'Click to enable';
+    banner.hidden = false;
   } else {
-    // Download mode: show explicit Save button
-    document.getElementById('save-btn').hidden = false;
-    // Hide banner — autosave isn't an option here.
+    banner.hidden = true;
   }
 }
 
@@ -2255,7 +2313,7 @@ function wireEvents() {
   document.getElementById('today-btn').addEventListener('click', jumpToToday);
   document.getElementById('people-btn').addEventListener('click', openPeopleModal);
   document.getElementById('add-project-btn').addEventListener('click', addProject);
-  document.getElementById('save-btn').addEventListener('click', downloadSave);
+  document.getElementById('save-btn').addEventListener('click', manualSave);
   document.getElementById('enable-autosave').addEventListener('click', enableAutosave);
   document.getElementById('dismiss-banner').addEventListener('click', () => {
     document.getElementById('autosave-banner').hidden = true;
@@ -2294,32 +2352,44 @@ function wireEvents() {
 }
 
 // ============================================================================
-// Error feedback
+// Toast feedback
 // ============================================================================
-let errorTimer = null;
-function flashError(msg) {
-  let el = document.getElementById('flash-error');
+function flashToast(id, bg, msg, ttlMs) {
+  let el = document.getElementById(id);
   if (!el) {
     el = document.createElement('div');
-    el.id = 'flash-error';
+    el.id = id;
     Object.assign(el.style, {
       position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-      background: '#dc2626', color: 'white', padding: '8px 14px', borderRadius: '6px',
+      color: 'white', padding: '8px 14px', borderRadius: '6px',
       fontSize: '13px', zIndex: '300', boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
     });
     document.body.appendChild(el);
   }
+  el.style.background = bg;
   el.textContent = msg;
   el.style.display = 'block';
-  clearTimeout(errorTimer);
-  errorTimer = setTimeout(() => { el.style.display = 'none'; }, 2400);
+  clearTimeout(el.__timer);
+  el.__timer = setTimeout(() => { el.style.display = 'none'; }, ttlMs);
 }
+function flashError(msg)   { flashToast('flash-error',   '#dc2626', msg, 2800); }
+function flashSuccess(msg) { flashToast('flash-success', '#16a34a', msg, 1600); }
 
 // ============================================================================
 // Init
 // ============================================================================
 async function init() {
   loadFromDom();
+  // Reset transient UI that may have been serialized as visible during a
+  // mid-edit autosave on the previous session. Popovers are populated lazily
+  // on open, so we can clear their content. The people-modal has static
+  // markup that the open handler relies on — only toggle its hidden flag.
+  for (const id of ['popover', 'project-popover']) {
+    const el = document.getElementById(id);
+    if (el) { el.hidden = true; el.innerHTML = ''; }
+  }
+  const peopleModal = document.getElementById('people-modal');
+  if (peopleModal) peopleModal.hidden = true;
   await setupFsHandle();
   setupSavePath();
   wireEvents();
@@ -2330,6 +2400,18 @@ async function init() {
   // Don't auto-scroll on first run; user picks demo or fresh.
   setTimeout(() => { if (!isEmpty()) jumpToToday(); }, 0);
 }
+// Minimal hook for the Playwright suite. Lets tests inject a fake handle
+// to simulate the "stored handle, permission lapsed" state without driving
+// a real file picker. Only sets/gets internal state; it does not bypass any
+// browser-level security check.
+window.__nanopm_test = {
+  setSaveHandle(h) { saveHandle = h; },
+  setRememberedHandle(h) { rememberedHandle = h; },
+  getSaveHandle() { return saveHandle; },
+  getRememberedHandle() { return rememberedHandle; },
+  refreshSavePath() { setupSavePath(); },
+};
+
 init();
 </script>
 </body>

@@ -1,0 +1,37 @@
+<c-vars m projects anchor_x=0 anchor_y=0 />
+<div id="popover-slot">
+  <form
+    id="milestone-popover"
+    class="popover"
+    data-milestone-id="{{ m.id }}"
+    style="left:{{ anchor_x }}px;top:{{ anchor_y }}px;"
+    data-init="nano.anchorPopover(el, '#ms-{{ m.id }}', {{ anchor_x }}, {{ anchor_y }})"
+    data-on:keyup="evt.key === 'Escape' && nano.closePopover()"
+    data-on:submit__prevent="@post('/milestones/{{ m.id }}/update/', { contentType: 'form' })"
+  >
+    {% csrf_token %}
+    <div>
+      <label>Title</label>
+      <input type="text" name="title" value="{{ m.title }}" autofocus>
+    </div>
+    <div class="row">
+      <div>
+        <label>Date</label>
+        <input type="date" name="date" value="{{ m.date|date:'Y-m-d' }}">
+      </div>
+      <div>
+        <label>Project</label>
+        <select name="project_id">
+          {% for p in projects %}
+            <option value="{{ p.id }}" {% if p.id == m.project_id %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" class="danger"
+              data-on:click="confirm('Delete this milestone?') && @post('/milestones/{{ m.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">Delete</button>
+      <button type="submit" class="primary">Done</button>
+    </div>
+  </form>
+</div>

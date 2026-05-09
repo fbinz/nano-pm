@@ -1,0 +1,84 @@
+{# A complete chart render: time axis, project header rows, task rows, bars, milestones, arrows, today line. #}
+<c-vars vm />
+<div
+  id="grid-scroll"
+  data-px-per-day="{{ vm.px_per_day }}"
+  data-chart-start="{{ vm.chart_start_iso }}"
+  data-chart-end="{{ vm.chart_end_iso }}"
+>
+  <div id="grid">
+    <div class="corner">timeline</div>
+    <div id="time-axis-cell">
+      <div id="time-axis" style="width:{{ vm.chart_width }}px;">
+        {% for tick in vm.axis_majors %}
+          <div class="axis-major" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
+        {% endfor %}
+        {% for tick in vm.axis_minors %}
+          <div class="axis-minor{% if tick.weekend %} weekend{% endif %}" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% for rg in vm.row_groups %}
+      <div class="left-cell proj"
+           id="proj-{{ rg.id }}"
+           data-project-id="{{ rg.id }}"
+           data-on:click="nano.openProjectPopover({{ rg.id }}, evt)">
+        <span class="swatch" style="background:{{ rg.color }}"></span>
+        <span class="name">{{ rg.name }}</span>
+        <span class="actions">edit</span>
+      </div>
+      <div class="chart-row proj"
+           data-project-id="{{ rg.id }}"
+           style="width:{{ vm.chart_width }}px;"
+           data-on:mousedown="nano.projectRowMouseDown(evt, {{ rg.id }})">
+        {% for tile in vm.weekend_tiles %}
+          <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
+        {% endfor %}
+        {% for m in rg.milestones %}
+          <c-screens.gantt.milestone :m="m" />
+        {% endfor %}
+      </div>
+      {% for bar in rg.tasks %}
+        <div class="left-cell task" data-task-id="{{ bar.id }}">
+          <span class="title">{{ bar.title }}</span>
+          <span class="assignees">{{ bar.assignees }}</span>
+        </div>
+        <div class="chart-row" data-task-id="{{ bar.id }}" style="width:{{ vm.chart_width }}px;">
+          {% for tile in vm.weekend_tiles %}
+            <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
+          {% endfor %}
+          <c-screens.gantt.bar :bar="bar" />
+        </div>
+      {% endfor %}
+    {% endfor %}
+
+    <div id="overlay">
+      <svg id="arrows" width="{{ vm.chart_width }}">
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <path d="M0,0 L0,8 L7,4 z" fill="#475569"/>
+          </marker>
+        </defs>
+        {% for dep in vm.deps %}
+          <path class="hit" d="{{ dep.d }}"
+                data-dep="{{ dep.from_id }}-{{ dep.to_id }}"
+                data-on:click="@post('/dependencies/{{ dep.from_id }}/{{ dep.to_id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })"
+                title="Click to remove this dependency"
+          ></path>
+          <path d="{{ dep.d }}" marker-end="url(#arrowhead)"></path>
+        {% endfor %}
+      </svg>
+      {% if vm.show_today_line %}
+        <div id="today-line" style="left:{{ vm.today_x }}px;"></div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not vm.row_groups %}
+    <div class="empty-cta">
+      <p>No projects yet.</p>
+      <button data-on:click="@post('/projects/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">+ Create your first project</button>
+    </div>
+  {% endif %}
+</div>

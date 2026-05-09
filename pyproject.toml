@@ -1,0 +1,16 @@
+[project]
+name = "nano-pm"
+version = "0.1.0"
+description = "A Gantt-focused PM tool. Django + Datastar + Django-Cotton + DaisyUI + SQLite."
+readme = "DESIGN.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.1",
+    "datastar-py>=0.8.0",
+    "django-cotton>=2.6.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.0",
+]

@@ -239,6 +239,138 @@ test.describe('interactions with demo', () => {
     await expect(page.locator('.left-cell.proj')).toHaveCount(before + 1);
   });
 
+  test('clicking the autosave banner re-uses a remembered handle (no file picker)', async ({ page }) => {
+    // Simulate a reload after autosave was previously enabled: a handle is
+    // remembered from IDB but permission has lapsed (queryPermission='prompt').
+    // The banner-click should call requestPermission on the remembered handle,
+    // not call showOpenFilePicker.
+    await page.evaluate(() => {
+      window.__pickerCalls = 0;
+      window.__requestPermCalls = 0;
+      window.showOpenFilePicker = async () => {
+        window.__pickerCalls++;
+        throw new Error('showOpenFilePicker should not have been called');
+      };
+      const fake = {
+        kind: 'file',
+        name: 'nano-pm.html',
+        queryPermission: async () => 'prompt',
+        requestPermission: async () => { window.__requestPermCalls++; return 'granted'; },
+        createWritable: async () => ({ write: async () => {}, close: async () => {} }),
+      };
+      window.__nanopm_test.setRememberedHandle(fake);
+      window.__nanopm_test.refreshSavePath();
+    });
+
+    await expect(page.locator('#autosave-banner')).toBeVisible();
+    // Banner copy should reflect the "re-enable" state (mention the filename).
+    await expect(page.locator('#autosave-banner')).toContainText(/re-enable|nano-pm\.html/i);
+
+    await page.click('#enable-autosave');
+    await page.waitForFunction(() => window.__requestPermCalls > 0);
+
+    expect(await page.evaluate(() => window.__pickerCalls)).toBe(0);
+    expect(await page.evaluate(() => window.__requestPermCalls)).toBe(1);
+    await expect(page.locator('#autosave-banner')).toBeHidden();
+  });
+
+  test('re-enabling autosave actually writes to the handle and updates save status', async ({ page }) => {
+    // Inject a fake remembered handle that records every write.
+    await page.evaluate(() => {
+      window.__writes = [];
+      const fake = {
+        kind: 'file',
+        name: 'nano-pm.html',
+        queryPermission: async () => 'prompt',
+        requestPermission: async () => 'granted',
+        createWritable: async () => ({
+          write: async (data) => { window.__writes.push(String(data).length); },
+          close: async () => {},
+        }),
+      };
+      window.__nanopm_test.setRememberedHandle(fake);
+      window.__nanopm_test.refreshSavePath();
+    });
+
+    await page.click('#enable-autosave');
+    // Wait for the immediate post-enable save to land.
+    await page.waitForFunction(() => window.__writes.length > 0);
+
+    // Save status should now read "Saved at …" (not the dirty state, not empty).
+    await expect(page.locator('#save-status')).toContainText(/Saved at/);
+
+    // Now make an edit and verify it triggers a debounced save (≤ ~700ms).
+    const target = page.locator('.bar', { hasText: 'Cutover' });
+    const box = await target.boundingBox();
+    await page.mouse.move(box.x + 30, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 60, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.up();
+
+    await page.waitForFunction(() => window.__writes.length >= 2, null, { timeout: 2000 });
+    // The latest write should still be a full HTML doc (length much larger than the data block alone).
+    const sizes = await page.evaluate(() => window.__writes);
+    expect(sizes[sizes.length - 1]).toBeGreaterThan(10000);
+  });
+
+  test('clicking the Save button forces an immediate save and flashes success', async ({ page }) => {
+    await page.evaluate(() => {
+      window.__writes = [];
+      const fake = {
+        kind: 'file',
+        name: 'nano-pm.html',
+        queryPermission: async () => 'granted',
+        requestPermission: async () => 'granted',
+        createWritable: async () => ({
+          write: async (d) => { window.__writes.push(String(d).length); },
+          close: async () => {},
+        }),
+      };
+      window.__nanopm_test.setSaveHandle(fake);
+      window.__nanopm_test.refreshSavePath();
+    });
+
+    // Save button must be visible and clickable, even in FS-API/autosave mode.
+    await expect(page.locator('#save-btn')).toBeVisible();
+    await page.click('#save-btn');
+    await page.waitForFunction(() => window.__writes.length > 0);
+
+    await expect(page.locator('#flash-success')).toBeVisible();
+    await expect(page.locator('#flash-success')).toContainText(/Saved/);
+  });
+
+  test('autosave does not clobber an open popover mid-edit', async ({ page }) => {
+    await page.evaluate(() => {
+      window.__writes = [];
+      const fake = {
+        kind: 'file',
+        name: 'nano-pm.html',
+        queryPermission: async () => 'granted',
+        requestPermission: async () => 'granted',
+        createWritable: async () => ({
+          write: async (d) => { window.__writes.push(String(d).length); },
+          close: async () => {},
+        }),
+      };
+      window.__nanopm_test.setSaveHandle(fake);
+    });
+
+    const bar = page.locator('.bar', { hasText: 'Cutover' });
+    await bar.click();
+    await expect(page.locator('#popover')).toBeVisible();
+    const title = page.locator('#po-title');
+    await title.fill('Cutover (edited)');
+    await title.dispatchEvent('change');
+
+    // Debounced save (500ms) should fire while the popover is still open.
+    await page.waitForFunction(() => window.__writes.length > 0, null, { timeout: 2000 });
+
+    // The popover must still be open with its content intact — the user is
+    // still editing.
+    await expect(page.locator('#popover')).toBeVisible();
+    await expect(page.locator('#po-title')).toHaveValue('Cutover (edited)');
+  });
+
   test('an edit flips the save status to dirty and writes a localStorage backup', async ({ page }) => {
     const target = page.locator('.bar', { hasText: 'Cutover' });
     const box = await target.boundingBox();

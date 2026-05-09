@@ -1,0 +1,31 @@
+<c-vars people />
+<div id="modal-slot">
+  <div class="modal-backdrop" data-on:click="evt.target === el && nano.closeModal()">
+    <div class="modal" data-on:click="evt.stopPropagation()">
+      <h2>People</h2>
+      <p>Team members you can assign to tasks. They aren't users of this tool.</p>
+      <div class="people-list">
+        {% for p in people %}
+          <form class="people-row"
+                data-on:submit__prevent="@post('/people/{{ p.id }}/update/', { contentType: 'form' })">
+            {% csrf_token %}
+            <input type="text" name="name" value="{{ p.name }}"
+                   data-on:blur="evt.target.form.requestSubmit()">
+            <button type="button" class="remove"
+                    data-on:click="confirm('Remove &quot;{{ p.name|escapejs }}&quot;?') && @post('/people/{{ p.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })"
+                    title="Remove">×</button>
+          </form>
+        {% endfor %}
+      </div>
+      <form class="add-row"
+            data-on:submit__prevent="@post('/people/', { contentType: 'form' })">
+        {% csrf_token %}
+        <input type="text" name="name" placeholder="Add a person…" autocomplete="off" autofocus>
+        <button type="submit">Add</button>
+      </form>
+      <div class="modal-actions">
+        <button type="button" class="primary" data-on:click="nano.closeModal()">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
