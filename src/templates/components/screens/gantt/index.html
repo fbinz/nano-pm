@@ -30,7 +30,7 @@
              }"
            data-on:input__debounce.150ms="@get(`/zoom/?ppd=${parseFloat(el.value)/parseFloat(el.dataset.daysPerUnit)}`)">
     <button class="topbar-btn" data-on:click="nano.scrollToToday()" title="Jump to today (T)">Today</button>
-    <button class="topbar-btn"
+    <button id="people-btn" class="topbar-btn"
             data-on:click="@get('/people/modal/')">People</button>
     <button class="topbar-btn"
             data-on:click="@post('/projects/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">+ Project</button>
