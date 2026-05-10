@@ -1,6 +1,8 @@
-# syntax=docker/dockerfile:1.7
-#
 # nano-pm production image — used by CapRover (see captain-definition).
+#
+# Written for the classic Docker builder (CapRover default). No BuildKit-only
+# features: no `RUN --mount=type=cache`, no syntax pragma. If you switch to
+# BuildKit you'll get a free uv-cache speedup by adding the mounts back.
 #
 # Two stages:
 #   1. builder  — installs deps with uv into a relocatable venv at /opt/venv.
@@ -41,12 +43,10 @@ WORKDIR /app
 
 # Install deps first (better layer caching: deps change less often than code).
 COPY pyproject.toml uv.lock ./
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev
+RUN uv sync --frozen --no-install-project --no-dev
 
 COPY src ./src
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev
 
 # --------------------------------------------------------------------------- #
 # Runtime                                                                      #
