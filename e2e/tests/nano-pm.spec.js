@@ -649,6 +649,109 @@ test.describe('drag interactions', () => {
 });
 
 // =============================================================================
+// Multi-select bulk move
+// =============================================================================
+test.describe('multi-select', () => {
+  test('shift-clicking a bar toggles a selected outline (no popover)', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'A/B test setup' });
+    await bar.click({ modifiers: ['Shift'] });
+    await expect(bar).toHaveClass(/\bselected\b/);
+    // Shift-click should NOT open the popover.
+    await expect(page.locator('#task-popover')).toHaveCount(0);
+
+    // Shift-click again to deselect.
+    await page.locator('.bar', { hasText: 'A/B test setup' }).click({ modifiers: ['Shift'] });
+    await expect(page.locator('.bar', { hasText: 'A/B test setup' }))
+      .not.toHaveClass(/\bselected\b/);
+  });
+
+  test('Escape clears the selection', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'A/B test setup' });
+    await bar.click({ modifiers: ['Shift'] });
+    await expect(bar).toHaveClass(/\bselected\b/);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.bar.selected')).toHaveCount(0);
+  });
+
+  test('dragging any selected bar moves the whole selection by the same delta', async ({ appPage: page }) => {
+    // t6 ("A/B test setup") and t8 ("Terraform module rewrites") are both
+    // leaves — moving them forward triggers no auto-cascade, so the post-
+    // commit deltas are clean to compare.
+    const sel1 = '.bar';
+    const t6 = page.locator(sel1, { hasText: 'A/B test setup' });
+    const t8 = page.locator(sel1, { hasText: 'Terraform module rewrites' });
+    const before6 = parseFloat(await t6.evaluate(el => el.style.left));
+    const before8 = parseFloat(await t8.evaluate(el => el.style.left));
+    const oldStart6 = await t6.evaluate(el => el.dataset.start);
+
+    await t6.click({ modifiers: ['Shift'] });
+    await t8.click({ modifiers: ['Shift'] });
+    await expect(page.locator('.bar.selected')).toHaveCount(2);
+
+    // Drag t6 right by 60px (5 days at week zoom).
+    const box = await t6.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    // Wait for the SSE patch — t6's data-start changes only after commit.
+    await page.waitForFunction(
+      ([oldStart]) => {
+        const el = [...document.querySelectorAll('.bar')]
+          .find(b => b.textContent.includes('A/B test setup'));
+        return el && el.dataset.start !== oldStart;
+      },
+      [oldStart6],
+      { timeout: 5000 }
+    );
+
+    const after6 = parseFloat(await page.locator('.bar', { hasText: 'A/B test setup' }).evaluate(el => el.style.left));
+    const after8 = parseFloat(await page.locator('.bar', { hasText: 'Terraform module rewrites' }).evaluate(el => el.style.left));
+    const d6 = after6 - before6;
+    const d8 = after8 - before8;
+    expect(d6).toBeGreaterThan(0);
+    expect(d8).toBeCloseTo(d6, 0);  // same delta within rounding
+  });
+
+  test('dragging a non-selected bar does not move the selected ones', async ({ appPage: page }) => {
+    // Selection persists across drags of unrelated bars.
+    const t6 = page.locator('.bar', { hasText: 'A/B test setup' });
+    await t6.click({ modifiers: ['Shift'] });
+
+    const t8 = page.locator('.bar', { hasText: 'Terraform module rewrites' });
+    const before8 = parseFloat(await t8.evaluate(el => el.style.left));
+    const before6 = parseFloat(await t6.evaluate(el => el.style.left));
+    const oldStart8 = await t8.evaluate(el => el.dataset.start);
+
+    // Drag t8 (not selected) — only t8 should move.
+    const box = await t8.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForFunction(
+      ([oldStart]) => {
+        const el = [...document.querySelectorAll('.bar')]
+          .find(b => b.textContent.includes('Terraform module rewrites'));
+        return el && el.dataset.start !== oldStart;
+      },
+      [oldStart8],
+      { timeout: 5000 }
+    );
+
+    const after8 = parseFloat(await page.locator('.bar', { hasText: 'Terraform module rewrites' }).evaluate(el => el.style.left));
+    const after6 = parseFloat(await page.locator('.bar', { hasText: 'A/B test setup' }).evaluate(el => el.style.left));
+    expect(after8).toBeGreaterThan(before8);
+    expect(after6).toBe(before6);  // t6 did not move
+    // Debug: how many times did the mutation observer fire, and is the set still populated?
+    // Selection survived the re-render.
+    await expect(page.locator('.bar', { hasText: 'A/B test setup' }))
+      .toHaveClass(/\bselected\b/);
+  });
+});
+
+// =============================================================================
 // Project / people management
 // =============================================================================
 test.describe('project & people management', () => {

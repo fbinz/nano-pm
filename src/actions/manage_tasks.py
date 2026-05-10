@@ -1,6 +1,6 @@
 """Write operations for tasks (incl. drag/move/resize). Each call runs auto_cascade."""
 
-from datetime import date
+from datetime import date, timedelta
 
 from data.models import Project, Task, TaskStatus, Person
 from actions.auto_cascade import cascade_user
@@ -101,6 +101,24 @@ def move_task(*, owner, task_id: int, new_start: date) -> tuple[Task | None, set
     t.save(update_fields=["start", "end"])
     cascaded = cascade_user(owner)
     return t, cascaded
+
+
+def move_many_tasks(
+    *, owner, task_ids: list[int], delta_days: int
+) -> tuple[list[Task], set[int]]:
+    """Shift every owned task in `task_ids` by `delta_days` (preserves duration);
+    runs auto_cascade once at the end so successor pushes happen as a batch."""
+    delta = timedelta(days=delta_days)
+    tasks = list(
+        Task.objects.filter(id__in=task_ids, project__owner=owner)
+    )
+    for t in tasks:
+        t.start = t.start + delta
+        t.end = t.end + delta
+    if tasks:
+        Task.objects.bulk_update(tasks, ["start", "end"])
+    cascaded = cascade_user(owner)
+    return tasks, cascaded
 
 
 def resize_end(*, owner, task_id: int, new_end: date) -> tuple[Task | None, set[int]]:

@@ -42,6 +42,28 @@
   }
 
   // ---------------------------------------------------------------------- //
+  // Selection (purely client-side; survives SSE re-renders via MutationObserver) //
+  // ---------------------------------------------------------------------- //
+  const selectedTaskIds = new Set();
+  function applySelection() {
+    document.querySelectorAll('.bar.selected').forEach(b => b.classList.remove('selected'));
+    for (const id of selectedTaskIds) {
+      const el = document.getElementById(`bar-${id}`);
+      if (el) el.classList.add('selected');
+    }
+  }
+  function toggleSelection(taskId) {
+    if (selectedTaskIds.has(taskId)) selectedTaskIds.delete(taskId);
+    else selectedTaskIds.add(taskId);
+    applySelection();
+  }
+  function clearSelection() {
+    if (selectedTaskIds.size === 0) return;
+    selectedTaskIds.clear();
+    applySelection();
+  }
+
+  // ---------------------------------------------------------------------- //
   // Bar move (drag the bar body)                                           //
   // ---------------------------------------------------------------------- //
   function barMouseDown(evt, taskId) {
@@ -49,35 +71,56 @@
     // Don't move if mousedown landed on a child handle.
     if (evt.target.classList.contains('resize-handle')
      || evt.target.classList.contains('dep-handle')) return;
+    // Shift-click toggles the bar in/out of the selection. No drag, no popover.
+    if (evt.shiftKey) {
+      evt.preventDefault();
+      evt.stopPropagation();
+      toggleSelection(taskId);
+      return;
+    }
     evt.preventDefault();
     const bar = evt.currentTarget;
     const startX = evt.clientX;
     const ppd = pxPerDay();
     const cs = chartStartDate();
     const origStart = bar.dataset.start;
-    const origEnd = bar.dataset.end;
     const [sy, sm, sd] = origStart.split('-').map(Number);
     const startDate = new Date(sy, sm - 1, sd);
-    const origLeft = parseFloat(bar.style.left);
-    bar.classList.add('dragging');
+
+    // If the grabbed bar is part of a multi-selection, drag the whole set.
+    const isMulti = selectedTaskIds.has(taskId) && selectedTaskIds.size > 1;
+    const dragIds = isMulti ? Array.from(selectedTaskIds) : [taskId];
+    const dragBars = dragIds
+      .map(id => document.getElementById(`bar-${id}`))
+      .filter(b => b);
+    const origLefts = new Map(dragBars.map(b => [b, parseFloat(b.style.left)]));
+    dragBars.forEach(b => b.classList.add('dragging'));
+
     let moved = false;
     function onMove(ev) {
       const dxPx = ev.clientX - startX;
       const dxDays = Math.round(dxPx / ppd);
       if (dxDays !== 0) moved = true;
-      bar.style.left = (origLeft + dxDays * ppd) + 'px';
+      dragBars.forEach(b => {
+        b.style.left = (origLefts.get(b) + dxDays * ppd) + 'px';
+      });
     }
     function onUp(ev) {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
-      bar.classList.remove('dragging');
+      dragBars.forEach(b => b.classList.remove('dragging'));
       if (!moved) {
         openTaskPopover(taskId, ev.clientX, ev.clientY);
         return;
       }
       const dxDays = Math.round((ev.clientX - startX) / ppd);
-      const newStart = fmt(addDays(startDate, dxDays));
-      commit(`/tasks/${taskId}/move/`, { start: newStart });
+      if (isMulti) {
+        commit(`/tasks/move-many/`, {
+          task_ids: dragIds.join(','), delta_days: dxDays,
+        });
+      } else {
+        commit(`/tasks/${taskId}/move/`, { start: fmt(addDays(startDate, dxDays)) });
+      }
     }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -531,7 +574,25 @@
   // default 240 then jump to the saved value on the next frame.
   restoreSidebarWidth();
 
-  // Initial: jump to today.
+  // Re-apply .bar.selected whenever the chart fragment is patched in (SSE
+  // round-trips replace bar elements wholesale, so the class is gone otherwise).
+  // We watch `body` rather than `#grid-scroll` because Datastar's patch
+  // replaces the #grid-scroll element itself — an observer bound to the old
+  // element would be orphaned. childList only (no attributes) keeps this
+  // quiet during drags, which mutate style but never insert nodes.
+  document.addEventListener('keydown', evt => {
+    if (evt.key === 'Escape') clearSelection();
+  });
+
+  // Datastar fires `datastar-fetch` with detail.type = "finished" after the
+  // SSE response has been processed and all chart DOM patches applied.
+  // That's our cue to re-attach .selected to currently-selected bars (the
+  // server template doesn't know about selection state, so the patched
+  // markup arrives without the class).
+  document.addEventListener('datastar-fetch', evt => {
+    if (evt.detail && evt.detail.type === 'finished') applySelection();
+  });
+
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(scrollToToday, 0);
   });

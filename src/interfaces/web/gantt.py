@@ -19,7 +19,8 @@ from actions.manage_projects import (
 )
 from actions.manage_people import create_person, update_person, delete_person
 from actions.manage_tasks import (
-    create_task, update_task, delete_task, move_task, resize_start, resize_end,
+    create_task, update_task, delete_task, move_task, move_many_tasks,
+    resize_start, resize_end,
 )
 from actions.manage_dependencies import add_dependency, delete_dependency
 from actions.manage_milestones import (
@@ -221,6 +222,25 @@ def task_move(request: HttpRequest, task_id: int):
     if new_start is None:
         return
     move_task(owner=request.user, task_id=task_id, new_start=new_start)
+    yield _patch_chart(request)
+
+
+@require_http_methods(["POST"])
+@login_required
+@datastar_response
+def task_move_many(request: HttpRequest):
+    """Bulk-shift a set of tasks by a common day delta — used by the
+    multi-select drag flow. Body fields: `task_ids` (CSV of ints),
+    `delta_days` (int, may be negative)."""
+    raw_ids = request.POST.get("task_ids", "")
+    task_ids = [int(x) for x in raw_ids.split(",") if x.strip().lstrip("-").isdigit()]
+    try:
+        delta_days = int(request.POST.get("delta_days", "0"))
+    except ValueError:
+        delta_days = 0
+    if not task_ids or delta_days == 0:
+        return
+    move_many_tasks(owner=request.user, task_ids=task_ids, delta_days=delta_days)
     yield _patch_chart(request)
 
 
@@ -523,6 +543,7 @@ urlpatterns = [
     path("tasks/<int:task_id>/popover/",       task_popover,        name="task_popover"),
     path("tasks/<int:task_id>/update/",        task_update,         name="task_update"),
     path("tasks/<int:task_id>/move/",          task_move,           name="task_move"),
+    path("tasks/move-many/",                    task_move_many,      name="task_move_many"),
     path("tasks/<int:task_id>/resize/start/",  task_resize_start,   name="task_resize_start"),
     path("tasks/<int:task_id>/resize/end/",    task_resize_end,     name="task_resize_end"),
     path("tasks/",                              task_create,         name="task_create"),

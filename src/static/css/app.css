@@ -200,6 +200,7 @@ a { color: inherit; }
   box-shadow: inset 0 -1px 0 rgba(0,0,0,0.15);
 }
 .bar.dark-text { text-shadow: none; }
+.bar.selected { outline: 2px solid var(--fg); outline-offset: 1px; z-index: 2; }
 
 /* Status variants tint the *background* via color-mix, leaving the text at
    full opacity. Whole-bar `opacity` made text gray-on-yellow / white-on-pale-blue

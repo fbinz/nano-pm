@@ -75,11 +75,13 @@
     <input name="project_id">
     <input name="title">
     <input name="date">
+    <input name="task_ids">
+    <input name="delta_days">
   </form>
   <div data-on:nano-commit__window="
     const f = document.getElementById('nano-bridge');
     f.action = evt.detail.url;
-    ['start','end','predecessor','successor','project_id','title','date'].forEach(k => {
+    ['start','end','predecessor','successor','project_id','title','date','task_ids','delta_days'].forEach(k => {
       const i = f.querySelector(`[name='${k}']`);
       if (i) i.value = (evt.detail.data && evt.detail.data[k] != null) ? String(evt.detail.data[k]) : '';
     });
