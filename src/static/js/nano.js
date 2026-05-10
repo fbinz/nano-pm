@@ -442,6 +442,55 @@
   }
 
   // ---------------------------------------------------------------------- //
+  // Sidebar width resize                                                   //
+  // ---------------------------------------------------------------------- //
+  // The sidebar is the sticky-left column controlled by the --left-w CSS
+  // variable on :root. Setting it on document.documentElement.style survives
+  // SSE chart patches (which only replace #grid-scroll's contents) and we
+  // persist the chosen value to localStorage so it survives reloads — there's
+  // no server-side notion of per-user UI prefs to push to.
+  const SIDEBAR_KEY = 'nano-pm:sidebar-width';
+  const SIDEBAR_MIN = 140;
+  const SIDEBAR_MAX = 600;
+
+  function setSidebarWidth(px) {
+    const clamped = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, px));
+    document.documentElement.style.setProperty('--left-w', clamped + 'px');
+    return clamped;
+  }
+
+  function sidebarResizeStart(evt) {
+    if (evt.button !== 0) return;
+    evt.preventDefault();
+    const handle = evt.currentTarget;
+    const startX = evt.clientX;
+    const origW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w')) || 240;
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'ew-resize';
+    function onMove(ev) {
+      setSidebarWidth(origW + (ev.clientX - startX));
+    }
+    function onUp(ev) {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      handle.classList.remove('dragging');
+      document.body.style.cursor = '';
+      const finalW = setSidebarWidth(origW + (ev.clientX - startX));
+      try { localStorage.setItem(SIDEBAR_KEY, String(finalW)); } catch (e) { /* ignore quota */ }
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  function restoreSidebarWidth() {
+    let saved;
+    try { saved = localStorage.getItem(SIDEBAR_KEY); } catch (e) { return; }
+    if (saved == null) return;
+    const px = parseFloat(saved);
+    if (Number.isFinite(px)) setSidebarWidth(px);
+  }
+
+  // ---------------------------------------------------------------------- //
   // Misc                                                                   //
   // ---------------------------------------------------------------------- //
   function scrollToToday() {
@@ -460,10 +509,15 @@
   window.nano = {
     barMouseDown, resizeStart, resizeEnd, depHandle,
     projectRowMouseDown, milestoneMouseDown,
+    sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, addMilestone,
     placePopover, placePopoverNear, anchorPopover, closePopover, closeModal,
     scrollToToday,
   };
+
+  // Restore sidebar width before first paint so the chart doesn't flash at the
+  // default 240 then jump to the saved value on the next frame.
+  restoreSidebarWidth();
 
   // Initial: jump to today.
   document.addEventListener('DOMContentLoaded', () => {

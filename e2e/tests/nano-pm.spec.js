@@ -82,6 +82,70 @@ test.describe('chart structure', () => {
     expect(box.x).toBeLessThan(4);
   });
 
+  test('the sidebar width can be resized by dragging the resizer handle', async ({ appPage: page }) => {
+    // Clear any persisted width from prior tests so we start at the default.
+    await page.evaluate(() => localStorage.removeItem('nano-pm:sidebar-width'));
+    await page.reload();
+
+    const widthVar = () => page.evaluate(() =>
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w'))
+    );
+    expect(await widthVar()).toBe(240);
+
+    const resizer = page.locator('#sidebar-resizer');
+    await expect(resizer).toBeVisible();
+    const box = await resizer.boundingBox();
+    const startX = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    // Drag right by 80px.
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.mouse.move(startX + 80, y, { steps: 10 });
+    await page.mouse.up();
+
+    await page.waitForFunction(() => {
+      const w = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w'));
+      return w >= 315 && w <= 325;
+    });
+
+    // Sticky left cell width follows the variable.
+    const cellWidth = await page.locator('.left-cell').first().evaluate(el => el.getBoundingClientRect().width);
+    expect(cellWidth).toBeGreaterThan(310);
+    expect(cellWidth).toBeLessThan(330);
+  });
+
+  test('the sidebar width persists across reloads (localStorage)', async ({ appPage: page }) => {
+    await page.evaluate(() => localStorage.setItem('nano-pm:sidebar-width', '300'));
+    await page.reload();
+    const w = await page.evaluate(() =>
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w'))
+    );
+    expect(w).toBe(300);
+  });
+
+  test('the sidebar resize handle clamps to a minimum width', async ({ appPage: page }) => {
+    await page.evaluate(() => localStorage.removeItem('nano-pm:sidebar-width'));
+    await page.reload();
+
+    const resizer = page.locator('#sidebar-resizer');
+    const box = await resizer.boundingBox();
+    const startX = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    // Drag far to the left — past zero — and confirm the width clamps.
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.mouse.move(startX - 500, y, { steps: 10 });
+    await page.mouse.up();
+
+    const w = await page.evaluate(() =>
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w'))
+    );
+    expect(w).toBeGreaterThanOrEqual(120);
+    expect(w).toBeLessThanOrEqual(160);
+  });
+
   test('the project header row stays visible when scrolling vertically past its tasks', async ({ appPage: page }) => {
     // Make the chart taller than the viewport so vertical scroll engages.
     await page.setViewportSize({ width: 1280, height: 360 });

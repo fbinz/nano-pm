@@ -276,6 +276,20 @@ a { color: inherit; }
 #arrows path.selected { stroke: var(--accent); stroke-width: 2; }
 #arrows .hit { fill: none; stroke: transparent; stroke-width: 8; pointer-events: stroke; cursor: pointer; }
 
+#sidebar-resizer {
+  position: fixed;
+  top: var(--topbar-h);
+  left: var(--left-w);
+  width: 8px;
+  bottom: 0;
+  transform: translateX(-4px);
+  cursor: ew-resize;
+  z-index: 40;
+  background: transparent;
+  transition: background 0.12s;
+}
+#sidebar-resizer:hover, #sidebar-resizer.dragging { background: rgba(59,130,246,0.25); }
+
 #rubber-band {
   position: absolute; pointer-events: none;
   background: rgba(59,130,246,0.18);
