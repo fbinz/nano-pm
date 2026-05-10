@@ -652,6 +652,28 @@ test.describe('drag interactions', () => {
 // Multi-select bulk move
 // =============================================================================
 test.describe('multi-select', () => {
+  test('dragging a bar updates its dependency arrows live during the drag', async ({ appPage: page }) => {
+    // t2 ("Migrate /users endpoints") sits between two deps: t1→t2 and t2→t3.
+    // Dragging it should move both arrow endpoints in real time, before the
+    // SSE patch comes back.
+    const before = await page.locator('#arrows .hit')
+      .evaluateAll(els => els.map(e => e.getAttribute('d')));
+
+    const target = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    const box = await target.boundingBox();
+    await page.mouse.move(box.x + 30, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 90, box.y + box.height / 2, { steps: 8 });
+
+    // Mid-drag (no mouseup yet) — at least one arrow's d should differ already.
+    const mid = await page.locator('#arrows .hit')
+      .evaluateAll(els => els.map(e => e.getAttribute('d')));
+    await page.mouse.up();
+
+    const changed = mid.filter((d, i) => d !== before[i]).length;
+    expect(changed).toBeGreaterThan(0);
+  });
+
   test('shift-clicking a bar toggles a selected outline (no popover)', async ({ appPage: page }) => {
     const bar = page.locator('.bar', { hasText: 'A/B test setup' });
     await bar.click({ modifiers: ['Shift'] });

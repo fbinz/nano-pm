@@ -41,6 +41,21 @@
     }));
   }
 
+  // Orthogonal arrow routing — mirrors chart_view.build_chart_vm: a forward
+  // flow uses M + 3 Ls (right stub → vertical → left to target); a backward
+  // flow (target before source) detours through a horizontal lane.
+  const ARROW_STUB = 8;
+  function routeArrow(sx, sy, tx, ty) {
+    if (sx + ARROW_STUB <= tx) {
+      return `M ${sx} ${sy} L ${sx + ARROW_STUB} ${sy} L ${sx + ARROW_STUB} ${ty} L ${tx} ${ty}`;
+    }
+    const dy = ty > sy ? 14 : -14;
+    return (
+      `M ${sx} ${sy} L ${sx + ARROW_STUB} ${sy} L ${sx + ARROW_STUB} ${sy + dy} ` +
+      `L ${tx - ARROW_STUB} ${sy + dy} L ${tx - ARROW_STUB} ${ty} L ${tx} ${ty}`
+    );
+  }
+
   // ---------------------------------------------------------------------- //
   // Selection (purely client-side; survives SSE re-renders via MutationObserver) //
   // ---------------------------------------------------------------------- //
@@ -90,19 +105,48 @@
     // If the grabbed bar is part of a multi-selection, drag the whole set.
     const isMulti = selectedTaskIds.has(taskId) && selectedTaskIds.size > 1;
     const dragIds = isMulti ? Array.from(selectedTaskIds) : [taskId];
+    const dragSet = new Set(dragIds);
     const dragBars = dragIds
       .map(id => document.getElementById(`bar-${id}`))
       .filter(b => b);
     const origLefts = new Map(dragBars.map(b => [b, parseFloat(b.style.left)]));
     dragBars.forEach(b => b.classList.add('dragging'));
 
+    // Snapshot every dep arrow that touches the drag set so we can re-route
+    // it live during the gesture. Parsing the existing `d` is cheaper than
+    // recomputing bar y-centers (the y values don't change on a horizontal
+    // drag — only x does), and keeps this code from duplicating the row-
+    // layout arithmetic in chart_view.py.
+    const arrowState = [];
+    document.querySelectorAll('#arrows .hit[data-dep]').forEach(hit => {
+      const [fromId, toId] = hit.dataset.dep.split('-').map(Number);
+      if (!dragSet.has(fromId) && !dragSet.has(toId)) return;
+      const nums = (hit.getAttribute('d') || '').match(/-?\d+(?:\.\d+)?/g);
+      if (!nums || nums.length < 4) return;
+      const visPath = hit.nextElementSibling;
+      arrowState.push({
+        fromId, toId,
+        origSx: parseFloat(nums[0]), sy: parseFloat(nums[1]),
+        origTx: parseFloat(nums[nums.length - 2]), ty: parseFloat(nums[nums.length - 1]),
+        hitPath: hit, visPath,
+      });
+    });
+
     let moved = false;
     function onMove(ev) {
       const dxPx = ev.clientX - startX;
       const dxDays = Math.round(dxPx / ppd);
       if (dxDays !== 0) moved = true;
+      const offset = dxDays * ppd;
       dragBars.forEach(b => {
-        b.style.left = (origLefts.get(b) + dxDays * ppd) + 'px';
+        b.style.left = (origLefts.get(b) + offset) + 'px';
+      });
+      arrowState.forEach(a => {
+        const sx = a.origSx + (dragSet.has(a.fromId) ? offset : 0);
+        const tx = a.origTx + (dragSet.has(a.toId) ? offset : 0);
+        const d = routeArrow(sx, a.sy, tx, a.ty);
+        a.hitPath.setAttribute('d', d);
+        if (a.visPath) a.visPath.setAttribute('d', d);
       });
     }
     function onUp(ev) {
@@ -241,25 +285,10 @@
     svg.appendChild(path);
     overlay.appendChild(svg);
 
-    // Mirror the orthogonal routing in chart_view.build_chart_vm: a forward
-    // flow uses M + 3 Ls (right stub → vertical → left to target); a backward
-    // flow (cursor before source) detours through a horizontal lane.
-    const stub = 8;
-    function routeD(tx, ty) {
-      if (sx + stub <= tx) {
-        return `M ${sx} ${sy} L ${sx + stub} ${sy} L ${sx + stub} ${ty} L ${tx} ${ty}`;
-      }
-      const dy = ty > sy ? 14 : -14;
-      return (
-        `M ${sx} ${sy} L ${sx + stub} ${sy} L ${sx + stub} ${sy + dy} ` +
-        `L ${tx - stub} ${sy + dy} L ${tx - stub} ${ty} L ${tx} ${ty}`
-      );
-    }
-
     function onMove(ev) {
       const tx = ev.clientX - overlayRect.left;
       const ty = ev.clientY - overlayRect.top;
-      path.setAttribute('d', routeD(tx, ty));
+      path.setAttribute('d', routeArrow(sx, sy, tx, ty));
     }
     function onUp(ev) {
       document.removeEventListener('mousemove', onMove);
