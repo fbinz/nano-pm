@@ -12,8 +12,21 @@ async function reset(request) {
   if (!r.ok()) throw new Error(`reset failed: ${r.status()}`);
 }
 
+// Retry the initial navigation once. Django's runserver multithreading
+// occasionally drops the very first request after a /__reset__/ cycle —
+// reproduces under load (~1 in 40 tests) and never reproduces in isolation.
+// Cheap to retry; expensive to debug deeper for a dev-only server.
+async function gotoWithRetry(page, url) {
+  try {
+    await page.goto(url);
+  } catch (e) {
+    if (!/Timeout|net::ERR/.test(String(e))) throw e;
+    await page.goto(url);
+  }
+}
+
 async function login(page) {
-  await page.goto('/accounts/login/');
+  await gotoWithRetry(page, '/accounts/login/');
   await page.fill('input[name=username]', 'demo');
   await page.fill('input[name=password]', 'demo');
   await page.click('button[type=submit]');

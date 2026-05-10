@@ -7,8 +7,9 @@ cross-project), and 2 milestones — all dated relative to today.
 
 from datetime import date, timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from data.models import Project, Person, Task, TaskStatus, Dependency, Milestone
@@ -19,6 +20,12 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        if not settings.ALLOW_INSECURE_SEED:
+            raise CommandError(
+                "seed_data creates user 'demo' with password 'demo'. Refusing "
+                "to run because DJANGO_ALLOW_INSECURE_SEED is not set. Set "
+                "DJANGO_ALLOW_INSECURE_SEED=true in dev/CI environments only."
+            )
         User = get_user_model()
         user, created = User.objects.get_or_create(username="demo")
         if created or not user.has_usable_password():

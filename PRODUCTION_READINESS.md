@@ -4,10 +4,15 @@ A snapshot of what stands between the current `main` (post-v1 pivot) and a
 production deployment. Items are roughly ordered by severity within each
 section. Cross-references point at file paths under `src/` unless noted.
 
-The current state is **fine for local exploration**. The four foundational
-risks (DEBUG, SECRET_KEY, ALLOWED_HOSTS, `/__reset__/`) have been resolved.
-The remaining items below would still be needed to expose this on the
-open internet — most importantly, password validators, HTTPS, and CSP.
+The current state is **deployable to CapRover** with the right env vars and
+a persistent volume mounted at `/data` (see Deployment & operations below).
+The foundational risks (DEBUG, SECRET_KEY, ALLOWED_HOSTS, `/__reset__/`,
+password validators, seeded trivial passwords), the deploy plumbing
+(gunicorn, whitenoise, Dockerfile, captain-definition, HTTPS-aware settings,
+migration step, `/healthz`), supply-chain hygiene (CDN scripts pinned with
+SRI), error monitoring (Sentry, opt-in), and SQLite tuning (WAL, IMMEDIATE,
+busy_timeout) are all in place. The remaining headline gaps for a *robust*
+prod posture are: a backup cron for the SQLite volume, and a CSP.
 
 ---
 
@@ -25,23 +30,41 @@ open internet — most importantly, password validators, HTTPS, and CSP.
   `DJANGO_ENABLE_TEST_RESET=true`. With the flag off, the endpoint returns
   404 (not 403), so a misconfigured deploy that leaves `DEBUG=True` doesn't
   expose the wipe.
-- [ ] **Password validators are disabled.** `AUTH_PASSWORD_VALIDATORS = []`.
-  Restore Django's defaults at minimum (`MinimumLength`, `CommonPassword`,
-  `NumericPassword`, `UserAttributeSimilarity`).
-- [ ] **Seeded accounts use the username as the password.** `seed_data` and
-  `populate_demo` set `demo/demo`, `alice/alice`, `bob/bob`, plus
-  `fabian/fabian`. They're also `is_staff=True` (admin access). Either
-  scrub these from any non-dev DB or refuse to seed when `DEBUG=False`.
-- [ ] **No HTTPS enforcement.** Add `SECURE_SSL_REDIRECT=True`,
-  `SESSION_COOKIE_SECURE=True`, `CSRF_COOKIE_SECURE=True`,
-  `SECURE_HSTS_SECONDS`, `SECURE_PROXY_SSL_HEADER` (if behind a proxy).
-- [ ] **No security headers.** Add `SECURE_CONTENT_TYPE_NOSNIFF`,
-  `SECURE_REFERRER_POLICY="same-origin"`. `X_FRAME_OPTIONS` is on by
-  default; verify it survives any reverse proxy.
-- [ ] **CDN `<script>` tags have no SRI.** `templates/components/layouts/base.html`
-  pulls Datastar and Floating UI from jsDelivr without `integrity=`/
-  `crossorigin=` attributes. Pin versions and add SRI hashes; ideally
-  vendor the libraries into `static/` and serve them locally.
+- [x] **Password validators are disabled.** Django's four default validators
+  (`UserAttributeSimilarity`, `MinimumLength`, `CommonPassword`,
+  `NumericPassword`) are now enabled. `DJANGO_DISABLE_PASSWORD_VALIDATORS=true`
+  turns them off as an escape hatch. Note: validators only run on form-driven
+  password changes (admin "set password", `PasswordChangeView`); seed
+  commands and `createsuperuser` bypass them via `set_password()`.
+- [x] **Seeded accounts use the username as the password.** Both `seed_data`
+  and `populate_demo` now refuse to run unless
+  `DJANGO_ALLOW_INSECURE_SEED=true` is set. The flag is on in `justfile` and
+  the Playwright config; production deploys must leave it unset, which makes
+  it impossible to materialise `demo/demo`, `alice/alice`, or `bob/bob`
+  without an explicit opt-in. (The `is_staff=True` part was already fixed in
+  a prior commit.)
+- [x] **HTTPS / proxy hardening — wiring in place; switches must be flipped per deploy.**
+  All env-toggleable from `settings.py`:
+  - `DJANGO_BEHIND_TLS_PROXY=true` enables `SECURE_PROXY_SSL_HEADER` (set on
+    CapRover; nginx forwards `X-Forwarded-Proto`).
+  - `DJANGO_SECURE_COOKIES=true` enables `SESSION_COOKIE_SECURE` + `CSRF_COOKIE_SECURE`.
+  - `DJANGO_HSTS_SECONDS=<n>` enables HSTS; `DJANGO_HSTS_INCLUDE_SUBDOMAINS`
+    and `DJANGO_HSTS_PRELOAD` are separate opt-ins.
+  - `DJANGO_SSL_REDIRECT=true` enables `SECURE_SSL_REDIRECT` — usually NOT
+    needed on CapRover (the proxy already redirects); turning it on without
+    `BEHIND_TLS_PROXY` will create a redirect loop.
+- [x] **Security headers.** `SECURE_CONTENT_TYPE_NOSNIFF=True` and
+  `SECURE_REFERRER_POLICY="same-origin"` are on unconditionally — verified
+  via `curl -I` against the running container. `X_FRAME_OPTIONS` is Django's
+  default `DENY`.
+- [x] **JS deps vendored locally.** Floating UI (core + dom UMD) and
+  Datastar 1.0.0-RC.7 are checked in under `src/static/vendor/`, served by
+  whitenoise at `/static/vendor/<file>.<hash>.js` thanks to
+  `CompressedManifestStaticFilesStorage`. No CDN dependency, no SRI needed
+  (same-origin), and a future `script-src 'self'` CSP just works without a
+  `cdn.jsdelivr.net` allowance. Upgrade procedure documented in the
+  template's `{% comment %}` block. Datastar's `sourceMappingURL` comment
+  was stripped (170KB map not worth shipping for a dep we don't debug).
 - [ ] **No CSP.** With Datastar inline-evaluating expressions and Floating
   UI, you'll need a `script-src` that allows the CDN origins (or vendored
   paths) plus `'unsafe-inline'` for `data-init`/`data-on:` (Datastar uses
@@ -63,44 +86,77 @@ superuser created via `manage.py createsuperuser`) handles all of it.
   consider relocating to `/{secret-slug}/admin/` (set via env) so casual
   scanners don't probe it. The admin is already gated by Django auth, so
   this is defence-in-depth rather than a real vulnerability.
-- [ ] **No password-strength enforcement when an admin sets a password.**
-  Once `AUTH_PASSWORD_VALIDATORS` is restored (see the Critical section),
-  the admin's "set password" form picks them up automatically.
+- [x] **No password-strength enforcement when an admin sets a password.**
+  Resolved alongside the Critical section's password-validator item — the
+  admin's "set password" form runs Django's four default validators.
 
 ## Deployment & operations
 
-- [ ] **No production WSGI server.** `manage.py runserver` is dev-only.
-  Add `gunicorn` (or `uvicorn` if going async) to deps, document the
-  invocation. Likely `gunicorn config.wsgi:application -b 0.0.0.0:$PORT`.
-- [ ] **Static files served by Django dev server.** Add `whitenoise`
-  (`WhiteNoiseMiddleware` after `SecurityMiddleware`, set
-  `STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"`)
-  and run `collectstatic` in deploy.
-- [ ] **SQLite as the production DB is risky.** Multiple concurrent writers
-  serialize on the file lock; long auto-cascades + e2e/`__reset__/` will
-  fight in prod. Switch to Postgres for any multi-user scenario; keep
-  SQLite for single-user local. Migrate via `dj_database_url` + env.
-- [ ] **No deployment artifacts.** No Dockerfile, no compose, no
-  Procfile/Heroku-style config, no systemd unit. Pick a target (Fly.io /
-  Railway / a VM with systemd / Kubernetes) and write the bootstrap.
+- [x] **Production WSGI server.** `gunicorn` is a runtime dep, invoked from
+  the Dockerfile CMD: `gunicorn config.wsgi:application --chdir src --bind
+  0.0.0.0:${PORT} --workers 2 --threads 4`. Re-tune workers/threads only
+  after the SQLite bottleneck is gone.
+- [x] **Static files via whitenoise.** `WhiteNoiseMiddleware` sits after
+  `SecurityMiddleware`; `STORAGES.staticfiles` is
+  `CompressedManifestStaticFilesStorage`; the Dockerfile runs `collectstatic
+  --noinput --clear` at build time so the image ships ready-to-serve.
+  `STATIC_ROOT` defaults to `<repo>/staticfiles`; `DJANGO_STATIC_ROOT`
+  overrides.
+- [x] **Deployment artifacts (CapRover).** `Dockerfile` (multi-stage uv
+  build), `captain-definition` (schema v2 → Dockerfile), and `.dockerignore`
+  are at the repo root. **First-deploy checklist** in CapRover UI:
+  1. App Configs → Environmental Variables — set `DJANGO_SECRET_KEY`,
+     `DJANGO_ALLOWED_HOSTS=<your-domain>`, `DJANGO_BEHIND_TLS_PROXY=true`,
+     `DJANGO_SECURE_COOKIES=true`, `DJANGO_HSTS_SECONDS=3600` (ramp up
+     later), `SENTRY_DSN=<from sentry.io>`, `SENTRY_ENVIRONMENT=prod`.
+  2. App Configs → Persistent Directories — map host path → `/data` so the
+     SQLite DB survives redeploys. **Without this, all data is wiped on every
+     deploy.**
+  3. App Configs → Health Check Path — set to `/healthz`.
+  4. HTTP Settings — enable HTTPS + force HTTPS redirect (proxy-level).
+  5. Deploy. The CMD runs `migrate --noinput` before booting gunicorn.
+- [x] **SQLite write contention.** Tuned in `settings.py`:
+  `journal_mode=WAL` (readers never block writers), `busy_timeout=5000`
+  (writers queue up to 5s instead of erroring), `transaction_mode=IMMEDIATE`
+  (Django 5.1+ — write lock taken at BEGIN, no mid-transaction upgrades),
+  plus `synchronous=NORMAL`, `temp_store=MEMORY`, `mmap_size=128MiB`,
+  `cache_size=64MiB`. Verified live in the running container. Realistic
+  edits don't queue noticeably given nano-pm's one-user-per-account model.
+- [ ] **No backup strategy.** Critical now that we're keeping SQLite.
+  Naive `cp` is unsafe with WAL (`-wal`/`-shm` sidecar files). Use
+  `sqlite3 db.sqlite3 ".backup '/data/backups/$(date +%F).db'"` or
+  `VACUUM INTO` on a cron. CapRover persistent dirs are bind-mounts on the
+  host, so a host-level cron can hit them directly. Document the recovery
+  drill — "restore by copying file back into `/data/db.sqlite3` and
+  redeploying" — before relying on it.
+- [ ] **SQLite scaling ceiling (categorical, not urgent).** Even with WAL
+  it's still one writer at a time, no replication, single-host. Fine for
+  this app's load profile; revisit if (a) write throughput climbs, (b) you
+  want HA, or (c) you go multi-tenant with cross-user writes. Migration
+  path: `dj_database_url` + Postgres.
 - [ ] **No structured logging.** Default Django logging only. Configure
   `LOGGING` with a JSON formatter; route to stdout for the orchestrator
-  to scrape.
-- [ ] **No error monitoring.** Add Sentry (or similar) with
-  `SENTRY_DSN` env. Especially valuable because Datastar errors surface
-  client-side and silently fail.
-- [ ] **No health-check endpoint.** Add `/healthz` (DB connectivity) and
-  `/readyz`. Most platforms need at least one for autoscaling.
+  to scrape. (Gunicorn already logs access + errors to stdout.)
+- [x] **Error monitoring (Sentry).** Wired in `settings.py`, no-op when
+  `SENTRY_DSN` is unset. Optional knobs: `SENTRY_ENVIRONMENT`,
+  `SENTRY_RELEASE`, `SENTRY_TRACES_SAMPLE` (default 0 — errors only).
+  `send_default_pii=False` keeps usernames/IPs out of events. Datastar SSE
+  handler errors surface via the `DjangoIntegration`, which catches
+  exceptions in WSGI generators.
+- [x] **Health-check endpoint.** `GET /healthz` runs a one-row `SELECT`
+  through Django's connection — returns `200 ok` on success, `503 db: <err>`
+  on `OperationalError`. No auth, no CSRF. Configure CapRover's HTTP health
+  check at "App Configs → Health Check Path = `/healthz`" so a wedged
+  container gets pulled out of the load balancer instead of TCP-pinging
+  green forever.
 - [ ] **No backup strategy.** Document daily snapshots of the DB; for
   Postgres this is `pg_dump`/managed snapshots; for SQLite, file-level
   copy + `VACUUM INTO` on a schedule.
-- [ ] **No migrations workflow.** Migrations are committed but no
-  pre-deploy `python manage.py migrate --noinput` step is documented.
+- [x] **Migrations workflow.** The Dockerfile CMD runs `migrate --noinput`
+  before exec'ing gunicorn — idempotent, fast when up-to-date.
 - [ ] **No CI.** No GitHub Actions / GitLab CI / etc. Add a workflow that
   runs `manage.py test`, `ruff check`, and the Playwright suite on PRs.
-- [ ] **`db.sqlite3` in `.gitignore` is correct, but `pm.html` is also
-  untracked** — that's user data from v0. Remove it from the working
-  tree once you've migrated anything you wanted to keep.
+- [x] **`pm.html`** v0 data file removed from the working tree.
 
 ## Data integrity
 
@@ -162,10 +218,12 @@ superuser created via `manage.py createsuperuser`) handles all of it.
   scoping patches to the affected bars (`SSE.patch_elements` per bar).
 - [ ] **No caching of the chart view-model.** `build_chart_vm` runs on
   every request. Memoize per-(user, zoom, last-updated-at).
-- [ ] **CDN dependencies cost a first-load round trip.** Pinned versions +
-  SRI and `<link rel="preconnect">` would help; vendoring would help more.
-- [ ] **`Datastar 1.0.0-RC.7` is a release candidate.** Once GA ships,
-  upgrade and retest. RC versions can have subtle breaking changes.
+- [x] **CDN dependencies first-load round trip.** Resolved by vendoring
+  (see Critical section). Vendor files are gzip + Brotli pre-compressed by
+  whitenoise + served with content-hashed long-cache URLs.
+- [x] **Datastar on GA.** Bumped to `1.0.1` (JS bundle vendored under
+  `src/static/vendor/`; `datastar-py>=1.0.0` on the Python side).
+  RC.7 → 1.0.1 was a clean upgrade — full e2e suite (38 tests) green.
 - [ ] **No bundling / minification of `static/css/app.css` or
   `static/js/nano.js`.** Acceptable at current size; revisit if files grow.
 
@@ -214,8 +272,6 @@ superuser created via `manage.py createsuperuser`) handles all of it.
 
 ## Smaller polish (not blocking, worth doing)
 
-- [ ] **`pm.html`** untracked at the repo root is your v0 data file. Decide:
-  delete it, move to `legacy/`, or extract any data you want to keep.
 - [ ] **Toast on save errors / network errors.** Currently a failed
   drag commit silently no-ops (Datastar logs to console). Add a
   user-visible toast on `data-on:datastar-error`.

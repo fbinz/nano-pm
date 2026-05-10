@@ -1,0 +1,40 @@
+# Keep the build context lean and the image small.
+
+# VCS
+.git
+.gitignore
+
+# Local virtualenvs / caches
+.venv
+.python-version
+__pycache__
+*.pyc
+*.pyo
+
+# Local DBs and v0 data — never bake into the image
+db.sqlite3
+db.sqlite3-journal
+pm.html
+
+# Static-collect output (rebuilt inside the image)
+staticfiles
+
+# Frontend tooling
+node_modules
+
+# Tests / e2e
+e2e
+test-results
+playwright-report
+.playwright
+
+# Editor / OS
+.DS_Store
+.idea
+.vscode
+*.swp
+
+# Docs that don't belong in the runtime image
+DESIGN.md
+PRODUCTION_READINESS.md
+legacy

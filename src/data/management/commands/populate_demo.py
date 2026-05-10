@@ -12,8 +12,9 @@ suite) is left untouched.
 
 from datetime import date, timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from data.models import (
@@ -26,6 +27,13 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **opts):
+        if not settings.ALLOW_INSECURE_SEED:
+            raise CommandError(
+                "populate_demo creates users 'alice' and 'bob' with passwords "
+                "matching their usernames. Refusing to run because "
+                "DJANGO_ALLOW_INSECURE_SEED is not set. Set "
+                "DJANGO_ALLOW_INSECURE_SEED=true in dev/CI environments only."
+            )
         User = get_user_model()
         today = date.today()
 

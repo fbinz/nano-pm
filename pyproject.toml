@@ -6,8 +6,11 @@ readme = "DESIGN.md"
 requires-python = ">=3.12"
 dependencies = [
     "django>=5.1",
-    "datastar-py>=0.8.0",
+    "datastar-py>=1.0.0",
     "django-cotton>=2.6.0",
+    "gunicorn>=23.0.0",
+    "whitenoise>=6.7.0",
+    "sentry-sdk[django]>=2.20.0",
 ]
 
 [dependency-groups]

@@ -17,7 +17,10 @@ module.exports = defineConfig({
     baseURL: BASE_URL,
     trace: 'retain-on-failure',
     actionTimeout: 8000,
-    navigationTimeout: 15000,
+    // 30s matches Playwright's default. Earlier 15s cap caught a Django
+    // runserver hiccup (very first request after /__reset__/ occasionally
+    // takes ~17s on a loaded box) — fixture has its own retry too.
+    navigationTimeout: 30000,
   },
   webServer: {
     // Migrate + seed once, then start the dev server.
@@ -32,10 +35,13 @@ module.exports = defineConfig({
     env: {
       // Required by settings.py — DEBUG for static-file serving in
       // runserver, ENABLE_TEST_RESET so the suite's /__reset__/ fixture
-      // endpoint is mounted.
+      // endpoint is mounted, ALLOW_INSECURE_SEED so seed_data (run before
+      // the server starts and on every /__reset__/ call) accepts the
+      // demo/demo credentials the suite logs in with.
       DJANGO_DEBUG: 'true',
       DJANGO_ALLOWED_HOSTS: 'localhost,127.0.0.1',
       DJANGO_ENABLE_TEST_RESET: 'true',
+      DJANGO_ALLOW_INSECURE_SEED: 'true',
     },
   },
   projects: [

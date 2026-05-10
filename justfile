@@ -6,6 +6,9 @@
 
 export DJANGO_DEBUG := "true"
 export DJANGO_ALLOWED_HOSTS := "localhost,127.0.0.1"
+# Lets `seed` / `populate` / `reset` materialise dev users with trivial
+# passwords (demo/demo, alice/alice, bob/bob). MUST stay unset in production.
+export DJANGO_ALLOW_INSECURE_SEED := "true"
 
 # Run the development server (optionally specify port, default 8000)
 run port="8000":
