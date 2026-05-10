@@ -31,9 +31,9 @@ test.describe('auth + page render', () => {
 // =============================================================================
 test.describe('topbar responsiveness', () => {
   test('the topbar fits within a narrow viewport without horizontal overflow', async ({ appPage: page }) => {
-    // 500px is a realistic phone landscape / very-narrow window. Default
-    // layout overflows — check both the topbar and the page itself.
-    await page.setViewportSize({ width: 500, height: 800 });
+    // 580px ≈ phone landscape / very-narrow window. Default layout
+    // overflows — verify both the topbar and the page itself.
+    await page.setViewportSize({ width: 580, height: 800 });
     const info = await page.evaluate(() => ({
       pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       topbarOverflow: document.getElementById('topbar').scrollWidth - document.getElementById('topbar').clientWidth,
@@ -43,11 +43,20 @@ test.describe('topbar responsiveness', () => {
   });
 
   test('essential topbar controls remain visible at narrow widths', async ({ appPage: page }) => {
-    await page.setViewportSize({ width: 500, height: 800 });
+    await page.setViewportSize({ width: 580, height: 800 });
     await expect(page.locator('#zoom-controls')).toBeVisible();
     await expect(page.locator('button:has-text("Today")')).toBeVisible();
     await expect(page.locator('button:has-text("+ Project")')).toBeVisible();
     await expect(page.locator('button:has-text("Sign out")')).toBeVisible();
+  });
+
+  test('the zoom slider stays visible at typical laptop widths', async ({ appPage: page }) => {
+    // The slider is a primary control — only hide it once it really stops
+    // fitting. At common laptop / tablet widths it should still render.
+    await page.setViewportSize({ width: 1000, height: 800 });
+    await expect(page.locator('#zoom-slider')).toBeVisible();
+    await page.setViewportSize({ width: 800, height: 800 });
+    await expect(page.locator('#zoom-slider')).toBeVisible();
   });
 });
 
