@@ -234,6 +234,19 @@ test.describe('chart structure', () => {
     expect(lineHeight).toBeGreaterThan(rowsHeight - 8);
   });
 
+  test('dependency arrows paint above project-header rows (cross-project deps stay visible)', async ({ appPage: page }) => {
+    // chart-row.proj has its own gray background and a z-index; if the
+    // arrows overlay sits below that z-index, any arrow whose route passes
+    // through a project header row vanishes behind the gray bg.
+    const overlayZ = await page.locator('#overlay').evaluate(
+      el => parseInt(getComputedStyle(el).zIndex, 10) || 0
+    );
+    const projRowZ = await page.locator('.chart-row.proj').first().evaluate(
+      el => parseInt(getComputedStyle(el).zIndex, 10) || 0
+    );
+    expect(overlayZ).toBeGreaterThanOrEqual(projRowZ);
+  });
+
   test('arrows SVG height matches chart content (not the 9999px sentinel)', async ({ appPage: page }) => {
     const svgHeight = await page.locator('#arrows').evaluate(
       el => el.getBoundingClientRect().height

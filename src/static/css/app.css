@@ -275,9 +275,14 @@ a { color: inherit; }
   /* Sit immediately below the (sticky) time axis so y=0 inside the SVG aligns
      with the top of the first project header row — matches the y-centers
      pre-computed in chart_view.build_chart_vm. Anchoring bottom:0 makes the
-     overlay span exactly the chart-rows height (no 9999px sentinel needed). */
+     overlay span exactly the chart-rows height (no 9999px sentinel needed).
+     z-index matches .chart-row.proj (2) so cross-project arrows stay visible
+     where they pass through a project header row's gray background; DOM
+     order then places the overlay on top. The sticky time axis sits at
+     z-index 3, so arrows still slide under it when scrolling. */
   position: absolute;
   top: var(--axis-h); bottom: 0; left: var(--left-w);
+  z-index: 2;
   pointer-events: none;
 }
 #arrows {
