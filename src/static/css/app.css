@@ -57,7 +57,6 @@ a { color: inherit; }
 #zoom-controls .active { background: var(--fg); color: white; }
 
 #zoom-slider { width: 120px; vertical-align: middle; }
-#zoom-label  { color: var(--muted); font-size: 12px; min-width: 80px; display: inline-block; }
 
 .user-pill {
   color: var(--muted); font-size: 12px; padding: 0 6px;

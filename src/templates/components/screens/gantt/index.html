@@ -10,18 +10,25 @@
       <a href="?zoom=month"   class="{% if zoom == 'month' %}active{% endif %}">Month</a>
       <a href="?zoom=quarter" class="{% if zoom == 'quarter' %}active{% endif %}">Quarter</a>
     </div>
-    {# Density slider — value is "px per active unit" (e.g. px/week). Server
-       converts back to px/day using the data-days-per-unit attribute below.
-       Persisted per-unit in the session, so switching units retains each
-       unit's last-set density. #}
-    <input type="range" id="zoom-slider"
+    {% comment %}
+      Density slider — value is "px per active unit" (e.g. px/week). Server
+      converts back to px/day using the data-days-per-unit attribute below.
+      Persisted per-unit in the session, so switching units retains each
+      unit's last-set density.
+    {% endcomment %}
+    <input type="range" id="zoom-slider" aria-label="Zoom" title="Zoom"
            min="{{ ppd_unit_min }}" max="{{ ppd_unit_max }}"
            step="{{ ppd_unit_step }}" value="{{ ppd_unit }}"
            data-days-per-unit="{{ days_per_unit }}"
-           title="px / {{ zoom }}"
-           oninput="document.getElementById('zoom-label').textContent = this.value + ' px/{{ zoom }}'"
+           data-on:wheel__prevent="
+             const step = parseFloat(el.step) || 1;
+             const sign = evt.deltaY > 0 ? -1 : 1;
+             const v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), parseFloat(el.value) + sign * step));
+             if (v !== parseFloat(el.value)) {
+               el.value = v;
+               el.dispatchEvent(new Event('input', { bubbles: true }));
+             }"
            data-on:input__debounce.150ms="@get(`/zoom/?ppd=${parseFloat(el.value)/parseFloat(el.dataset.daysPerUnit)}`)">
-    <span id="zoom-label">{{ ppd_unit }} px/{{ zoom }}</span>
     <button class="topbar-btn" data-on:click="nano.scrollToToday()" title="Jump to today (T)">Today</button>
     <button class="topbar-btn"
             data-on:click="@get('/people/modal/')">People</button>

@@ -162,6 +162,25 @@ test.describe('chart structure', () => {
     );
   });
 
+  test('scrolling the wheel over the slider nudges its value', async ({ appPage: page }) => {
+    const slider = page.locator('#zoom-slider');
+    await slider.hover();
+    const before = parseFloat(await slider.inputValue());
+
+    // Scroll up — value should rise (more zoom-in).
+    await page.mouse.wheel(0, -100);
+    await expect
+      .poll(async () => parseFloat(await slider.inputValue()), { timeout: 2000 })
+      .toBeGreaterThan(before);
+
+    const after = parseFloat(await slider.inputValue());
+    // Scroll down — value should drop again.
+    await page.mouse.wheel(0, 100);
+    await expect
+      .poll(async () => parseFloat(await slider.inputValue()), { timeout: 2000 })
+      .toBeLessThan(after);
+  });
+
   test('the slider remembers its value per zoom unit', async ({ appPage: page }) => {
     // Tweak slider to max at week zoom.
     await page.locator('#zoom-slider').evaluate(el => {

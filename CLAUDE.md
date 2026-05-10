@@ -62,6 +62,13 @@ than no unit test. (If the property under test really is pure — e.g.
 DAG cascade math on a synthetic graph — that's a candidate for a
 focused unit test, but those are rare here.)
 
+## Django template gotchas
+
+- **Comments.** `{# ... #}` is **single-line only** — Django parses
+  multi-line `{# ... #}` blocks incorrectly and silently leaks the
+  middle lines into rendered output. For anything that spans more
+  than one line, use `{% comment %}...{% endcomment %}`.
+
 ## Architecture quick-ref
 
 - `src/interfaces/web/gantt.py` — Django views, all chart-state SSE
