@@ -27,6 +27,31 @@ test.describe('auth + page render', () => {
 });
 
 // =============================================================================
+// Topbar responsiveness
+// =============================================================================
+test.describe('topbar responsiveness', () => {
+  test('the topbar fits within a narrow viewport without horizontal overflow', async ({ appPage: page }) => {
+    // 500px is a realistic phone landscape / very-narrow window. Default
+    // layout overflows — check both the topbar and the page itself.
+    await page.setViewportSize({ width: 500, height: 800 });
+    const info = await page.evaluate(() => ({
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      topbarOverflow: document.getElementById('topbar').scrollWidth - document.getElementById('topbar').clientWidth,
+    }));
+    expect(info.topbarOverflow).toBeLessThanOrEqual(1);
+    expect(info.pageOverflow).toBeLessThanOrEqual(1);
+  });
+
+  test('essential topbar controls remain visible at narrow widths', async ({ appPage: page }) => {
+    await page.setViewportSize({ width: 500, height: 800 });
+    await expect(page.locator('#zoom-controls')).toBeVisible();
+    await expect(page.locator('button:has-text("Today")')).toBeVisible();
+    await expect(page.locator('button:has-text("+ Project")')).toBeVisible();
+    await expect(page.locator('button:has-text("Sign out")')).toBeVisible();
+  });
+});
+
+// =============================================================================
 // Chart structure
 // =============================================================================
 test.describe('chart structure', () => {

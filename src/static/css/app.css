@@ -62,6 +62,20 @@ a { color: inherit; }
   color: var(--muted); font-size: 12px; padding: 0 6px;
 }
 
+/* Hide non-essential topbar items as the viewport narrows. The full topbar
+   targets a desktop chart layout; below ~900px the density slider and the
+   logged-in-user pill go first (cosmetic), and below ~620px the People
+   button (modal access — still reachable from the popover-driven flow).
+   Brand + zoom tabs + Today + Project + Sign out always remain. */
+@media (max-width: 900px) {
+  #topbar { gap: 8px; padding: 0 10px; }
+  #topbar #zoom-slider,
+  #topbar .user-pill { display: none; }
+}
+@media (max-width: 620px) {
+  #topbar #people-btn { display: none; }
+}
+
 /* === grid === */
 #grid-scroll {
   height: calc(100vh - var(--topbar-h));
