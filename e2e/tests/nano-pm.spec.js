@@ -146,6 +146,34 @@ test.describe('chart structure', () => {
     expect(w).toBeLessThanOrEqual(160);
   });
 
+  test('the sidebar width can be resized via a touch drag', async ({ appPage: page }) => {
+    // Touch devices don't fire mousedown/mousemove/mouseup for finger drags —
+    // only pointer events (and touch events). Verify the gesture works for
+    // pointerType='touch' so the resizer is usable on tablets/phones.
+    await page.evaluate(() => localStorage.removeItem('nano-pm:sidebar-width'));
+    await page.reload();
+
+    const box = await page.locator('#sidebar-resizer').boundingBox();
+    const startX = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.evaluate(({ sx, sy, ex }) => {
+      const target = document.getElementById('sidebar-resizer');
+      const make = (type, x, yy) => new PointerEvent(type, {
+        pointerType: 'touch', clientX: x, clientY: yy,
+        isPrimary: true, button: 0, bubbles: true, cancelable: true,
+      });
+      target.dispatchEvent(make('pointerdown', sx, sy));
+      document.dispatchEvent(make('pointermove', ex, sy));
+      document.dispatchEvent(make('pointerup', ex, sy));
+    }, { sx: startX, sy: y, ex: startX + 80 });
+
+    await page.waitForFunction(() => {
+      const w = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w'));
+      return w >= 315 && w <= 325;
+    });
+  });
+
   test('the project header row stays visible when scrolling vertically past its tasks', async ({ appPage: page }) => {
     // Make the chart taller than the viewport so vertical scroll engages.
     await page.setViewportSize({ width: 1280, height: 360 });

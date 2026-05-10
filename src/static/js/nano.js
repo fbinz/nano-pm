@@ -459,6 +459,10 @@
     return clamped;
   }
 
+  // Pointer events so the gesture works for both mouse and touch (finger drag
+  // on tablets/phones). Touch drags don't fire mousedown/mousemove/mouseup —
+  // only pointer/touch events. CSS `touch-action: none` on the handle keeps
+  // the browser from hijacking the drag for page scroll.
   function sidebarResizeStart(evt) {
     if (evt.button !== 0) return;
     evt.preventDefault();
@@ -471,15 +475,17 @@
       setSidebarWidth(origW + (ev.clientX - startX));
     }
     function onUp(ev) {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
       handle.classList.remove('dragging');
       document.body.style.cursor = '';
       const finalW = setSidebarWidth(origW + (ev.clientX - startX));
       try { localStorage.setItem(SIDEBAR_KEY, String(finalW)); } catch (e) { /* ignore quota */ }
     }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
   }
 
   function restoreSidebarWidth() {
