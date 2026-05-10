@@ -14,6 +14,22 @@ from readers.gantt import ChartState
 ZOOM_PX_PER_DAY = {"day": 36, "week": 12, "month": 3, "quarter": 1}
 DEFAULT_ZOOM = "week"
 
+# Slider range for the per-unit density slider, expressed in px/day (server's
+# canonical unit). Defaults from ZOOM_PX_PER_DAY sit inside each range. Picked
+# to span ~0.5×–2× the default — enough to noticeably re-pace the chart
+# without making bars unrenderably thin or absurdly wide.
+ZOOM_PPD_RANGE = {
+    "day": (18, 72),
+    "week": (6, 24),
+    "month": (1, 6),
+    "quarter": (1, 3),
+}
+# Days-per-unit conversion so the slider can present its value in "px per
+# whatever the active unit is" (e.g. px/week at week zoom). Month/quarter
+# use 30/90 as nominal day counts for that label only — chart geometry is
+# always driven by the underlying px/day.
+ZOOM_DAYS_PER_UNIT = {"day": 1, "week": 7, "month": 30, "quarter": 90}
+
 MONTH_NAMES = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
@@ -140,10 +156,14 @@ def _add_months(d: date, n: int) -> date:
     return date(y, m, 1)
 
 
-def build_chart_vm(state: ChartState, zoom: str = DEFAULT_ZOOM) -> ChartVM:
+def build_chart_vm(
+    state: ChartState,
+    zoom: str = DEFAULT_ZOOM,
+    px_per_day: int | None = None,
+) -> ChartVM:
     if zoom not in ZOOM_PX_PER_DAY:
         zoom = DEFAULT_ZOOM
-    ppd = ZOOM_PX_PER_DAY[zoom]
+    ppd = px_per_day if px_per_day is not None else ZOOM_PX_PER_DAY[zoom]
 
     def x_of(d: date) -> float:
         return (d - state.chart_start).days * ppd

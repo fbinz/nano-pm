@@ -1,5 +1,5 @@
 {% load static %}
-<c-vars vm zoom user />
+<c-vars vm zoom user ppd_unit ppd_unit_min ppd_unit_max ppd_unit_step days_per_unit />
 <c-layouts.base title="nano-pm">
   <div id="topbar">
     <div class="brand">nano-pm</div>
@@ -10,6 +10,18 @@
       <a href="?zoom=month"   class="{% if zoom == 'month' %}active{% endif %}">Month</a>
       <a href="?zoom=quarter" class="{% if zoom == 'quarter' %}active{% endif %}">Quarter</a>
     </div>
+    {# Density slider — value is "px per active unit" (e.g. px/week). Server
+       converts back to px/day using the data-days-per-unit attribute below.
+       Persisted per-unit in the session, so switching units retains each
+       unit's last-set density. #}
+    <input type="range" id="zoom-slider"
+           min="{{ ppd_unit_min }}" max="{{ ppd_unit_max }}"
+           step="{{ ppd_unit_step }}" value="{{ ppd_unit }}"
+           data-days-per-unit="{{ days_per_unit }}"
+           title="px / {{ zoom }}"
+           oninput="document.getElementById('zoom-label').textContent = this.value + ' px/{{ zoom }}'"
+           data-on:input__debounce.150ms="@get(`/zoom/?ppd=${parseFloat(el.value)/parseFloat(el.dataset.daysPerUnit)}`)">
+    <span id="zoom-label">{{ ppd_unit }} px/{{ zoom }}</span>
     <button class="topbar-btn" data-on:click="nano.scrollToToday()" title="Jump to today (T)">Today</button>
     <button class="topbar-btn"
             data-on:click="@get('/people/modal/')">People</button>

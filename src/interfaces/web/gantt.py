@@ -30,7 +30,13 @@ from data.models.project import PROJECT_COLORS
 from readers.gantt import (
     get_chart_state, get_task, get_project, get_milestone,
 )
-from readers.chart_view import build_chart_vm, DEFAULT_ZOOM
+from readers.chart_view import (
+    build_chart_vm,
+    DEFAULT_ZOOM,
+    ZOOM_PX_PER_DAY,
+    ZOOM_PPD_RANGE,
+    ZOOM_DAYS_PER_UNIT,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -55,10 +61,31 @@ def _zoom(request: HttpRequest) -> str:
     return DEFAULT_ZOOM
 
 
+def _ppd(request: HttpRequest, zoom: str) -> int:
+    """Resolve px/day for `zoom`. ?ppd= wins (and is persisted per-zoom);
+    falls back to a per-zoom session value, else the zoom's default."""
+    lo, hi = ZOOM_PPD_RANGE[zoom]
+    raw = request.GET.get("ppd")
+    if raw is not None:
+        try:
+            v = int(round(float(raw)))
+        except ValueError:
+            v = None
+        if v is not None:
+            v = max(lo, min(hi, v))
+            request.session[f"ppd_{zoom}"] = v
+            return v
+    sv = request.session.get(f"ppd_{zoom}")
+    if isinstance(sv, int) and lo <= sv <= hi:
+        return sv
+    return ZOOM_PX_PER_DAY[zoom]
+
+
 def _patch_chart(request: HttpRequest, zoom: str | None = None):
     """Yield an SSE patch that replaces the chart fragment with a fresh render."""
     state = get_chart_state(request.user)
-    vm = build_chart_vm(state, zoom or _zoom(request))
+    z = zoom or _zoom(request)
+    vm = build_chart_vm(state, z, px_per_day=_ppd(request, z))
     return SSE.patch_elements(render_component(request, "screens/gantt/chart", vm=vm))
 
 
@@ -87,12 +114,41 @@ def _anchor_xy(request: HttpRequest) -> tuple[int, int]:
 def index(request: HttpRequest) -> HttpResponse:
     state = get_chart_state(request.user)
     zoom = _zoom(request)
-    vm = build_chart_vm(state, zoom)
+    ppd = _ppd(request, zoom)
+    vm = build_chart_vm(state, zoom, px_per_day=ppd)
+    days_per_unit = ZOOM_DAYS_PER_UNIT[zoom]
+    lo, hi = ZOOM_PPD_RANGE[zoom]
     return render(
         request,
         "components/screens/gantt/index.html",
-        {"vm": vm, "zoom": zoom, "user": request.user},
+        {
+            "vm": vm,
+            "zoom": zoom,
+            "user": request.user,
+            # Slider is in "px per active unit" — convert from px/day for the
+            # template. Step matches one px/day so the slider lands on integer
+            # px/day values regardless of the unit.
+            "ppd_unit": ppd * days_per_unit,
+            "ppd_unit_min": lo * days_per_unit,
+            "ppd_unit_max": hi * days_per_unit,
+            "ppd_unit_step": days_per_unit,
+            "days_per_unit": days_per_unit,
+        },
     )
+
+
+@login_required
+@datastar_response
+def zoom_set(request: HttpRequest):
+    """Slider-driven density change — re-render the chart at the requested
+    px/day. Reads ?ppd=… and persists per-zoom in the session via _ppd()."""
+    # The generator body runs lazily during response streaming, AFTER
+    # Django's session middleware has already finished on this response.
+    # Without an explicit save here the new ppd never reaches the backend.
+    zoom = _zoom(request)
+    _ppd(request, zoom)
+    request.session.save()
+    yield _patch_chart(request, zoom=zoom)
 
 
 # --------------------------------------------------------------------------- #
@@ -452,6 +508,7 @@ def people_delete(request: HttpRequest, person_id: int):
 
 urlpatterns = [
     path("", index, name="gantt_index"),
+    path("zoom/", zoom_set, name="zoom_set"),
     # Tasks
     path("tasks/<int:task_id>/popover/",       task_popover,        name="task_popover"),
     path("tasks/<int:task_id>/update/",        task_update,         name="task_update"),

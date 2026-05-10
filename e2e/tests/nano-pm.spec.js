@@ -137,6 +137,57 @@ test.describe('chart structure', () => {
     await expect(page).toHaveURL(/zoom=day/);
     await expect(page.locator('#zoom-controls a.active')).toHaveText('Day');
   });
+
+  test('the px-per-day slider adjusts the chart density at the active unit', async ({ appPage: page }) => {
+    // Default week zoom = 12 px/day.
+    expect(await page.locator('#grid-scroll').evaluate(
+      el => parseFloat(el.dataset.pxPerDay)
+    )).toBe(12);
+
+    const slider = page.locator('#zoom-slider');
+    await expect(slider).toBeVisible();
+    // Slider is in px/week at week zoom: range [6..24] px/day = [42..168] px/week.
+    expect(await slider.getAttribute('min')).toBe('42');
+    expect(await slider.getAttribute('max')).toBe('168');
+
+    // Drag slider to its max and let the SSE patch land.
+    await slider.evaluate(el => {
+      el.value = el.max;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForFunction(
+      () => parseFloat(document.getElementById('grid-scroll').dataset.pxPerDay) === 24,
+      null,
+      { timeout: 5000 }
+    );
+  });
+
+  test('the slider remembers its value per zoom unit', async ({ appPage: page }) => {
+    // Tweak slider to max at week zoom.
+    await page.locator('#zoom-slider').evaluate(el => {
+      el.value = el.max;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForFunction(
+      () => parseFloat(document.getElementById('grid-scroll').dataset.pxPerDay) === 24,
+      null, { timeout: 5000 }
+    );
+
+    // Switch to day zoom — slider should reflect day's default (36 px/day).
+    await page.click('#zoom-controls a:has-text("Day")');
+    await expect(page.locator('#zoom-controls a.active')).toHaveText('Day');
+    expect(await page.locator('#zoom-slider').inputValue()).toBe('36');
+    expect(await page.locator('#grid-scroll').evaluate(
+      el => parseFloat(el.dataset.pxPerDay)
+    )).toBe(36);
+
+    // Switch back to week — the earlier tweak (168 px/week = 24 px/day) survives.
+    await page.click('#zoom-controls a:has-text("Week")');
+    expect(await page.locator('#zoom-slider').inputValue()).toBe('168');
+    expect(await page.locator('#grid-scroll').evaluate(
+      el => parseFloat(el.dataset.pxPerDay)
+    )).toBe(24);
+  });
 });
 
 // =============================================================================
