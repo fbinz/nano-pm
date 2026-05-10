@@ -287,6 +287,9 @@ a { color: inherit; }
   z-index: 40;
   background: transparent;
   transition: background 0.12s;
+  /* Stop the browser from claiming the gesture for page scroll on touch
+     devices — pointermove/pointerup must reach our handler. */
+  touch-action: none;
 }
 #sidebar-resizer:hover, #sidebar-resizer.dragging { background: rgba(59,130,246,0.25); }
 
