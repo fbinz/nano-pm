@@ -329,14 +329,18 @@ def milestone_move(request: HttpRequest, milestone_id: int):
 @login_required
 @datastar_response
 def milestone_create(request: HttpRequest, project_id: int):
-    """Create a milestone with placeholder title at today's date and open its
-    editor — same UX as the rubber-band-create-task flow."""
+    """Create a milestone with placeholder title and open its editor —
+    same UX as the rubber-band-create-task flow. The optional `date` POST
+    field places the milestone at a specific date (used by the click-on-row
+    flow); without it the milestone lands on today's date (used by the
+    + Add milestone button in the project popover)."""
     proj = get_project(request.user, project_id)
     if proj is None:
         return
+    on = _parse_iso(request.POST.get("date", "")) or date.today()
     m = create_milestone(
         owner=request.user, project_id=project_id,
-        title="New milestone", on=date.today(),
+        title="New milestone", on=on,
     )
     if m is None:
         return

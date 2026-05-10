@@ -285,7 +285,12 @@
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       rb.remove();
-      if (!moved) return;
+      if (!moved) {
+        // Click without a drag → create a milestone at the click date.
+        const days = Math.round((ev.clientX - rect.left) / ppd);
+        addMilestone(projectId, fmt(addDays(cs, days)));
+        return;
+      }
       const x = ev.clientX - rect.left;
       const lo = Math.min(startXLocal, x);
       const hi = Math.max(startXLocal, x);
@@ -358,11 +363,12 @@
     fetchInto(`/milestones/${milestoneId}/popover/?popoverX=${Math.round(x)}&popoverY=${Math.round(y)}`);
   }
 
-  // Server creates a placeholder milestone (today's date) and returns the
-  // editor. The popover's data-init self-anchors to the freshly-rendered
-  // diamond on the chart, so no client-side repositioning needed here.
-  function addMilestone(projectId) {
-    commit(`/projects/${projectId}/milestones/`, {});
+  // Server creates a placeholder milestone and returns the editor. The
+  // popover's data-init self-anchors to the freshly-rendered diamond, so
+  // no client-side repositioning is needed. Optional `date` (YYYY-MM-DD)
+  // places the milestone at that day; default is today.
+  function addMilestone(projectId, date) {
+    commit(`/projects/${projectId}/milestones/`, date ? { date } : {});
   }
 
   // ---------------------------------------------------------------------- //

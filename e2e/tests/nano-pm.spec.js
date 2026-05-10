@@ -733,6 +733,47 @@ test.describe('project & people management', () => {
     await expect(page.locator('.left-cell.proj')).toHaveCount(4);
   });
 
+  test('clicking (no drag) in a project row creates a milestone at the click date', async ({ appPage: page }) => {
+    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
+
+    const row = page.locator('.chart-row.proj').first();
+    const rowBox = await row.boundingBox();
+    const clickX = rowBox.x + 200;
+    const clickY = rowBox.y + rowBox.height / 2;
+
+    // Compute the date that 200 px past the row's left edge maps to.
+    const ppd = await page.locator('#grid-scroll').evaluate(el => parseFloat(el.dataset.pxPerDay));
+    const chartStart = await page.locator('#grid-scroll').evaluate(el => el.dataset.chartStart);
+    const days = Math.round(200 / ppd);
+    const [y, m, d] = chartStart.split('-').map(Number);
+    const dt = new Date(y, m - 1, d + days);
+    const expectedIso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+
+    await page.mouse.click(clickX, clickY);
+
+    // Editor opens and a third diamond shows up.
+    await expect(page.locator('#milestone-popover')).toBeVisible();
+    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(3);
+    await expect(page.locator('#milestone-popover input[name=date]')).toHaveValue(expectedIso);
+  });
+
+  test('dragging (with movement) in a project row still creates a task, not a milestone', async ({ appPage: page }) => {
+    const milestonesBefore = await page.locator('.chart-row.proj .milestone').count();
+    const barsBefore = await page.locator('.bar').count();
+
+    const row = page.locator('.chart-row.proj').first();
+    const rowBox = await row.boundingBox();
+    // Drag a clear distance so projectRowMouseDown's `moved` flag flips.
+    await page.mouse.move(rowBox.x + 100, rowBox.y + rowBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(rowBox.x + 220, rowBox.y + rowBox.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    // Bar count goes up; milestone count does not.
+    await expect(page.locator('.bar')).toHaveCount(barsBefore + 1);
+    expect(await page.locator('.chart-row.proj .milestone').count()).toBe(milestonesBefore);
+  });
+
   test('+ Add milestone in the project popover creates one and opens its editor', async ({ appPage: page }) => {
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
     await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
