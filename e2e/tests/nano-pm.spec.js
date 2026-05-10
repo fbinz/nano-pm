@@ -388,6 +388,17 @@ test.describe('task popover', () => {
     await expect(page.locator('.bar', { hasText: 'Migrate users (renamed)' })).toBeVisible();
   });
 
+  test('the description textarea fills the popover width', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    await bar.click();
+    await expect(page.locator('#task-popover')).toBeVisible();
+    const titleW = await page.locator('#task-popover input[name=title]')
+      .evaluate(el => el.getBoundingClientRect().width);
+    const descW = await page.locator('#task-popover textarea[name=description]')
+      .evaluate(el => el.getBoundingClientRect().width);
+    expect(Math.abs(descW - titleW)).toBeLessThan(2);
+  });
+
   test('a task description can be saved and is restored when the popover reopens', async ({ appPage: page }) => {
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
     await bar.click();

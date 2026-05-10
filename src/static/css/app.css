@@ -323,9 +323,12 @@ a { color: inherit; }
   display: flex; flex-direction: column; gap: 8px;
 }
 .popover label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px; }
-.popover input[type=text], .popover input[type=date], .popover select {
+.popover input[type=text], .popover input[type=date], .popover select, .popover textarea {
   width: 100%; padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg);
+  font: inherit;
+  box-sizing: border-box;
 }
+.popover textarea { resize: vertical; }
 .popover .row { display: flex; gap: 8px; }
 .popover .row > div { flex: 1; }
 .popover .actions { display: flex; justify-content: space-between; margin-top: 4px; }
