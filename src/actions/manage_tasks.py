@@ -43,6 +43,7 @@ def update_task(
     owner,
     task_id: int,
     title: str | None = None,
+    description: str | None = None,
     start: date | None = None,
     end: date | None = None,
     status: str | None = None,
@@ -57,6 +58,8 @@ def update_task(
         return None, set()
     if title is not None:
         t.title = title.strip() or t.title
+    if description is not None:
+        t.description = description
     if start is not None:
         t.start = start
     if end is not None:

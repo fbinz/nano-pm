@@ -17,6 +17,7 @@ class Task(models.Model):
         related_name="tasks",
     )
     title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
     start = models.DateField()
     end = models.DateField()
     status = models.CharField(

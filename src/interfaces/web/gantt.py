@@ -188,6 +188,9 @@ def task_popover(request: HttpRequest, task_id: int):
 @datastar_response
 def task_update(request: HttpRequest, task_id: int):
     title = request.POST.get("title", "").strip() or None
+    # description: empty string is a valid value (clears existing notes), so
+    # only fall back to None when the field is absent from the POST entirely.
+    description = request.POST.get("description") if "description" in request.POST else None
     start = _parse_iso(request.POST.get("start", ""))
     end = _parse_iso(request.POST.get("end", ""))
     status = request.POST.get("status") or None
@@ -198,6 +201,7 @@ def task_update(request: HttpRequest, task_id: int):
         owner=request.user,
         task_id=task_id,
         title=title,
+        description=description,
         start=start,
         end=end,
         status=status,
@@ -294,10 +298,12 @@ def milestone_popover(request: HttpRequest, milestone_id: int):
 @datastar_response
 def milestone_update_view(request: HttpRequest, milestone_id: int):
     project_id_raw = request.POST.get("project_id", "")
+    description = request.POST.get("description") if "description" in request.POST else None
     update_milestone(
         owner=request.user,
         milestone_id=milestone_id,
         title=request.POST.get("title") or None,
+        description=description,
         on=_parse_iso(request.POST.get("date", "")),
         project_id=int(project_id_raw) if project_id_raw.isdigit() else None,
     )

@@ -22,6 +22,7 @@ def update_milestone(
     owner,
     milestone_id: int,
     title: str | None = None,
+    description: str | None = None,
     on: date | None = None,
     project_id: int | None = None,
 ) -> Milestone | None:
@@ -33,6 +34,8 @@ def update_milestone(
         return None
     if title is not None:
         m.title = title.strip() or m.title
+    if description is not None:
+        m.description = description
     if on is not None:
         m.date = on
     if project_id is not None:

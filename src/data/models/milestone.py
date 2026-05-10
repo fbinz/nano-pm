@@ -10,6 +10,7 @@ class Milestone(models.Model):
         related_name="milestones",
     )
     title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
     date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

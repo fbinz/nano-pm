@@ -388,6 +388,19 @@ test.describe('task popover', () => {
     await expect(page.locator('.bar', { hasText: 'Migrate users (renamed)' })).toBeVisible();
   });
 
+  test('a task description can be saved and is restored when the popover reopens', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    await bar.click();
+    await expect(page.locator('#task-popover')).toBeVisible();
+    await page.fill('#task-popover textarea[name=description]', 'Notes about the migration');
+    await page.click('#task-popover button[type=submit]');
+    await expect(page.locator('#task-popover')).toHaveCount(0);
+
+    await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).click();
+    await expect(page.locator('#task-popover textarea[name=description]'))
+      .toHaveValue('Notes about the migration');
+  });
+
   test('clicking the × on a dep row removes that dependency', async ({ appPage: page }) => {
     await expect(page.locator('#arrows .hit')).toHaveCount(6);
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
@@ -704,6 +717,22 @@ test.describe('project & people management', () => {
     await page.waitForSelector('#milestone-popover');
     await expect(page.locator('#milestone-popover input[name=title]')).toBeVisible();
     await expect(page.locator('#milestone-popover input[name=date]')).toBeVisible();
+  });
+
+  test('a milestone description can be saved and is restored when the popover reopens', async ({ appPage: page }) => {
+    const ms = page.locator('.chart-row.proj .milestone').first();
+    const box = await ms.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.waitForSelector('#milestone-popover');
+    await page.fill('#milestone-popover textarea[name=description]', 'Cutover notes');
+    await page.click('#milestone-popover button[type=submit]');
+    await expect(page.locator('#milestone-popover')).toHaveCount(0);
+
+    const reopened = page.locator('.chart-row.proj .milestone').first();
+    const reopenedBox = await reopened.boundingBox();
+    await page.mouse.click(reopenedBox.x + reopenedBox.width / 2, reopenedBox.y + reopenedBox.height / 2);
+    await expect(page.locator('#milestone-popover textarea[name=description]'))
+      .toHaveValue('Cutover notes');
   });
 
   test('editing a milestone title saves and updates the chart label', async ({ appPage: page }) => {
