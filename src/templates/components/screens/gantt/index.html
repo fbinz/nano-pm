@@ -43,9 +43,11 @@
 
   <c-screens.gantt.chart :vm="vm" />
 
-  {# Drag handle pinned at the right edge of the sticky-left sidebar; updates
-     --left-w on drag. Lives outside #grid-scroll so SSE chart patches don't
-     re-render it. #}
+  {% comment %}
+    Drag handle pinned at the right edge of the sticky-left sidebar; updates
+    --left-w on drag. Lives outside #grid-scroll so SSE chart patches don't
+    re-render it.
+  {% endcomment %}
   <div id="sidebar-resizer"
        title="Drag to resize sidebar"
        data-on:pointerdown="nano.sidebarResizeStart(evt)"></div>
