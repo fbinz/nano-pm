@@ -472,6 +472,44 @@ test.describe('project & people management', () => {
     expect(after.date > before.date).toBe(true);
   });
 
+  test('dragging a milestone at day zoom keeps the chart at day zoom', async ({ appPage: page }) => {
+    // Reproduces the "moving a milestone changes back to week mode" bug:
+    // the SSE POST to /milestones/<id>/move/ carries no ?zoom=, so the server
+    // re-rendered the chart at DEFAULT_ZOOM (week) instead of the active zoom.
+    await page.goto('/?zoom=day');
+    await expect(page.locator('#zoom-controls a.active')).toHaveText('Day');
+    expect(await page.locator('#grid-scroll').evaluate(
+      el => parseFloat(el.dataset.pxPerDay)
+    )).toBe(36);  // day zoom
+
+    // At day zoom (36 px/day) the seeded milestones are far past the initial
+    // viewport — scroll the chart so the first one is interactable.
+    const ms = page.locator('.chart-row.proj .milestone').first();
+    await ms.scrollIntoViewIfNeeded();
+    const beforeDate = await ms.evaluate(el => el.dataset.date);
+    const box = await ms.boundingBox();
+    // 72px right at day zoom (36 px/day) = 2 days.
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 72, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    await page.waitForFunction(
+      ([oldDate]) => {
+        const el = document.querySelector('.chart-row.proj .milestone');
+        return el && el.dataset.date !== oldDate;
+      },
+      [beforeDate],
+      { timeout: 5000 }
+    );
+
+    // After the SSE re-render the chart should still be at day zoom. The bug
+    // resets it to week (px/day = 12).
+    expect(await page.locator('#grid-scroll').evaluate(
+      el => parseFloat(el.dataset.pxPerDay)
+    )).toBe(36);
+  });
+
   test('clicking a milestone diamond opens an editable popover', async ({ appPage: page }) => {
     const ms = page.locator('.chart-row.proj .milestone').first();
     const box = await ms.boundingBox();

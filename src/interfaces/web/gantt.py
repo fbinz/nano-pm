@@ -37,9 +37,22 @@ from readers.chart_view import build_chart_vm, DEFAULT_ZOOM
 # Helpers                                                                     #
 # --------------------------------------------------------------------------- #
 
+_VALID_ZOOMS = {"day", "week", "month", "quarter"}
+
+
 def _zoom(request: HttpRequest) -> str:
-    z = request.GET.get("zoom", DEFAULT_ZOOM)
-    return z if z in {"day", "week", "month", "quarter"} else DEFAULT_ZOOM
+    # The zoom is chosen via ?zoom=… on the page URL. SSE-driven mutation
+    # endpoints (drag/resize/popover-save) POST to URLs without that query
+    # string, so we cache the last-chosen zoom in the session and use it as
+    # the fallback — otherwise every commit would re-render at DEFAULT_ZOOM.
+    z = request.GET.get("zoom")
+    if z in _VALID_ZOOMS:
+        request.session["zoom"] = z
+        return z
+    sz = request.session.get("zoom")
+    if sz in _VALID_ZOOMS:
+        return sz
+    return DEFAULT_ZOOM
 
 
 def _patch_chart(request: HttpRequest, zoom: str | None = None):
