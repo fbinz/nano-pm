@@ -1,0 +1,413 @@
+/* Tailwind v4 + DaisyUI 5 source. Build to app.css with `just css` (or watch
+   with `just css-watch`). Don't edit app.css by hand — regenerated from here.
+
+   The standalone tailwindcss CLI doesn't auto-resolve daisyui from
+   node_modules, so we point @plugin at the vendored bundle under bin/. */
+
+@import "tailwindcss" source("../../");
+@plugin "../../../bin/daisyui.js";
+
+/* ===================================================================
+   Chart geometry tokens — *not* a design-system concern.
+   Bar/row/axis heights and the sidebar width drive absolute positioning
+   computed server-side in chart_view.build_chart_vm. They have to stay
+   as CSS custom properties because bars set --bar-bg inline and the
+   sidebar drag updates --left-w from JS.
+   =================================================================== */
+:root {
+  --bar-h: 24px;
+  --row-h: 32px;
+  --proj-row-h: 36px;
+  --topbar-h: 52px;
+  --axis-h: 48px;
+  --left-w: 240px;
+}
+
+html, body { height: 100%; }
+
+/* Match the original hand-rolled font stack — Tailwind v4 defaults to
+   `ui-sans-serif` first, which on Linux often resolves to a font whose
+   glyph metrics aren't well-centered inside our 24px bars. */
+@layer base {
+  html, body {
+    @apply text-base-content bg-base-100 text-[13px];
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.45;
+  }
+}
+
+/* ===================================================================
+   Topbar
+   =================================================================== */
+@layer components {
+  #topbar {
+    height: var(--topbar-h);
+    @apply relative z-50 flex items-center gap-3 bg-base-100 px-3.5 border-b border-base-300;
+  }
+  .brand { @apply font-semibold text-[15px] tracking-tight; }
+  .spacer { @apply flex-1; }
+
+  .topbar-btn { @apply btn btn-sm btn-ghost border border-base-300 font-normal; }
+  .topbar-btn:hover { @apply bg-base-200; }
+  .topbar-btn.danger { @apply text-error border-error; }
+
+  #zoom-controls { @apply join border border-base-300 rounded-md overflow-hidden; }
+  #zoom-controls a,
+  #zoom-controls button {
+    @apply join-item bg-base-100 px-2.5 py-1 border-0 border-r border-base-300 no-underline text-base-content;
+  }
+  #zoom-controls > *:last-child { @apply border-r-0; }
+  #zoom-controls .active { @apply bg-base-content text-base-100; }
+
+  #zoom-slider { width: 120px; vertical-align: middle; }
+  .user-pill { @apply text-base-content/60 text-xs px-1.5; }
+
+  /* Hide non-essential topbar items as the viewport narrows. Same breakpoints
+     as before: ≤900px drops the density slider + user pill, ≤620px also
+     drops the People button. */
+  @media (max-width: 900px) {
+    #topbar { @apply gap-2 px-2.5; }
+    #topbar #zoom-slider,
+    #topbar .user-pill { display: none; }
+  }
+  @media (max-width: 620px) {
+    #topbar #people-btn { display: none; }
+  }
+}
+
+/* ===================================================================
+   Grid / chart shell
+   =================================================================== */
+@layer components {
+  #grid-scroll {
+    height: calc(100vh - var(--topbar-h));
+    @apply overflow-auto relative bg-base-100;
+  }
+  #grid {
+    display: grid;
+    grid-template-columns: var(--left-w) max-content;
+    width: max-content;
+    @apply relative bg-base-100;
+  }
+
+  .corner {
+    position: sticky; top: 0; left: 0;
+    height: var(--axis-h);
+    @apply z-[4] bg-base-100 border-r border-b border-base-300 flex items-center px-3 text-base-content/60 text-xs;
+  }
+
+  #time-axis-cell {
+    position: sticky; top: 0;
+    height: var(--axis-h);
+    @apply z-[3] bg-base-100 border-b border-base-300;
+  }
+  #time-axis { @apply relative h-full; }
+
+  .axis-major {
+    @apply absolute top-1 h-[18px] text-xs font-semibold text-base-content px-1.5 whitespace-nowrap border-l border-base-300;
+  }
+  .axis-minor {
+    @apply absolute bottom-0 h-[22px] text-[11px] text-base-content/60 px-1 pt-1 whitespace-nowrap overflow-hidden border-l;
+    border-left-color: oklch(from var(--color-base-300) l c h / 0.5);
+  }
+  .axis-minor.weekend { @apply bg-base-200/60; }
+
+  .left-cell {
+    position: sticky; left: 0;
+    @apply z-[3] bg-base-100 border-r border-base-300 border-b border-base-200 px-3 flex items-center gap-2 overflow-hidden;
+  }
+  .left-cell.proj {
+    height: var(--proj-row-h);
+    top: var(--axis-h);
+    @apply bg-base-200 z-[4] font-semibold cursor-pointer;
+  }
+  .left-cell.proj:hover { @apply bg-base-300/70; }
+  .left-cell.proj .swatch { @apply w-2.5 h-2.5 rounded-[2px] flex-shrink-0; }
+  .left-cell.proj .name { @apply flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
+  .left-cell.proj .actions { @apply text-base-content/60 text-[11px]; }
+  .left-cell.task {
+    height: var(--row-h);
+    @apply pl-7 text-base-content/80 text-xs;
+  }
+  .left-cell.task .title { @apply flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
+  .left-cell.task .assignees { @apply text-base-content/60 text-[11px] flex-shrink-0; }
+
+  .chart-row {
+    height: var(--row-h);
+    @apply relative border-b border-base-200;
+  }
+  .chart-row.proj {
+    height: var(--proj-row-h);
+    position: sticky;
+    top: var(--axis-h);
+    @apply bg-base-200 cursor-crosshair z-[2];
+  }
+  .chart-row .weekend-tile {
+    @apply absolute top-0 bottom-0 pointer-events-none;
+    background: rgba(0,0,0,0.025);
+  }
+}
+
+/* ===================================================================
+   Bars, milestones, arrows
+   =================================================================== */
+@layer components {
+  .bar {
+    position: absolute;
+    height: var(--bar-h);
+    top: calc((var(--row-h) - var(--bar-h)) / 2);
+    background-color: var(--bar-bg);
+    @apply rounded cursor-grab select-none flex items-center text-[11px] overflow-visible;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.25);
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.15);
+  }
+  .bar.dark-text { text-shadow: none; }
+  .bar.selected {
+    outline: 2px solid var(--color-base-content);
+    outline-offset: 2px;
+    z-index: 2;
+  }
+  .bar.dark-text.planned    { background-color: color-mix(in srgb, var(--bar-bg), white 30%); }
+  .bar:not(.dark-text).planned { background-color: color-mix(in srgb, var(--bar-bg), black 25%); }
+  .bar.dark-text.done       { background-color: color-mix(in srgb, var(--bar-bg), #888 50%); }
+  .bar:not(.dark-text).done { background-color: color-mix(in srgb, var(--bar-bg), #444 45%); }
+  .bar.blocked {
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.35) 5px, rgba(255,255,255,0.35) 10px);
+    box-shadow: 0 0 0 2px var(--color-error), inset 0 -1px 0 rgba(0,0,0,0.15);
+  }
+  .bar.overdue {
+    box-shadow: -3px 0 0 var(--color-error), inset 0 -1px 0 rgba(0,0,0,0.15);
+  }
+  .bar.dragging {
+    @apply cursor-grabbing opacity-90 z-20;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25), inset 0 -1px 0 rgba(0,0,0,0.15);
+  }
+  .bar-label {
+    @apply flex-1 overflow-hidden text-ellipsis whitespace-nowrap px-2.5 pointer-events-none;
+  }
+  .bar .resize-handle {
+    @apply absolute top-0 bottom-0 w-1.5 z-[2];
+    cursor: ew-resize;
+  }
+  .bar .resize-handle.resize-start { @apply left-0; }
+  .bar .resize-handle.resize-end { @apply right-0; }
+  .bar:hover .resize-handle::after,
+  .bar.dragging .resize-handle::after {
+    content: '';
+    @apply absolute rounded-[1.5px];
+    left: 1.5px; right: 1.5px; top: 25%; bottom: 25%;
+    background: rgba(255,255,255,0.7);
+  }
+  .bar .dep-handle {
+    /* Handle's left edge sits exactly at the bar's right edge so the cursor
+       never crosses a "no element" gap that would drop bar:hover. */
+    position: absolute; right: -12px; top: 50%;
+    width: 12px; height: 12px; margin-top: -6px;
+    @apply rounded-full bg-base-100 opacity-0 pointer-events-none transition-opacity z-[5];
+    border: 2px solid var(--color-base-content);
+    cursor: crosshair;
+  }
+  .bar:hover .dep-handle { @apply opacity-100 pointer-events-auto; }
+
+  .milestone {
+    @apply absolute w-3.5 h-3.5 cursor-pointer;
+    top: 50%; margin-top: -7px;
+    transform: rotate(45deg);
+    box-shadow: 0 0 0 1px white, 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .milestone.overdue {
+    box-shadow: 0 0 0 2px var(--color-error), 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .milestone.selected {
+    outline: 2px solid var(--color-base-content);
+    outline-offset: 2px;
+  }
+  .milestone-label {
+    @apply absolute text-[11px] text-base-content whitespace-nowrap pointer-events-none pl-1;
+    top: 50%; transform: translateY(-50%);
+  }
+
+  #today-line {
+    @apply absolute top-0 bottom-0 w-0 pointer-events-none z-[1];
+    border-left: 1px dashed var(--color-error);
+  }
+  #overlay {
+    /* Sit just below the sticky time axis (z:3) so y=0 inside the SVG aligns
+       with the first project header row — matches chart_view's pre-computed
+       y-centers. Anchoring bottom:0 spans the chart-rows height. z-index 2
+       matches .chart-row.proj so cross-project arrows stay visible against
+       the gray header background; DOM order puts the overlay on top. */
+    position: absolute;
+    top: var(--axis-h); bottom: 0; left: var(--left-w);
+    @apply z-[2] pointer-events-none;
+  }
+  #arrows {
+    @apply absolute top-0 left-0 h-full pointer-events-none;
+    overflow: visible;
+  }
+  #arrows path {
+    fill: none;
+    stroke: oklch(from var(--color-base-content) l c h / 0.55);
+    stroke-width: 1.5;
+    pointer-events: none;
+  }
+  #arrows path.selected {
+    stroke: var(--color-error);
+    stroke-width: 2;
+  }
+  #arrows .hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 8;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+
+  #sidebar-resizer {
+    position: fixed;
+    top: var(--topbar-h);
+    left: var(--left-w);
+    width: 8px;
+    bottom: 0;
+    transform: translateX(-4px);
+    cursor: ew-resize;
+    /* Prevent touch from scrolling the page during a resize gesture. */
+    touch-action: none;
+    @apply z-40 bg-transparent transition-colors;
+  }
+  #sidebar-resizer:hover,
+  #sidebar-resizer.dragging { @apply bg-primary/25; }
+
+  #rubber-band {
+    @apply absolute pointer-events-none rounded-[3px] z-30;
+    background: oklch(from var(--color-primary) l c h / 0.18);
+    border: 1px dashed var(--color-primary);
+  }
+}
+
+/* ===================================================================
+   Popovers (anchored client-side via Floating UI / nano.anchorPopover).
+   Visually a card; semantically still distinct from DaisyUI's
+   `.dropdown-content` because we control positioning ourselves.
+   =================================================================== */
+@layer components {
+  .popover {
+    @apply fixed bg-base-100 border border-base-300 rounded-lg p-3 z-[100] min-w-[280px] flex flex-col gap-2;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  }
+  .popover label {
+    @apply block text-[11px] text-base-content/60 mb-0.5;
+  }
+  .popover input[type=text],
+  .popover input[type=date],
+  .popover select,
+  .popover textarea {
+    @apply input input-sm w-full font-[inherit];
+  }
+  .popover textarea {
+    @apply textarea textarea-sm min-h-[3rem] resize-y;
+  }
+  .popover .row { @apply flex gap-2; }
+  .popover .row > div { @apply flex-1; }
+  .popover .actions { @apply flex justify-between mt-1; }
+  .popover .actions .danger {
+    @apply btn btn-sm btn-ghost text-error border-0 px-2;
+  }
+  .popover .actions .primary { @apply btn btn-sm btn-neutral; }
+
+  .deps-list { @apply flex flex-col gap-1; }
+  .dep-row {
+    @apply flex items-center gap-1.5 px-1.5 py-0.5 bg-base-200 border border-base-300 rounded text-[11px];
+  }
+  .dep-row .dep-arrow { @apply text-base-content/60 text-[10px] flex-shrink-0; }
+  .dep-row .dep-name { @apply flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
+  .dep-row .dep-remove {
+    @apply border-0 bg-transparent text-base-content/60 px-1 text-sm leading-none cursor-pointer rounded-[3px];
+  }
+  .dep-row .dep-remove:hover {
+    @apply text-error;
+    background: oklch(from var(--color-error) l c h / 0.08);
+  }
+  .deps-empty { @apply text-base-content/60 text-[11px] py-0.5; }
+
+  .assignees-area {
+    @apply flex flex-wrap gap-1 p-1 border border-base-300 rounded items-center;
+    min-height: 30px;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 px-1.5 py-0.5 bg-base-200 border border-base-300 rounded-full text-[11px];
+  }
+  .chip button {
+    @apply border-0 bg-transparent p-0 leading-none text-base-content/60 cursor-pointer;
+  }
+
+  .colors { @apply flex gap-1 flex-wrap; }
+  .colors button {
+    @apply w-[22px] h-[22px] rounded p-0;
+    border: 2px solid transparent;
+  }
+  .colors button.active { border-color: var(--color-base-content); }
+}
+
+/* ===================================================================
+   Modals — uses DaisyUI's native `.modal.modal-open > .modal-box`
+   pattern (see people-modal.html). DaisyUI provides the full-viewport
+   overlay, centering, and backdrop; we only customise inner content
+   chrome (h2/p typography, add-row, people-list, actions).
+   =================================================================== */
+@layer components {
+  .modal h2 { @apply m-0 mb-2 text-lg font-semibold; }
+  .modal p { @apply text-base-content/60 m-0 mb-4; }
+
+  .people-list { @apply flex flex-col gap-1 mb-3; }
+  .people-row {
+    @apply flex items-center gap-2 px-2 py-1.5 border border-base-300 rounded;
+  }
+  .people-row input { @apply flex-1 border-0 bg-transparent p-0; }
+  .people-row .remove { @apply border-0 bg-transparent text-base-content/60; }
+  .modal .add-row { @apply flex gap-2; }
+  .modal .add-row input { @apply input input-sm flex-1; }
+  .modal .add-row button { @apply btn btn-sm btn-neutral; }
+  .modal .modal-actions { @apply flex justify-end gap-2 mt-4; }
+  .modal .modal-actions button { @apply btn btn-sm; }
+  .modal .modal-actions .primary { @apply btn-neutral; }
+}
+
+/* ===================================================================
+   Empty-state CTA, login card, toasts
+   =================================================================== */
+@layer components {
+  .empty-cta {
+    @apply absolute flex flex-col items-center gap-2 text-base-content/60 pointer-events-auto;
+    left: 50%; top: 40%; transform: translate(-50%, -50%);
+  }
+  .empty-cta button { @apply btn btn-sm btn-outline; }
+
+  .login-page {
+    @apply h-screen flex items-center justify-center bg-base-200;
+  }
+  .login-card {
+    @apply bg-base-100 p-8 rounded-2xl w-80 flex flex-col gap-3;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  }
+  .login-card h1 { @apply m-0 text-[22px] font-semibold; }
+  .login-card .hint { @apply m-0 text-base-content/60 text-sm; }
+  .login-card .hint.small { @apply text-[11px] mt-1; }
+  .login-card label {
+    @apply flex flex-col gap-1 text-xs text-base-content/60;
+  }
+  .login-card input { @apply input input-sm; }
+  .login-card button { @apply btn btn-neutral; }
+  .login-card .error {
+    @apply text-error text-xs px-2.5 py-1.5 rounded;
+    background: oklch(from var(--color-error) l c h / 0.08);
+  }
+
+  .toast {
+    @apply fixed bottom-5 left-1/2 -translate-x-1/2 text-white px-3.5 py-2 rounded-md text-sm z-[300];
+    background: #1a1a1a;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .toast.error { @apply bg-error; }
+  .toast.success { @apply bg-success; }
+}

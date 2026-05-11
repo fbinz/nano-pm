@@ -15,3 +15,10 @@ __pycache__/
 db.sqlite3
 db.sqlite3-journal
 .python-version
+
+# Tailwind standalone CLI + DaisyUI plugin (fetched by `just css-deps`).
+# The built `src/static/css/app.css` IS committed — keeps the Dockerfile
+# Python-only (consistent with vendored JS under static/vendor/).
+bin/tailwindcss
+bin/daisyui.js
+bin/daisyui-theme.js

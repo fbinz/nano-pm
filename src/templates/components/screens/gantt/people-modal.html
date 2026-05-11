@@ -1,7 +1,7 @@
 <c-vars people />
 <div id="modal-slot">
-  <div class="modal-backdrop" data-on:click="evt.target === el && nano.closeModal()">
-    <div class="modal" data-on:click="evt.stopPropagation()">
+  <div class="modal modal-open" data-on:click="evt.target === el && nano.closeModal()">
+    <div class="modal-box" data-on:click="evt.stopPropagation()">
       <h2>People</h2>
       <p>Team members you can assign to tasks. They aren't users of this tool.</p>
       <div class="people-list">

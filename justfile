@@ -47,3 +47,20 @@ test:
 # Run the Playwright end-to-end suite
 e2e *args:
     cd e2e && npx playwright test {{args}}
+
+# Fetch the Tailwind v4 standalone CLI + DaisyUI plugin into bin/.
+# Idempotent: skip-if-exists, run again to upgrade.
+css-deps:
+    mkdir -p bin
+    [ -x bin/tailwindcss ] || curl -fsSL -o bin/tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64
+    chmod +x bin/tailwindcss
+    [ -f bin/daisyui.js ] || curl -fsSL -o bin/daisyui.js https://github.com/saadeghi/daisyui/releases/latest/download/daisyui.js
+    [ -f bin/daisyui-theme.js ] || curl -fsSL -o bin/daisyui-theme.js https://github.com/saadeghi/daisyui/releases/latest/download/daisyui-theme.js
+
+# Build src/static/css/app.css from input.css (minified).
+css: css-deps
+    ./bin/tailwindcss -i src/static/css/input.css -o src/static/css/app.css --minify
+
+# Watch input.css and rebuild on change.
+css-watch: css-deps
+    ./bin/tailwindcss -i src/static/css/input.css -o src/static/css/app.css --watch
