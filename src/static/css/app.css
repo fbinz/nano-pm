@@ -127,7 +127,11 @@ a { color: inherit; }
 .axis-minor.weekend { background: var(--bg-soft); }
 
 .left-cell {
-  position: sticky; left: 0; z-index: 2;
+  /* z-index sits above #overlay (z-index 2) so the dep-arrows SVG and
+     today-line — which extend left past their overlay's left:--left-w
+     anchor when the chart scrolls horizontally — are occluded by the
+     sticky sidebar rather than bleeding over it. */
+  position: sticky; left: 0; z-index: 3;
   background: var(--bg);
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line-soft);
@@ -145,7 +149,7 @@ a { color: inherit; }
      they're looking at. position: sticky here is "doubly sticky" — it
      also stays pinned to left:0 (already set on .left-cell). */
   top: var(--axis-h);
-  z-index: 3;
+  z-index: 4;
 }
 .left-cell.proj:hover { background: #ebedf0; }
 .left-cell.proj .swatch {

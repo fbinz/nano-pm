@@ -247,6 +247,24 @@ test.describe('chart structure', () => {
     expect(overlayZ).toBeGreaterThanOrEqual(projRowZ);
   });
 
+  test('the sticky sidebar paints above the arrows/today overlay', async ({ appPage: page }) => {
+    // Counterpart to the test above: overlay needs to sit *above* the
+    // chart-row backgrounds but *below* the sticky-left sidebar, otherwise
+    // the SVG arrows (overflow:visible) and today-line bleed over the
+    // sidebar when the chart is scrolled horizontally.
+    const overlayZ = await page.locator('#overlay').evaluate(
+      el => parseInt(getComputedStyle(el).zIndex, 10) || 0
+    );
+    const taskCellZ = await page.locator('.left-cell.task').first().evaluate(
+      el => parseInt(getComputedStyle(el).zIndex, 10) || 0
+    );
+    const projCellZ = await page.locator('.left-cell.proj').first().evaluate(
+      el => parseInt(getComputedStyle(el).zIndex, 10) || 0
+    );
+    expect(taskCellZ).toBeGreaterThan(overlayZ);
+    expect(projCellZ).toBeGreaterThan(overlayZ);
+  });
+
   test('arrows SVG height matches chart content (not the 9999px sentinel)', async ({ appPage: page }) => {
     const svgHeight = await page.locator('#arrows').evaluate(
       el => el.getBoundingClientRect().height
