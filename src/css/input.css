@@ -47,17 +47,14 @@ html, body { height: 100%; }
   .brand { @apply font-semibold text-[15px] tracking-tight; }
   .spacer { @apply flex-1; }
 
-  /* btn-sm gives a 32px height + 12px padding-inline, which is right for the
-     topbar — but its default 0.75rem text is too small. Bump text size and
-     keep zoom controls at the same size so the row reads as a coherent unit. */
-  .topbar-btn { @apply btn btn-sm btn-ghost border border-base-300 font-normal text-sm; }
+  .topbar-btn { @apply btn btn-sm btn-ghost border border-base-300 font-normal; }
   .topbar-btn:hover { @apply bg-base-200; }
   .topbar-btn.danger { @apply text-error border-error; }
 
   #zoom-controls { @apply join border border-base-300 rounded-md overflow-hidden; }
   #zoom-controls a,
   #zoom-controls button {
-    @apply join-item bg-base-100 px-2.5 py-1 text-sm leading-none border-0 border-r border-base-300 no-underline text-base-content;
+    @apply join-item btn btn-sm btn-ghost font-normal border-0 border-r border-base-300 rounded-none no-underline;
   }
   #zoom-controls > *:last-child { @apply border-r-0; }
   #zoom-controls .active { @apply bg-base-content text-base-100; }
