@@ -56,6 +56,15 @@ wheels = [
 ]
 
 [[package]]
+name = "django-lucide"
+version = "1.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/09/c8/d45394504e52dfc0878067b4858214c96752db676219b7f8980a66bfcdf2/django_lucide-1.3.1.tar.gz", hash = "sha256:202202f08108e0d134b4444cac21035ea11b059445f05109ce787db60b58005d", size = 424944, upload-time = "2026-02-04T21:01:25.438Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/88/e2/d0cb84ac735ee1d85759111547a919b8cdd295d8a5f74b25892a4392b798/django_lucide-1.3.1-py3-none-any.whl", hash = "sha256:7d4d548637cc15f61f0710619bd86b09b240a89fc6fa3421d422046ef8cc72df", size = 425273, upload-time = "2026-02-04T21:01:23.44Z" },
+]
+
+[[package]]
 name = "gunicorn"
 version = "26.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -75,6 +84,7 @@ dependencies = [
     { name = "datastar-py" },
     { name = "django" },
     { name = "django-cotton" },
+    { name = "django-lucide" },
     { name = "gunicorn" },
     { name = "sentry-sdk", extra = ["django"] },
     { name = "whitenoise" },
@@ -90,6 +100,7 @@ requires-dist = [
     { name = "datastar-py", specifier = ">=1.0.0" },
     { name = "django", specifier = ">=5.1" },
     { name = "django-cotton", specifier = ">=2.6.0" },
+    { name = "django-lucide", specifier = ">=1.3.1" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "sentry-sdk", extras = ["django"], specifier = ">=2.20.0" },
     { name = "whitenoise", specifier = ">=6.7.0" },

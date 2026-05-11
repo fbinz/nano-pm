@@ -1,12 +1,10 @@
-<c-vars m projects anchor_x=0 anchor_y=0 />
-<div id="popover-slot">
+{# Milestone editor — rendered into the right drawer (#drawer-slot). #}
+<c-vars m projects />
+<div id="drawer-slot">
   <form
     id="milestone-popover"
     class="popover"
     data-milestone-id="{{ m.id }}"
-    style="left:{{ anchor_x }}px;top:{{ anchor_y }}px;"
-    data-init="nano.anchorPopover(el, '#ms-{{ m.id }}', {{ anchor_x }}, {{ anchor_y }})"
-    data-on:keyup="evt.key === 'Escape' && nano.closePopover()"
     data-on:submit__prevent="@post('/milestones/{{ m.id }}/update/', { contentType: 'form' })"
   >
     {% csrf_token %}

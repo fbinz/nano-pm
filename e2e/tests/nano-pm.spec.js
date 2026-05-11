@@ -361,32 +361,34 @@ test.describe('chart structure', () => {
 // Task popover
 // =============================================================================
 test.describe('task popover', () => {
-  test('the task popover anchors near the clicked bar (not at a fixed corner)', async ({ appPage: page }) => {
+  // The slide-in is a 180ms CSS transform transition; wait for it to settle
+  // before measuring boundingBox(). At rest the drawer's right edge sits
+  // exactly on the viewport right edge (transform: translateX(0)).
+  async function waitForDrawerOpen(page) {
+    await page.waitForFunction(() => {
+      const el = document.getElementById('drawer');
+      return el && getComputedStyle(el).transform === 'matrix(1, 0, 0, 1, 0, 0)';
+    });
+  }
+
+  test('clicking a bar slides the drawer in flush against the right edge', async ({ appPage: page }) => {
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
-    const box = await bar.boundingBox();
-    const clickX = box.x + box.width / 2;
-    const clickY = box.y + box.height / 2;
-    await page.mouse.click(clickX, clickY);
+    await bar.click();
     await page.waitForSelector('#task-popover');
-    const pop = await page.locator('#task-popover').boundingBox();
-    // Popover left edge should be within a popover-width of the click;
-    // top should be within a popover-height of the click. The legacy
-    // (broken) state lands at a fixed (200, 200), which is hundreds of
-    // pixels off in a 1280-wide viewport.
-    expect(Math.abs(pop.x - clickX)).toBeLessThan(pop.width);
-    expect(Math.abs(pop.y - clickY)).toBeLessThan(pop.height);
+    await waitForDrawerOpen(page);
+    const drawer = await page.locator('#drawer').boundingBox();
+    const viewport = page.viewportSize();
+    expect(Math.abs(drawer.x + drawer.width - viewport.width)).toBeLessThan(2);
   });
 
-  test('the project popover anchors near the clicked project header', async ({ appPage: page }) => {
+  test('clicking a project header slides the drawer in flush against the right edge', async ({ appPage: page }) => {
     const header = page.locator('.left-cell.proj', { hasText: 'API Migration' });
-    const box = await header.boundingBox();
-    const clickX = box.x + box.width / 2;
-    const clickY = box.y + box.height / 2;
-    await page.mouse.click(clickX, clickY);
+    await header.click();
     await page.waitForSelector('#project-popover');
-    const pop = await page.locator('#project-popover').boundingBox();
-    expect(Math.abs(pop.x - clickX)).toBeLessThan(pop.width);
-    expect(Math.abs(pop.y - clickY)).toBeLessThan(pop.height);
+    await waitForDrawerOpen(page);
+    const drawer = await page.locator('#drawer').boundingBox();
+    const viewport = page.viewportSize();
+    expect(Math.abs(drawer.x + drawer.width - viewport.width)).toBeLessThan(2);
   });
 
   test('clicking a bar opens the popover with all five fields', async ({ appPage: page }) => {
@@ -447,9 +449,13 @@ test.describe('task popover', () => {
     await expect(page.locator('#arrows .hit')).toHaveCount(6);
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
     await bar.click();
+    await expect(page.locator('#task-popover .dep-row')).toHaveCount(2);
     await page.locator('#task-popover .dep-row .dep-remove').first().click();
-    // After the dep is gone the chart re-renders; the arrow count drops by 1.
+    // Chart re-renders (arrow count drops by 1) AND the open popover's
+    // deps-list re-renders so the removed row is gone — otherwise the
+    // ghost button sticks around in the drawer.
     await expect(page.locator('#arrows .hit')).toHaveCount(5);
+    await expect(page.locator('#task-popover .dep-row')).toHaveCount(1);
   });
 });
 
@@ -999,13 +1005,13 @@ test.describe('project & people management', () => {
     await expect(page.locator('#project-popover input[name=name]')).toHaveValue('API Migration');
   });
 
-  test('People modal opens, lists seeded team and accepts an Add', async ({ appPage: page }) => {
+  test('People drawer opens, lists seeded team and accepts an Add', async ({ appPage: page }) => {
     await page.click('button:has-text("People")');
-    await expect(page.locator('#modal-slot .modal')).toBeVisible();
+    await expect(page.locator('#drawer-slot .people-sheet')).toBeVisible();
     // Demo seeds Alex / Sam / Riley
-    await expect(page.locator('#modal-slot .people-row')).toHaveCount(3);
-    await page.fill('#modal-slot .add-row input[name=name]', 'Jamie Park');
-    await page.click('#modal-slot .add-row button[type=submit]');
-    await expect(page.locator('#modal-slot .people-row')).toHaveCount(4);
+    await expect(page.locator('#drawer-slot .people-row')).toHaveCount(3);
+    await page.fill('#drawer-slot .add-row input[name=name]', 'Jamie Park');
+    await page.click('#drawer-slot .add-row button[type=submit]');
+    await expect(page.locator('#drawer-slot .people-row')).toHaveCount(4);
   });
 });

@@ -52,9 +52,25 @@
        title="Drag to resize sidebar"
        data-on:pointerdown="nano.sidebarResizeStart(evt)"></div>
 
-  {# Containers Datastar will patch into via SSE. #}
-  <div id="popover-slot"></div>
-  <div id="modal-slot"></div>
+  {% comment %}
+    Right-side drawer: a single persistent panel that hosts task / milestone
+    / project editors and the People sheet. #drawer-slot is the SSE target
+    Datastar patches into. The outer #drawer is the panel that slides in via
+    CSS when #drawer-slot has any children (`:has(:not(:empty))`). Closing
+    is just emptying the slot (nano.closeDrawer).
+  {% endcomment %}
+  <aside id="drawer"
+         data-on:keydown__window="evt.key === 'Escape' && nano.closeDrawer()">
+    <header class="drawer-header">
+      <button class="drawer-close"
+              type="button"
+              aria-label="Close"
+              data-on:click="nano.closeDrawer()">
+        <c-lucide name="x" size="14" />
+      </button>
+    </header>
+    <div id="drawer-slot"></div>
+  </aside>
   <div id="toast-slot"></div>
 
   {% comment %}

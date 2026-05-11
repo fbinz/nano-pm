@@ -1,12 +1,9 @@
-{# Task editor popover. Anchored client-side via nano.placePopover after merge. #}
-<c-vars task projects people preds succs anchor_x=0 anchor_y=0 />
-<div id="popover-slot">
+{# Task editor — rendered into the right drawer (#drawer-slot). #}
+<c-vars task projects people preds succs />
+<div id="drawer-slot">
   <form
     id="task-popover"
     class="popover"
-    style="left:{{ anchor_x }}px;top:{{ anchor_y }}px;"
-    data-init="nano.anchorPopover(el, '#bar-{{ task.id }}', {{ anchor_x }}, {{ anchor_y }})"
-    data-on:keyup="evt.key === 'Escape' && nano.closePopover()"
     data-on:submit__prevent="@post('/tasks/{{ task.id }}/update/', { contentType: 'form' })"
   >
     {% csrf_token %}
@@ -49,7 +46,7 @@
     </div>
     <div>
       <label>Assignees</label>
-      <select name="assignee_ids" multiple size="3">
+      <select name="assignee_ids" multiple size="6">
         {% for p in people %}
           {% if p.id in task.assignee_ids %}
             <option value="{{ p.id }}" selected>{{ p.name }}</option>
@@ -67,7 +64,7 @@
             <span class="dep-arrow">↑ depends on</span>
             <span class="dep-name">{{ d.predecessor.title }}</span>
             <button type="button" class="dep-remove" title="Remove dependency"
-                    data-on:click="@post('/dependencies/{{ d.predecessor_id }}/{{ d.successor_id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">×</button>
+                    data-on:click="@post('/dependencies/{{ d.predecessor_id }}/{{ d.successor_id }}/delete/?task={{ task.id }}', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">×</button>
           </div>
         {% endfor %}
         {% for d in succs %}
@@ -75,7 +72,7 @@
             <span class="dep-arrow">↓ blocks</span>
             <span class="dep-name">{{ d.successor.title }}</span>
             <button type="button" class="dep-remove" title="Remove dependency"
-                    data-on:click="@post('/dependencies/{{ d.predecessor_id }}/{{ d.successor_id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">×</button>
+                    data-on:click="@post('/dependencies/{{ d.predecessor_id }}/{{ d.successor_id }}/delete/?task={{ task.id }}', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">×</button>
           </div>
         {% endfor %}
         {% if not preds and not succs %}

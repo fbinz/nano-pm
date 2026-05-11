@@ -154,7 +154,7 @@
       document.removeEventListener('mouseup', onUp);
       dragBars.forEach(b => b.classList.remove('dragging'));
       if (!moved) {
-        openTaskPopover(taskId, ev.clientX, ev.clientY);
+        openTaskPopover(taskId);
         return;
       }
       const dxDays = Math.round((ev.clientX - startX) / ppd);
@@ -419,7 +419,7 @@
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       if (!moved) {
-        openMilestonePopover(milestoneId, ev.clientX, ev.clientY);
+        openMilestonePopover(milestoneId);
         return;
       }
       const dxDays = Math.round((ev.clientX - startX) / ppd);
@@ -431,91 +431,31 @@
     document.addEventListener('mouseup', onUp);
   }
 
-  function openMilestonePopover(milestoneId, x, y) {
-    fetchInto(`/milestones/${milestoneId}/popover/?popoverX=${Math.round(x)}&popoverY=${Math.round(y)}`);
-  }
-
-  // Server creates a placeholder milestone and returns the editor. The
-  // popover's data-init self-anchors to the freshly-rendered diamond, so
-  // no client-side repositioning is needed. Optional `date` (YYYY-MM-DD)
-  // places the milestone at that day; default is today.
+  // Server creates a placeholder milestone and returns the editor (which
+  // opens the right drawer). Optional `date` (YYYY-MM-DD) places the
+  // milestone at that day; default is today.
   function addMilestone(projectId, date) {
     commit(`/projects/${projectId}/milestones/`, date ? { date } : {});
   }
 
   // ---------------------------------------------------------------------- //
-  // Popovers                                                               //
+  // Drawer (task / milestone / project editors and the People sheet)       //
   // ---------------------------------------------------------------------- //
-  function openTaskPopover(taskId, x, y) {
-    // x, y are kept as fallback anchor coords in case the bar element isn't
-    // findable by the popover's data-init (it normally is).
-    fetchInto(`/tasks/${taskId}/popover/?popoverX=${Math.round(x)}&popoverY=${Math.round(y)}`);
+  // Server returns a fragment whose root is <div id="drawer-slot">…</div>;
+  // Datastar swaps it into the persistent drawer shell. The slot's "is
+  // populated?" state drives the slide-in via a :has() rule in CSS.
+  function openTaskPopover(taskId) {
+    fetchInto(`/tasks/${taskId}/popover/`);
+  }
+  function openProjectPopover(projectId) {
+    fetchInto(`/projects/${projectId}/popover/`);
+  }
+  function openMilestonePopover(milestoneId) {
+    fetchInto(`/milestones/${milestoneId}/popover/`);
   }
 
-  function openProjectPopover(projectId, evt) {
-    const x = evt && evt.clientX ? evt.clientX : 200;
-    const y = evt && evt.clientY ? evt.clientY : 200;
-    fetchInto(`/projects/${projectId}/popover/?popoverX=${Math.round(x)}&popoverY=${Math.round(y)}`);
-  }
-
-  // Floating UI handles viewport-aware popover positioning. We pass either
-  // a click point (x, y) as a virtual reference or, in the new-milestone
-  // flow, the actual diamond element. flip() retreats above the anchor when
-  // the popover would overflow downward; shift() slides it horizontally to
-  // stay in view; offset() adds a small gap to the anchor.
-  function _placeWith(reference, el) {
-    const FUI = window.FloatingUIDOM;
-    if (!FUI) {
-      // Fallback if Floating UI didn't load (offline, blocked CDN, etc.)
-      const r = reference.getBoundingClientRect();
-      el.style.left = Math.max(8, r.left) + 'px';
-      el.style.top = Math.max(8, r.bottom + 6) + 'px';
-      return;
-    }
-    FUI.computePosition(reference, el, {
-      placement: 'bottom-start',
-      strategy: 'fixed',
-      middleware: [FUI.offset(6), FUI.flip(), FUI.shift({ padding: 8 })],
-    }).then(({ x, y }) => {
-      el.style.left = `${x}px`;
-      el.style.top = `${y}px`;
-    });
-  }
-
-  function placePopover(el, anchorX, anchorY) {
-    // Virtual reference at the click point (zero-size box at anchorX/Y).
-    const ref = {
-      getBoundingClientRect: () => ({
-        x: anchorX, y: anchorY,
-        top: anchorY, bottom: anchorY,
-        left: anchorX, right: anchorX,
-        width: 0, height: 0,
-      }),
-    };
-    _placeWith(ref, el);
-  }
-
-  function placePopoverNear(el, refEl) {
-    _placeWith(refEl, el);
-  }
-
-  // Called from each popover template's data-init. Looks up the reference
-  // element by selector (the bar / project header / milestone diamond the
-  // popover is logically anchored to) and positions the popover next to it.
-  // Falls back to the click coords if the reference isn't in the DOM.
-  function anchorPopover(el, refSelector, fallbackX, fallbackY) {
-    const ref = refSelector && document.querySelector(refSelector);
-    if (ref) placePopoverNear(el, ref);
-    else placePopover(el, fallbackX, fallbackY);
-  }
-
-  function closePopover() {
-    const slot = document.getElementById('popover-slot');
-    if (slot) slot.innerHTML = '';
-  }
-
-  function closeModal() {
-    const slot = document.getElementById('modal-slot');
+  function closeDrawer() {
+    const slot = document.getElementById('drawer-slot');
     if (slot) slot.innerHTML = '';
   }
 
@@ -595,7 +535,7 @@
     projectRowMouseDown, milestoneMouseDown,
     sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, addMilestone,
-    placePopover, placePopoverNear, anchorPopover, closePopover, closeModal,
+    closeDrawer,
     scrollToToday,
   };
 

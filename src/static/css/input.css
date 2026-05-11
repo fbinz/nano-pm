@@ -54,12 +54,25 @@ html, body { height: 100%; }
   #zoom-controls { @apply join border border-base-300 rounded-md overflow-hidden; }
   #zoom-controls a,
   #zoom-controls button {
-    @apply join-item bg-base-100 px-2.5 py-1 border-0 border-r border-base-300 no-underline text-base-content;
+    /* text-xs matches the 0.75rem font-size DaisyUI's .btn-sm applies to
+       the topbar-btn group; otherwise these inherit the body's 13px and
+       end up visibly taller than the surrounding buttons. */
+    @apply join-item bg-base-100 px-2.5 py-1 text-xs leading-none border-0 border-r border-base-300 no-underline text-base-content;
   }
   #zoom-controls > *:last-child { @apply border-r-0; }
   #zoom-controls .active { @apply bg-base-content text-base-100; }
 
-  #zoom-slider { width: 120px; vertical-align: middle; }
+  /* Compact density slider — native range with a fixed visual height so it
+     doesn't dominate the 52px topbar. */
+  #zoom-slider {
+    @apply w-24 h-1.5 appearance-none rounded-full bg-base-300 cursor-pointer align-middle;
+  }
+  #zoom-slider::-webkit-slider-thumb {
+    @apply appearance-none w-3 h-3 rounded-full bg-base-content cursor-pointer;
+  }
+  #zoom-slider::-moz-range-thumb {
+    @apply appearance-none w-3 h-3 rounded-full bg-base-content cursor-pointer border-0;
+  }
   .user-pill { @apply text-base-content/60 text-xs px-1.5; }
 
   /* Hide non-essential topbar items as the viewport narrows. Same breakpoints
@@ -286,14 +299,47 @@ html, body { height: 100%; }
 }
 
 /* ===================================================================
-   Popovers (anchored client-side via Floating UI / nano.anchorPopover).
-   Visually a card; semantically still distinct from DaisyUI's
-   `.dropdown-content` because we control positioning ourselves.
+   Right-side drawer — single persistent panel; all the
+   former popovers + people modal render into #drawer-slot.
+   The outer #drawer slides via CSS based on whether the slot has any
+   children (`:has(:not(:empty))`). No JS toggle, no backdrop —
+   the chart stays interactive next to the open drawer.
    =================================================================== */
 @layer components {
+  #drawer {
+    @apply fixed top-0 right-0 bottom-0 w-[400px] max-w-[92vw] bg-base-100 z-[100] flex flex-col;
+    border-left: 1px solid var(--color-base-300);
+    box-shadow: -8px 0 24px rgba(0,0,0,0.08);
+    transform: translateX(100%);
+    transition: transform 0.18s ease-out;
+    /* Hidden when empty so nothing intercepts clicks on the chart. */
+    visibility: hidden;
+  }
+  #drawer:has(#drawer-slot > *) {
+    transform: translateX(0);
+    visibility: visible;
+  }
+  /* Header row owns the close button. Putting it in its own row (instead of
+     position:absolute over the content) keeps the button's hover background
+     from overlapping the first form input. */
+  .drawer-header {
+    @apply flex justify-end px-3 pt-3 flex-shrink-0;
+  }
+  .drawer-close {
+    @apply btn btn-sm btn-ghost btn-circle text-base-content/60;
+  }
+  #drawer-slot {
+    @apply flex-1 overflow-y-auto px-5 pb-5 pt-2;
+  }
+  /* Hide the header (and its close button) when the drawer is closed so it
+     can't be tab-focused. */
+  #drawer:not(:has(#drawer-slot > *)) .drawer-header { display: none; }
+
+  /* Forms inside the drawer: same shape as the old popover forms.
+     `.popover` is retained as a class hook on the existing templates so the
+     descendant selectors below carry over without renaming. */
   .popover {
-    @apply fixed bg-base-100 border border-base-300 rounded-lg p-3 z-[100] min-w-[280px] flex flex-col gap-2;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    @apply flex flex-col gap-3;
   }
   .popover label {
     @apply block text-[11px] text-base-content/60 mb-0.5;
@@ -304,12 +350,17 @@ html, body { height: 100%; }
   .popover textarea {
     @apply input input-sm w-full font-[inherit];
   }
+  /* Multi-selects need to grow to show all their rows — `.input input-sm`
+     pins single-line controls to ~32px and clips the option list otherwise. */
+  .popover select[multiple] {
+    @apply h-auto py-1 leading-tight;
+  }
   .popover textarea {
-    @apply textarea textarea-sm min-h-[3rem] resize-y;
+    @apply textarea textarea-sm min-h-[4rem] resize-y;
   }
   .popover .row { @apply flex gap-2; }
   .popover .row > div { @apply flex-1; }
-  .popover .actions { @apply flex justify-between mt-1; }
+  .popover .actions { @apply flex justify-between mt-2; }
   .popover .actions .danger {
     @apply btn btn-sm btn-ghost text-error border-0 px-2;
   }
@@ -350,27 +401,22 @@ html, body { height: 100%; }
 }
 
 /* ===================================================================
-   Modals — uses DaisyUI's native `.modal.modal-open > .modal-box`
-   pattern (see people-modal.html). DaisyUI provides the full-viewport
-   overlay, centering, and backdrop; we only customise inner content
-   chrome (h2/p typography, add-row, people-list, actions).
+   People sheet (rendered into the drawer like everything else)
    =================================================================== */
 @layer components {
-  .modal h2 { @apply m-0 mb-2 text-lg font-semibold; }
-  .modal p { @apply text-base-content/60 m-0 mb-4; }
-
+  .people-sheet h2 { @apply m-0 mb-2 text-lg font-semibold; }
+  .people-sheet p { @apply text-base-content/60 m-0 mb-4; }
   .people-list { @apply flex flex-col gap-1 mb-3; }
   .people-row {
     @apply flex items-center gap-2 px-2 py-1.5 border border-base-300 rounded;
   }
   .people-row input { @apply flex-1 border-0 bg-transparent p-0; }
   .people-row .remove { @apply border-0 bg-transparent text-base-content/60; }
-  .modal .add-row { @apply flex gap-2; }
-  .modal .add-row input { @apply input input-sm flex-1; }
-  .modal .add-row button { @apply btn btn-sm btn-neutral; }
-  .modal .modal-actions { @apply flex justify-end gap-2 mt-4; }
-  .modal .modal-actions button { @apply btn btn-sm; }
-  .modal .modal-actions .primary { @apply btn-neutral; }
+  .people-sheet .add-row { @apply flex gap-2; }
+  .people-sheet .add-row input { @apply input input-sm flex-1; }
+  .people-sheet .add-row button { @apply btn btn-sm btn-neutral; }
+  .people-sheet-actions { @apply flex justify-end gap-2 mt-4; }
+  .people-sheet-actions button { @apply btn btn-sm btn-neutral; }
 }
 
 /* ===================================================================

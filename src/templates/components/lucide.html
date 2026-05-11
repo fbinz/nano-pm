@@ -1,0 +1,10 @@
+{% comment %}
+  Lucide icon wrapper. Usage:
+    <c-lucide name="x" size="20" class="text-base-content/70" />
+
+    name  — icon slug from https://lucide.dev/icons (e.g. "x", "trash-2", "plus").
+    size  — pixel size of the rendered <svg>. Default 20.
+    class — extra classes on the <svg>.
+{% endcomment %}
+<c-vars name size="20" class="" />
+{% lucide name size=size class=class %}

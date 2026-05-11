@@ -1,11 +1,9 @@
-<c-vars project anchor_x=0 anchor_y=0 colors />
-<div id="popover-slot">
+{# Project editor — rendered into the right drawer (#drawer-slot). #}
+<c-vars project colors />
+<div id="drawer-slot">
   <form
     id="project-popover"
     class="popover"
-    style="left:{{ anchor_x }}px;top:{{ anchor_y }}px;"
-    data-init="nano.anchorPopover(el, '#proj-{{ project.id }}', {{ anchor_x }}, {{ anchor_y }})"
-    data-on:keyup="evt.key === 'Escape' && nano.closePopover()"
     data-on:submit__prevent="@post('/projects/{{ project.id }}/update/', { contentType: 'form' })"
   >
     {% csrf_token %}

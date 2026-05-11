@@ -97,16 +97,6 @@ def _parse_iso(s: str) -> date | None:
         return None
 
 
-def _anchor_xy(request: HttpRequest) -> tuple[int, int]:
-    """Pull popover anchor coords from the URL — see nano.openTaskPopover/etc."""
-    def _int(name: str, default: int) -> int:
-        try:
-            return int(request.GET.get(name, default))
-        except ValueError:
-            return default
-    return _int("popoverX", 200), _int("popoverY", 200)
-
-
 # --------------------------------------------------------------------------- #
 # Page                                                                        #
 # --------------------------------------------------------------------------- #
@@ -156,12 +146,13 @@ def zoom_set(request: HttpRequest):
 # Tasks                                                                       #
 # --------------------------------------------------------------------------- #
 
-@login_required
-@datastar_response
-def task_popover(request: HttpRequest, task_id: int):
+def _render_task_popover(request: HttpRequest, task_id: int) -> str | None:
+    """Render the task-popover fragment for `task_id`, or None if it's gone.
+    Shared by task_popover (initial open) and side-effecting endpoints that
+    want to refresh the drawer's deps list (e.g. dep_delete)."""
     task = get_task(request.user, task_id)
     if task is None:
-        return
+        return None
     state = get_chart_state(request.user)
     preds = list(
         Dependency.objects.filter(successor=task)
@@ -171,17 +162,22 @@ def task_popover(request: HttpRequest, task_id: int):
         Dependency.objects.filter(predecessor=task)
         .select_related("successor")
     )
-    anchor_x, anchor_y = _anchor_xy(request)
-    # Augment task object so the template can check assignee membership simply.
     task.assignee_ids = list(task.assignees.values_list("id", flat=True))
     task.project_id = task.project.id
-    yield SSE.patch_elements(
-        render_component(
-            request, "screens/gantt/task-popover",
-            task=task, projects=state.projects, people=state.people,
-            preds=preds, succs=succs, anchor_x=anchor_x, anchor_y=anchor_y,
-        )
+    return render_component(
+        request, "screens/gantt/task-popover",
+        task=task, projects=state.projects, people=state.people,
+        preds=preds, succs=succs,
     )
+
+
+@login_required
+@datastar_response
+def task_popover(request: HttpRequest, task_id: int):
+    fragment = _render_task_popover(request, task_id)
+    if fragment is None:
+        return
+    yield SSE.patch_elements(fragment)
 
 
 @require_http_methods(["POST"])
@@ -211,7 +207,7 @@ def task_update(request: HttpRequest, task_id: int):
     )
     yield _patch_chart(request)
     # Close the popover by emptying its slot.
-    yield SSE.patch_elements('<div id="popover-slot"></div>')
+    yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
 @require_http_methods(["POST"])
@@ -288,7 +284,7 @@ def task_create(request: HttpRequest):
 def task_delete_view(request: HttpRequest, task_id: int):
     delete_task(owner=request.user, task_id=task_id)
     yield _patch_chart(request)
-    yield SSE.patch_elements('<div id="popover-slot"></div>')
+    yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
 # --------------------------------------------------------------------------- #
@@ -302,13 +298,11 @@ def milestone_popover(request: HttpRequest, milestone_id: int):
     if m is None:
         return
     state = get_chart_state(request.user)
-    anchor_x, anchor_y = _anchor_xy(request)
     m.project_id = m.project.id  # for the template's `selected` check
     yield SSE.patch_elements(
         render_component(
             request, "screens/gantt/milestone-popover",
             m=m, projects=state.projects,
-            anchor_x=anchor_x, anchor_y=anchor_y,
         )
     )
 
@@ -328,7 +322,7 @@ def milestone_update_view(request: HttpRequest, milestone_id: int):
         project_id=int(project_id_raw) if project_id_raw.isdigit() else None,
     )
     yield _patch_chart(request)
-    yield SSE.patch_elements('<div id="popover-slot"></div>')
+    yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
 @require_http_methods(["POST"])
@@ -337,7 +331,7 @@ def milestone_update_view(request: HttpRequest, milestone_id: int):
 def milestone_delete_view(request: HttpRequest, milestone_id: int):
     delete_milestone(owner=request.user, milestone_id=milestone_id)
     yield _patch_chart(request)
-    yield SSE.patch_elements('<div id="popover-slot"></div>')
+    yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
 @require_http_methods(["POST"])
@@ -373,12 +367,10 @@ def milestone_create(request: HttpRequest, project_id: int):
     state = get_chart_state(request.user)
     yield _patch_chart(request)
     m.project_id = m.project.id  # for the template's `selected` check
-    anchor_x, anchor_y = _anchor_xy(request)
     yield SSE.patch_elements(
         render_component(
             request, "screens/gantt/milestone-popover",
             m=m, projects=state.projects,
-            anchor_x=anchor_x, anchor_y=anchor_y,
         )
     )
 
@@ -414,6 +406,14 @@ def dep_delete(request: HttpRequest, predecessor_id: int, successor_id: int):
         successor_id=successor_id,
     )
     yield _patch_chart(request)
+    # If the request originated from an open task popover (button passes
+    # ?task=<id>), re-render that popover so its deps-list reflects the
+    # deletion — otherwise the dep-row sticks around as a ghost button.
+    task_raw = request.GET.get("task", "")
+    if task_raw.isdigit():
+        fragment = _render_task_popover(request, int(task_raw))
+        if fragment is not None:
+            yield SSE.patch_elements(fragment)
 
 
 # --------------------------------------------------------------------------- #
@@ -434,14 +434,11 @@ def project_popover(request: HttpRequest, project_id: int):
     proj = get_project(request.user, project_id)
     if proj is None:
         return
-    anchor_x, anchor_y = _anchor_xy(request)
     yield SSE.patch_elements(
         render_component(
             request, "screens/gantt/project-popover",
             project=proj,
             colors=PROJECT_COLORS,
-            anchor_x=anchor_x,
-            anchor_y=anchor_y,
         )
     )
 
@@ -457,7 +454,7 @@ def project_update(request: HttpRequest, project_id: int):
         color=request.POST.get("color") or None,
     )
     yield _patch_chart(request)
-    yield SSE.patch_elements('<div id="popover-slot"></div>')
+    yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
 @require_http_methods(["POST"])
@@ -467,7 +464,7 @@ def project_move(request: HttpRequest, project_id: int):
     direction = int(request.GET.get("dir", "0") or 0)
     move_project(owner=request.user, project_id=project_id, direction=direction)
     yield _patch_chart(request)
-    yield SSE.patch_elements('<div id="popover-slot"></div>')
+    yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
 @require_http_methods(["POST"])
@@ -476,7 +473,7 @@ def project_move(request: HttpRequest, project_id: int):
 def project_delete(request: HttpRequest, project_id: int):
     delete_project(owner=request.user, project_id=project_id)
     yield _patch_chart(request)
-    yield SSE.patch_elements('<div id="popover-slot"></div>')
+    yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
 # --------------------------------------------------------------------------- #

@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_cotton",
+    "lucide",
     "data",
 ]
 
@@ -83,6 +84,11 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+            ],
+            # Make {% lucide %} available without {% load lucide %} in every
+            # template — the c-lucide Cotton wrapper renders it on every use.
+            "builtins": [
+                "lucide.templatetags.lucide",
             ],
         },
     },
