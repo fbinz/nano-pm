@@ -4,8 +4,8 @@
    The standalone tailwindcss CLI doesn't auto-resolve daisyui from
    node_modules, so we point @plugin at the vendored bundle under bin/. */
 
-@import "tailwindcss" source("../../");
-@plugin "../../../bin/daisyui.js";
+@import "tailwindcss" source("../");
+@plugin "../../bin/daisyui.js";
 
 /* ===================================================================
    Chart geometry tokens — *not* a design-system concern.

@@ -57,10 +57,12 @@ css-deps:
     [ -f bin/daisyui.js ] || curl -fsSL -o bin/daisyui.js https://github.com/saadeghi/daisyui/releases/latest/download/daisyui.js
     [ -f bin/daisyui-theme.js ] || curl -fsSL -o bin/daisyui-theme.js https://github.com/saadeghi/daisyui/releases/latest/download/daisyui-theme.js
 
-# Build src/static/css/app.css from input.css (minified).
+# Build src/static/css/app.css from src/css/input.css (minified).
+# Source lives outside src/static/ so whitenoise's collectstatic doesn't
+# try to parse it as a deliverable CSS file.
 css: css-deps
-    ./bin/tailwindcss -i src/static/css/input.css -o src/static/css/app.css --minify
+    ./bin/tailwindcss -i src/css/input.css -o src/static/css/app.css --minify
 
 # Watch input.css and rebuild on change.
 css-watch: css-deps
-    ./bin/tailwindcss -i src/static/css/input.css -o src/static/css/app.css --watch
+    ./bin/tailwindcss -i src/css/input.css -o src/static/css/app.css --watch
