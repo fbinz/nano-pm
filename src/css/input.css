@@ -36,6 +36,30 @@ html, body { height: 100%; }
   }
 }
 
+/* DaisyUI's `-sm` modifiers set `--fontsize` / `--font-size` to .75rem
+   which at our 13px html root renders as 9.75px. `@apply btn-sm` inlines
+   those vars under each consumer selector, so targeting `.btn-sm` directly
+   won't reach them — we have to list every `@apply`-based consumer. */
+.topbar-btn,
+#zoom-controls a,
+#zoom-controls button,
+.drawer-close,
+.popover .actions .danger,
+.popover .actions .primary,
+.people-sheet .add-row button,
+.people-sheet-actions button,
+.empty-cta button {
+  --fontsize: 1rem;
+}
+.popover input[type=text],
+.popover input[type=date],
+.popover select,
+.popover textarea,
+.people-sheet .add-row input,
+.login-card input {
+  --font-size: 1rem;
+}
+
 /* ===================================================================
    Topbar
    =================================================================== */
@@ -345,11 +369,7 @@ html, body { height: 100%; }
   .popover input[type=date],
   .popover select,
   .popover textarea {
-    /* DaisyUI's `input-sm` sets font-size to .75rem which, at our 13px html
-       root, renders as 9.75px — uncomfortably small. Pin to 1rem (= base
-       13px) so form text matches the rest of the UI. */
     @apply input input-sm w-full font-[inherit];
-    font-size: 1rem;
   }
   /* Multi-selects need to grow to show all their rows — `.input input-sm`
      pins single-line controls to ~32px and clips the option list otherwise. */
@@ -358,7 +378,6 @@ html, body { height: 100%; }
   }
   .popover textarea {
     @apply textarea textarea-sm min-h-[4rem] resize-y;
-    font-size: 1rem;
   }
   .popover .row { @apply flex gap-2; }
   .popover .row > div { @apply flex-1; }
@@ -415,10 +434,7 @@ html, body { height: 100%; }
   .people-row input { @apply flex-1 border-0 bg-transparent p-0; }
   .people-row .remove { @apply border-0 bg-transparent text-base-content/60; }
   .people-sheet .add-row { @apply flex gap-2; }
-  .people-sheet .add-row input {
-    @apply input input-sm flex-1;
-    font-size: 1rem;
-  }
+  .people-sheet .add-row input { @apply input input-sm flex-1; }
   .people-sheet .add-row button { @apply btn btn-sm btn-neutral; }
   .people-sheet-actions { @apply flex justify-end gap-2 mt-4; }
   .people-sheet-actions button { @apply btn btn-sm btn-neutral; }
@@ -447,10 +463,7 @@ html, body { height: 100%; }
   .login-card label {
     @apply flex flex-col gap-1 text-base-content/60;
   }
-  .login-card input {
-    @apply input input-sm;
-    font-size: 1rem;
-  }
+  .login-card input { @apply input input-sm; }
   .login-card button { @apply btn btn-neutral; }
   .login-card .error {
     @apply text-error px-2.5 py-1.5 rounded;
