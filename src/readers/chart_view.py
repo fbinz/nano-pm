@@ -73,6 +73,10 @@ class ProjectRowVM:
     order: float
     tasks: list[BarVM]
     milestones: list[MilestoneVM]
+    # When True the template skips this project's task rows. Milestones on the
+    # project's header row keep rendering — they live on the header line, not
+    # the per-task rows.
+    collapsed: bool = False
 
 
 @dataclass
@@ -160,10 +164,12 @@ def build_chart_vm(
     state: ChartState,
     zoom: str = DEFAULT_ZOOM,
     px_per_day: int | None = None,
+    collapsed_project_ids: set[int] | None = None,
 ) -> ChartVM:
     if zoom not in ZOOM_PX_PER_DAY:
         zoom = DEFAULT_ZOOM
     ppd = px_per_day if px_per_day is not None else ZOOM_PX_PER_DAY[zoom]
+    collapsed_ids = collapsed_project_ids or set()
 
     def x_of(d: date) -> float:
         return (d - state.chart_start).days * ppd
@@ -286,6 +292,7 @@ def build_chart_vm(
         row_groups.append(ProjectRowVM(
             id=proj.id, name=proj.name, color=proj.color, order=proj.order,
             tasks=bars, milestones=miles,
+            collapsed=(proj.id in collapsed_ids),
         ))
 
     # Dep arrows — orthogonal route through a small stub between rows.
@@ -296,12 +303,15 @@ def build_chart_vm(
 
     # Compute y-centers in the chart-area coordinate system (excluding axis).
     # Each project row group: 1 project header (proj_row_h) + N task rows (row_h each).
+    # Collapsed projects contribute their header row but no task rows.
     y = 0.0
     for rg_idx, rg in enumerate(row_groups):
         # project header row first
         y += 0  # no bars on header rows except milestones (centered)
         proj_y = y + 18  # ~half of proj_row_h for milestone marker centering
         y += 36  # proj_row_h
+        if rg.collapsed:
+            continue
         for bar in rg.tasks:
             bar_y_centers[bar.id] = y + 16  # ~half of row_h
             bar_lookup[bar.id] = (bar, rg_idx)
@@ -310,6 +320,7 @@ def build_chart_vm(
         a = bar_lookup.get(dep.predecessor_id)
         b = bar_lookup.get(dep.successor_id)
         if not a or not b:
+            # Endpoint(s) inside a collapsed project — skip the arrow entirely.
             continue
         a_bar, _ = a
         b_bar, _ = b

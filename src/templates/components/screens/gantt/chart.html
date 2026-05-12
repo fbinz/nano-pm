@@ -20,10 +20,20 @@
     </div>
 
     {% for rg in vm.row_groups %}
-      <div class="left-cell proj"
+      <div class="left-cell proj{% if rg.collapsed %} collapsed{% endif %}"
            id="proj-{{ rg.id }}"
            data-project-id="{{ rg.id }}"
            data-on:click="nano.openProjectPopover({{ rg.id }})">
+        {# Chevron stops propagation so it doesn't also open the popover. #}
+        <button type="button" class="collapse-toggle"
+                title="{% if rg.collapsed %}Expand{% else %}Collapse{% endif %} project"
+                data-on:click__stop="nano.toggleProjectCollapse({{ rg.id }})">
+          {% if rg.collapsed %}
+            <c-lucide name="chevron-right" size="16" />
+          {% else %}
+            <c-lucide name="chevron-down" size="16" />
+          {% endif %}
+        </button>
         <span class="swatch" style="background:{{ rg.color }}"></span>
         <span class="name">{{ rg.name }}</span>
         <span class="actions">edit</span>
@@ -39,18 +49,20 @@
           <c-screens.gantt.milestone :m="m" />
         {% endfor %}
       </div>
-      {% for bar in rg.tasks %}
-        <div class="left-cell task" data-task-id="{{ bar.id }}">
-          <span class="title">{{ bar.title }}</span>
-          <span class="assignees">{{ bar.assignees }}</span>
-        </div>
-        <div class="chart-row" data-task-id="{{ bar.id }}" style="width:{{ vm.chart_width }}px;">
-          {% for tile in vm.weekend_tiles %}
-            <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
-          {% endfor %}
-          <c-screens.gantt.bar :bar="bar" />
-        </div>
-      {% endfor %}
+      {% if not rg.collapsed %}
+        {% for bar in rg.tasks %}
+          <div class="left-cell task" data-task-id="{{ bar.id }}">
+            <span class="title">{{ bar.title }}</span>
+            <span class="assignees">{{ bar.assignees }}</span>
+          </div>
+          <div class="chart-row" data-task-id="{{ bar.id }}" style="width:{{ vm.chart_width }}px;">
+            {% for tile in vm.weekend_tiles %}
+              <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
+            {% endfor %}
+            <c-screens.gantt.bar :bar="bar" />
+          </div>
+        {% endfor %}
+      {% endif %}
     {% endfor %}
 
     <div id="overlay">

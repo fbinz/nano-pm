@@ -156,6 +156,17 @@ html, body { height: 100%; }
     @apply bg-base-200 z-[4] font-semibold cursor-pointer;
   }
   .left-cell.proj:hover { @apply bg-base-300/70; }
+  .left-cell.proj .collapse-toggle {
+    /* Bare button — no daisy `.btn` so it sits visually quiet inside the row.
+       Sized to fill most of the 36px project-row height so the hit area is
+       comfortable even though the caret glyph itself is only ~10px wide.
+       Negative margin pulls it close to the row's left edge so it doesn't
+       eat into the space available for the project name. */
+    @apply flex-shrink-0 inline-flex items-center justify-center w-7 h-7 -ml-2
+           bg-transparent border-0 cursor-pointer text-base-content/60 rounded;
+    padding: 0;
+  }
+  .left-cell.proj .collapse-toggle:hover { @apply bg-base-content/10 text-base-content; }
   .left-cell.proj .swatch { @apply w-2.5 h-2.5 rounded-[2px] flex-shrink-0; }
   .left-cell.proj .name { @apply flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
   .left-cell.proj .actions { @apply text-base-content/60; }

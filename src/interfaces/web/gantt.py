@@ -82,11 +82,26 @@ def _ppd(request: HttpRequest, zoom: str) -> int:
     return ZOOM_PX_PER_DAY[zoom]
 
 
+def _collapsed_projects(request: HttpRequest) -> set[int]:
+    """Read the per-session set of collapsed project IDs (UI-only state; no DB)."""
+    raw = request.session.get("collapsed_projects", [])
+    return {int(x) for x in raw if isinstance(x, (int, str)) and str(x).lstrip("-").isdigit()}
+
+
+def _set_collapsed_projects(request: HttpRequest, ids: set[int]) -> None:
+    """Persist the collapsed project ID set into the session as a sorted list."""
+    request.session["collapsed_projects"] = sorted(ids)
+
+
 def _patch_chart(request: HttpRequest, zoom: str | None = None):
     """Yield an SSE patch that replaces the chart fragment with a fresh render."""
     state = get_chart_state(request.user)
     z = zoom or _zoom(request)
-    vm = build_chart_vm(state, z, px_per_day=_ppd(request, z))
+    vm = build_chart_vm(
+        state, z,
+        px_per_day=_ppd(request, z),
+        collapsed_project_ids=_collapsed_projects(request),
+    )
     return SSE.patch_elements(render_component(request, "screens/gantt/chart", vm=vm))
 
 
@@ -106,7 +121,11 @@ def index(request: HttpRequest) -> HttpResponse:
     state = get_chart_state(request.user)
     zoom = _zoom(request)
     ppd = _ppd(request, zoom)
-    vm = build_chart_vm(state, zoom, px_per_day=ppd)
+    vm = build_chart_vm(
+        state, zoom,
+        px_per_day=ppd,
+        collapsed_project_ids=_collapsed_projects(request),
+    )
     days_per_unit = ZOOM_DAYS_PER_UNIT[zoom]
     lo, hi = ZOOM_PPD_RANGE[zoom]
     return render(
@@ -476,6 +495,26 @@ def project_delete(request: HttpRequest, project_id: int):
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
+@require_http_methods(["POST"])
+@login_required
+@datastar_response
+def project_toggle_collapse(request: HttpRequest, project_id: int):
+    """Flip whether this project's task rows are hidden in the sidebar/chart.
+    Collapsed-set lives in the session — pure UI state, no DB write — and the
+    chart re-renders so the hidden rows (and any dep arrows touching them)
+    drop out of the view-model."""
+    # Only honor real, owned projects so a stale ID can't pollute the session.
+    if get_project(request.user, project_id) is None:
+        return
+    collapsed = _collapsed_projects(request)
+    collapsed.symmetric_difference_update({project_id})
+    _set_collapsed_projects(request, collapsed)
+    # Same reason as zoom_set: generator body runs after middleware, so the
+    # session write needs an explicit save to reach the backend.
+    request.session.save()
+    yield _patch_chart(request)
+
+
 # --------------------------------------------------------------------------- #
 # People                                                                      #
 # --------------------------------------------------------------------------- #
@@ -561,6 +600,8 @@ urlpatterns = [
     path("projects/<int:project_id>/update/",        project_update,   name="project_update"),
     path("projects/<int:project_id>/move/",          project_move,     name="project_move"),
     path("projects/<int:project_id>/delete/",        project_delete,   name="project_delete"),
+    path("projects/<int:project_id>/toggle-collapse/",
+                                                     project_toggle_collapse, name="project_toggle_collapse"),
     # People
     path("people/modal/",                            people_modal,     name="people_modal"),
     path("people/",                                  people_create,    name="people_create"),

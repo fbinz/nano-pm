@@ -459,6 +459,13 @@
     if (slot) slot.innerHTML = '';
   }
 
+  // Toggle a project's collapsed state. The chevron button's click handler
+  // already stopped propagation, so the row's openProjectPopover handler
+  // doesn't also fire. Server flips the session-stored ID set and re-renders.
+  function toggleProjectCollapse(projectId) {
+    commit(`/projects/${projectId}/toggle-collapse/`, {});
+  }
+
   // ---------------------------------------------------------------------- //
   // Sidebar width resize                                                   //
   // ---------------------------------------------------------------------- //
@@ -535,7 +542,7 @@
     projectRowMouseDown, milestoneMouseDown,
     sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, addMilestone,
-    closeDrawer,
+    closeDrawer, toggleProjectCollapse,
     scrollToToday,
   };
 
