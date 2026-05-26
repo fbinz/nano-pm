@@ -27,8 +27,8 @@
            data-on:click="nano.openProjectPopover({{ rg.id }})">
         <button type="button" class="collapse-toggle"
                 data-on:click__stop="$_collapsed.{{ rg.id }} = !$_collapsed.{{ rg.id }}; nano.onCollapseChanged({{ rg.id }})">
-          <span data-show="$_collapsed.{{ rg.id }}"><c-lucide name="chevron-right" size="16" /></span>
-          <span data-show="!$_collapsed.{{ rg.id }}"><c-lucide name="chevron-down" size="16" /></span>
+          <span data-show="$_collapsed.{{ rg.id }}" {% if not rg.collapsed %}style="display:none"{% endif %}><c-lucide name="chevron-right" size="16" /></span>
+          <span data-show="!$_collapsed.{{ rg.id }}" {% if rg.collapsed %}style="display:none"{% endif %}><c-lucide name="chevron-down" size="16" /></span>
         </button>
         <span class="swatch" style="background:{{ rg.color }}"></span>
         <span class="name">{{ rg.name }}</span>
