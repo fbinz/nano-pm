@@ -108,6 +108,7 @@ class ChartVM:
     row_groups: list[ProjectRowVM]
     deps: list[DepArrowVM]
     show_today_line: bool
+    all_collapsed: bool
     # Layout constants (kept here so the template doesn't have to know)
     left_w: int = 240
     axis_h: int = 48
@@ -354,4 +355,5 @@ def build_chart_vm(
         row_groups=row_groups,
         deps=deps,
         show_today_line=show_today,
+        all_collapsed=bool(row_groups) and all(rg.collapsed for rg in row_groups),
     )
