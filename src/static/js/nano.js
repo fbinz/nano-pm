@@ -459,22 +459,24 @@
     if (slot) slot.innerHTML = '';
   }
 
-  function onCollapseChanged(projectId) {
+  function onCollapseChanged(id, urlBase) {
     requestAnimationFrame(recalcArrows);
     const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
     if (csrfEl) {
-      fetch(`/projects/${projectId}/toggle-collapse/`, {
+      const base = urlBase || '/projects';
+      fetch(`${base}/${id}/toggle-collapse/`, {
         method: 'POST',
         headers: { 'X-CSRFToken': csrfEl.value },
       });
     }
   }
 
-  function onCollapseAllChanged(collapse, ids) {
+  function onCollapseAllChanged(collapse, ids, urlBase) {
     requestAnimationFrame(recalcArrows);
     const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
     if (csrfEl) {
-      fetch('/projects/set-collapsed/', {
+      const base = urlBase || '/projects';
+      fetch(`${base}/set-collapsed/`, {
         method: 'POST',
         headers: { 'X-CSRFToken': csrfEl.value, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'ids=' + (collapse ? ids.join(',') : ''),

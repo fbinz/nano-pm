@@ -429,6 +429,56 @@ test.describe('project collapse', () => {
 
 
 // =============================================================================
+// Resource view
+// =============================================================================
+test.describe('resource view', () => {
+  test('shows person-grouped rows with correct task counts', async ({ appPage: page }) => {
+    await page.goto('/resources/');
+
+    // 3 people + 1 "Unassigned" = 4 header rows
+    await expect(page.locator('.left-cell.proj')).toHaveCount(4);
+    await expect(page.locator('.left-cell.proj', { hasText: 'Alex Chen' })).toBeVisible();
+    await expect(page.locator('.left-cell.proj', { hasText: 'Sam Patel' })).toBeVisible();
+    await expect(page.locator('.left-cell.proj', { hasText: 'Riley Wong' })).toBeVisible();
+    await expect(page.locator('.left-cell.proj', { hasText: 'Unassigned' })).toBeVisible();
+
+    // Multi-assignee tasks are duplicated: 8 unique tasks → 11 bars
+    // Alex: t1,t2,t7,t8=4  Sam: t2,t3,t5=3  Riley: t4,t5,t6,t8=4  Unassigned: 0
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(11);
+  });
+
+  test('milestones appear in the Unassigned group', async ({ appPage: page }) => {
+    await page.goto('/resources/');
+    const unassigned = page.locator('.chart-row.proj', { hasText: '' }).last();
+    // Seed has 2 milestones; both should be in the Unassigned header row
+    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
+  });
+
+  test('no dependency arrows in resource view', async ({ appPage: page }) => {
+    await page.goto('/resources/');
+    await expect(page.locator('#arrows .hit')).toHaveCount(0);
+  });
+
+  test('view switch links navigate between views', async ({ appPage: page }) => {
+    // Start in project view
+    await expect(page.locator('#view-switch a.active')).toHaveText('Projects');
+
+    // Click Resources
+    await page.locator('#view-switch a', { hasText: 'Resources' }).click();
+    await page.waitForURL('**/resources/');
+    await expect(page.locator('#view-switch a.active')).toHaveText('Resources');
+    await expect(page.locator('.left-cell.proj', { hasText: 'Alex Chen' })).toBeVisible();
+
+    // Click back to Projects
+    await page.locator('#view-switch a', { hasText: 'Projects' }).click();
+    await page.waitForURL(/\/$/);
+    await expect(page.locator('#view-switch a.active')).toHaveText('Projects');
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toBeVisible();
+  });
+});
+
+
+// =============================================================================
 // Task popover
 // =============================================================================
 test.describe('task popover', () => {

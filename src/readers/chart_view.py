@@ -161,16 +161,24 @@ def _add_months(d: date, n: int) -> date:
     return date(y, m, 1)
 
 
-def build_chart_vm(
-    state: ChartState,
-    zoom: str = DEFAULT_ZOOM,
-    px_per_day: int | None = None,
-    collapsed_project_ids: set[int] | None = None,
-) -> ChartVM:
+@dataclass
+class _GridContext:
+    zoom: str
+    ppd: int
+    chart_width: float
+    today_x: float
+    show_today: bool
+    axis_majors: list[AxisTick]
+    axis_minors: list[AxisTick]
+    weekend_tiles: list[AxisTick]
+
+    def x_of(self, d: date, chart_start: date) -> float:
+        return (d - chart_start).days * self.ppd
+
+
+def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
     if zoom not in ZOOM_PX_PER_DAY:
         zoom = DEFAULT_ZOOM
-    ppd = px_per_day if px_per_day is not None else ZOOM_PX_PER_DAY[zoom]
-    collapsed_ids = collapsed_project_ids or set()
 
     def x_of(d: date) -> float:
         return (d - state.chart_start).days * ppd
@@ -179,7 +187,6 @@ def build_chart_vm(
     today_x = x_of(state.today)
     show_today = 0 <= today_x <= chart_width
 
-    # Axis ticks
     axis_majors: list[AxisTick] = []
     axis_minors: list[AxisTick] = []
 
@@ -244,7 +251,6 @@ def build_chart_vm(
             axis_minors.append(AxisTick(x=x_of(d), w=x_of(nxt) - x_of(d), label=f"Q{q}"))
             d = nxt
 
-    # Weekend tiles (only at day/week zoom)
     weekend_tiles: list[AxisTick] = []
     if zoom in ("day", "week"):
         d = _start_of_week(state.chart_start)
@@ -254,6 +260,30 @@ def build_chart_vm(
                 if state.chart_start <= wd < state.chart_end:
                     weekend_tiles.append(AxisTick(x=x_of(wd), w=ppd, label=""))
             d += timedelta(days=7)
+
+    return _GridContext(
+        zoom=zoom, ppd=ppd, chart_width=chart_width, today_x=today_x,
+        show_today=show_today, axis_majors=axis_majors, axis_minors=axis_minors,
+        weekend_tiles=weekend_tiles,
+    )
+
+
+def build_chart_vm(
+    state: ChartState,
+    zoom: str = DEFAULT_ZOOM,
+    px_per_day: int | None = None,
+    collapsed_project_ids: set[int] | None = None,
+) -> ChartVM:
+    if zoom not in ZOOM_PX_PER_DAY:
+        zoom = DEFAULT_ZOOM
+    ppd = px_per_day if px_per_day is not None else ZOOM_PX_PER_DAY[zoom]
+    collapsed_ids = collapsed_project_ids or set()
+    g = _build_grid_context(state, zoom, ppd)
+
+    def x_of(d: date) -> float:
+        return (d - state.chart_start).days * ppd
+
+    chart_width = g.chart_width
 
     # Row groups, with bars and milestones
     row_groups: list[ProjectRowVM] = []
@@ -345,15 +375,102 @@ def build_chart_vm(
     return ChartVM(
         zoom=zoom,
         px_per_day=ppd,
-        chart_width=chart_width,
-        today_x=today_x,
+        chart_width=g.chart_width,
+        today_x=g.today_x,
         chart_start_iso=state.chart_start.isoformat(),
         chart_end_iso=state.chart_end.isoformat(),
-        axis_majors=axis_majors,
-        axis_minors=axis_minors,
-        weekend_tiles=weekend_tiles,
+        axis_majors=g.axis_majors,
+        axis_minors=g.axis_minors,
+        weekend_tiles=g.weekend_tiles,
         row_groups=row_groups,
         deps=deps,
-        show_today_line=show_today,
+        show_today_line=g.show_today,
+        all_collapsed=bool(row_groups) and all(rg.collapsed for rg in row_groups),
+    )
+
+
+def build_resource_vm(
+    state: ChartState,
+    zoom: str = DEFAULT_ZOOM,
+    px_per_day: int | None = None,
+    collapsed_person_ids: set[int] | None = None,
+) -> ChartVM:
+    if zoom not in ZOOM_PX_PER_DAY:
+        zoom = DEFAULT_ZOOM
+    ppd = px_per_day if px_per_day is not None else ZOOM_PX_PER_DAY[zoom]
+    collapsed_ids = collapsed_person_ids or set()
+    g = _build_grid_context(state, zoom, ppd)
+
+    def x_of(d: date) -> float:
+        return (d - state.chart_start).days * ppd
+
+    # Group bars by person (duplicate for multi-assignee tasks)
+    person_bars: dict[int | None, list[BarVM]] = {}
+    for person in state.people:
+        person_bars[person.id] = []
+    person_bars[None] = []  # unassigned
+
+    for proj in state.projects:
+        text_color, text_dark = _text_color_for(proj.color)
+        for t in proj.tasks.all():
+            assignee_list = list(t.assignees.all())
+            bar = BarVM(
+                id=t.id,
+                project_id=proj.id,
+                title=t.title,
+                x=x_of(t.start), w=max(2.0, x_of(t.end + timedelta(days=1)) - x_of(t.start)),
+                color=proj.color,
+                text_color=text_color,
+                text_dark=text_dark,
+                status=t.status,
+                overdue=(t.end < state.today and t.status != TaskStatus.DONE),
+                is_done=(t.status == TaskStatus.DONE),
+                start_iso=t.start.isoformat(),
+                end_iso=t.end.isoformat(),
+                assignees=", ".join(p.name.split(" ")[0] for p in assignee_list),
+            )
+            if not assignee_list:
+                person_bars[None].append(bar)
+            else:
+                for p in assignee_list:
+                    person_bars.setdefault(p.id, []).append(bar)
+
+    # All milestones go to unassigned
+    all_milestones: list[MilestoneVM] = []
+    for proj in state.projects:
+        for m in proj.milestones.all():
+            all_milestones.append(MilestoneVM(
+                id=m.id, project_id=proj.id, title=m.title,
+                date_iso=m.date.isoformat(), x=x_of(m.date),
+                color=proj.color, overdue=(m.date < state.today),
+            ))
+
+    row_groups: list[ProjectRowVM] = []
+    for idx, person in enumerate(sorted(state.people, key=lambda p: p.name)):
+        row_groups.append(ProjectRowVM(
+            id=person.id, name=person.name, color="#6b7280", order=idx,
+            tasks=person_bars.get(person.id, []), milestones=[],
+            collapsed=(person.id in collapsed_ids),
+        ))
+    # Unassigned group at the end
+    row_groups.append(ProjectRowVM(
+        id=0, name="Unassigned", color="#9ca3af", order=len(row_groups),
+        tasks=person_bars.get(None, []), milestones=all_milestones,
+        collapsed=(0 in collapsed_ids),
+    ))
+
+    return ChartVM(
+        zoom=zoom,
+        px_per_day=ppd,
+        chart_width=g.chart_width,
+        today_x=g.today_x,
+        chart_start_iso=state.chart_start.isoformat(),
+        chart_end_iso=state.chart_end.isoformat(),
+        axis_majors=g.axis_majors,
+        axis_minors=g.axis_minors,
+        weekend_tiles=g.weekend_tiles,
+        row_groups=row_groups,
+        deps=[],
+        show_today_line=g.show_today,
         all_collapsed=bool(row_groups) and all(rg.collapsed for rg in row_groups),
     )

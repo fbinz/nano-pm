@@ -33,6 +33,7 @@ from readers.gantt import (
 )
 from readers.chart_view import (
     build_chart_vm,
+    build_resource_vm,
     DEFAULT_ZOOM,
     ZOOM_PX_PER_DAY,
     ZOOM_PPD_RANGE,
@@ -93,16 +94,33 @@ def _set_collapsed_projects(request: HttpRequest, ids: set[int]) -> None:
     request.session["collapsed_projects"] = sorted(ids)
 
 
+def _collapsed_people(request: HttpRequest) -> set[int]:
+    raw = request.session.get("collapsed_people", [])
+    return {int(x) for x in raw if isinstance(x, (int, str)) and str(x).lstrip("-").isdigit()}
+
+
+def _set_collapsed_people(request: HttpRequest, ids: set[int]) -> None:
+    request.session["collapsed_people"] = sorted(ids)
+
+
+def _view_mode(request: HttpRequest) -> str:
+    return request.session.get("view_mode", "project")
+
+
 def _patch_chart(request: HttpRequest, zoom: str | None = None):
     """Yield an SSE patch that replaces the chart fragment with a fresh render."""
     state = get_chart_state(request.user)
     z = zoom or _zoom(request)
-    vm = build_chart_vm(
-        state, z,
-        px_per_day=_ppd(request, z),
-        collapsed_project_ids=_collapsed_projects(request),
-    )
-    return SSE.patch_elements(render_component(request, "screens/gantt/chart", vm=vm))
+    ppd = _ppd(request, z)
+    if _view_mode(request) == "resource":
+        vm = build_resource_vm(state, z, px_per_day=ppd,
+                               collapsed_person_ids=_collapsed_people(request))
+        template = "screens/gantt/chart_resource"
+    else:
+        vm = build_chart_vm(state, z, px_per_day=ppd,
+                            collapsed_project_ids=_collapsed_projects(request))
+        template = "screens/gantt/chart"
+    return SSE.patch_elements(render_component(request, template, vm=vm))
 
 
 def _parse_iso(s: str) -> date | None:
@@ -118,6 +136,8 @@ def _parse_iso(s: str) -> date | None:
 
 @login_required
 def index(request: HttpRequest) -> HttpResponse:
+    request.session["view_mode"] = "project"
+    request.session.save()
     state = get_chart_state(request.user)
     zoom = _zoom(request)
     ppd = _ppd(request, zoom)
@@ -522,6 +542,59 @@ def set_all_collapsed(request: HttpRequest):
 
 
 # --------------------------------------------------------------------------- #
+# Resource view                                                                #
+# --------------------------------------------------------------------------- #
+
+@login_required
+def resource_index(request: HttpRequest) -> HttpResponse:
+    request.session["view_mode"] = "resource"
+    request.session.save()
+    state = get_chart_state(request.user)
+    zoom = _zoom(request)
+    ppd = _ppd(request, zoom)
+    vm = build_resource_vm(
+        state, zoom, px_per_day=ppd,
+        collapsed_person_ids=_collapsed_people(request),
+    )
+    days_per_unit = ZOOM_DAYS_PER_UNIT[zoom]
+    lo, hi = ZOOM_PPD_RANGE[zoom]
+    return render(
+        request,
+        "components/screens/gantt/resource_index.html",
+        {
+            "vm": vm,
+            "zoom": zoom,
+            "user": request.user,
+            "ppd_unit": ppd * days_per_unit,
+            "ppd_unit_min": lo * days_per_unit,
+            "ppd_unit_max": hi * days_per_unit,
+            "ppd_unit_step": days_per_unit,
+            "days_per_unit": days_per_unit,
+        },
+    )
+
+
+@require_http_methods(["POST"])
+@login_required
+def person_toggle_collapse(request: HttpRequest, person_id: int):
+    collapsed = _collapsed_people(request)
+    collapsed.symmetric_difference_update({person_id})
+    _set_collapsed_people(request, collapsed)
+    request.session.save()
+    return HttpResponse(status=204)
+
+
+@require_http_methods(["POST"])
+@login_required
+def set_all_people_collapsed(request: HttpRequest):
+    raw = request.POST.get("ids", "")
+    ids = {int(x) for x in raw.split(",") if x.strip().lstrip("-").isdigit()}
+    _set_collapsed_people(request, ids)
+    request.session.save()
+    return HttpResponse(status=204)
+
+
+# --------------------------------------------------------------------------- #
 # People                                                                      #
 # --------------------------------------------------------------------------- #
 
@@ -609,6 +682,11 @@ urlpatterns = [
     path("projects/<int:project_id>/toggle-collapse/",
                                                      project_toggle_collapse, name="project_toggle_collapse"),
     path("projects/set-collapsed/",                  set_all_collapsed,       name="set_all_collapsed"),
+    # Resource view
+    path("resources/",                               resource_index,          name="resource_index"),
+    path("resources/people/<int:person_id>/toggle-collapse/",
+                                                     person_toggle_collapse,  name="person_toggle_collapse"),
+    path("resources/people/set-collapsed/",          set_all_people_collapsed, name="set_all_people_collapsed"),
     # People
     path("people/modal/",                            people_modal,     name="people_modal"),
     path("people/",                                  people_create,    name="people_create"),

@@ -1,0 +1,81 @@
+{# Resource view: person-grouped chart. No dependency arrows, no project popovers. #}
+<c-vars vm />
+<div
+  id="grid-scroll"
+  data-px-per-day="{{ vm.px_per_day }}"
+  data-chart-start="{{ vm.chart_start_iso }}"
+  data-chart-end="{{ vm.chart_end_iso }}"
+>
+  <div id="grid">
+    <div class="corner"
+         data-signals__ifmissing='{"_collapsed": { {% for rg in vm.row_groups %}"{{ rg.id }}": {{ rg.collapsed|yesno:"true,false" }}{% if not forloop.last %}, {% endif %}{% endfor %} }}'>
+      {% if vm.row_groups %}
+        <button id="collapse-all-btn" class="collapse-toggle"
+                data-on:click="
+                  const c = {% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %};
+                  {% for rg in vm.row_groups %}$_collapsed.{{ rg.id }} = c; {% endfor %}
+                  nano.onCollapseAllChanged(c, [{% for rg in vm.row_groups %}{{ rg.id }}{% if not forloop.last %},{% endif %}{% endfor %}], '/resources/people')"
+                data-text="({% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %}) ? 'Collapse all' : 'Expand all'">{% if vm.all_collapsed %}Expand all{% else %}Collapse all{% endif %}</button>
+      {% else %}
+        timeline
+      {% endif %}
+    </div>
+    <div id="time-axis-cell">
+      <div id="time-axis" style="width:{{ vm.chart_width }}px;">
+        {% for tick in vm.axis_majors %}
+          <div class="axis-major" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
+        {% endfor %}
+        {% for tick in vm.axis_minors %}
+          <div class="axis-minor{% if tick.weekend %} weekend{% endif %}" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% for rg in vm.row_groups %}
+      <div class="left-cell proj"
+           id="proj-{{ rg.id }}"
+           data-project-id="{{ rg.id }}"
+           data-signals:_collapsed.{{ rg.id }}__ifmissing="{{ rg.collapsed|yesno:'true,false' }}">
+        <button type="button" class="collapse-toggle"
+                data-on:click__stop="$_collapsed.{{ rg.id }} = !$_collapsed.{{ rg.id }}; nano.onCollapseChanged({{ rg.id }}, '/resources/people')">
+          <span data-show="$_collapsed.{{ rg.id }}" {% if not rg.collapsed %}style="display:none"{% endif %}><c-lucide name="chevron-right" size="16" /></span>
+          <span data-show="!$_collapsed.{{ rg.id }}" {% if rg.collapsed %}style="display:none"{% endif %}><c-lucide name="chevron-down" size="16" /></span>
+        </button>
+        <span class="swatch" style="background:{{ rg.color }}"></span>
+        <span class="name">{{ rg.name }}</span>
+      </div>
+      <div class="chart-row proj"
+           data-project-id="{{ rg.id }}"
+           style="width:{{ vm.chart_width }}px;">
+        {% for tile in vm.weekend_tiles %}
+          <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
+        {% endfor %}
+        {% for m in rg.milestones %}
+          <c-screens.gantt.milestone :m="m" />
+        {% endfor %}
+      </div>
+      {% for bar in rg.tasks %}
+          <div class="left-cell task" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
+               {% if rg.collapsed %}style="display:none"{% endif %}
+               data-show="!$_collapsed.{{ rg.id }}">
+            <span class="title">{{ bar.title }}</span>
+            <span class="assignees">{{ bar.assignees }}</span>
+          </div>
+          <div class="chart-row" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
+               style="{% if rg.collapsed %}display:none;{% endif %}width:{{ vm.chart_width }}px;"
+               data-show="!$_collapsed.{{ rg.id }}">
+            {% for tile in vm.weekend_tiles %}
+              <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
+            {% endfor %}
+            <c-screens.gantt.bar :bar="bar" />
+          </div>
+        {% endfor %}
+    {% endfor %}
+
+    <div id="overlay">
+      {% if vm.show_today_line %}
+        <div id="today-line" style="left:{{ vm.today_x }}px;"></div>
+      {% endif %}
+    </div>
+  </div>
+</div>

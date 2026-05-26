@@ -75,6 +75,13 @@ html, body { height: 100%; }
   .topbar-btn:hover { @apply bg-base-200; }
   .topbar-btn.danger { @apply text-error border-error; }
 
+  #view-switch { @apply join border border-base-300 rounded-md overflow-hidden; }
+  #view-switch a {
+    @apply join-item btn btn-sm btn-ghost font-normal border-0 border-r border-base-300 rounded-none no-underline;
+  }
+  #view-switch > *:last-child { @apply border-r-0; }
+  #view-switch .active { @apply bg-base-content text-base-100; }
+
   #zoom-controls { @apply join border border-base-300 rounded-md overflow-hidden; }
   #zoom-controls a,
   #zoom-controls button {

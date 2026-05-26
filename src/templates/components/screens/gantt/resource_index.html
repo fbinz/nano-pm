@@ -1,11 +1,11 @@
 {% load static %}
 <c-vars vm zoom user ppd_unit ppd_unit_min ppd_unit_max ppd_unit_step days_per_unit />
-<c-layouts.base title="nano-pm">
+<c-layouts.base title="nano-pm · Resources">
   <div id="topbar">
     <div class="brand">nano-pm</div>
     <div id="view-switch">
-      <a href="/" class="active">Projects</a>
-      <a href="/resources/">Resources</a>
+      <a href="/">Projects</a>
+      <a href="/resources/" class="active">Resources</a>
     </div>
     <div class="spacer"></div>
     <div id="zoom-controls">
@@ -14,12 +14,6 @@
       <a href="?zoom=month"   class="{% if zoom == 'month' %}active{% endif %}">Month</a>
       <a href="?zoom=quarter" class="{% if zoom == 'quarter' %}active{% endif %}">Quarter</a>
     </div>
-    {% comment %}
-      Density slider — value is "px per active unit" (e.g. px/week). Server
-      converts back to px/day using the data-days-per-unit attribute below.
-      Persisted per-unit in the session, so switching units retains each
-      unit's last-set density.
-    {% endcomment %}
     <input type="range" id="zoom-slider" aria-label="Zoom" title="Zoom"
            min="{{ ppd_unit_min }}" max="{{ ppd_unit_max }}"
            step="{{ ppd_unit_step }}" value="{{ ppd_unit }}"
@@ -45,24 +39,12 @@
     </form>
   </div>
 
-  <c-screens.gantt.chart :vm="vm" />
+  <c-screens.gantt.chart_resource :vm="vm" />
 
-  {% comment %}
-    Drag handle pinned at the right edge of the sticky-left sidebar; updates
-    --left-w on drag. Lives outside #grid-scroll so SSE chart patches don't
-    re-render it.
-  {% endcomment %}
   <div id="sidebar-resizer"
        title="Drag to resize sidebar"
        data-on:pointerdown="nano.sidebarResizeStart(evt)"></div>
 
-  {% comment %}
-    Right-side drawer: a single persistent panel that hosts task / milestone
-    / project editors and the People sheet. #drawer-slot is the SSE target
-    Datastar patches into. The outer #drawer is the panel that slides in via
-    CSS when #drawer-slot has any children (`:has(:not(:empty))`). Closing
-    is just emptying the slot (nano.closeDrawer).
-  {% endcomment %}
   <aside id="drawer"
          data-on:keydown__window="evt.key === 'Escape' && nano.closeDrawer()">
     <header class="drawer-header">
@@ -77,14 +59,6 @@
   </aside>
   <div id="toast-slot"></div>
 
-  {% comment %}
-    Bridge for client-side gestures (drag move/resize, dep-handle,
-    rubber-band, milestone drag): the gesture handlers in nano.js dispatch
-    a custom event with { url, data }; Datastar populates this form, fires
-    @post for real, and applies the SSE chart-fragment patch. Keeps the
-    round-trip handling on Datastar so nano.js doesn't need a hand-rolled
-    SSE parser.
-  {% endcomment %}
   <form id="nano-bridge" hidden
         data-on:submit__prevent="@post(el.action, { contentType: 'form' })">
     {% csrf_token %}
@@ -108,10 +82,6 @@
     f.requestSubmit();
   "></div>
 
-  {% comment %}
-    GET bridge for popover-open helpers (openTaskPopover etc.). Same shape
-    as nano-commit but routes through Datastar's @get instead of @post.
-  {% endcomment %}
   <div data-on:nano-fetch__window="@get(evt.detail.url)"></div>
 
   <script src="{% static 'js/nano.js' %}"></script>
