@@ -470,6 +470,18 @@
     }
   }
 
+  function onCollapseAllChanged(collapse, ids) {
+    requestAnimationFrame(recalcArrows);
+    const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfEl) {
+      fetch('/projects/set-collapsed/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfEl.value, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'ids=' + (collapse ? ids.join(',') : ''),
+      });
+    }
+  }
+
   function recalcArrows() {
     const grid = document.getElementById('grid');
     if (!grid) return;
@@ -585,7 +597,7 @@
     projectRowMouseDown, milestoneMouseDown,
     sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, addMilestone,
-    closeDrawer, onCollapseChanged, recalcArrows,
+    closeDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
     scrollToToday,
   };
 

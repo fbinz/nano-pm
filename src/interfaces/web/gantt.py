@@ -510,6 +510,17 @@ def project_toggle_collapse(request: HttpRequest, project_id: int):
     return HttpResponse(status=204)
 
 
+@require_http_methods(["POST"])
+@login_required
+def set_all_collapsed(request: HttpRequest):
+    """Persist the full collapsed set (fire-and-forget from collapse-all / expand-all)."""
+    raw = request.POST.get("ids", "")
+    ids = {int(x) for x in raw.split(",") if x.strip().isdigit()}
+    _set_collapsed_projects(request, ids)
+    request.session.save()
+    return HttpResponse(status=204)
+
+
 # --------------------------------------------------------------------------- #
 # People                                                                      #
 # --------------------------------------------------------------------------- #
@@ -597,6 +608,7 @@ urlpatterns = [
     path("projects/<int:project_id>/delete/",        project_delete,   name="project_delete"),
     path("projects/<int:project_id>/toggle-collapse/",
                                                      project_toggle_collapse, name="project_toggle_collapse"),
+    path("projects/set-collapsed/",                  set_all_collapsed,       name="set_all_collapsed"),
     # People
     path("people/modal/",                            people_modal,     name="people_modal"),
     path("people/",                                  people_create,    name="people_create"),

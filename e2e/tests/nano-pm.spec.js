@@ -410,6 +410,21 @@ test.describe('project collapse', () => {
     const afterArrows = await page.locator('#arrows .hit:visible').count();
     expect(afterArrows).toBeLessThan(6);
   });
+
+  test('collapse-all button hides all task rows, then expand-all restores them', async ({ appPage: page }) => {
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(8);
+
+    const btn = page.locator('#collapse-all-btn');
+    await expect(btn).toHaveText('Collapse all');
+    await btn.click();
+
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(0);
+    await expect(btn).toHaveText('Expand all');
+
+    await btn.click();
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(8);
+    await expect(btn).toHaveText('Collapse all');
+  });
 });
 
 
