@@ -497,22 +497,17 @@ def project_delete(request: HttpRequest, project_id: int):
 
 @require_http_methods(["POST"])
 @login_required
-@datastar_response
 def project_toggle_collapse(request: HttpRequest, project_id: int):
-    """Flip whether this project's task rows are hidden in the sidebar/chart.
-    Collapsed-set lives in the session — pure UI state, no DB write — and the
-    chart re-renders so the hidden rows (and any dep arrows touching them)
-    drop out of the view-model."""
-    # Only honor real, owned projects so a stale ID can't pollute the session.
+    """Persist the collapsed/expanded state to the session (fire-and-forget from
+    the client). The visual toggle is handled client-side via Datastar signals;
+    this just ensures the next full page load renders the correct initial state."""
     if get_project(request.user, project_id) is None:
-        return
+        return HttpResponse(status=404)
     collapsed = _collapsed_projects(request)
     collapsed.symmetric_difference_update({project_id})
     _set_collapsed_projects(request, collapsed)
-    # Same reason as zoom_set: generator body runs after middleware, so the
-    # session write needs an explicit save to reach the backend.
     request.session.save()
-    yield _patch_chart(request)
+    return HttpResponse(status=204)
 
 
 # --------------------------------------------------------------------------- #

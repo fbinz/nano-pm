@@ -459,11 +459,54 @@
     if (slot) slot.innerHTML = '';
   }
 
-  // Toggle a project's collapsed state. The chevron button's click handler
-  // already stopped propagation, so the row's openProjectPopover handler
-  // doesn't also fire. Server flips the session-stored ID set and re-renders.
-  function toggleProjectCollapse(projectId) {
-    commit(`/projects/${projectId}/toggle-collapse/`, {});
+  function onCollapseChanged(projectId) {
+    requestAnimationFrame(recalcArrows);
+    const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfEl) {
+      fetch(`/projects/${projectId}/toggle-collapse/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfEl.value },
+      });
+    }
+  }
+
+  function recalcArrows() {
+    const grid = document.getElementById('grid');
+    if (!grid) return;
+    const barYCenters = {};
+    const barPos = {};
+    let y = 0;
+    for (const el of grid.children) {
+      if (el.matches('.chart-row.proj')) {
+        y += 36;
+      } else if (el.matches('.chart-row[data-task-id]')) {
+        if (getComputedStyle(el).display === 'none') continue;
+        const taskId = el.dataset.taskId;
+        const bar = el.querySelector('.bar');
+        if (bar) {
+          barYCenters[taskId] = y + 16;
+          barPos[taskId] = { x: parseFloat(bar.style.left), w: parseFloat(bar.style.width) };
+        }
+        y += 32;
+      }
+    }
+    for (const hit of document.querySelectorAll('#arrows path.hit[data-dep]')) {
+      const [fromId, toId] = hit.dataset.dep.split('-');
+      const vis = hit.nextElementSibling;
+      if (!barYCenters[fromId] || !barYCenters[toId]) {
+        hit.style.display = 'none';
+        if (vis) vis.style.display = 'none';
+        continue;
+      }
+      hit.style.display = '';
+      if (vis) vis.style.display = '';
+      const d = routeArrow(
+        barPos[fromId].x + barPos[fromId].w, barYCenters[fromId],
+        barPos[toId].x, barYCenters[toId],
+      );
+      hit.setAttribute('d', d);
+      if (vis) vis.setAttribute('d', d);
+    }
   }
 
   // ---------------------------------------------------------------------- //
@@ -542,7 +585,7 @@
     projectRowMouseDown, milestoneMouseDown,
     sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, addMilestone,
-    closeDrawer, toggleProjectCollapse,
+    closeDrawer, onCollapseChanged, recalcArrows,
     scrollToToday,
   };
 
@@ -566,7 +609,10 @@
   // server template doesn't know about selection state, so the patched
   // markup arrives without the class).
   document.addEventListener('datastar-fetch', evt => {
-    if (evt.detail && evt.detail.type === 'finished') applySelection();
+    if (evt.detail && evt.detail.type === 'finished') {
+      applySelection();
+      recalcArrows();
+    }
   });
 
   document.addEventListener('DOMContentLoaded', () => {

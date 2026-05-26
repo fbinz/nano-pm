@@ -358,21 +358,19 @@ test.describe('chart structure', () => {
 });
 
 // =============================================================================
-// Project collapse
+// Project collapse (client-side via Datastar signals)
 // =============================================================================
 test.describe('project collapse', () => {
   test('clicking the chevron on a project header hides its task rows', async ({ appPage: page }) => {
     // Seed: 8 task rows total. "API Migration" owns 3 of them.
-    await expect(page.locator('.left-cell.task')).toHaveCount(8);
+    // All rows are always in the DOM; collapsed rows get display:none.
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(8);
 
     const header = page.locator('.left-cell.proj', { hasText: 'API Migration' });
     await header.locator('.collapse-toggle').click();
 
-    // Wait for SSE patch to drop the 3 hidden rows — server-committed state,
-    // not client preview (per CLAUDE.md guidance).
-    await page.waitForFunction(
-      () => document.querySelectorAll('.left-cell.task').length === 5,
-    );
+    // Client-side toggle is instant — no SSE round-trip.
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(5);
 
     // Header itself stays visible.
     await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toBeVisible();
@@ -385,15 +383,11 @@ test.describe('project collapse', () => {
   test('clicking the chevron again expands the project', async ({ appPage: page }) => {
     const header = page.locator('.left-cell.proj', { hasText: 'API Migration' });
     await header.locator('.collapse-toggle').click();
-    await page.waitForFunction(
-      () => document.querySelectorAll('.left-cell.task').length === 5,
-    );
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(5);
 
     await page.locator('.left-cell.proj', { hasText: 'API Migration' })
       .locator('.collapse-toggle').click();
-    await page.waitForFunction(
-      () => document.querySelectorAll('.left-cell.task').length === 8,
-    );
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(8);
   });
 
   test('clicking the project header label still opens the edit popover', async ({ appPage: page }) => {
@@ -405,18 +399,15 @@ test.describe('project collapse', () => {
   });
 
   test('arrows touching a collapsed project are hidden', async ({ appPage: page }) => {
-    // Seed has 6 dep arrows; collapsing API Migration removes its 3 task rows,
-    // which kill at least the deps internal to that project and any
-    // cross-project deps that touch one of its tasks.
-    expect(await page.locator('#arrows .hit').count()).toBe(6);
+    // Seed has 6 dep arrows; collapsing API Migration hides arrows whose
+    // endpoints are in the collapsed project.
+    await expect(page.locator('#arrows .hit:visible')).toHaveCount(6);
 
     const header = page.locator('.left-cell.proj', { hasText: 'API Migration' });
     await header.locator('.collapse-toggle').click();
-    await page.waitForFunction(
-      () => document.querySelectorAll('.left-cell.task').length === 5,
-    );
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(5);
 
-    const afterArrows = await page.locator('#arrows .hit').count();
+    const afterArrows = await page.locator('#arrows .hit:visible').count();
     expect(afterArrows).toBeLessThan(6);
   });
 });
