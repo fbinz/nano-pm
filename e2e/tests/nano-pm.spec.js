@@ -447,11 +447,9 @@ test.describe('resource view', () => {
     await expect(page.locator('.left-cell.task:visible')).toHaveCount(11);
   });
 
-  test('milestones appear in the Unassigned group', async ({ appPage: page }) => {
+  test('no milestones in resource view', async ({ appPage: page }) => {
     await page.goto('/resources/');
-    const unassigned = page.locator('.chart-row.proj', { hasText: '' }).last();
-    // Seed has 2 milestones; both should be in the Unassigned header row
-    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
+    await expect(page.locator('.milestone')).toHaveCount(0);
   });
 
   test('no dependency arrows in resource view', async ({ appPage: page }) => {

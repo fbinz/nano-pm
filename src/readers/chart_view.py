@@ -435,16 +435,6 @@ def build_resource_vm(
                 for p in assignee_list:
                     person_bars.setdefault(p.id, []).append(bar)
 
-    # All milestones go to unassigned
-    all_milestones: list[MilestoneVM] = []
-    for proj in state.projects:
-        for m in proj.milestones.all():
-            all_milestones.append(MilestoneVM(
-                id=m.id, project_id=proj.id, title=m.title,
-                date_iso=m.date.isoformat(), x=x_of(m.date),
-                color=proj.color, overdue=(m.date < state.today),
-            ))
-
     row_groups: list[ProjectRowVM] = []
     for idx, person in enumerate(sorted(state.people, key=lambda p: p.name)):
         row_groups.append(ProjectRowVM(
@@ -455,7 +445,7 @@ def build_resource_vm(
     # Unassigned group at the end
     row_groups.append(ProjectRowVM(
         id=0, name="Unassigned", color="#9ca3af", order=len(row_groups),
-        tasks=person_bars.get(None, []), milestones=all_milestones,
+        tasks=person_bars.get(None, []), milestones=[],
         collapsed=(0 in collapsed_ids),
     ))
 

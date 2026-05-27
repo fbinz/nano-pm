@@ -50,9 +50,6 @@
         {% for tile in vm.weekend_tiles %}
           <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
         {% endfor %}
-        {% for m in rg.milestones %}
-          <c-screens.gantt.milestone :m="m" />
-        {% endfor %}
       </div>
       {% for bar in rg.tasks %}
           <div class="left-cell task" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
