@@ -394,6 +394,7 @@ def build_resource_vm(
     zoom: str = DEFAULT_ZOOM,
     px_per_day: int | None = None,
     collapsed_person_ids: set[int] | None = None,
+    status_filter: set[str] | None = None,
 ) -> ChartVM:
     if zoom not in ZOOM_PX_PER_DAY:
         zoom = DEFAULT_ZOOM
@@ -413,6 +414,8 @@ def build_resource_vm(
     for proj in state.projects:
         text_color, text_dark = _text_color_for(proj.color)
         for t in proj.tasks.all():
+            if status_filter is not None and t.status not in status_filter:
+                continue
             assignee_list = list(t.assignees.all())
             bar = BarVM(
                 id=t.id,

@@ -45,6 +45,7 @@ html, body { height: 100%; }
 #view-switch a,
 #zoom-controls a,
 #zoom-controls button,
+#status-filter .status-chip,
 .drawer-close,
 .popover .actions .danger,
 .popover .actions .primary,
@@ -91,6 +92,13 @@ html, body { height: 100%; }
   }
   #zoom-controls > *:last-child { @apply border-r-0; }
   #zoom-controls .active { @apply bg-base-content text-base-100; }
+
+  #status-filter { @apply join border border-base-300 rounded-md overflow-hidden; }
+  #status-filter .status-chip {
+    @apply join-item btn btn-sm btn-ghost font-normal border-0 border-r border-base-300 rounded-none;
+  }
+  #status-filter > *:last-child { @apply border-r-0; }
+  #status-filter .status-chip.active { @apply bg-base-content text-base-100; }
 
   /* Compact density slider — native range with a fixed visual height so it
      doesn't dominate the 52px topbar. */

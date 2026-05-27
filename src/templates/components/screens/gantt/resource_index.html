@@ -7,6 +7,7 @@
       <a href="/">Projects</a>
       <a href="/resources/" class="active">Resources</a>
     </div>
+    <c-screens.gantt.status-filter :status_choices="status_choices" :status_filter="status_filter" />
     <div class="spacer"></div>
     <div id="zoom-controls">
       <a href="?zoom=day"     class="{% if zoom == 'day' %}active{% endif %}">Day</a>

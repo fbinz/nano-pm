@@ -442,14 +442,31 @@ test.describe('resource view', () => {
     await expect(page.locator('.left-cell.proj', { hasText: 'Riley Wong' })).toBeVisible();
     await expect(page.locator('.left-cell.proj', { hasText: 'Unassigned' })).toBeVisible();
 
-    // Multi-assignee tasks are duplicated: 8 unique tasks → 11 bars
-    // Alex: t1,t2,t7,t8=4  Sam: t2,t3,t5=3  Riley: t4,t5,t6,t8=4  Unassigned: 0
-    await expect(page.locator('.left-cell.task:visible')).toHaveCount(11);
+    // Default filter hides "done" tasks. 7 non-done tasks → 10 bars
+    // Alex: t2,t7,t8=3  Sam: t2,t3,t5=3  Riley: t4,t5,t6,t8=4  Unassigned: 0
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(10);
   });
 
   test('no milestones in resource view', async ({ appPage: page }) => {
     await page.goto('/resources/');
     await expect(page.locator('.milestone')).toHaveCount(0);
+  });
+
+  test('status filter toggles hide and show tasks', async ({ appPage: page }) => {
+    await page.goto('/resources/');
+    // Default: Done is off, 3 active statuses are on
+    await expect(page.locator('#status-filter .status-chip.active')).toHaveCount(3);
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(10);
+
+    // Enable Done → all 11 bars visible
+    await page.locator('#status-filter .status-chip', { hasText: 'Done' }).click();
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(11);
+    await expect(page.locator('#status-filter .status-chip.active')).toHaveCount(4);
+
+    // Disable In progress → hides 2 in-progress tasks (t2 appears under Alex+Sam = 2 bars)
+    await page.locator('#status-filter .status-chip', { hasText: 'In progress' }).click();
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(8);
+    await expect(page.locator('#status-filter .status-chip.active')).toHaveCount(3);
   });
 
   test('no dependency arrows in resource view', async ({ appPage: page }) => {

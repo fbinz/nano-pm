@@ -103,6 +103,21 @@ def _set_collapsed_people(request: HttpRequest, ids: set[int]) -> None:
     request.session["collapsed_people"] = sorted(ids)
 
 
+_DEFAULT_STATUS_FILTER = {TaskStatus.PLANNED, TaskStatus.IN_PROGRESS, TaskStatus.BLOCKED}
+
+
+def _status_filter(request: HttpRequest) -> set[str]:
+    raw = request.session.get("status_filter")
+    if raw is None:
+        return set(_DEFAULT_STATUS_FILTER)
+    valid = {c.value for c in TaskStatus}
+    return {s for s in raw if s in valid}
+
+
+def _set_status_filter(request: HttpRequest, statuses: set[str]) -> None:
+    request.session["status_filter"] = sorted(statuses)
+
+
 def _view_mode(request: HttpRequest) -> str:
     return request.session.get("view_mode", "project")
 
@@ -114,7 +129,8 @@ def _patch_chart(request: HttpRequest, zoom: str | None = None):
     ppd = _ppd(request, z)
     if _view_mode(request) == "resource":
         vm = build_resource_vm(state, z, px_per_day=ppd,
-                               collapsed_person_ids=_collapsed_people(request))
+                               collapsed_person_ids=_collapsed_people(request),
+                               status_filter=_status_filter(request))
         template = "screens/gantt/chart_resource"
     else:
         vm = build_chart_vm(state, z, px_per_day=ppd,
@@ -552,10 +568,13 @@ def resource_index(request: HttpRequest) -> HttpResponse:
     state = get_chart_state(request.user)
     zoom = _zoom(request)
     ppd = _ppd(request, zoom)
+    sf = _status_filter(request)
     vm = build_resource_vm(
         state, zoom, px_per_day=ppd,
         collapsed_person_ids=_collapsed_people(request),
+        status_filter=sf,
     )
+    status_choices = [(c.value, c.label) for c in TaskStatus]
     days_per_unit = ZOOM_DAYS_PER_UNIT[zoom]
     lo, hi = ZOOM_PPD_RANGE[zoom]
     return render(
@@ -570,6 +589,8 @@ def resource_index(request: HttpRequest) -> HttpResponse:
             "ppd_unit_max": hi * days_per_unit,
             "ppd_unit_step": days_per_unit,
             "days_per_unit": days_per_unit,
+            "status_choices": status_choices,
+            "status_filter": sf,
         },
     )
 
@@ -592,6 +613,25 @@ def set_all_people_collapsed(request: HttpRequest):
     _set_collapsed_people(request, ids)
     request.session.save()
     return HttpResponse(status=204)
+
+
+@login_required
+@datastar_response
+def toggle_status_filter(request: HttpRequest):
+    status = request.GET.get("status", "")
+    valid = {c.value for c in TaskStatus}
+    if status not in valid:
+        return HttpResponse(status=400)
+    sf = _status_filter(request)
+    sf.symmetric_difference_update({status})
+    _set_status_filter(request, sf)
+    request.session.save()
+    yield SSE.patch_elements(render_component(
+        request, "screens/gantt/status-filter",
+        status_choices=[(c.value, c.label) for c in TaskStatus],
+        status_filter=sf,
+    ))
+    yield _patch_chart(request)
 
 
 # --------------------------------------------------------------------------- #
@@ -687,6 +727,7 @@ urlpatterns = [
     path("resources/people/<int:person_id>/toggle-collapse/",
                                                      person_toggle_collapse,  name="person_toggle_collapse"),
     path("resources/people/set-collapsed/",          set_all_people_collapsed, name="set_all_people_collapsed"),
+    path("resources/toggle-status/",                 toggle_status_filter,     name="toggle_status_filter"),
     # People
     path("people/modal/",                            people_modal,     name="people_modal"),
     path("people/",                                  people_create,    name="people_create"),

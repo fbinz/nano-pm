@@ -1,0 +1,7 @@
+<c-vars status_choices status_filter />
+<div id="status-filter">
+  {% for value, label in status_choices %}
+    <button class="status-chip{% if value in status_filter %} active{% endif %}"
+            data-on:click="@get('/resources/toggle-status/?status={{ value }}')">{{ label }}</button>
+  {% endfor %}
+</div>
