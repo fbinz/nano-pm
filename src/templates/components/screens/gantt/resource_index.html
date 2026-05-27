@@ -50,6 +50,11 @@
           <input type="text" name="name" placeholder="New workspace" required>
           <button type="submit">Create</button>
         </form>
+        {% if invite_token %}
+        <div class="workspace-invite">
+          <a id="invite-link" href="/invite/{{ invite_token }}/">Invite link</a>
+        </div>
+        {% endif %}
       </div>
     </div>
     <span class="user-pill">{{ user.username }}</span>

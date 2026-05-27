@@ -1,11 +1,15 @@
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.auth import views as auth_views
+from django.contrib.auth import get_user_model, login, views as auth_views
 from django.core.management import call_command
 from django.db import OperationalError, connection
-from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import redirect, render
 from django.urls import path, include
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+
+from data.models import Invitation, Membership, WorkspaceRole
 
 
 @csrf_exempt
@@ -32,6 +36,37 @@ def healthz(request):
     return HttpResponse("ok", content_type="text/plain")
 
 
+def invite_accept(request: HttpRequest, token: str):
+    try:
+        inv = Invitation.objects.select_related("workspace").get(token=token)
+    except Invitation.DoesNotExist:
+        return HttpResponse("Invalid or expired invite link.", status=404)
+
+    if request.method == "GET":
+        return render(request, "accounts/invite.html", {
+            "workspace_name": inv.workspace.name,
+        })
+
+    User = get_user_model()
+    username = request.POST.get("username", "").strip()
+    password = request.POST.get("password", "")
+    if not username or not password:
+        return render(request, "accounts/invite.html", {
+            "workspace_name": inv.workspace.name,
+            "error": "Username and password are required.",
+        })
+    if User.objects.filter(username=username).exists():
+        return render(request, "accounts/invite.html", {
+            "workspace_name": inv.workspace.name,
+            "error": "That username is already taken.",
+        })
+    user = User.objects.create_user(username=username, password=password)
+    Membership.objects.create(user=user, workspace=inv.workspace, role=WorkspaceRole.MEMBER)
+    login(request, user)
+    request.session["active_workspace_id"] = inv.workspace_id
+    return redirect("/")
+
+
 urlpatterns = [
     path("healthz", healthz, name="healthz"),
     path("admin/", admin.site.urls),
@@ -41,6 +76,7 @@ urlpatterns = [
         name="login",
     ),
     path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("invite/<str:token>/", invite_accept, name="invite_accept"),
     path("", include("interfaces.web.gantt")),
 ]
 

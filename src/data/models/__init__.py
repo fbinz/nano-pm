@@ -5,6 +5,7 @@ from data.models.person import Person
 from data.models.task import Task, TaskStatus
 from data.models.dependency import Dependency
 from data.models.milestone import Milestone
+from data.models.invitation import Invitation
 
 __all__ = [
     "Workspace",
@@ -16,4 +17,5 @@ __all__ = [
     "TaskStatus",
     "Dependency",
     "Milestone",
+    "Invitation",
 ]

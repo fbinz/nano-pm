@@ -1279,3 +1279,38 @@ test.describe('member role', () => {
     await expect(page.locator('#task-popover button[type=submit]')).toHaveCount(0);
   });
 });
+
+
+// =============================================================================
+// Join link invitation
+// =============================================================================
+test.describe('join link', () => {
+  test('PM can copy a join link and a new user can sign up through it', async ({ appPage: page, browser }) => {
+    // PM opens the workspace menu and sees an invite link
+    await page.locator('#workspace-name').click();
+    const inviteLink = page.locator('#invite-link');
+    await expect(inviteLink).toBeVisible();
+    const href = await inviteLink.getAttribute('href');
+    expect(href).toMatch(/\/invite\//);
+
+    // New user visits the invite link in a fresh browser context (not logged in)
+    const newCtx = await browser.newContext();
+    const newPage = await newCtx.newPage();
+    const baseUrl = page.url().match(/^https?:\/\/[^/]+/)[0];
+    await newPage.goto(baseUrl + href);
+
+    // They see a signup form
+    await expect(newPage.locator('input[name=username]')).toBeVisible();
+    await expect(newPage.locator('input[name=password]')).toBeVisible();
+
+    // Sign up
+    await newPage.fill('input[name=username]', 'newbie');
+    await newPage.fill('input[name=password]', 'newbie123');
+    await newPage.click('button[type=submit]');
+
+    // They land in the demo workspace and see the chart
+    await expect(newPage.locator('#workspace-name')).toHaveText("demo's workspace");
+    await expect(newPage.locator('.left-cell.proj')).toHaveCount(3);
+    await newCtx.close();
+  });
+});

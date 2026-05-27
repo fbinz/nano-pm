@@ -34,6 +34,10 @@ class Command(BaseCommand):
             )
         User = get_user_model()
 
+        # Wipe all non-superuser accounts for a clean slate
+        User.objects.filter(is_superuser=False).delete()
+        Workspace.objects.all().delete()
+
         # --- demo user + workspace ---
         user, created = User.objects.get_or_create(username="demo")
         if created or not user.has_usable_password():

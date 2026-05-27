@@ -26,7 +26,7 @@ from actions.manage_dependencies import add_dependency, delete_dependency
 from actions.manage_milestones import (
     create_milestone, update_milestone, delete_milestone,
 )
-from data.models import Dependency, Membership, Person, TaskStatus, WorkspaceRole
+from data.models import Dependency, Invitation, Membership, Person, TaskStatus, WorkspaceRole
 from data.models.project import PROJECT_COLORS
 from readers.gantt import (
     get_chart_state, get_task, get_project, get_milestone,
@@ -133,10 +133,15 @@ def _workspace_context(request: HttpRequest) -> dict:
         .select_related("workspace")
         .order_by("workspace__name")
     )
+    invite_token = None
+    if _is_pm(request) and request.workspace:
+        inv, _ = Invitation.objects.get_or_create(workspace=request.workspace)
+        invite_token = inv.token
     return {
         "workspace": request.workspace,
         "workspaces": [m.workspace for m in workspaces],
         "has_multiple_workspaces": len(workspaces) > 1,
+        "invite_token": invite_token,
     }
 
 
