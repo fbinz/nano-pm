@@ -139,3 +139,12 @@ class Command(BaseCommand):
         Membership.objects.create(user=pm2, workspace=ws2, role=WorkspaceRole.PM)
 
         self.stdout.write(self.style.SUCCESS("Seeded empty workspace for user 'pm2'."))
+
+        # --- multi1 user: member of both workspaces (for switcher tests) ---
+        multi1, created = User.objects.get_or_create(username="multi1")
+        if created or not multi1.has_usable_password():
+            multi1.set_password("multi1")
+            multi1.save()
+        Membership.objects.filter(user=multi1).delete()
+        Membership.objects.create(user=multi1, workspace=ws, role=WorkspaceRole.MEMBER)
+        Membership.objects.create(user=multi1, workspace=ws2, role=WorkspaceRole.MEMBER)

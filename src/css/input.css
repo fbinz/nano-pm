@@ -78,6 +78,15 @@ html, body { height: 100%; }
   .topbar-btn:hover { @apply bg-base-200; }
   .topbar-btn.danger { @apply text-error border-error; }
 
+  .workspace-switcher { @apply relative; }
+  .workspace-menu {
+    @apply absolute top-full right-0 mt-1 bg-base-100 border border-base-300 rounded-md shadow-lg z-50 min-w-48;
+  }
+  .workspace-menu form { @apply contents; }
+  .workspace-menu button {
+    @apply block w-full text-left px-3 py-2 text-sm bg-transparent border-0 cursor-pointer text-base-content hover:bg-base-200;
+  }
+
   #view-switch { @apply join border border-base-300 rounded-md overflow-hidden; }
   #view-switch a {
     @apply join-item btn btn-sm btn-ghost font-normal border-0 border-r border-base-300 rounded-none no-underline;

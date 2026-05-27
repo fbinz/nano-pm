@@ -32,9 +32,11 @@ class WorkspaceMiddleware:
                 del request.session["active_workspace_id"]
 
         memberships = list(
-            Membership.objects.select_related("workspace").filter(user=request.user)
+            Membership.objects.select_related("workspace")
+            .filter(user=request.user)
+            .order_by("workspace__name")
         )
-        if len(memberships) == 1:
+        if memberships:
             m = memberships[0]
             request.session["active_workspace_id"] = m.workspace_id
             request.workspace = m.workspace

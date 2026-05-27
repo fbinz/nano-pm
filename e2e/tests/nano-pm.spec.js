@@ -1171,6 +1171,38 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('.left-cell.proj')).toHaveCount(0);
     await expect(page.locator('.bar')).toHaveCount(0);
   });
+
+  test('topbar shows the current workspace name', async ({ appPage: page }) => {
+    await expect(page.locator('#workspace-name')).toHaveText("demo's workspace");
+  });
+
+  test('user in two workspaces can switch between them', async ({ page, request }) => {
+    await reset(request);
+
+    // member1 is in demo's workspace. Add member1 to pm2's workspace too
+    // by using the seeded multi-workspace user "multi1"
+    await page.goto('/accounts/login/');
+    await page.fill('input[name=username]', 'multi1');
+    await page.fill('input[name=password]', 'multi1');
+    await page.click('button[type=submit]');
+    await page.waitForURL('/');
+
+    // Should see demo's workspace data (auto-selected as first)
+    await expect(page.locator('#workspace-name')).toBeVisible();
+
+    // Open workspace switcher and pick the other workspace
+    await page.locator('#workspace-name').click();
+    await expect(page.locator('#workspace-menu')).toBeVisible();
+    // Two workspaces listed
+    await expect(page.locator('#workspace-menu button[type=submit]')).toHaveCount(2);
+
+    // Click the second workspace (pm2's)
+    await page.locator('#workspace-menu button', { hasText: "pm2's workspace" }).click();
+    await page.waitForURL('/');
+    // Chart should now be empty (pm2's workspace has no projects)
+    await expect(page.locator('.left-cell.proj')).toHaveCount(0);
+    await expect(page.locator('#workspace-name')).toHaveText("pm2's workspace");
+  });
 });
 
 

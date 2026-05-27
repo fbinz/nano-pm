@@ -1,5 +1,5 @@
 {% load static %}
-<c-vars vm zoom user is_pm ppd_unit ppd_unit_min ppd_unit_max ppd_unit_step days_per_unit />
+<c-vars vm zoom user is_pm workspace workspaces has_multiple_workspaces ppd_unit ppd_unit_min ppd_unit_max ppd_unit_step days_per_unit />
 <c-layouts.base title="nano-pm · Resources">
   <div id="topbar">
     <div class="brand">nano-pm</div>
@@ -35,6 +35,20 @@
     <button class="topbar-btn"
             data-on:click="@post('/projects/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">+ Project</button>
     {% endif %}
+    <div class="workspace-switcher">
+      <button id="workspace-name" class="topbar-btn"
+              {% if has_multiple_workspaces %}onclick="document.getElementById('workspace-menu').toggleAttribute('hidden')"{% endif %}>{{ workspace.name }}</button>
+      {% if has_multiple_workspaces %}
+      <div id="workspace-menu" class="workspace-menu" hidden>
+        {% for ws in workspaces %}
+          <form method="post" action="/workspaces/{{ ws.id }}/switch/">
+            {% csrf_token %}
+            <button type="submit">{{ ws.name }}</button>
+          </form>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
     <span class="user-pill">{{ user.username }}</span>
     <form method="post" action="{% url 'logout' %}" style="display:inline">
       {% csrf_token %}

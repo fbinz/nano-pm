@@ -26,7 +26,7 @@ from actions.manage_dependencies import add_dependency, delete_dependency
 from actions.manage_milestones import (
     create_milestone, update_milestone, delete_milestone,
 )
-from data.models import Dependency, Person, TaskStatus, WorkspaceRole
+from data.models import Dependency, Membership, Person, TaskStatus, WorkspaceRole
 from data.models.project import PROJECT_COLORS
 from readers.gantt import (
     get_chart_state, get_task, get_project, get_milestone,
@@ -127,6 +127,19 @@ def _is_pm(request: HttpRequest) -> bool:
     return m is not None and m.role == WorkspaceRole.PM
 
 
+def _workspace_context(request: HttpRequest) -> dict:
+    workspaces = list(
+        Membership.objects.filter(user=request.user)
+        .select_related("workspace")
+        .order_by("workspace__name")
+    )
+    return {
+        "workspace": request.workspace,
+        "workspaces": [m.workspace for m in workspaces],
+        "has_multiple_workspaces": len(workspaces) > 1,
+    }
+
+
 def _is_assigned(request: HttpRequest, task) -> bool:
     person = Person.objects.filter(
         workspace=request.workspace, user=request.user
@@ -191,6 +204,7 @@ def index(request: HttpRequest) -> HttpResponse:
             "ppd_unit_max": hi * days_per_unit,
             "ppd_unit_step": days_per_unit,
             "days_per_unit": days_per_unit,
+            **_workspace_context(request),
         },
     )
 
@@ -605,6 +619,7 @@ def resource_index(request: HttpRequest) -> HttpResponse:
             "days_per_unit": days_per_unit,
             "status_choices": status_choices,
             "status_filter": sf,
+            **_workspace_context(request),
         },
     )
 
@@ -702,6 +717,21 @@ def people_delete(request: HttpRequest, person_id: int):
 
 
 # --------------------------------------------------------------------------- #
+# Workspace switching                                                         #
+# --------------------------------------------------------------------------- #
+
+@require_http_methods(["POST"])
+@login_required
+def workspace_switch(request: HttpRequest, workspace_id: int):
+    from django.shortcuts import redirect
+    if not Membership.objects.filter(user=request.user, workspace_id=workspace_id).exists():
+        return HttpResponse(status=403)
+    request.session["active_workspace_id"] = workspace_id
+    request.session.save()
+    return redirect("/")
+
+
+# --------------------------------------------------------------------------- #
 # URL routing                                                                 #
 # --------------------------------------------------------------------------- #
 
@@ -747,4 +777,6 @@ urlpatterns = [
     path("people/",                                  people_create,    name="people_create"),
     path("people/<int:person_id>/update/",           people_update,    name="people_update"),
     path("people/<int:person_id>/delete/",           people_delete,    name="people_delete"),
+    # Workspaces
+    path("workspaces/<int:workspace_id>/switch/",    workspace_switch, name="workspace_switch"),
 ]
