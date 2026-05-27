@@ -10,7 +10,7 @@
     <div class="corner"
          data-signals__ifmissing='{"_collapsed": { {% for rg in vm.row_groups %}"{{ rg.id }}": {{ rg.collapsed|yesno:"true,false" }}{% if not forloop.last %}, {% endif %}{% endfor %} }}'>
       {% if vm.row_groups %}
-        <button id="collapse-all-btn" class="collapse-toggle"
+        <button id="collapse-all-btn" class="topbar-btn"
                 data-on:click="
                   const c = {% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %};
                   {% for rg in vm.row_groups %}$_collapsed.{{ rg.id }} = c; {% endfor %}

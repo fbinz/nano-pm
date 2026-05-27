@@ -41,6 +41,7 @@ html, body { height: 100%; }
    those vars under each consumer selector, so targeting `.btn-sm` directly
    won't reach them — we have to list every `@apply`-based consumer. */
 .topbar-btn,
+#collapse-all-btn,
 #view-switch a,
 #zoom-controls a,
 #zoom-controls button,
