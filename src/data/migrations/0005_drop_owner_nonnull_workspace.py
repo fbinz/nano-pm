@@ -1,3 +1,5 @@
+# Step 3: Drop owner FKs, make workspace non-null.
+
 import django.db.models.deletion
 from django.db import migrations, models
 
@@ -5,10 +7,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('data', '0003_add_workspace_membership'),
+        ('data', '0004_populate_workspaces'),
     ]
 
     operations = [
+        migrations.RemoveField(
+            model_name='person',
+            name='owner',
+        ),
+        migrations.RemoveField(
+            model_name='project',
+            name='owner',
+        ),
         migrations.AlterField(
             model_name='person',
             name='workspace',
