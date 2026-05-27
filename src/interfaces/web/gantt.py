@@ -731,6 +731,19 @@ def workspace_switch(request: HttpRequest, workspace_id: int):
     return redirect("/")
 
 
+@require_http_methods(["POST"])
+@login_required
+def workspace_create(request: HttpRequest):
+    from django.shortcuts import redirect
+    from data.models import Workspace
+    name = request.POST.get("name", "").strip() or "New workspace"
+    ws = Workspace.objects.create(name=name)
+    Membership.objects.create(user=request.user, workspace=ws, role=WorkspaceRole.PM)
+    request.session["active_workspace_id"] = ws.id
+    request.session.save()
+    return redirect("/")
+
+
 # --------------------------------------------------------------------------- #
 # URL routing                                                                 #
 # --------------------------------------------------------------------------- #
@@ -778,5 +791,6 @@ urlpatterns = [
     path("people/<int:person_id>/update/",           people_update,    name="people_update"),
     path("people/<int:person_id>/delete/",           people_delete,    name="people_delete"),
     # Workspaces
+    path("workspaces/",                              workspace_create, name="workspace_create"),
     path("workspaces/<int:workspace_id>/switch/",    workspace_switch, name="workspace_switch"),
 ]

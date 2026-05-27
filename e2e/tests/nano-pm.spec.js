@@ -1193,8 +1193,8 @@ test.describe('workspace isolation', () => {
     // Open workspace switcher and pick the other workspace
     await page.locator('#workspace-name').click();
     await expect(page.locator('#workspace-menu')).toBeVisible();
-    // Two workspaces listed
-    await expect(page.locator('#workspace-menu button[type=submit]')).toHaveCount(2);
+    // Two workspaces listed (excluding the create form button)
+    await expect(page.locator('#workspace-menu form:not(.workspace-create) button[type=submit]')).toHaveCount(2);
 
     // Click the second workspace (pm2's)
     await page.locator('#workspace-menu button', { hasText: "pm2's workspace" }).click();
@@ -1202,6 +1202,24 @@ test.describe('workspace isolation', () => {
     // Chart should now be empty (pm2's workspace has no projects)
     await expect(page.locator('.left-cell.proj')).toHaveCount(0);
     await expect(page.locator('#workspace-name')).toHaveText("pm2's workspace");
+  });
+
+  test('user can create a new workspace from the switcher', async ({ appPage: page }) => {
+    // demo starts with one workspace — no dropdown yet, just the name
+    await expect(page.locator('#workspace-name')).toHaveText("demo's workspace");
+
+    // Click the workspace name to open the menu (has "+ New workspace")
+    await page.locator('#workspace-name').click();
+    await expect(page.locator('#workspace-menu')).toBeVisible();
+
+    // Fill the name and submit
+    await page.fill('#workspace-menu input[name=name]', 'Side project');
+    await page.locator('#workspace-menu button', { hasText: 'Create' }).click();
+    await page.waitForURL('/');
+
+    // Now in the new empty workspace
+    await expect(page.locator('#workspace-name')).toHaveText('Side project');
+    await expect(page.locator('.left-cell.proj')).toHaveCount(0);
   });
 });
 

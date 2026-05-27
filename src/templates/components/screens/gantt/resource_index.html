@@ -37,8 +37,7 @@
     {% endif %}
     <div class="workspace-switcher">
       <button id="workspace-name" class="topbar-btn"
-              {% if has_multiple_workspaces %}onclick="document.getElementById('workspace-menu').toggleAttribute('hidden')"{% endif %}>{{ workspace.name }}</button>
-      {% if has_multiple_workspaces %}
+              onclick="document.getElementById('workspace-menu').toggleAttribute('hidden')">{{ workspace.name }}</button>
       <div id="workspace-menu" class="workspace-menu" hidden>
         {% for ws in workspaces %}
           <form method="post" action="/workspaces/{{ ws.id }}/switch/">
@@ -46,8 +45,12 @@
             <button type="submit">{{ ws.name }}</button>
           </form>
         {% endfor %}
+        <form method="post" action="/workspaces/" class="workspace-create">
+          {% csrf_token %}
+          <input type="text" name="name" placeholder="New workspace" required>
+          <button type="submit">Create</button>
+        </form>
       </div>
-      {% endif %}
     </div>
     <span class="user-pill">{{ user.username }}</span>
     <form method="post" action="{% url 'logout' %}" style="display:inline">
