@@ -1101,10 +1101,12 @@ test.describe('project & people management', () => {
 
     const row = page.locator('.chart-row.proj').first();
     const rowBox = await row.boundingBox();
-    // Drag a clear distance so projectRowMouseDown's `moved` flag flips.
-    await page.mouse.move(rowBox.x + 100, rowBox.y + rowBox.height / 2);
+    // Start past the sticky sidebar so the click lands on the chart area.
+    const sidebar = await page.locator('.left-cell.proj').first().boundingBox();
+    const chartX = sidebar.x + sidebar.width + 20;
+    await page.mouse.move(chartX, rowBox.y + rowBox.height / 2);
     await page.mouse.down();
-    await page.mouse.move(rowBox.x + 220, rowBox.y + rowBox.height / 2, { steps: 8 });
+    await page.mouse.move(chartX + 120, rowBox.y + rowBox.height / 2, { steps: 8 });
     await page.mouse.up();
 
     // Bar count goes up; milestone count does not.
