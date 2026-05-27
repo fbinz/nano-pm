@@ -1,5 +1,5 @@
 {% load static %}
-<c-vars vm zoom user ppd_unit ppd_unit_min ppd_unit_max ppd_unit_step days_per_unit />
+<c-vars vm zoom user is_pm ppd_unit ppd_unit_min ppd_unit_max ppd_unit_step days_per_unit />
 <c-layouts.base title="nano-pm">
   <div id="topbar">
     <div class="brand">nano-pm</div>
@@ -36,8 +36,10 @@
     <button class="topbar-btn" data-on:click="nano.scrollToToday()" title="Jump to today (T)">Today</button>
     <button id="people-btn" class="topbar-btn"
             data-on:click="@get('/people/modal/')">People</button>
+    {% if is_pm %}
     <button class="topbar-btn"
             data-on:click="@post('/projects/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">+ Project</button>
+    {% endif %}
     <span class="user-pill">{{ user.username }}</span>
     <form method="post" action="{% url 'logout' %}" style="display:inline">
       {% csrf_token %}

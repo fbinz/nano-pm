@@ -1172,3 +1172,58 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('.bar')).toHaveCount(0);
   });
 });
+
+
+// =============================================================================
+// Member role
+// =============================================================================
+test.describe('member role', () => {
+  async function loginAsMember(page) {
+    await page.goto('/accounts/login/');
+    await page.fill('input[name=username]', 'member1');
+    await page.fill('input[name=password]', 'member1');
+    await page.click('button[type=submit]');
+    await page.waitForURL('/');
+  }
+
+  test('member sees the full chart but not the + Project button', async ({ page, request }) => {
+    await reset(request);
+    await loginAsMember(page);
+
+    // Member sees demo's projects and tasks
+    await expect(page.locator('.left-cell.proj')).toHaveCount(3);
+    await expect(page.locator('.bar')).toHaveCount(8);
+
+    // No + Project button for members
+    await expect(page.locator('button:has-text("+ Project")')).toHaveCount(0);
+  });
+
+  test('member can update a task assigned to them', async ({ page, request }) => {
+    await reset(request);
+    await loginAsMember(page);
+
+    // member1 is linked to Alex Chen, who is assigned to "Migrate /users endpoints"
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    await bar.click();
+    await expect(page.locator('#task-popover')).toBeVisible();
+
+    // Member can edit the title
+    await page.fill('#task-popover input[name=title]', 'Migrate users (updated by member)');
+    await page.click('#task-popover button[type=submit]');
+    await expect(page.locator('#task-popover')).toHaveCount(0);
+    await expect(page.locator('.bar', { hasText: 'Migrate users (updated by member)' })).toBeVisible();
+  });
+
+  test('member cannot update a task not assigned to them', async ({ page, request }) => {
+    await reset(request);
+    await loginAsMember(page);
+
+    // "User research interviews" is assigned to Riley, not Alex (member1)
+    const bar = page.locator('.bar', { hasText: 'User research interviews' });
+    await bar.click();
+    await expect(page.locator('#task-popover')).toBeVisible();
+
+    // The save button should be hidden for non-assigned tasks
+    await expect(page.locator('#task-popover button[type=submit]')).toHaveCount(0);
+  });
+});

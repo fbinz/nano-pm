@@ -1,5 +1,5 @@
 {# Task editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars task projects people preds succs />
+<c-vars task projects people preds succs can_edit />
 <div id="drawer-slot">
   <form
     id="task-popover"
@@ -80,10 +80,12 @@
         {% endif %}
       </div>
     </div>
+    {% if can_edit %}
     <div class="actions">
       <button type="button" class="danger"
               data-on:click="confirm('Delete this task?') && @post('/tasks/{{ task.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">Delete</button>
       <button type="submit" class="primary">Done</button>
     </div>
+    {% endif %}
   </form>
 </div>

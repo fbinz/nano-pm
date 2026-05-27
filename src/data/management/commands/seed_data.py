@@ -116,6 +116,15 @@ class Command(BaseCommand):
         Dependency.objects.create(predecessor=t7, successor=t8)
         Dependency.objects.create(predecessor=t1, successor=t5)
 
+        # --- member1 user linked to Alex Chen ---
+        member1, created = User.objects.get_or_create(username="member1")
+        if created or not member1.has_usable_password():
+            member1.set_password("member1")
+            member1.save()
+        Membership.objects.create(user=member1, workspace=ws, role=WorkspaceRole.MEMBER)
+        alex.user = member1
+        alex.save()
+
         self.stdout.write(self.style.SUCCESS(
             "Seeded 3 projects, 3 people, 8 tasks, 2 milestones, 6 deps for user 'demo'."
         ))

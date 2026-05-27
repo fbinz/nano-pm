@@ -26,7 +26,7 @@ from actions.manage_dependencies import add_dependency, delete_dependency
 from actions.manage_milestones import (
     create_milestone, update_milestone, delete_milestone,
 )
-from data.models import Dependency, TaskStatus
+from data.models import Dependency, Person, TaskStatus, WorkspaceRole
 from data.models.project import PROJECT_COLORS
 from readers.gantt import (
     get_chart_state, get_task, get_project, get_milestone,
@@ -122,6 +122,20 @@ def _view_mode(request: HttpRequest) -> str:
     return request.session.get("view_mode", "project")
 
 
+def _is_pm(request: HttpRequest) -> bool:
+    m = getattr(request, "membership", None)
+    return m is not None and m.role == WorkspaceRole.PM
+
+
+def _is_assigned(request: HttpRequest, task) -> bool:
+    person = Person.objects.filter(
+        workspace=request.workspace, user=request.user
+    ).first()
+    if person is None:
+        return False
+    return task.assignees.filter(id=person.id).exists()
+
+
 def _patch_chart(request: HttpRequest, zoom: str | None = None):
     """Yield an SSE patch that replaces the chart fragment with a fresh render."""
     state = get_chart_state(request.workspace)
@@ -171,9 +185,7 @@ def index(request: HttpRequest) -> HttpResponse:
             "vm": vm,
             "zoom": zoom,
             "user": request.user,
-            # Slider is in "px per active unit" — convert from px/day for the
-            # template. Step matches one px/day so the slider lands on integer
-            # px/day values regardless of the unit.
+            "is_pm": _is_pm(request),
             "ppd_unit": ppd * days_per_unit,
             "ppd_unit_min": lo * days_per_unit,
             "ppd_unit_max": hi * days_per_unit,
@@ -219,10 +231,11 @@ def _render_task_popover(request: HttpRequest, task_id: int) -> str | None:
     )
     task.assignee_ids = list(task.assignees.values_list("id", flat=True))
     task.project_id = task.project.id
+    can_edit = _is_pm(request) or _is_assigned(request, task)
     return render_component(
         request, "screens/gantt/task-popover",
         task=task, projects=state.projects, people=state.people,
-        preds=preds, succs=succs,
+        preds=preds, succs=succs, can_edit=can_edit,
     )
 
 
@@ -584,6 +597,7 @@ def resource_index(request: HttpRequest) -> HttpResponse:
             "vm": vm,
             "zoom": zoom,
             "user": request.user,
+            "is_pm": _is_pm(request),
             "ppd_unit": ppd * days_per_unit,
             "ppd_unit_min": lo * days_per_unit,
             "ppd_unit_max": hi * days_per_unit,
