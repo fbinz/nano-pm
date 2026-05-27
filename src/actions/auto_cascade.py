@@ -11,15 +11,15 @@ from datetime import timedelta
 from data.models import Dependency, Task
 
 
-def cascade_user(user) -> set[int]:
-    """Apply auto-cascade across every task owned by ``user``.
+def cascade_workspace(workspace) -> set[int]:
+    """Apply auto-cascade across every task in ``workspace``.
 
     Returns the set of task ids whose dates were shifted, so the caller can
     re-render only the affected bars.
     """
-    tasks = {t.id: t for t in Task.objects.filter(project__owner=user)}
+    tasks = {t.id: t for t in Task.objects.filter(project__workspace=workspace)}
     deps = list(
-        Dependency.objects.filter(predecessor__project__owner=user).values_list(
+        Dependency.objects.filter(predecessor__project__workspace=workspace).values_list(
             "predecessor_id", "successor_id"
         )
     )
@@ -28,9 +28,6 @@ def cascade_user(user) -> set[int]:
         preds.setdefault(s, []).append(p)
 
     changed: set[int] = set()
-    # Iterate to a fixed point. Each shift is monotonic (we only move tasks
-    # later), and in a DAG this terminates. The safety counter guards us from
-    # accidental cycles in malformed data.
     for _ in range(10_000):
         any_change = False
         for tid, t in tasks.items():

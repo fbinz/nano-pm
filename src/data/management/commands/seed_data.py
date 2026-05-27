@@ -1,8 +1,11 @@
-"""Seed example data for nano-pm. Mirrors the demo dataset from legacy/nano-pm.html.
+"""Seed example data for nano-pm.
 
-Creates a 'demo' user (password 'demo') if missing, then 3 projects, 3 people,
-8 tasks (with multi-assignee + every status), 6 dependencies (incl. one
-cross-project), and 2 milestones — all dated relative to today.
+Creates a 'demo' user (password 'demo') with a workspace containing 3 projects,
+3 people, 8 tasks (with multi-assignee + every status), 6 dependencies (incl.
+one cross-project), and 2 milestones — all dated relative to today.
+
+Also creates a second user 'pm2' (password 'pm2') with an empty workspace,
+for multi-tenancy testing.
 """
 
 from datetime import date, timedelta
@@ -12,7 +15,10 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from data.models import Project, Person, Task, TaskStatus, Dependency, Milestone
+from data.models import (
+    Workspace, Membership, WorkspaceRole,
+    Project, Person, Task, TaskStatus, Dependency, Milestone,
+)
 
 
 class Command(BaseCommand):
@@ -27,6 +33,8 @@ class Command(BaseCommand):
                 "DJANGO_ALLOW_INSECURE_SEED=true in dev/CI environments only."
             )
         User = get_user_model()
+
+        # --- demo user + workspace ---
         user, created = User.objects.get_or_create(username="demo")
         if created or not user.has_usable_password():
             user.set_password("demo")
@@ -34,21 +42,23 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Created user 'demo' (password 'demo')."))
 
         # Wipe existing demo data for idempotency
-        Project.objects.filter(owner=user).delete()
-        Person.objects.filter(owner=user).delete()
+        Workspace.objects.filter(memberships__user=user).delete()
+
+        ws = Workspace.objects.create(name="demo's workspace")
+        Membership.objects.create(user=user, workspace=ws, role=WorkspaceRole.PM)
 
         today = date.today()
 
         def D(offset: int) -> date:
             return today + timedelta(days=offset)
 
-        alex = Person.objects.create(owner=user, name="Alex Chen")
-        sam = Person.objects.create(owner=user, name="Sam Patel")
-        riley = Person.objects.create(owner=user, name="Riley Wong")
+        alex = Person.objects.create(workspace=ws, name="Alex Chen")
+        sam = Person.objects.create(workspace=ws, name="Sam Patel")
+        riley = Person.objects.create(workspace=ws, name="Riley Wong")
 
-        p1 = Project.objects.create(owner=user, name="API Migration", color="#3b82f6", order=1)
-        p2 = Project.objects.create(owner=user, name="Onboarding revamp", color="#10b981", order=2)
-        p3 = Project.objects.create(owner=user, name="Infra hardening", color="#f59e0b", order=3)
+        p1 = Project.objects.create(workspace=ws, name="API Migration", color="#3b82f6", order=1)
+        p2 = Project.objects.create(workspace=ws, name="Onboarding revamp", color="#10b981", order=2)
+        p3 = Project.objects.create(workspace=ws, name="Infra hardening", color="#f59e0b", order=3)
 
         # Project 1: API Migration
         t1 = Task.objects.create(
@@ -107,5 +117,16 @@ class Command(BaseCommand):
         Dependency.objects.create(predecessor=t1, successor=t5)
 
         self.stdout.write(self.style.SUCCESS(
-            f"Seeded 3 projects, 3 people, 8 tasks, 2 milestones, 6 deps for user 'demo'."
+            "Seeded 3 projects, 3 people, 8 tasks, 2 milestones, 6 deps for user 'demo'."
         ))
+
+        # --- pm2 user + empty workspace (for isolation tests) ---
+        pm2, created = User.objects.get_or_create(username="pm2")
+        if created or not pm2.has_usable_password():
+            pm2.set_password("pm2")
+            pm2.save()
+        Workspace.objects.filter(memberships__user=pm2).delete()
+        ws2 = Workspace.objects.create(name="pm2's workspace")
+        Membership.objects.create(user=pm2, workspace=ws2, role=WorkspaceRole.PM)
+
+        self.stdout.write(self.style.SUCCESS("Seeded empty workspace for user 'pm2'."))

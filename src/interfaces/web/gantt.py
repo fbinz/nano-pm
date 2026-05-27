@@ -124,7 +124,7 @@ def _view_mode(request: HttpRequest) -> str:
 
 def _patch_chart(request: HttpRequest, zoom: str | None = None):
     """Yield an SSE patch that replaces the chart fragment with a fresh render."""
-    state = get_chart_state(request.user)
+    state = get_chart_state(request.workspace)
     z = zoom or _zoom(request)
     ppd = _ppd(request, z)
     if _view_mode(request) == "resource":
@@ -154,7 +154,7 @@ def _parse_iso(s: str) -> date | None:
 def index(request: HttpRequest) -> HttpResponse:
     request.session["view_mode"] = "project"
     request.session.save()
-    state = get_chart_state(request.user)
+    state = get_chart_state(request.workspace)
     zoom = _zoom(request)
     ppd = _ppd(request, zoom)
     vm = build_chart_vm(
@@ -205,10 +205,10 @@ def _render_task_popover(request: HttpRequest, task_id: int) -> str | None:
     """Render the task-popover fragment for `task_id`, or None if it's gone.
     Shared by task_popover (initial open) and side-effecting endpoints that
     want to refresh the drawer's deps list (e.g. dep_delete)."""
-    task = get_task(request.user, task_id)
+    task = get_task(request.workspace, task_id)
     if task is None:
         return None
-    state = get_chart_state(request.user)
+    state = get_chart_state(request.workspace)
     preds = list(
         Dependency.objects.filter(successor=task)
         .select_related("predecessor")
@@ -250,7 +250,7 @@ def task_update(request: HttpRequest, task_id: int):
     project_id = int(project_id_raw) if project_id_raw and project_id_raw.isdigit() else None
     assignee_ids = [int(x) for x in request.POST.getlist("assignee_ids") if x.isdigit()]
     update_task(
-        owner=request.user,
+        workspace=request.workspace,
         task_id=task_id,
         title=title,
         description=description,
@@ -272,7 +272,7 @@ def task_move(request: HttpRequest, task_id: int):
     new_start = _parse_iso(request.POST.get("start", ""))
     if new_start is None:
         return
-    move_task(owner=request.user, task_id=task_id, new_start=new_start)
+    move_task(workspace=request.workspace, task_id=task_id, new_start=new_start)
     yield _patch_chart(request)
 
 
@@ -291,7 +291,7 @@ def task_move_many(request: HttpRequest):
         delta_days = 0
     if not task_ids or delta_days == 0:
         return
-    move_many_tasks(owner=request.user, task_ids=task_ids, delta_days=delta_days)
+    move_many_tasks(workspace=request.workspace, task_ids=task_ids, delta_days=delta_days)
     yield _patch_chart(request)
 
 
@@ -302,7 +302,7 @@ def task_resize_start(request: HttpRequest, task_id: int):
     new_start = _parse_iso(request.POST.get("start", ""))
     if new_start is None:
         return
-    resize_start(owner=request.user, task_id=task_id, new_start=new_start)
+    resize_start(workspace=request.workspace, task_id=task_id, new_start=new_start)
     yield _patch_chart(request)
 
 
@@ -313,7 +313,7 @@ def task_resize_end(request: HttpRequest, task_id: int):
     new_end = _parse_iso(request.POST.get("end", ""))
     if new_end is None:
         return
-    resize_end(owner=request.user, task_id=task_id, new_end=new_end)
+    resize_end(workspace=request.workspace, task_id=task_id, new_end=new_end)
     yield _patch_chart(request)
 
 
@@ -328,7 +328,7 @@ def task_create(request: HttpRequest):
     if not project_id or start is None or end is None:
         return
     create_task(
-        owner=request.user, project_id=project_id, title=title, start=start, end=end,
+        workspace=request.workspace, project_id=project_id, title=title, start=start, end=end,
     )
     yield _patch_chart(request)
 
@@ -337,7 +337,7 @@ def task_create(request: HttpRequest):
 @login_required
 @datastar_response
 def task_delete_view(request: HttpRequest, task_id: int):
-    delete_task(owner=request.user, task_id=task_id)
+    delete_task(workspace=request.workspace, task_id=task_id)
     yield _patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
@@ -349,10 +349,10 @@ def task_delete_view(request: HttpRequest, task_id: int):
 @login_required
 @datastar_response
 def milestone_popover(request: HttpRequest, milestone_id: int):
-    m = get_milestone(request.user, milestone_id)
+    m = get_milestone(request.workspace, milestone_id)
     if m is None:
         return
-    state = get_chart_state(request.user)
+    state = get_chart_state(request.workspace)
     m.project_id = m.project.id  # for the template's `selected` check
     yield SSE.patch_elements(
         render_component(
@@ -369,7 +369,7 @@ def milestone_update_view(request: HttpRequest, milestone_id: int):
     project_id_raw = request.POST.get("project_id", "")
     description = request.POST.get("description") if "description" in request.POST else None
     update_milestone(
-        owner=request.user,
+        workspace=request.workspace,
         milestone_id=milestone_id,
         title=request.POST.get("title") or None,
         description=description,
@@ -384,7 +384,7 @@ def milestone_update_view(request: HttpRequest, milestone_id: int):
 @login_required
 @datastar_response
 def milestone_delete_view(request: HttpRequest, milestone_id: int):
-    delete_milestone(owner=request.user, milestone_id=milestone_id)
+    delete_milestone(workspace=request.workspace, milestone_id=milestone_id)
     yield _patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
@@ -396,7 +396,7 @@ def milestone_move(request: HttpRequest, milestone_id: int):
     new_date = _parse_iso(request.POST.get("date", ""))
     if new_date is None:
         return
-    update_milestone(owner=request.user, milestone_id=milestone_id, on=new_date)
+    update_milestone(workspace=request.workspace, milestone_id=milestone_id, on=new_date)
     yield _patch_chart(request)
 
 
@@ -409,17 +409,17 @@ def milestone_create(request: HttpRequest, project_id: int):
     field places the milestone at a specific date (used by the click-on-row
     flow); without it the milestone lands on today's date (used by the
     + Add milestone button in the project popover)."""
-    proj = get_project(request.user, project_id)
+    proj = get_project(request.workspace, project_id)
     if proj is None:
         return
     on = _parse_iso(request.POST.get("date", "")) or date.today()
     m = create_milestone(
-        owner=request.user, project_id=project_id,
+        workspace=request.workspace, project_id=project_id,
         title="New milestone", on=on,
     )
     if m is None:
         return
-    state = get_chart_state(request.user)
+    state = get_chart_state(request.workspace)
     yield _patch_chart(request)
     m.project_id = m.project.id  # for the template's `selected` check
     yield SSE.patch_elements(
@@ -441,7 +441,7 @@ def dep_add(request: HttpRequest):
     pred = int(request.POST.get("predecessor", 0) or 0)
     succ = int(request.POST.get("successor", 0) or 0)
     _, _, err = add_dependency(
-        owner=request.user, predecessor_id=pred, successor_id=succ
+        workspace=request.workspace, predecessor_id=pred, successor_id=succ
     )
     if err:
         yield SSE.patch_elements(
@@ -456,7 +456,7 @@ def dep_add(request: HttpRequest):
 @datastar_response
 def dep_delete(request: HttpRequest, predecessor_id: int, successor_id: int):
     delete_dependency(
-        owner=request.user,
+        workspace=request.workspace,
         predecessor_id=predecessor_id,
         successor_id=successor_id,
     )
@@ -479,14 +479,14 @@ def dep_delete(request: HttpRequest, predecessor_id: int, successor_id: int):
 @login_required
 @datastar_response
 def project_create(request: HttpRequest):
-    create_project(owner=request.user)
+    create_project(workspace=request.workspace)
     yield _patch_chart(request)
 
 
 @login_required
 @datastar_response
 def project_popover(request: HttpRequest, project_id: int):
-    proj = get_project(request.user, project_id)
+    proj = get_project(request.workspace, project_id)
     if proj is None:
         return
     yield SSE.patch_elements(
@@ -503,7 +503,7 @@ def project_popover(request: HttpRequest, project_id: int):
 @datastar_response
 def project_update(request: HttpRequest, project_id: int):
     update_project(
-        owner=request.user,
+        workspace=request.workspace,
         project_id=project_id,
         name=request.POST.get("name") or None,
         color=request.POST.get("color") or None,
@@ -517,7 +517,7 @@ def project_update(request: HttpRequest, project_id: int):
 @datastar_response
 def project_move(request: HttpRequest, project_id: int):
     direction = int(request.GET.get("dir", "0") or 0)
-    move_project(owner=request.user, project_id=project_id, direction=direction)
+    move_project(workspace=request.workspace, project_id=project_id, direction=direction)
     yield _patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
@@ -526,7 +526,7 @@ def project_move(request: HttpRequest, project_id: int):
 @login_required
 @datastar_response
 def project_delete(request: HttpRequest, project_id: int):
-    delete_project(owner=request.user, project_id=project_id)
+    delete_project(workspace=request.workspace, project_id=project_id)
     yield _patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
@@ -537,7 +537,7 @@ def project_toggle_collapse(request: HttpRequest, project_id: int):
     """Persist the collapsed/expanded state to the session (fire-and-forget from
     the client). The visual toggle is handled client-side via Datastar signals;
     this just ensures the next full page load renders the correct initial state."""
-    if get_project(request.user, project_id) is None:
+    if get_project(request.workspace, project_id) is None:
         return HttpResponse(status=404)
     collapsed = _collapsed_projects(request)
     collapsed.symmetric_difference_update({project_id})
@@ -565,7 +565,7 @@ def set_all_collapsed(request: HttpRequest):
 def resource_index(request: HttpRequest) -> HttpResponse:
     request.session["view_mode"] = "resource"
     request.session.save()
-    state = get_chart_state(request.user)
+    state = get_chart_state(request.workspace)
     zoom = _zoom(request)
     ppd = _ppd(request, zoom)
     sf = _status_filter(request)
@@ -641,7 +641,7 @@ def toggle_status_filter(request: HttpRequest):
 @login_required
 @datastar_response
 def people_modal(request: HttpRequest):
-    state = get_chart_state(request.user)
+    state = get_chart_state(request.workspace)
     yield SSE.patch_elements(
         render_component(request, "screens/gantt/people-modal", people=state.people)
     )
@@ -654,8 +654,8 @@ def people_create(request: HttpRequest):
     name = request.POST.get("name", "").strip()
     if not name:
         return
-    create_person(owner=request.user, name=name)
-    state = get_chart_state(request.user)
+    create_person(workspace=request.workspace, name=name)
+    state = get_chart_state(request.workspace)
     yield SSE.patch_elements(
         render_component(request, "screens/gantt/people-modal", people=state.people)
     )
@@ -666,9 +666,9 @@ def people_create(request: HttpRequest):
 @datastar_response
 def people_update(request: HttpRequest, person_id: int):
     update_person(
-        owner=request.user, person_id=person_id, name=request.POST.get("name", "")
+        workspace=request.workspace, person_id=person_id, name=request.POST.get("name", "")
     )
-    state = get_chart_state(request.user)
+    state = get_chart_state(request.workspace)
     yield SSE.patch_elements(
         render_component(request, "screens/gantt/people-modal", people=state.people)
     )
@@ -679,8 +679,8 @@ def people_update(request: HttpRequest, person_id: int):
 @login_required
 @datastar_response
 def people_delete(request: HttpRequest, person_id: int):
-    delete_person(owner=request.user, person_id=person_id)
-    state = get_chart_state(request.user)
+    delete_person(workspace=request.workspace, person_id=person_id)
+    state = get_chart_state(request.workspace)
     yield SSE.patch_elements(
         render_component(request, "screens/gantt/people-modal", people=state.people)
     )

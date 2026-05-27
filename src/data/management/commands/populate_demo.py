@@ -18,7 +18,8 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from data.models import (
-    Dependency, Milestone, Person, Project, Task, TaskStatus,
+    Dependency, Membership, Milestone, Person, Project, Task, TaskStatus,
+    Workspace, WorkspaceRole,
 )
 
 
@@ -46,10 +47,11 @@ class Command(BaseCommand):
                     f"Created user '{username}' (password '{username}')."
                 ))
             # Wipe this user's data only — leave 'demo' (and any other users) alone.
-            Project.objects.filter(owner=user).delete()
-            Person.objects.filter(owner=user).delete()
+            Workspace.objects.filter(memberships__user=user).delete()
+            ws = Workspace.objects.create(name=f"{username}'s workspace")
+            Membership.objects.create(user=user, workspace=ws, role=WorkspaceRole.PM)
 
-            stats = builder(user, today)
+            stats = builder(ws, today)
             self.stdout.write(self.style.SUCCESS(
                 f"  Populated '{username}': "
                 f"{stats['projects']} projects, "
@@ -85,17 +87,17 @@ def _make_task(project, title, start_offset, duration, status, assignees, today)
 # Persona: Alice (startup PM)                                                 #
 # --------------------------------------------------------------------------- #
 
-def build_alice(user, today):
+def build_alice(ws, today):
     # Team
-    maya = Person.objects.create(owner=user, name="Maya Patel")
-    ravi = Person.objects.create(owner=user, name="Ravi Kumar")
-    jordan = Person.objects.create(owner=user, name="Jordan Reyes")
-    olivia = Person.objects.create(owner=user, name="Olivia Brandt")
+    maya = Person.objects.create(workspace=ws, name="Maya Patel")
+    ravi = Person.objects.create(workspace=ws, name="Ravi Kumar")
+    jordan = Person.objects.create(workspace=ws, name="Jordan Reyes")
+    olivia = Person.objects.create(workspace=ws, name="Olivia Brandt")
 
     n_tasks = n_deps = n_ms = 0
 
     # 1. Mobile App v2
-    p1 = Project.objects.create(owner=user, name="Mobile App v2", color="#3b82f6", order=1)
+    p1 = Project.objects.create(workspace=ws, name="Mobile App v2", color="#3b82f6", order=1)
     spike = _make_task(p1, "Architectural spike", -45, 14, TaskStatus.DONE, [maya], today)
     core = _make_task(p1, "Core API rebuild", -30, 25, TaskStatus.IN_PROGRESS, [ravi, jordan], today)
     ios = _make_task(p1, "iOS UI rebuild", -10, 30, TaskStatus.IN_PROGRESS, [maya], today)
@@ -113,7 +115,7 @@ def build_alice(user, today):
     Dependency.objects.create(predecessor=beta, successor=release); n_deps += 1
 
     # 2. Customer Onboarding
-    p2 = Project.objects.create(owner=user, name="Customer Onboarding", color="#10b981", order=2)
+    p2 = Project.objects.create(workspace=ws, name="Customer Onboarding", color="#10b981", order=2)
     research = _make_task(p2, "User research interviews", -75, 20, TaskStatus.DONE, [olivia], today)
     design = _make_task(p2, "Tutorial v2 design", -50, 18, TaskStatus.DONE, [olivia, maya], today)
     build = _make_task(p2, "Tutorial v2 build", -28, 21, TaskStatus.DONE, [maya, ravi], today)
@@ -127,7 +129,7 @@ def build_alice(user, today):
     Dependency.objects.create(predecessor=abtest, successor=rollout); n_deps += 1
 
     # 3. Pricing Page Redesign
-    p3 = Project.objects.create(owner=user, name="Pricing Page Redesign", color="#f59e0b", order=3)
+    p3 = Project.objects.create(workspace=ws, name="Pricing Page Redesign", color="#f59e0b", order=3)
     copy = _make_task(p3, "Copy + visual design", 5, 10, TaskStatus.PLANNED, [jordan], today)
     impl = _make_task(p3, "Implementation", 16, 8, TaskStatus.PLANNED, [ravi], today)
     launch = _make_task(p3, "Launch + analytics", 25, 2, TaskStatus.PLANNED, [jordan], today)
@@ -136,7 +138,7 @@ def build_alice(user, today):
     Dependency.objects.create(predecessor=impl, successor=launch); n_deps += 1
 
     # 4. Data Pipeline
-    p4 = Project.objects.create(owner=user, name="Data Pipeline", color="#8b5cf6", order=4)
+    p4 = Project.objects.create(workspace=ws, name="Data Pipeline", color="#8b5cf6", order=4)
     soc2 = _make_task(p4, "SOC2 compliance review", -10, 30, TaskStatus.BLOCKED, [ravi], today)
     pipeline = _make_task(p4, "Pipeline rewrite", 21, 30, TaskStatus.PLANNED, [ravi], today)
     Milestone.objects.create(project=p4, title="Pipeline cutover", date=_D(today, 55))
@@ -155,18 +157,18 @@ def build_alice(user, today):
 # Persona: Bob (corporate PM)                                                 #
 # --------------------------------------------------------------------------- #
 
-def build_bob(user, today):
-    taylor = Person.objects.create(owner=user, name="Taylor Singh")
-    lin = Person.objects.create(owner=user, name="Lin Hayashi")
-    nia = Person.objects.create(owner=user, name="Nia Okafor")
-    dev = Person.objects.create(owner=user, name="Dev Alvarez")
-    robin = Person.objects.create(owner=user, name="Robin Hartley")
-    casey = Person.objects.create(owner=user, name="Casey Mensah")
+def build_bob(ws, today):
+    taylor = Person.objects.create(workspace=ws, name="Taylor Singh")
+    lin = Person.objects.create(workspace=ws, name="Lin Hayashi")
+    nia = Person.objects.create(workspace=ws, name="Nia Okafor")
+    dev = Person.objects.create(workspace=ws, name="Dev Alvarez")
+    robin = Person.objects.create(workspace=ws, name="Robin Hartley")
+    casey = Person.objects.create(workspace=ws, name="Casey Mensah")
 
     n_tasks = n_deps = n_ms = 0
 
     # 1. Q3 Platform Migration
-    p1 = Project.objects.create(owner=user, name="Q3 Platform Migration", color="#06b6d4", order=1)
+    p1 = Project.objects.create(workspace=ws, name="Q3 Platform Migration", color="#06b6d4", order=1)
     capacity = _make_task(p1, "Capacity planning", -60, 14, TaskStatus.DONE, [taylor], today)
     schema = _make_task(p1, "Schema migration", -40, 25, TaskStatus.DONE, [lin, dev], today)
     phase1 = _make_task(p1, "Service migration phase 1", -12, 20, TaskStatus.IN_PROGRESS, [lin, dev, casey], today)
@@ -183,7 +185,7 @@ def build_bob(user, today):
     Dependency.objects.create(predecessor=perfval, successor=cutover); n_deps += 1
 
     # 2. Compliance Audit
-    p2 = Project.objects.create(owner=user, name="Compliance Audit", color="#ef4444", order=2)
+    p2 = Project.objects.create(workspace=ws, name="Compliance Audit", color="#ef4444", order=2)
     prep = _make_task(p2, "Pre-audit prep", -90, 30, TaskStatus.DONE, [nia], today)
     audit = _make_task(p2, "SOC2 audit window", -55, 21, TaskStatus.DONE, [nia, robin], today)
     remed = _make_task(p2, "Remediation", -30, 14, TaskStatus.DONE, [robin], today)
@@ -195,7 +197,7 @@ def build_bob(user, today):
     Dependency.objects.create(predecessor=remed, successor=finalrep); n_deps += 1
 
     # 3. Regional Expansion
-    p3 = Project.objects.create(owner=user, name="Regional Expansion", color="#84cc16", order=3)
+    p3 = Project.objects.create(workspace=ws, name="Regional Expansion", color="#84cc16", order=3)
     market = _make_task(p3, "Market research", 15, 28, TaskStatus.PLANNED, [casey], today)
     regul = _make_task(p3, "Regulatory review", 25, 35, TaskStatus.PLANNED, [nia], today)
     locale = _make_task(p3, "Localisation design", 50, 21, TaskStatus.PLANNED, [robin], today)
@@ -207,7 +209,7 @@ def build_bob(user, today):
     Dependency.objects.create(predecessor=locale, successor=pilot); n_deps += 1
 
     # 4. API v3
-    p4 = Project.objects.create(owner=user, name="API v3", color="#0ea5e9", order=4)
+    p4 = Project.objects.create(workspace=ws, name="API v3", color="#0ea5e9", order=4)
     spec = _make_task(p4, "Spec drafting", 28, 14, TaskStatus.PLANNED, [dev], today)
     refimpl = _make_task(p4, "Reference implementation", 44, 28, TaskStatus.PLANNED, [lin, dev], today)
     sdk = _make_task(p4, "SDK rollout", 75, 14, TaskStatus.PLANNED, [lin], today)
@@ -219,7 +221,7 @@ def build_bob(user, today):
     Dependency.objects.create(predecessor=sdk, successor=pubbeta); n_deps += 1
 
     # 5. Performance Hardening
-    p5 = Project.objects.create(owner=user, name="Performance Hardening", color="#ec4899", order=5)
+    p5 = Project.objects.create(workspace=ws, name="Performance Hardening", color="#ec4899", order=5)
     profiling = _make_task(p5, "Profiling sweep", -20, 14, TaskStatus.IN_PROGRESS, [taylor], today)
     opts = _make_task(p5, "Critical-path opts", -5, 18, TaskStatus.BLOCKED, [taylor, casey], today)
     caching = _make_task(p5, "Caching layer", 15, 28, TaskStatus.PLANNED, [taylor], today)

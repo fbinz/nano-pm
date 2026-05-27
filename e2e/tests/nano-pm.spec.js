@@ -1151,3 +1151,24 @@ test.describe('project & people management', () => {
     await expect(page.locator('#drawer-slot .people-row')).toHaveCount(4);
   });
 });
+
+
+// =============================================================================
+// Workspace isolation
+// =============================================================================
+test.describe('workspace isolation', () => {
+  test('a second PM sees an empty chart, not the demo data', async ({ page, request }) => {
+    await reset(request);
+
+    // Log in as pm2 — a second user seeded with their own empty workspace
+    await page.goto('/accounts/login/');
+    await page.fill('input[name=username]', 'pm2');
+    await page.fill('input[name=password]', 'pm2');
+    await page.click('button[type=submit]');
+    await page.waitForURL('/');
+
+    // pm2's workspace has no projects, so the chart should be empty
+    await expect(page.locator('.left-cell.proj')).toHaveCount(0);
+    await expect(page.locator('.bar')).toHaveCount(0);
+  });
+});

@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import models
 
 
@@ -9,10 +8,10 @@ PROJECT_COLORS = [
 
 
 class Project(models.Model):
-    """A project owned by a single user. Groups tasks and milestones."""
+    """A project within a workspace. Groups tasks and milestones."""
 
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+    workspace = models.ForeignKey(
+        "data.Workspace",
         on_delete=models.CASCADE,
         related_name="projects",
     )

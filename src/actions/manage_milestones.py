@@ -6,10 +6,10 @@ from data.models import Milestone, Project
 
 
 def create_milestone(
-    *, owner, project_id: int, title: str, on: date
+    *, workspace, project_id: int, title: str, on: date
 ) -> Milestone | None:
     try:
-        proj = Project.objects.get(id=project_id, owner=owner)
+        proj = Project.objects.get(id=project_id, workspace=workspace)
     except Project.DoesNotExist:
         return None
     return Milestone.objects.create(
@@ -19,7 +19,7 @@ def create_milestone(
 
 def update_milestone(
     *,
-    owner,
+    workspace,
     milestone_id: int,
     title: str | None = None,
     description: str | None = None,
@@ -28,7 +28,7 @@ def update_milestone(
 ) -> Milestone | None:
     try:
         m = Milestone.objects.select_related("project").get(
-            id=milestone_id, project__owner=owner
+            id=milestone_id, project__workspace=workspace
         )
     except Milestone.DoesNotExist:
         return None
@@ -40,7 +40,7 @@ def update_milestone(
         m.date = on
     if project_id is not None:
         try:
-            new_proj = Project.objects.get(id=project_id, owner=owner)
+            new_proj = Project.objects.get(id=project_id, workspace=workspace)
             m.project = new_proj
         except Project.DoesNotExist:
             pass
@@ -48,8 +48,8 @@ def update_milestone(
     return m
 
 
-def delete_milestone(*, owner, milestone_id: int) -> bool:
+def delete_milestone(*, workspace, milestone_id: int) -> bool:
     deleted, _ = Milestone.objects.filter(
-        id=milestone_id, project__owner=owner
+        id=milestone_id, project__workspace=workspace
     ).delete()
     return deleted > 0

@@ -1,4 +1,4 @@
-"""Read-side queries for the Gantt chart, all scoped to a single user."""
+"""Read-side queries for the Gantt chart, all scoped to a workspace."""
 
 from datetime import date, timedelta
 from dataclasses import dataclass, field
@@ -10,7 +10,7 @@ from data.models import Project, Person, Task, Milestone, Dependency
 
 @dataclass
 class ChartState:
-    """Materialised chart state for one user — what the renderer needs."""
+    """Materialised chart state for one workspace — what the renderer needs."""
 
     projects: list[Project]
     people: list[Person]
@@ -38,12 +38,12 @@ def _add_months(d: date, n: int) -> date:
     return date(y, m, 1)
 
 
-def get_chart_state(user) -> ChartState:
-    """Load everything needed to render the chart for the given user."""
+def get_chart_state(workspace) -> ChartState:
+    """Load everything needed to render the chart for the given workspace."""
     today = date.today()
 
     projects = list(
-        Project.objects.filter(owner=user)
+        Project.objects.filter(workspace=workspace)
         .order_by("order", "id")
         .prefetch_related(
             Prefetch(
@@ -56,18 +56,14 @@ def get_chart_state(user) -> ChartState:
             ),
         )
     )
-    people = list(Person.objects.filter(owner=user))
+    people = list(Person.objects.filter(workspace=workspace))
 
-    # Restrict deps to those whose endpoints are owned by this user. Both ends
-    # share a project owner, so a single owner filter on either side is enough.
     deps = list(
-        Dependency.objects.filter(predecessor__project__owner=user).select_related(
+        Dependency.objects.filter(predecessor__project__workspace=workspace).select_related(
             "predecessor", "successor"
         )
     )
 
-    # Compute chart range: earliest of (today - 30d, earliest data - 7d) to
-    # latest of (today + 150d, latest data + 14d), rounded to month boundaries.
     earliest = today - timedelta(days=30)
     latest = today + timedelta(days=150)
     for proj in projects:
@@ -98,35 +94,35 @@ def get_chart_state(user) -> ChartState:
     )
 
 
-def get_task(user, task_id: int) -> Task | None:
+def get_task(workspace, task_id: int) -> Task | None:
     try:
         return (
             Task.objects.select_related("project")
             .prefetch_related("assignees")
-            .get(id=task_id, project__owner=user)
+            .get(id=task_id, project__workspace=workspace)
         )
     except Task.DoesNotExist:
         return None
 
 
-def get_project(user, project_id: int) -> Project | None:
+def get_project(workspace, project_id: int) -> Project | None:
     try:
-        return Project.objects.get(id=project_id, owner=user)
+        return Project.objects.get(id=project_id, workspace=workspace)
     except Project.DoesNotExist:
         return None
 
 
-def get_milestone(user, milestone_id: int) -> Milestone | None:
+def get_milestone(workspace, milestone_id: int) -> Milestone | None:
     try:
         return Milestone.objects.select_related("project").get(
-            id=milestone_id, project__owner=user
+            id=milestone_id, project__workspace=workspace
         )
     except Milestone.DoesNotExist:
         return None
 
 
-def get_person(user, person_id: int) -> Person | None:
+def get_person(workspace, person_id: int) -> Person | None:
     try:
-        return Person.objects.get(id=person_id, owner=user)
+        return Person.objects.get(id=person_id, workspace=workspace)
     except Person.DoesNotExist:
         return None
