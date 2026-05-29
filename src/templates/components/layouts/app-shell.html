@@ -1,0 +1,109 @@
+{% load static %}
+<c-vars user is_pm workspace workspaces has_multiple_workspaces active_nav />
+<c-layouts.base title="nano-pm">
+  <div class="drawer lg:drawer-open">
+    <input id="app-drawer" type="checkbox" class="drawer-toggle" />
+    <div class="drawer-content flex flex-col min-h-screen">
+      {{ slot }}
+    </div>
+    <div class="drawer-side z-[60]">
+      <label for="app-drawer" class="drawer-overlay" aria-label="Close sidebar"></label>
+      <aside class="bg-base-200 h-full w-[220px] flex flex-col border-r border-base-300">
+        <div class="sidebar-brand">nano-pm</div>
+        <div class="sidebar-workspace">
+          <div class="sidebar-workspace-display">
+            <span id="workspace-name" class="ws-name">{{ workspace.name }}</span>
+            <button type="button" class="ws-chevron-btn"
+                    aria-label="Switch workspace"
+                    popovertarget="workspace-menu">
+              <c-lucide name="chevrons-up-down" size="14" />
+            </button>
+          </div>
+          <div id="workspace-menu" popover="auto" class="workspace-menu"
+               data-on:toggle="evt.newState === 'open' && nano.positionWorkspaceMenu(el)">
+            <div class="workspace-menu-header">Workspaces</div>
+            {% for ws in workspaces %}
+              <form method="post" action="/workspaces/{{ ws.id }}/switch/">
+                {% csrf_token %}
+                <button type="submit" class="workspace-item{% if ws.id == workspace.id %} active{% endif %}">
+                  <span>{{ ws.name }}</span>
+                  {% if ws.id == workspace.id %}<c-lucide name="check" size="14" />{% endif %}
+                </button>
+              </form>
+            {% endfor %}
+            <form method="post" action="/workspaces/" class="workspace-create">
+              {% csrf_token %}
+              <c-lucide name="plus-circle" size="14" />
+              <input type="text" name="name" placeholder="Create workspace" required>
+              <button type="submit" class="workspace-create-btn">Create</button>
+            </form>
+          </div>
+        </div>
+        <ul class="menu gap-0 w-full p-0 rounded-none">
+          <li><a href="/"{% if active_nav == "projects" %} class="menu-active"{% endif %}>
+            <c-lucide name="gantt-chart" size="18" /> Projects
+          </a></li>
+          <li><a href="/resources/"{% if active_nav == "resources" %} class="menu-active"{% endif %}>
+            <c-lucide name="users" size="18" /> Resources
+          </a></li>
+          <li><a href="/tasks/"{% if active_nav == "tasks" %} class="menu-active"{% endif %}>
+            <c-lucide name="kanban" size="18" /> Tasks
+          </a></li>
+          <li><a href="/people/"{% if active_nav == "people" %} class="menu-active"{% endif %}>
+            <c-lucide name="user-cog" size="18" /> People
+          </a></li>
+        </ul>
+        <div class="flex-1"></div>
+        <div class="sidebar-user">
+          <span class="user-name">{{ user.username }}</span>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="sign-out-btn">Sign out</button>
+          </form>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <aside id="drawer"
+         data-on:keydown__window="evt.key === 'Escape' && nano.closeDrawer()">
+    <header class="drawer-header">
+      <button class="drawer-close"
+              type="button"
+              aria-label="Close"
+              data-on:click="nano.closeDrawer()">
+        <c-lucide name="x" size="14" />
+      </button>
+    </header>
+    <div id="drawer-slot"></div>
+  </aside>
+  <div id="toast-slot"></div>
+
+  <form id="nano-bridge" hidden
+        data-on:submit__prevent="@post(el.action, { contentType: 'form' })">
+    {% csrf_token %}
+    <input name="start">
+    <input name="end">
+    <input name="predecessor">
+    <input name="successor">
+    <input name="project_id">
+    <input name="title">
+    <input name="date">
+    <input name="task_ids">
+    <input name="delta_days">
+    <input name="status">
+  </form>
+  <div data-on:nano-commit__window="
+    const f = document.getElementById('nano-bridge');
+    f.action = evt.detail.url;
+    ['start','end','predecessor','successor','project_id','title','date','task_ids','delta_days','status'].forEach(k => {
+      const i = f.querySelector(`[name='${k}']`);
+      if (i) i.value = (evt.detail.data && evt.detail.data[k] != null) ? String(evt.detail.data[k]) : '';
+    });
+    f.requestSubmit();
+  "></div>
+
+  <div data-on:nano-fetch__window="@get(evt.detail.url)"></div>
+
+  <script src="{% static 'js/nano.js' %}"></script>
+</c-layouts.base>

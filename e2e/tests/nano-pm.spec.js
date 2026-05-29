@@ -21,7 +21,7 @@ test.describe('auth + page render', () => {
   test('demo / demo logs in and lands on the chart', async ({ page, request }) => {
     await reset(request);
     await login(page);
-    await expect(page.locator('.brand')).toHaveText('nano-pm');
+    await expect(page.locator('.sidebar-brand')).toHaveText('nano-pm');
     await expect(page.locator('#zoom-controls')).toBeVisible();
   });
 });
@@ -46,8 +46,6 @@ test.describe('topbar responsiveness', () => {
     await page.setViewportSize({ width: 500, height: 800 });
     await expect(page.locator('#zoom-controls')).toBeVisible();
     await expect(page.locator('button:has-text("Today")')).toBeVisible();
-    await expect(page.locator('button:has-text("+ Project")')).toBeVisible();
-    await expect(page.locator('button:has-text("Sign out")')).toBeVisible();
   });
 });
 
@@ -63,6 +61,44 @@ test.describe('chart structure', () => {
     // Dep arrows: 6, each rendered as one .hit (interactive) + one visible path.
     // Hit paths are easy to count.
     await expect(page.locator('#arrows .hit')).toHaveCount(6);
+  });
+
+  test('every dep arrow terminates on its target bar (y-aligned)', async ({ appPage: page }) => {
+    // Each .hit path ends at the LEFT edge of its successor bar. The end-y of
+    // the path (last L command) must land inside the target bar's vertical
+    // bounds, otherwise the arrow points to empty space — the regression we
+    // saw when the is_pm add-project-spacer row offset everything by row_h.
+    const info = await page.evaluate(() => {
+      const grid = document.getElementById('grid-scroll');
+      const gridRect = grid.getBoundingClientRect();
+      const arrowsRect = document.getElementById('arrows').getBoundingClientRect();
+      // Overlay is offset from grid by axis_h + left_w; convert SVG-y to grid-y
+      // by adding the SVG's top relative to the grid.
+      const yOffset = arrowsRect.top - gridRect.top + grid.scrollTop;
+      const results = [];
+      for (const hit of document.querySelectorAll('#arrows .hit[data-dep]')) {
+        const d = hit.getAttribute('d') || '';
+        // Last L command pair gives the arrow tip — "L tx ty" at end of path.
+        const m = d.match(/L\s+([\d.\-]+)\s+([\d.\-]+)\s*$/);
+        if (!m) continue;
+        const tipY = parseFloat(m[2]) + yOffset;
+        const [, toId] = hit.dataset.dep.split('-');
+        const bar = document.querySelector(`.bar[data-task-id="${toId}"], [id="bar-${toId}"]`);
+        if (!bar) continue;
+        const br = bar.getBoundingClientRect();
+        const barCenterY = (br.top + br.bottom) / 2 - gridRect.top + grid.scrollTop;
+        results.push({ dep: hit.dataset.dep, tipY, barTop: br.top - gridRect.top + grid.scrollTop,
+                       barBottom: br.bottom - gridRect.top + grid.scrollTop, barCenterY });
+      }
+      return results;
+    });
+    expect(info.length).toBeGreaterThan(0);
+    for (const r of info) {
+      expect(r.tipY, `dep ${r.dep} tip-y=${r.tipY} outside bar [${r.barTop},${r.barBottom}]`)
+        .toBeGreaterThanOrEqual(r.barTop - 1);
+      expect(r.tipY, `dep ${r.dep} tip-y=${r.tipY} outside bar [${r.barTop},${r.barBottom}]`)
+        .toBeLessThanOrEqual(r.barBottom + 1);
+    }
   });
 
   test('bars on a light project background use dark text (contrast)', async ({ appPage: page }) => {
@@ -100,11 +136,15 @@ test.describe('chart structure', () => {
       const sc = document.getElementById('grid-scroll');
       sc.scrollLeft = sc.scrollWidth - sc.clientWidth;
     });
-    // The first sticky-left cell should still be anchored at viewport-x ≈ 0.
+    // The first sticky-left cell should still be anchored at the left edge
+    // of the drawer-content area (offset by the 220px app sidebar).
     const cell = page.locator('.left-cell').first();
     const box = await cell.boundingBox();
-    expect(box.x).toBeGreaterThan(-2);
-    expect(box.x).toBeLessThan(4);
+    const sidebarW = await page.evaluate(() =>
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-sidebar-w')) || 0
+    );
+    expect(box.x).toBeGreaterThan(sidebarW - 2);
+    expect(box.x).toBeLessThan(sidebarW + 4);
   });
 
   test('the sidebar width can be resized by dragging the resizer handle', async ({ appPage: page }) => {
@@ -475,19 +515,20 @@ test.describe('resource view', () => {
   });
 
   test('view switch links navigate between views', async ({ appPage: page }) => {
+    const nav = page.locator('.drawer-side .menu');
     // Start in project view
-    await expect(page.locator('#view-switch a.active')).toHaveText('Projects');
+    await expect(nav.locator('a.menu-active')).toHaveText(/Projects/);
 
     // Click Resources
-    await page.locator('#view-switch a', { hasText: 'Resources' }).click();
+    await nav.locator('a', { hasText: 'Resources' }).click();
     await page.waitForURL('**/resources/');
-    await expect(page.locator('#view-switch a.active')).toHaveText('Resources');
+    await expect(nav.locator('a.menu-active')).toHaveText(/Resources/);
     await expect(page.locator('.left-cell.proj', { hasText: 'Alex Chen' })).toBeVisible();
 
     // Click back to Projects
-    await page.locator('#view-switch a', { hasText: 'Projects' }).click();
+    await nav.locator('a', { hasText: 'Projects' }).click();
     await page.waitForURL(/\/$/);
-    await expect(page.locator('#view-switch a.active')).toHaveText('Projects');
+    await expect(nav.locator('a.menu-active')).toHaveText(/Projects/);
     await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toBeVisible();
   });
 });
@@ -1065,24 +1106,42 @@ test.describe('project & people management', () => {
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(1);
   });
 
-  test('+ Project adds a new project row', async ({ appPage: page }) => {
+  test('+ Project at the bottom adds a new project at the end', async ({ appPage: page }) => {
     await expect(page.locator('.left-cell.proj')).toHaveCount(3);
-    await page.click('button:has-text("+ Project")');
+    await page.locator('.add-project-row').last().click();
     await expect(page.locator('.left-cell.proj')).toHaveCount(4);
+    // New project is the last entry in the list
+    const lastProj = page.locator('.left-cell.proj').last();
+    await expect(lastProj).toContainText('New project');
+  });
+
+  test('+ Project at the top adds a new project at the start', async ({ appPage: page }) => {
+    await expect(page.locator('.left-cell.proj')).toHaveCount(3);
+    await page.locator('.add-project-row').first().click();
+    await expect(page.locator('.left-cell.proj')).toHaveCount(4);
+    // New project is the first entry in the list
+    const firstProj = page.locator('.left-cell.proj').first();
+    await expect(firstProj).toContainText('New project');
   });
 
   test('clicking (no drag) in a project row creates a milestone at the click date', async ({ appPage: page }) => {
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
 
+    // Click 200px past the sticky left column so we land in the chart area.
+    const leftCell = page.locator('.left-cell.proj').first();
+    const lcBox = await leftCell.boundingBox();
     const row = page.locator('.chart-row.proj').first();
     const rowBox = await row.boundingBox();
-    const clickX = rowBox.x + 200;
+    const chartAreaX = lcBox.x + lcBox.width;
+    const clickX = chartAreaX + 200;
     const clickY = rowBox.y + rowBox.height / 2;
 
-    // Compute the date that 200 px past the row's left edge maps to.
+    // Compute the date that clickX maps to in the chart coordinate system.
     const ppd = await page.locator('#grid-scroll').evaluate(el => parseFloat(el.dataset.pxPerDay));
     const chartStart = await page.locator('#grid-scroll').evaluate(el => el.dataset.chartStart);
-    const days = Math.round(200 / ppd);
+    const pxIntoChart = clickX - chartAreaX;
+    const scrollLeft = await page.evaluate(() => document.getElementById('grid-scroll').scrollLeft);
+    const days = Math.round((scrollLeft + pxIntoChart) / ppd);
     const [y, m, d] = chartStart.split('-').map(Number);
     const dt = new Date(y, m - 1, d + days);
     const expectedIso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
@@ -1143,14 +1202,15 @@ test.describe('project & people management', () => {
     await expect(page.locator('#project-popover input[name=name]')).toHaveValue('API Migration');
   });
 
-  test('People drawer opens, lists seeded team and accepts an Add', async ({ appPage: page }) => {
-    await page.click('button:has-text("People")');
-    await expect(page.locator('#drawer-slot .people-sheet')).toBeVisible();
+  test('People page lists seeded team and accepts an Add', async ({ appPage: page }) => {
+    await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
+    await page.waitForURL('**/people/');
+    await expect(page.locator('#people-page')).toBeVisible();
     // Demo seeds Alex / Sam / Riley
-    await expect(page.locator('#drawer-slot .people-row')).toHaveCount(3);
-    await page.fill('#drawer-slot .add-row input[name=name]', 'Jamie Park');
-    await page.click('#drawer-slot .add-row button[type=submit]');
-    await expect(page.locator('#drawer-slot .people-row')).toHaveCount(4);
+    await expect(page.locator('.person-row')).toHaveCount(3);
+    await page.fill('.add-person-form input[name=name]', 'Jamie Park');
+    await page.click('.add-person-form button[type=submit]');
+    await expect(page.locator('.person-row')).toHaveCount(4);
   });
 });
 
@@ -1193,13 +1253,13 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('#workspace-name')).toBeVisible();
 
     // Open workspace switcher and pick the other workspace
-    await page.locator('#workspace-name').click();
+    await page.locator('.ws-chevron-btn').click();
     await expect(page.locator('#workspace-menu')).toBeVisible();
-    // Two workspaces listed (excluding the create form button)
-    await expect(page.locator('#workspace-menu form:not(.workspace-create) button[type=submit]')).toHaveCount(2);
+    // Two workspaces listed (excluding the create form)
+    await expect(page.locator('#workspace-menu .workspace-item')).toHaveCount(2);
 
     // Click the second workspace (pm2's)
-    await page.locator('#workspace-menu button', { hasText: "pm2's workspace" }).click();
+    await page.locator('#workspace-menu .workspace-item', { hasText: "pm2's workspace" }).click();
     await page.waitForURL('/');
     // Chart should now be empty (pm2's workspace has no projects)
     await expect(page.locator('.left-cell.proj')).toHaveCount(0);
@@ -1210,13 +1270,13 @@ test.describe('workspace isolation', () => {
     // demo starts with one workspace — no dropdown yet, just the name
     await expect(page.locator('#workspace-name')).toHaveText("demo's workspace");
 
-    // Click the workspace name to open the menu (has "+ New workspace")
-    await page.locator('#workspace-name').click();
+    // Click the chevron to open the switcher
+    await page.locator('.ws-chevron-btn').click();
     await expect(page.locator('#workspace-menu')).toBeVisible();
 
-    // Fill the name and submit
+    // Type the name into the "Create workspace" input and press Enter
     await page.fill('#workspace-menu input[name=name]', 'Side project');
-    await page.locator('#workspace-menu button', { hasText: 'Create' }).click();
+    await page.locator('#workspace-menu input[name=name]').press('Enter');
     await page.waitForURL('/');
 
     // Now in the new empty workspace
@@ -1246,8 +1306,8 @@ test.describe('member role', () => {
     await expect(page.locator('.left-cell.proj')).toHaveCount(3);
     await expect(page.locator('.bar')).toHaveCount(8);
 
-    // No + Project button for members
-    await expect(page.locator('button:has-text("+ Project")')).toHaveCount(0);
+    // No "+ Project" rows for members
+    await expect(page.locator('.add-project-row')).toHaveCount(0);
   });
 
   test('member can update a task assigned to them', async ({ page, request }) => {
@@ -1281,36 +1341,171 @@ test.describe('member role', () => {
 });
 
 
-// =============================================================================
-// Join link invitation
-// =============================================================================
-test.describe('join link', () => {
-  test('PM can copy a join link and a new user can sign up through it', async ({ appPage: page, browser }) => {
-    // PM opens the workspace menu and sees an invite link
-    await page.locator('#workspace-name').click();
-    const inviteLink = page.locator('#invite-link');
-    await expect(inviteLink).toBeVisible();
-    const href = await inviteLink.getAttribute('href');
-    expect(href).toMatch(/\/invite\//);
 
-    // New user visits the invite link in a fresh browser context (not logged in)
+// =============================================================================
+// App sidebar
+// =============================================================================
+test.describe('app sidebar', () => {
+  test('sidebar shows brand, nav links, workspace name, and user area', async ({ appPage: page }) => {
+    const sidebar = page.locator('.drawer-side');
+    await expect(sidebar).toBeVisible();
+
+    // Brand
+    await expect(sidebar.locator('.sidebar-brand')).toHaveText('nano-pm');
+
+    // Nav links — Projects, Resources, People
+    const nav = sidebar.locator('.menu');
+    await expect(nav.locator('a', { hasText: 'Projects' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Resources' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'People' })).toBeVisible();
+
+    // Projects link is active on the main page
+    await expect(nav.locator('a', { hasText: 'Projects' })).toHaveClass(/menu-active/);
+
+    // Workspace name visible in sidebar
+    await expect(sidebar.locator('#workspace-name')).toHaveText("demo's workspace");
+
+    // User area
+    await expect(sidebar.locator('.sidebar-user')).toContainText('demo');
+  });
+
+  test('sidebar nav links navigate between views', async ({ appPage: page }) => {
+    const nav = page.locator('.drawer-side .menu');
+
+    // Click Resources
+    await nav.locator('a', { hasText: 'Resources' }).click();
+    await page.waitForURL('**/resources/');
+    await expect(nav.locator('a', { hasText: 'Resources' })).toHaveClass(/menu-active/);
+
+    // Click back to Projects
+    await nav.locator('a', { hasText: 'Projects' }).click();
+    await page.waitForURL(/\/$/);
+    await expect(nav.locator('a', { hasText: 'Projects' })).toHaveClass(/menu-active/);
+  });
+
+  test('sidebar nav People link opens the people page', async ({ appPage: page }) => {
+    await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
+    await page.waitForURL('**/people/');
+    await expect(page.locator('#people-page')).toBeVisible();
+    await expect(page.locator('.drawer-side .menu a', { hasText: 'People' })).toHaveClass(/menu-active/);
+  });
+});
+
+
+// =============================================================================
+// Per-person invitation
+// =============================================================================
+test.describe('per-person invitation', () => {
+  test('PM can generate an invite link for an unlinked person and a new user can join through it', async ({ appPage: page, browser }) => {
+    // Navigate to People page
+    await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
+    await page.waitForURL('**/people/');
+
+    // Sam Patel is seeded without a linked user — should have an Invite button
+    const samRow = page.locator('.person-row').filter({ has: page.locator('input[value="Sam Patel"]') });
+    await expect(samRow).toBeVisible();
+    const inviteBtn = samRow.locator('button', { hasText: 'Invite' });
+    await expect(inviteBtn).toBeVisible();
+
+    // Click Invite — should reveal an invite link
+    await inviteBtn.click();
+    const linkInput = page.locator('#invite-link-slot input[readonly]');
+    await expect(linkInput).toBeVisible();
+    const inviteUrl = await linkInput.inputValue();
+    expect(inviteUrl).toContain('/invite/');
+
+    // New user visits the invite link in a fresh browser context
     const newCtx = await browser.newContext();
     const newPage = await newCtx.newPage();
-    const baseUrl = page.url().match(/^https?:\/\/[^/]+/)[0];
-    await newPage.goto(baseUrl + href);
+    await newPage.goto(inviteUrl);
 
-    // They see a signup form
+    // Signup form shows workspace and person context
     await expect(newPage.locator('input[name=username]')).toBeVisible();
-    await expect(newPage.locator('input[name=password]')).toBeVisible();
 
     // Sign up
-    await newPage.fill('input[name=username]', 'newbie');
-    await newPage.fill('input[name=password]', 'newbie123');
+    await newPage.fill('input[name=username]', 'sampatel');
+    await newPage.fill('input[name=password]', 'sampatel123');
     await newPage.click('button[type=submit]');
+    await newPage.waitForURL('**/');
 
-    // They land in the demo workspace and see the chart
+    // New user lands in the workspace
     await expect(newPage.locator('#workspace-name')).toHaveText("demo's workspace");
-    await expect(newPage.locator('.left-cell.proj')).toHaveCount(3);
+
+    // Go to People page — Sam Patel should now be linked
+    await newPage.locator('.drawer-side .menu a', { hasText: 'People' }).click();
+    await newPage.waitForURL('**/people/');
+    const samLinked = newPage.locator('.person-row', { hasText: 'Sam Patel' });
+    await expect(samLinked.locator('.badge')).toContainText('sampatel');
+
     await newCtx.close();
+  });
+});
+
+// =============================================================================
+// Kanban board
+// =============================================================================
+test.describe('kanban board', () => {
+  test('shows four status columns with seeded tasks grouped correctly', async ({ appPage: page }) => {
+    await page.goto('/tasks/');
+    await expect(page.locator('.kanban-col')).toHaveCount(4);
+    // Seed: 4 planned, 2 in-progress, 1 blocked, 1 done.
+    await expect(page.locator('[data-status="planned"] .kanban-card')).toHaveCount(4);
+    await expect(page.locator('[data-status="in-progress"] .kanban-card')).toHaveCount(2);
+    await expect(page.locator('[data-status="blocked"] .kanban-card')).toHaveCount(1);
+    await expect(page.locator('[data-status="done"] .kanban-card')).toHaveCount(1);
+  });
+
+  test('Tasks nav entry highlights when on the kanban page', async ({ appPage: page }) => {
+    await page.goto('/tasks/');
+    const navTasks = page.locator('.drawer-side .menu a', { hasText: 'Tasks' });
+    await expect(navTasks).toHaveClass(/menu-active/);
+  });
+
+  test('a task card shows title, project chip, and date range', async ({ appPage: page }) => {
+    await page.goto('/tasks/');
+    const card = page.locator('.kanban-card', { hasText: 'Migrate /users endpoints' });
+    await expect(card).toBeVisible();
+    await expect(card.locator('.kanban-card-project')).toHaveText('API Migration');
+    await expect(card.locator('.kanban-card-dates')).toContainText('–');
+  });
+
+  test('clicking a card opens the task popover drawer', async ({ appPage: page }) => {
+    await page.goto('/tasks/');
+    await page.locator('.kanban-card', { hasText: 'Migrate /users endpoints' }).click();
+    await expect(page.locator('#task-popover')).toBeVisible();
+    await expect(page.locator('#task-popover input[name=title]')).toHaveValue('Migrate /users endpoints');
+  });
+
+  test('dragging a card from Planned to In progress changes its status', async ({ appPage: page }) => {
+    await page.goto('/tasks/');
+    const card = page.locator('.kanban-card', { hasText: 'Cutover and deprecation' });
+    // Confirm it starts in the planned column.
+    await expect(card).toHaveAttribute('data-status', 'planned');
+
+    // Drop onto an existing card in the target column — SortableJS only
+    // swaps lists when the cursor is over another draggable, not empty
+    // column space (the column has cards, so emptyInsertThreshold is moot).
+    const dropCard = page.locator('[data-status="in-progress"] .kanban-card').first();
+    await card.scrollIntoViewIfNeeded();
+    await dropCard.scrollIntoViewIfNeeded();
+
+    const cardBox = await card.boundingBox();
+    const dropBox = await dropCard.boundingBox();
+    await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
+    await page.mouse.down();
+    // Initial small move to cross SortableJS's fallbackTolerance threshold.
+    await page.mouse.move(cardBox.x + cardBox.width / 2 + 20, cardBox.y + cardBox.height / 2 + 20, { steps: 5 });
+    await page.mouse.move(dropBox.x + dropBox.width / 2, dropBox.y + dropBox.height / 2, { steps: 15 });
+    await page.mouse.up();
+
+    // Wait for the SSE re-render to flip data-status on the rebuilt card.
+    await page.waitForFunction(() => {
+      const c = [...document.querySelectorAll('.kanban-card')]
+        .find(el => el.textContent.includes('Cutover and deprecation'));
+      return c && c.dataset.status === 'in-progress';
+    }, null, { timeout: 5000 });
+
+    await expect(page.locator('[data-status="in-progress"] .kanban-card', { hasText: 'Cutover and deprecation' })).toBeVisible();
+    await expect(page.locator('[data-status="planned"] .kanban-card', { hasText: 'Cutover and deprecation' })).toHaveCount(0);
   });
 });

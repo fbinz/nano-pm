@@ -1,0 +1,38 @@
+<c-vars people is_pm />
+<div id="people-list">
+  {% for p in people %}
+    <div class="person-row" id="person-row-{{ p.id }}">
+      <div class="person-name">
+        {% if is_pm %}
+        <form data-on:submit__prevent="@post('/people/{{ p.id }}/update/', { contentType: 'form' })">
+          {% csrf_token %}
+          <input type="text" name="name" value="{{ p.name }}"
+                 data-on:blur="evt.target.form.requestSubmit()">
+        </form>
+        {% else %}
+          {{ p.name }}
+        {% endif %}
+      </div>
+      <div class="person-linked">
+        {% if p.user %}
+          <span class="badge badge-sm badge-ghost">{{ p.user.username }}</span>
+        {% endif %}
+      </div>
+      {% if is_pm %}
+      <div class="person-actions">
+        {% if not p.user %}
+        <button type="button" class="btn btn-sm btn-ghost"
+                data-on:click="@get('/people/{{ p.id }}/invite-link/')">
+          Invite
+        </button>
+        {% endif %}
+        <button type="button" class="btn btn-sm btn-ghost text-error"
+                data-on:click="confirm('Remove &quot;{{ p.name|escapejs }}&quot;?') && @post('/people/{{ p.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })"
+                title="Remove">
+          <c-lucide name="trash-2" size="14" />
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>

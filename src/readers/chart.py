@@ -1,4 +1,4 @@
-"""Read-side queries for the Gantt chart, all scoped to a workspace."""
+"""Full chart state loading for one workspace."""
 
 from datetime import date, timedelta
 from dataclasses import dataclass, field
@@ -92,37 +92,3 @@ def get_chart_state(workspace) -> ChartState:
         chart_end=chart_end,
         tasks_by_id=tasks_by_id,
     )
-
-
-def get_task(workspace, task_id: int) -> Task | None:
-    try:
-        return (
-            Task.objects.select_related("project")
-            .prefetch_related("assignees")
-            .get(id=task_id, project__workspace=workspace)
-        )
-    except Task.DoesNotExist:
-        return None
-
-
-def get_project(workspace, project_id: int) -> Project | None:
-    try:
-        return Project.objects.get(id=project_id, workspace=workspace)
-    except Project.DoesNotExist:
-        return None
-
-
-def get_milestone(workspace, milestone_id: int) -> Milestone | None:
-    try:
-        return Milestone.objects.select_related("project").get(
-            id=milestone_id, project__workspace=workspace
-        )
-    except Milestone.DoesNotExist:
-        return None
-
-
-def get_person(workspace, person_id: int) -> Person | None:
-    try:
-        return Person.objects.get(id=person_id, workspace=workspace)
-    except Person.DoesNotExist:
-        return None

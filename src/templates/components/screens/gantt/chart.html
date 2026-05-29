@@ -1,5 +1,5 @@
 {# A complete chart render: time axis, project header rows, task rows, bars, milestones, arrows, today line. #}
-<c-vars vm />
+<c-vars vm is_pm="False" />
 <div
   id="grid-scroll"
   data-px-per-day="{{ vm.px_per_day }}"
@@ -30,6 +30,14 @@
         {% endfor %}
       </div>
     </div>
+
+    {% if is_pm %}
+      <div class="left-cell add-project-row"
+           data-on:click="@post('/projects/?position=start', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
+        <c-lucide name="plus" size="14" /><span class="add-project-label">Add Project</span>
+      </div>
+      <div class="chart-row add-project-spacer" style="width:{{ vm.chart_width }}px;"></div>
+    {% endif %}
 
     {% for rg in vm.row_groups %}
       <div class="left-cell proj"
@@ -74,6 +82,14 @@
           </div>
         {% endfor %}
     {% endfor %}
+
+    {% if is_pm %}
+      <div class="left-cell add-project-row"
+           data-on:click="@post('/projects/?position=end', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
+        <c-lucide name="plus" size="14" /><span class="add-project-label">Add Project</span>
+      </div>
+      <div class="chart-row add-project-spacer" style="width:{{ vm.chart_width }}px;"></div>
+    {% endif %}
 
     <div id="overlay">
       <svg id="arrows" width="{{ vm.chart_width }}">

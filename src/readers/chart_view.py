@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from dataclasses import dataclass, field
 
 from data.models import TaskStatus
-from readers.gantt import ChartState
+from readers.chart import ChartState
 
 
 ZOOM_PX_PER_DAY = {"day": 36, "week": 12, "month": 3, "quarter": 1}
@@ -273,6 +273,7 @@ def build_chart_vm(
     zoom: str = DEFAULT_ZOOM,
     px_per_day: int | None = None,
     collapsed_project_ids: set[int] | None = None,
+    is_pm: bool = False,
 ) -> ChartVM:
     if zoom not in ZOOM_PX_PER_DAY:
         zoom = DEFAULT_ZOOM
@@ -335,7 +336,10 @@ def build_chart_vm(
     # Compute y-centers in the chart-area coordinate system (excluding axis).
     # Each project row group: 1 project header (proj_row_h) + N task rows (row_h each).
     # Collapsed projects contribute their header row but no task rows.
-    y = 0.0
+    # PMs see an "Add Project" spacer row above the first project (chart.html);
+    # shift everything below it down by one row_h so dep arrows still terminate
+    # on the correct bars.
+    y = 32.0 if is_pm else 0.0
     for rg_idx, rg in enumerate(row_groups):
         # project header row first
         y += 0  # no bars on header rows except milestones (centered)
@@ -467,3 +471,75 @@ def build_resource_vm(
         show_today_line=g.show_today,
         all_collapsed=bool(row_groups) and all(rg.collapsed for rg in row_groups),
     )
+
+
+@dataclass
+class KanbanCardVM:
+    id: int
+    title: str
+    project_name: str
+    project_color: str
+    project_text_color: str
+    project_text_dark: bool
+    assignees: str  # comma-joined first names; empty string if unassigned
+    start_iso: str
+    end_iso: str
+    date_range: str  # pre-formatted "May 12 – May 26" for display
+    overdue: bool
+
+
+@dataclass
+class KanbanColumnVM:
+    status: str  # TaskStatus value, e.g. "planned"
+    label: str   # human label, e.g. "Planned"
+    cards: list[KanbanCardVM]
+
+
+@dataclass
+class KanbanVM:
+    columns: list[KanbanColumnVM]
+
+
+_MONTH_SHORT = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+]
+
+
+def _fmt_date_range(start: date, end: date) -> str:
+    if start == end:
+        return f"{_MONTH_SHORT[start.month - 1]} {start.day}"
+    if start.month == end.month and start.year == end.year:
+        return f"{_MONTH_SHORT[start.month - 1]} {start.day} – {end.day}"
+    return f"{_MONTH_SHORT[start.month - 1]} {start.day} – {_MONTH_SHORT[end.month - 1]} {end.day}"
+
+
+def build_kanban_vm(state: ChartState) -> KanbanVM:
+    """Group every workspace task into TaskStatus columns for the kanban board.
+    Cards within a column are ordered by start date, then id (same as the
+    Task default ordering used elsewhere)."""
+    buckets: dict[str, list[KanbanCardVM]] = {c.value: [] for c in TaskStatus}
+    for proj in state.projects:
+        text_color, text_dark = _text_color_for(proj.color)
+        for t in proj.tasks.all():
+            first_names = [p.name.split()[0] for p in t.assignees.all()]
+            buckets[t.status].append(KanbanCardVM(
+                id=t.id,
+                title=t.title,
+                project_name=proj.name,
+                project_color=proj.color,
+                project_text_color=text_color,
+                project_text_dark=text_dark,
+                assignees=", ".join(first_names),
+                start_iso=t.start.isoformat(),
+                end_iso=t.end.isoformat(),
+                date_range=_fmt_date_range(t.start, t.end),
+                overdue=(t.status != TaskStatus.DONE and t.end < state.today),
+            ))
+    for cards in buckets.values():
+        cards.sort(key=lambda c: (c.start_iso, c.id))
+    columns = [
+        KanbanColumnVM(status=c.value, label=c.label, cards=buckets[c.value])
+        for c in TaskStatus
+    ]
+    return KanbanVM(columns=columns)

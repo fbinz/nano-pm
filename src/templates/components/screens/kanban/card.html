@@ -1,0 +1,19 @@
+{% comment %}
+  A single task card on the kanban board. data-* attrs drive the Sortable
+  commit + the e2e assertions. Click opens the existing task popover.
+{% endcomment %}
+<c-vars card status />
+<div class="kanban-card{% if card.overdue %} overdue{% endif %}"
+     data-task-id="{{ card.id }}"
+     data-status="{{ status }}"
+     data-on:click="nano.openTaskPopover({{ card.id }})">
+  <div class="kanban-card-title">{{ card.title }}</div>
+  <div class="kanban-card-project"
+       style="background:{{ card.project_color }};color:{{ card.project_text_color }};">
+    {{ card.project_name }}
+  </div>
+  {% if card.assignees %}
+    <div class="kanban-card-assignees">{{ card.assignees }}</div>
+  {% endif %}
+  <div class="kanban-card-dates">{{ card.date_range }}</div>
+</div>

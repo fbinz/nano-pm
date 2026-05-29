@@ -369,7 +369,7 @@
       const startDays = Math.round(lo / ppd);
       const endDays = Math.round(hi / ppd);
       if (endDays - startDays < 1) return;
-      commit(`/tasks/`, {
+      commit(`/tasks/create/`, {
         project_id: projectId,
         title: 'New task',
         start: fmt(addDays(cs, startDays)),
@@ -459,6 +459,46 @@
     if (slot) slot.innerHTML = '';
   }
 
+  // ---------------------------------------------------------------------- //
+  // Kanban — Sortable.js per-column instance, commit on drop.              //
+  // ---------------------------------------------------------------------- //
+  // The board fragment is replaced wholesale on every SSE patch, so we
+  // re-attach Sortable instances on each render via data-on:load on
+  // #kanban-board. Previous instances live on the old (detached) DOM and
+  // are GC'd along with it.
+  function initKanban() {
+    if (typeof window.Sortable !== 'function') return;
+    const cols = document.querySelectorAll('#kanban-board .kanban-col-body');
+    cols.forEach(col => {
+      window.Sortable.create(col, {
+        group: 'kanban-cards',
+        animation: 150,
+        draggable: '.kanban-card',
+        ghostClass: 'kanban-card-ghost',
+        chosenClass: 'kanban-card-chosen',
+        dragClass:  'kanban-card-drag',
+        // forceFallback bypasses the native HTML5 drag API (which Playwright's
+        // page.mouse doesn't drive) and uses pointer events instead, so the
+        // same code path works for mouse, touch, and e2e tests.
+        forceFallback: true,
+        // 4-px movement threshold separates a click (opens the popover) from
+        // a drag. A timed `delay:` would also work but breaks pointer-driven
+        // e2e tests that move faster than the delay elapses.
+        fallbackTolerance: 4,
+        onEnd(evt) {
+          const newStatus = evt.to.dataset.status;
+          const oldStatus = evt.from.dataset.status;
+          const taskId = evt.item.dataset.taskId;
+          if (!taskId || newStatus === oldStatus) return;
+          // Reflect the new status locally so the e2e wait-for-fn (and the
+          // user) sees an immediate column move; SSE will re-render shortly.
+          evt.item.dataset.status = newStatus;
+          commit(`/tasks/${taskId}/status/`, { status: newStatus });
+        },
+      });
+    });
+  }
+
   function onCollapseChanged(id, urlBase) {
     requestAnimationFrame(recalcArrows);
     const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -493,6 +533,11 @@
     for (const el of grid.children) {
       if (el.matches('.chart-row.proj')) {
         y += 36;
+      } else if (el.matches('.chart-row.add-project-spacer')) {
+        // PMs see "Add Project" spacer rows before and after the project list
+        // (chart.html). They take a full row_h of vertical space — counting
+        // them keeps arrow y-coords aligned with bar y-coords.
+        y += 32;
       } else if (el.matches('.chart-row[data-task-id]')) {
         if (getComputedStyle(el).display === 'none') continue;
         const taskId = el.dataset.taskId;
@@ -581,6 +626,18 @@
   // ---------------------------------------------------------------------- //
   // Misc                                                                   //
   // ---------------------------------------------------------------------- //
+  // Position the workspace popover below the chevron trigger. Called from
+  // `data-on:toggle` when the native popover opens; native popover renders in
+  // the top layer (escaping sidebar overflow clipping) so we just need to set
+  // its viewport coordinates.
+  function positionWorkspaceMenu(menu) {
+    const trigger = document.querySelector('.ws-chevron-btn');
+    if (!trigger || !menu) return;
+    const r = trigger.getBoundingClientRect();
+    menu.style.top = `${r.bottom + 4}px`;
+    menu.style.left = `12px`;
+  }
+
   function scrollToToday() {
     const sc = chartScroll();
     if (!sc) return;
@@ -600,7 +657,8 @@
     sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, addMilestone,
     closeDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
-    scrollToToday,
+    scrollToToday, positionWorkspaceMenu,
+    initKanban,
   };
 
   // Restore sidebar width before first paint so the chart doesn't flash at the
@@ -626,10 +684,14 @@
     if (evt.detail && evt.detail.type === 'finished') {
       applySelection();
       recalcArrows();
+      // The kanban board fragment is replaced wholesale on every status
+      // change — re-attach Sortable to the freshly-rendered column bodies.
+      if (document.getElementById('kanban-board')) initKanban();
     }
   });
 
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(scrollToToday, 0);
+    if (document.getElementById('kanban-board')) initKanban();
   });
 })();

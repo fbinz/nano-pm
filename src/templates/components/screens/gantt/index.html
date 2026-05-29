@@ -1,12 +1,12 @@
 {% load static %}
 <c-vars vm zoom user is_pm workspace workspaces has_multiple_workspaces ppd_unit ppd_unit_min ppd_unit_max ppd_unit_step days_per_unit />
-<c-layouts.base title="nano-pm">
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
+    :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
+    active_nav="projects">
   <div id="topbar">
-    <div class="brand">nano-pm</div>
-    <div id="view-switch">
-      <a href="/" class="active">Projects</a>
-      <a href="/resources/">Resources</a>
-    </div>
+    <label for="app-drawer" class="topbar-btn lg:hidden" aria-label="Open menu">
+      <c-lucide name="menu" size="18" />
+    </label>
     <div class="spacer"></div>
     <div id="zoom-controls">
       <a href="?zoom=day"     class="{% if zoom == 'day' %}active{% endif %}">Day</a>
@@ -14,12 +14,6 @@
       <a href="?zoom=month"   class="{% if zoom == 'month' %}active{% endif %}">Month</a>
       <a href="?zoom=quarter" class="{% if zoom == 'quarter' %}active{% endif %}">Quarter</a>
     </div>
-    {% comment %}
-      Density slider — value is "px per active unit" (e.g. px/week). Server
-      converts back to px/day using the data-days-per-unit attribute below.
-      Persisted per-unit in the session, so switching units retains each
-      unit's last-set density.
-    {% endcomment %}
     <input type="range" id="zoom-slider" aria-label="Zoom" title="Zoom"
            min="{{ ppd_unit_min }}" max="{{ ppd_unit_max }}"
            step="{{ ppd_unit_step }}" value="{{ ppd_unit }}"
@@ -34,109 +28,11 @@
              }"
            data-on:input__debounce.150ms="@get(`/zoom/?ppd=${parseFloat(el.value)/parseFloat(el.dataset.daysPerUnit)}`)">
     <button class="topbar-btn" data-on:click="nano.scrollToToday()" title="Jump to today (T)">Today</button>
-    <button id="people-btn" class="topbar-btn"
-            data-on:click="@get('/people/modal/')">People</button>
-    {% if is_pm %}
-    <button class="topbar-btn"
-            data-on:click="@post('/projects/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">+ Project</button>
-    {% endif %}
-    <div class="workspace-switcher">
-      <button id="workspace-name" class="topbar-btn"
-              onclick="document.getElementById('workspace-menu').toggleAttribute('hidden')">{{ workspace.name }}</button>
-      <div id="workspace-menu" class="workspace-menu" hidden>
-        {% for ws in workspaces %}
-          <form method="post" action="/workspaces/{{ ws.id }}/switch/">
-            {% csrf_token %}
-            <button type="submit">{{ ws.name }}</button>
-          </form>
-        {% endfor %}
-        <form method="post" action="/workspaces/" class="workspace-create">
-          {% csrf_token %}
-          <input type="text" name="name" placeholder="New workspace" required>
-          <button type="submit">Create</button>
-        </form>
-        {% if invite_token %}
-        <div class="workspace-invite">
-          <a id="invite-link" href="/invite/{{ invite_token }}/">Invite link</a>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-    <span class="user-pill">{{ user.username }}</span>
-    <form method="post" action="{% url 'logout' %}" style="display:inline">
-      {% csrf_token %}
-      <button type="submit" class="topbar-btn">Sign out</button>
-    </form>
   </div>
 
-  <c-screens.gantt.chart :vm="vm" />
+  <c-screens.gantt.chart :vm="vm" :is_pm="is_pm" />
 
-  {% comment %}
-    Drag handle pinned at the right edge of the sticky-left sidebar; updates
-    --left-w on drag. Lives outside #grid-scroll so SSE chart patches don't
-    re-render it.
-  {% endcomment %}
   <div id="sidebar-resizer"
        title="Drag to resize sidebar"
        data-on:pointerdown="nano.sidebarResizeStart(evt)"></div>
-
-  {% comment %}
-    Right-side drawer: a single persistent panel that hosts task / milestone
-    / project editors and the People sheet. #drawer-slot is the SSE target
-    Datastar patches into. The outer #drawer is the panel that slides in via
-    CSS when #drawer-slot has any children (`:has(:not(:empty))`). Closing
-    is just emptying the slot (nano.closeDrawer).
-  {% endcomment %}
-  <aside id="drawer"
-         data-on:keydown__window="evt.key === 'Escape' && nano.closeDrawer()">
-    <header class="drawer-header">
-      <button class="drawer-close"
-              type="button"
-              aria-label="Close"
-              data-on:click="nano.closeDrawer()">
-        <c-lucide name="x" size="14" />
-      </button>
-    </header>
-    <div id="drawer-slot"></div>
-  </aside>
-  <div id="toast-slot"></div>
-
-  {% comment %}
-    Bridge for client-side gestures (drag move/resize, dep-handle,
-    rubber-band, milestone drag): the gesture handlers in nano.js dispatch
-    a custom event with { url, data }; Datastar populates this form, fires
-    @post for real, and applies the SSE chart-fragment patch. Keeps the
-    round-trip handling on Datastar so nano.js doesn't need a hand-rolled
-    SSE parser.
-  {% endcomment %}
-  <form id="nano-bridge" hidden
-        data-on:submit__prevent="@post(el.action, { contentType: 'form' })">
-    {% csrf_token %}
-    <input name="start">
-    <input name="end">
-    <input name="predecessor">
-    <input name="successor">
-    <input name="project_id">
-    <input name="title">
-    <input name="date">
-    <input name="task_ids">
-    <input name="delta_days">
-  </form>
-  <div data-on:nano-commit__window="
-    const f = document.getElementById('nano-bridge');
-    f.action = evt.detail.url;
-    ['start','end','predecessor','successor','project_id','title','date','task_ids','delta_days'].forEach(k => {
-      const i = f.querySelector(`[name='${k}']`);
-      if (i) i.value = (evt.detail.data && evt.detail.data[k] != null) ? String(evt.detail.data[k]) : '';
-    });
-    f.requestSubmit();
-  "></div>
-
-  {% comment %}
-    GET bridge for popover-open helpers (openTaskPopover etc.). Same shape
-    as nano-commit but routes through Datastar's @get instead of @post.
-  {% endcomment %}
-  <div data-on:nano-fetch__window="@get(evt.detail.url)"></div>
-
-  <script src="{% static 'js/nano.js' %}"></script>
-</c-layouts.base>
+</c-layouts.app-shell>

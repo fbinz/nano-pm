@@ -1,0 +1,22 @@
+{% load static %}
+<c-vars people user is_pm workspace workspaces has_multiple_workspaces />
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
+    :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
+    active_nav="people">
+  <div id="people-page">
+    <div class="people-page-header">
+      <h1>People</h1>
+      <p>Team members you can assign to tasks.</p>
+    </div>
+    <c-screens.people.people-list :people="people" :is_pm="is_pm" />
+    {% if is_pm %}
+    <form class="add-person-form"
+          data-on:submit__prevent="@post('/people/create/', { contentType: 'form' })">
+      {% csrf_token %}
+      <input type="text" name="name" placeholder="Add a person…" autocomplete="off">
+      <button type="submit" class="btn btn-sm btn-neutral">Add</button>
+    </form>
+    {% endif %}
+    <div id="invite-link-slot"></div>
+  </div>
+</c-layouts.app-shell>

@@ -1,0 +1,7 @@
+<c-vars person_name invite_url />
+<div id="invite-link-slot">
+  <div class="invite-reveal">
+    <span>Invite link for <strong>{{ person_name }}</strong>:</span>
+    <input type="text" readonly value="{{ invite_url }}" onclick="this.select()">
+  </div>
+</div>

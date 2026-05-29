@@ -38,7 +38,7 @@ def healthz(request):
 
 def invite_accept(request: HttpRequest, token: str):
     try:
-        inv = Invitation.objects.select_related("workspace").get(token=token)
+        inv = Invitation.objects.select_related("workspace", "person").get(token=token)
     except Invitation.DoesNotExist:
         return HttpResponse("Invalid or expired invite link.", status=404)
 
@@ -62,6 +62,9 @@ def invite_accept(request: HttpRequest, token: str):
         })
     user = User.objects.create_user(username=username, password=password)
     Membership.objects.create(user=user, workspace=inv.workspace, role=WorkspaceRole.MEMBER)
+    if inv.person and inv.person.user is None:
+        inv.person.user = user
+        inv.person.save()
     login(request, user)
     request.session["active_workspace_id"] = inv.workspace_id
     return redirect("/")
@@ -77,7 +80,7 @@ urlpatterns = [
     ),
     path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("invite/<str:token>/", invite_accept, name="invite_accept"),
-    path("", include("interfaces.web.gantt")),
+    path("", include("interfaces.web")),
 ]
 
 # `/__reset__/` is mounted ONLY when DJANGO_ENABLE_TEST_RESET is set. With it

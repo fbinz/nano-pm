@@ -21,6 +21,10 @@
   --topbar-h: 52px;
   --axis-h: 48px;
   --left-w: 240px;
+  --app-sidebar-w: 0px;
+}
+@media (min-width: 1024px) {
+  :root { --app-sidebar-w: 220px; }
 }
 
 html, body { height: 100%; }
@@ -30,38 +34,11 @@ html, body { height: 100%; }
    glyph metrics aren't well-centered inside our 24px bars. */
 @layer base {
   html, body {
-    @apply text-base-content bg-base-100 text-[13px];
+    @apply text-base-content bg-base-100;
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    line-height: 1.45;
   }
 }
 
-/* DaisyUI's `-sm` modifiers set `--fontsize` / `--font-size` to .75rem
-   which at our 13px html root renders as 9.75px. `@apply btn-sm` inlines
-   those vars under each consumer selector, so targeting `.btn-sm` directly
-   won't reach them — we have to list every `@apply`-based consumer. */
-.topbar-btn,
-#collapse-all-btn,
-#view-switch a,
-#zoom-controls a,
-#zoom-controls button,
-#status-filter .status-chip,
-.drawer-close,
-.popover .actions .danger,
-.popover .actions .primary,
-.people-sheet .add-row button,
-.people-sheet-actions button,
-.empty-cta button {
-  --fontsize: 1rem;
-}
-.popover input[type=text],
-.popover input[type=date],
-.popover select,
-.popover textarea,
-.people-sheet .add-row input,
-.login-card input {
-  --font-size: 1rem;
-}
 
 /* ===================================================================
    Topbar
@@ -71,43 +48,37 @@ html, body { height: 100%; }
     height: var(--topbar-h);
     @apply relative z-50 flex items-center gap-3 bg-base-100 px-3.5 border-b border-base-300;
   }
-  .brand { @apply font-semibold text-[15px] tracking-tight; }
   .spacer { @apply flex-1; }
 
   .topbar-btn { @apply btn btn-sm btn-ghost border border-base-300 font-normal; }
   .topbar-btn:hover { @apply bg-base-200; }
   .topbar-btn.danger { @apply text-error border-error; }
 
-  .workspace-switcher { @apply relative; }
-  .workspace-menu {
-    @apply absolute top-full right-0 mt-1 bg-base-100 border border-base-300 rounded-md shadow-lg z-50 min-w-48;
+  .workspace-menu[popover] {
+    @apply bg-base-100 border border-base-300 rounded-md shadow-lg overflow-hidden;
+    margin: 0;
+    position: fixed;
+    min-width: 14rem;
   }
   .workspace-menu form { @apply contents; }
-  .workspace-menu button {
-    @apply block w-full text-left px-3 py-2 text-sm bg-transparent border-0 cursor-pointer text-base-content hover:bg-base-200;
+  .workspace-menu-header {
+    @apply px-3 py-2 text-xs uppercase tracking-wider text-base-content/60 border-b border-base-300;
   }
-  .workspace-invite {
-    @apply px-3 py-2 border-t border-base-300;
+  .workspace-item {
+    @apply flex! items-center justify-between w-full text-left px-3 py-2 bg-transparent border-0 cursor-pointer text-base-content hover:bg-base-200;
   }
-  .workspace-invite a {
-    @apply text-sm text-base-content/60 no-underline hover:text-base-content;
-  }
+  .workspace-item.active { @apply font-medium; }
   .workspace-create {
-    @apply flex! gap-1 px-2 py-2 border-t border-base-300;
+    @apply flex! items-center gap-2 px-3 py-2 border-t border-base-300;
   }
+  .workspace-create > svg { @apply text-base-content/80 flex-shrink-0; }
   .workspace-create input {
-    @apply flex-1 px-2 py-1 text-sm border border-base-300 rounded;
+    @apply flex-1 min-w-0 bg-transparent border-0 outline-none text-base-content placeholder:text-base-content/60 p-0;
   }
-  .workspace-create button {
-    @apply px-2 py-1 text-sm bg-base-content text-base-100 rounded cursor-pointer border-0 hover:opacity-80;
+  .workspace-create-btn {
+    @apply flex-shrink-0 px-2 py-0.5 rounded bg-base-content text-base-100
+           border-0 cursor-pointer text-sm font-medium hover:opacity-80;
   }
-
-  #view-switch { @apply join border border-base-300 rounded-md overflow-hidden; }
-  #view-switch a {
-    @apply join-item btn btn-sm btn-ghost font-normal border-0 border-r border-base-300 rounded-none no-underline;
-  }
-  #view-switch > *:last-child { @apply border-r-0; }
-  #view-switch .active { @apply bg-base-content text-base-100; }
 
   #zoom-controls { @apply join border border-base-300 rounded-md overflow-hidden; }
   #zoom-controls a,
@@ -135,18 +106,45 @@ html, body { height: 100%; }
   #zoom-slider::-moz-range-thumb {
     @apply appearance-none w-3 h-3 rounded-full bg-base-content cursor-pointer border-0;
   }
-  .user-pill { @apply text-base-content/60 px-1.5; }
-
-  /* Hide non-essential topbar items as the viewport narrows. Same breakpoints
-     as before: ≤900px drops the density slider + user pill, ≤620px also
-     drops the People button. */
   @media (max-width: 900px) {
     #topbar { @apply gap-2 px-2.5; }
-    #topbar #zoom-slider,
-    #topbar .user-pill { display: none; }
+    #topbar #zoom-slider { display: none; }
   }
-  @media (max-width: 620px) {
-    #topbar #people-btn { display: none; }
+}
+
+/* ===================================================================
+   App sidebar (DaisyUI drawer + menu)
+   =================================================================== */
+@layer components {
+  .sidebar-brand {
+    @apply px-4 py-3 font-semibold text-[15px] tracking-tight;
+  }
+  .sidebar-workspace {
+    @apply relative px-3 py-2 border-b border-base-300;
+  }
+  .sidebar-workspace-display {
+    @apply flex items-center gap-2 px-2 py-1.5;
+  }
+  .sidebar-workspace-display .ws-name {
+    @apply flex-1 font-medium truncate;
+  }
+  .ws-chevron-btn {
+    @apply flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded
+           bg-transparent border border-base-300 cursor-pointer
+           text-base-content/60 hover:bg-base-300/50 hover:text-base-content;
+    padding: 0;
+  }
+  /* Sidebar nav menu items span the full sidebar width — no inset, no rounded
+     corners — so the active pill flushes against the sidebar edges. */
+  .drawer-side .menu > li > a {
+    @apply rounded-none px-4 py-2.5;
+  }
+  .sidebar-user {
+    @apply px-4 py-3 border-t border-base-300 flex items-center justify-between;
+  }
+  .sidebar-user .user-name { @apply text-sm text-base-content/60; }
+  .sidebar-user .sign-out-btn {
+    @apply text-sm text-base-content/60 bg-transparent border-0 cursor-pointer hover:text-base-content;
   }
 }
 
@@ -214,6 +212,17 @@ html, body { height: 100%; }
   .left-cell.task {
     height: var(--row-h);
     @apply pl-7 text-base-content/80;
+  }
+  .left-cell.add-project-row {
+    height: var(--row-h);
+    @apply cursor-pointer text-base-content/60;
+  }
+  .left-cell.add-project-row:hover {
+    @apply bg-base-200 text-base-content;
+  }
+  .chart-row.add-project-spacer {
+    height: var(--row-h);
+    @apply bg-base-100;
   }
   .left-cell.task .title { @apply flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
   .left-cell.task .assignees { @apply text-base-content/60 flex-shrink-0; }
@@ -352,7 +361,7 @@ html, body { height: 100%; }
   #sidebar-resizer {
     position: fixed;
     top: var(--topbar-h);
-    left: var(--left-w);
+    left: calc(var(--app-sidebar-w) + var(--left-w));
     width: 8px;
     bottom: 0;
     transform: translateX(-4px);
@@ -473,23 +482,30 @@ html, body { height: 100%; }
   .colors button.active { border-color: var(--color-base-content); }
 }
 
+
 /* ===================================================================
-   People sheet (rendered into the drawer like everything else)
+   People page
    =================================================================== */
 @layer components {
-  .people-sheet h2 { @apply m-0 mb-2 text-lg font-semibold; }
-  .people-sheet p { @apply text-base-content/60 m-0 mb-4; }
-  .people-list { @apply flex flex-col gap-1 mb-3; }
-  .people-row {
-    @apply flex items-center gap-2 px-2 py-1.5 border border-base-300 rounded;
+  #people-page {
+    @apply p-6 max-w-3xl;
   }
-  .people-row input { @apply flex-1 border-0 bg-transparent p-0; }
-  .people-row .remove { @apply border-0 bg-transparent text-base-content/60; }
-  .people-sheet .add-row { @apply flex gap-2; }
-  .people-sheet .add-row input { @apply input input-sm flex-1; }
-  .people-sheet .add-row button { @apply btn btn-sm btn-neutral; }
-  .people-sheet-actions { @apply flex justify-end gap-2 mt-4; }
-  .people-sheet-actions button { @apply btn btn-sm btn-neutral; }
+  .people-page-header h1 { @apply text-xl font-semibold m-0 mb-1; }
+  .people-page-header p { @apply text-base-content/60 m-0 mb-4; }
+  .person-row {
+    @apply flex items-center gap-3 px-3 py-2 border border-base-300 rounded mb-1;
+  }
+  .person-name { @apply flex-1; }
+  .person-name form { @apply contents; }
+  .person-name input { @apply border-0 bg-transparent p-0 w-full; }
+  .person-linked { @apply text-sm flex-shrink-0; }
+  .person-actions { @apply flex gap-1 flex-shrink-0; }
+  .add-person-form { @apply flex gap-2 mt-2; }
+  .add-person-form input { @apply input input-sm flex-1; }
+  .invite-reveal {
+    @apply mt-4 p-3 bg-base-200 border border-base-300 rounded flex items-center gap-2 text-sm;
+  }
+  .invite-reveal input { @apply input input-sm flex-1 font-mono text-xs; }
 }
 
 /* ===================================================================
@@ -530,3 +546,60 @@ html, body { height: 100%; }
   .toast.error { @apply bg-error; }
   .toast.success { @apply bg-success; }
 }
+
+/* ===================================================================
+   Kanban board
+   =================================================================== */
+@layer components {
+  #kanban-board {
+    @apply flex gap-3 items-start p-4 overflow-x-auto;
+    height: calc(100vh - var(--topbar-h));
+  }
+  .kanban-col {
+    @apply flex flex-col bg-base-200 rounded-md border border-base-300 flex-shrink-0;
+    width: 280px;
+    max-height: 100%;
+  }
+  .kanban-col-header {
+    @apply flex items-center justify-between px-3 py-2 border-b border-base-300 text-sm font-medium;
+  }
+  .kanban-col-count {
+    @apply text-xs text-base-content/60 bg-base-100 rounded-full px-2 py-0.5;
+  }
+  .kanban-col-body {
+    @apply flex-1 overflow-y-auto p-2 flex flex-col gap-2 min-h-[40px];
+    /* Reserve scrollbar space so adding/removing a card mid-drag doesn't
+       briefly show/hide the gutter and reflow card widths. */
+    scrollbar-gutter: stable;
+  }
+  .kanban-card {
+    @apply bg-base-100 border border-base-300 rounded-md p-2.5 cursor-grab select-none;
+    @apply flex flex-col gap-1.5 text-sm;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .kanban-card:hover { @apply border-base-content/30; }
+  .kanban-card.overdue { @apply border-error; }
+  .kanban-card-title { @apply font-medium leading-tight; }
+  .kanban-card-project {
+    @apply self-start text-xs px-1.5 py-0.5 rounded font-medium;
+  }
+  .kanban-card-assignees { @apply text-xs text-base-content/70; }
+  .kanban-card-dates { @apply text-xs text-base-content/50; }
+
+  /* Sortable.js drag states. The forceFallback mirror (.kanban-card-drag)
+     follows the cursor as a positioned clone:
+       — pointer-events:none keeps it from intercepting elementFromPoint
+         (otherwise drops never register).
+       — position:fixed pins it to the viewport. Sortable defaults to
+         position:absolute on document.body, which extends the document's
+         scroll area near viewport edges and makes html briefly grow
+         horizontal/vertical scrollbars during the drag. */
+  .kanban-card-ghost { @apply opacity-40; }
+  .kanban-card-chosen { @apply cursor-grabbing; }
+  .kanban-card-drag {
+    @apply shadow-lg rotate-1;
+    pointer-events: none !important;
+    position: fixed !important;
+  }
+}
+

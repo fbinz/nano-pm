@@ -4,11 +4,25 @@ from data.models import Project
 from data.models.project import PROJECT_COLORS
 
 
-def create_project(*, workspace, name: str = "New project", color: str | None = None) -> Project:
-    existing = list(Project.objects.filter(workspace=workspace).order_by("-order").values_list("order", flat=True))
-    next_order = (existing[0] + 1.0) if existing else 1.0
+def create_project(
+    *,
+    workspace,
+    name: str = "New project",
+    color: str | None = None,
+    position: str = "end",
+) -> Project:
+    orders = list(
+        Project.objects.filter(workspace=workspace)
+        .order_by("order").values_list("order", flat=True)
+    )
+    if not orders:
+        next_order = 1.0
+    elif position == "start":
+        next_order = orders[0] - 1.0
+    else:
+        next_order = orders[-1] + 1.0
     if color is None:
-        color = PROJECT_COLORS[len(existing) % len(PROJECT_COLORS)]
+        color = PROJECT_COLORS[len(orders) % len(PROJECT_COLORS)]
     return Project.objects.create(workspace=workspace, name=name, color=color, order=next_order)
 
 

@@ -9,6 +9,13 @@ class Invitation(models.Model):
         on_delete=models.CASCADE,
         related_name="invitations",
     )
+    person = models.ForeignKey(
+        "data.Person",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="invitations",
+    )
     token = models.CharField(max_length=64, unique=True, default=secrets.token_urlsafe)
     created_at = models.DateTimeField(auto_now_add=True)
 
