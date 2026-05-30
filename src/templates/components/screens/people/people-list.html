@@ -1,3 +1,4 @@
+{% load i18n %}
 <c-vars people is_pm />
 <div id="people-list">
   {% for p in people %}
@@ -23,12 +24,12 @@
         {% if not p.user %}
         <button type="button" class="btn btn-sm btn-ghost"
                 data-on:click="@get('/people/{{ p.id }}/invite-link/')">
-          Invite
+          {% trans "Invite" %}
         </button>
         {% endif %}
         <button type="button" class="btn btn-sm btn-ghost text-error"
-                data-on:click="confirm('Remove &quot;{{ p.name|escapejs }}&quot;?') && @post('/people/{{ p.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })"
-                title="Remove">
+                data-on:click="confirm('{% blocktrans with name=p.name|escapejs %}Remove &quot;{{ name }}&quot;?{% endblocktrans %}') && @post('/people/{{ p.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })"
+                title="{% trans 'Remove' %}">
           <c-lucide name="trash-2" size="14" />
         </button>
       </div>

@@ -1,10 +1,11 @@
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class WorkspaceRole(models.TextChoices):
-    PM = "pm", "PM"
-    MEMBER = "member", "Member"
+    PM = "pm", _("PM")
+    MEMBER = "member", _("Member")
 
 
 class Membership(models.Model):

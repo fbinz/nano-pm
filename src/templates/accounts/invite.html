@@ -1,19 +1,21 @@
-<c-layouts.base title="Join — nano-pm">
+{% load i18n %}
+{% trans "Join — nano-pm" as page_title %}
+<c-layouts.base :title="page_title">
   <main class="login-page">
     <form method="post" class="login-card">
       {% csrf_token %}
       <h1>nano-pm</h1>
-      <p class="hint">Join <strong>{{ workspace_name }}</strong></p>
+      <p class="hint">{% blocktrans %}Join <strong>{{ workspace_name }}</strong>{% endblocktrans %}</p>
       {% if error %}
         <div class="error">{{ error }}</div>
       {% endif %}
-      <label>Username
+      <label>{% trans "Username" %}
         <input type="text" name="username" autocomplete="username" autofocus required>
       </label>
-      <label>Password
+      <label>{% trans "Password" %}
         <input type="password" name="password" autocomplete="new-password" required>
       </label>
-      <button type="submit">Sign up &amp; join</button>
+      <button type="submit">{% trans "Sign up & join" %}</button>
     </form>
   </main>
 </c-layouts.base>

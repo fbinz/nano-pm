@@ -1,3 +1,4 @@
+{% load i18n %}
 {# A complete chart render: time axis, project header rows, task rows, bars, milestones, arrows, today line. #}
 <c-vars vm is_pm="False" />
 <div
@@ -15,9 +16,9 @@
                   const c = {% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %};
                   {% for rg in vm.row_groups %}$_collapsed.{{ rg.id }} = c; {% endfor %}
                   nano.onCollapseAllChanged(c, [{% for rg in vm.row_groups %}{{ rg.id }}{% if not forloop.last %},{% endif %}{% endfor %}])"
-                data-text="({% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %}) ? 'Collapse all' : 'Expand all'">{% if vm.all_collapsed %}Expand all{% else %}Collapse all{% endif %}</button>
+                data-text="({% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %}) ? '{% trans 'Collapse all' %}' : '{% trans 'Expand all' %}'">{% if vm.all_collapsed %}{% trans "Expand all" %}{% else %}{% trans "Collapse all" %}{% endif %}</button>
       {% else %}
-        timeline
+        {% trans "timeline" %}
       {% endif %}
     </div>
     <div id="time-axis-cell">
@@ -34,7 +35,7 @@
     {% if is_pm %}
       <div class="left-cell add-project-row"
            data-on:click="@post('/projects/?position=start', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
-        <c-lucide name="plus" size="14" /><span class="add-project-label">Add Project</span>
+        <c-lucide name="plus" size="14" /><span class="add-project-label">{% trans "Add Project" %}</span>
       </div>
       <div class="chart-row add-project-spacer" style="width:{{ vm.chart_width }}px;"></div>
     {% endif %}
@@ -86,7 +87,7 @@
     {% if is_pm %}
       <div class="left-cell add-project-row"
            data-on:click="@post('/projects/?position=end', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
-        <c-lucide name="plus" size="14" /><span class="add-project-label">Add Project</span>
+        <c-lucide name="plus" size="14" /><span class="add-project-label">{% trans "Add Project" %}</span>
       </div>
       <div class="chart-row add-project-spacer" style="width:{{ vm.chart_width }}px;"></div>
     {% endif %}
@@ -102,7 +103,7 @@
           <path class="hit" d="{{ dep.d }}"
                 data-dep="{{ dep.from_id }}-{{ dep.to_id }}"
                 data-on:click="@post('/dependencies/{{ dep.from_id }}/{{ dep.to_id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })"
-                title="Click to remove this dependency"
+                title="{% trans 'Click to remove this dependency' %}"
           ></path>
           <path d="{{ dep.d }}" marker-end="url(#arrowhead)"></path>
         {% endfor %}
@@ -115,8 +116,8 @@
 
   {% if not vm.row_groups %}
     <div class="empty-cta">
-      <p>No projects yet.</p>
-      <button data-on:click="@post('/projects/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">+ Create your first project</button>
+      <p>{% trans "No projects yet." %}</p>
+      <button data-on:click="@post('/projects/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "+ Create your first project" %}</button>
     </div>
   {% endif %}
 </div>

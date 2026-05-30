@@ -1,11 +1,12 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class TaskStatus(models.TextChoices):
-    PLANNED = "planned", "Planned"
-    IN_PROGRESS = "in-progress", "In progress"
-    BLOCKED = "blocked", "Blocked"
-    DONE = "done", "Done"
+    PLANNED = "planned", _("Planned")
+    IN_PROGRESS = "in-progress", _("In progress")
+    BLOCKED = "blocked", _("Blocked")
+    DONE = "done", _("Done")
 
 
 class Task(models.Model):

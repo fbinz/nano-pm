@@ -1,3 +1,4 @@
+{% load i18n %}
 {# Task editor — rendered into the right drawer (#drawer-slot). #}
 <c-vars task projects people preds succs can_edit />
 <div id="drawer-slot">
@@ -8,35 +9,35 @@
   >
     {% csrf_token %}
     <div>
-      <label>Title</label>
+      <label>{% trans "Title" %}</label>
       <input type="text" name="title" value="{{ task.title }}" autofocus>
     </div>
     <div>
-      <label>Description</label>
+      <label>{% trans "Description" %}</label>
       <textarea name="description" rows="3">{{ task.description }}</textarea>
     </div>
     <div class="row">
       <div>
-        <label>Start</label>
+        <label>{% trans "Start" %}</label>
         <input type="date" name="start" value="{{ task.start|date:'Y-m-d' }}">
       </div>
       <div>
-        <label>End</label>
+        <label>{% trans "End" %}</label>
         <input type="date" name="end" value="{{ task.end|date:'Y-m-d' }}">
       </div>
     </div>
     <div class="row">
       <div>
-        <label>Status</label>
+        <label>{% trans "Status" %}</label>
         <select name="status">
-          <option value="planned"     {% if task.status == 'planned' %}selected{% endif %}>Planned</option>
-          <option value="in-progress" {% if task.status == 'in-progress' %}selected{% endif %}>In progress</option>
-          <option value="blocked"     {% if task.status == 'blocked' %}selected{% endif %}>Blocked</option>
-          <option value="done"        {% if task.status == 'done' %}selected{% endif %}>Done</option>
+          <option value="planned"     {% if task.status == 'planned' %}selected{% endif %}>{% trans "Planned" %}</option>
+          <option value="in-progress" {% if task.status == 'in-progress' %}selected{% endif %}>{% trans "In progress" %}</option>
+          <option value="blocked"     {% if task.status == 'blocked' %}selected{% endif %}>{% trans "Blocked" %}</option>
+          <option value="done"        {% if task.status == 'done' %}selected{% endif %}>{% trans "Done" %}</option>
         </select>
       </div>
       <div>
-        <label>Project</label>
+        <label>{% trans "Project" %}</label>
         <select name="project_id">
           {% for p in projects %}
             <option value="{{ p.id }}" {% if p.id == task.project_id %}selected{% endif %}>{{ p.name }}</option>
@@ -45,7 +46,7 @@
       </div>
     </div>
     <div>
-      <label>Assignees</label>
+      <label>{% trans "Assignees" %}</label>
       <select name="assignee_ids" multiple size="6">
         {% for p in people %}
           {% if p.id in task.assignee_ids %}
@@ -57,34 +58,34 @@
       </select>
     </div>
     <div>
-      <label>Dependencies</label>
+      <label>{% trans "Dependencies" %}</label>
       <div class="deps-list">
         {% for d in preds %}
           <div class="dep-row">
-            <span class="dep-arrow">↑ depends on</span>
+            <span class="dep-arrow">↑ {% trans "depends on" %}</span>
             <span class="dep-name">{{ d.predecessor.title }}</span>
-            <button type="button" class="dep-remove" title="Remove dependency"
+            <button type="button" class="dep-remove" title="{% trans 'Remove dependency' %}"
                     data-on:click="@post('/dependencies/{{ d.predecessor_id }}/{{ d.successor_id }}/delete/?task={{ task.id }}', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">×</button>
           </div>
         {% endfor %}
         {% for d in succs %}
           <div class="dep-row">
-            <span class="dep-arrow">↓ blocks</span>
+            <span class="dep-arrow">↓ {% trans "blocks" %}</span>
             <span class="dep-name">{{ d.successor.title }}</span>
-            <button type="button" class="dep-remove" title="Remove dependency"
+            <button type="button" class="dep-remove" title="{% trans 'Remove dependency' %}"
                     data-on:click="@post('/dependencies/{{ d.predecessor_id }}/{{ d.successor_id }}/delete/?task={{ task.id }}', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">×</button>
           </div>
         {% endfor %}
         {% if not preds and not succs %}
-          <div class="deps-empty">No dependencies. Drag from a bar's right-edge handle onto another bar to create one.</div>
+          <div class="deps-empty">{% trans "No dependencies. Drag from a bar's right-edge handle onto another bar to create one." %}</div>
         {% endif %}
       </div>
     </div>
     {% if can_edit %}
     <div class="actions">
       <button type="button" class="danger"
-              data-on:click="confirm('Delete this task?') && @post('/tasks/{{ task.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">Delete</button>
-      <button type="submit" class="primary">Done</button>
+              data-on:click="confirm('{% trans 'Delete this task?' %}') && @post('/tasks/{{ task.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete" %}</button>
+      <button type="submit" class="primary">{% trans "Done" %}</button>
     </div>
     {% endif %}
   </form>

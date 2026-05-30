@@ -146,6 +146,16 @@ html, body { height: 100%; }
   .sidebar-user .sign-out-btn {
     @apply text-sm text-base-content/60 bg-transparent border-0 cursor-pointer hover:text-base-content;
   }
+  .lang-switch {
+    @apply px-4 py-3 flex gap-1;
+  }
+  .lang-btn {
+    @apply text-xs px-2 py-0.5 rounded border border-base-300 bg-transparent
+           text-base-content/60 cursor-pointer hover:text-base-content hover:bg-base-100;
+  }
+  .lang-btn.active {
+    @apply bg-base-100 text-base-content font-medium border-base-content/30;
+  }
 }
 
 /* ===================================================================

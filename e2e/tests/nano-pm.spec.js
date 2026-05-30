@@ -1509,3 +1509,64 @@ test.describe('kanban board', () => {
     await expect(page.locator('[data-status="planned"] .kanban-card', { hasText: 'Cutover and deprecation' })).toHaveCount(0);
   });
 });
+
+// =============================================================================
+// i18n — German translations
+// =============================================================================
+test.describe('i18n (German)', () => {
+  test('defaults to English in the sidebar nav', async ({ appPage: page }) => {
+    const nav = page.locator('.drawer-side .menu');
+    await expect(nav.locator('a', { hasText: 'Projects' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Resources' })).toBeVisible();
+    // EN is the active language button.
+    await expect(page.locator('.lang-btn', { hasText: 'EN' })).toHaveClass(/active/);
+  });
+
+  test('the DE switcher translates the sidebar nav, and EN switches back', async ({ appPage: page }) => {
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    const nav = page.locator('.drawer-side .menu');
+    await expect(nav.locator('a', { hasText: 'Projekte' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Ressourcen' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Aufgaben' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Personen' })).toBeVisible();
+    await expect(page.locator('.sign-out-btn')).toHaveText('Abmelden');
+    await expect(page.locator('.lang-btn', { hasText: 'DE' })).toHaveClass(/active/);
+
+    // The choice persists across navigation (language cookie / session).
+    await page.goto('/people/');
+    await expect(page.locator('.people-page-header h1')).toHaveText('Personen');
+
+    // Switch back to English.
+    await page.locator('.lang-btn', { hasText: 'EN' }).click();
+    await expect(page.locator('.drawer-side .menu a', { hasText: 'Projects' })).toBeVisible();
+  });
+
+  test('task popover labels and status options are translated', async ({ appPage: page }) => {
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await expect(page.locator('.drawer-side .menu a', { hasText: 'Projekte' })).toBeVisible();
+
+    // Open a task popover and check translated field labels + status choices.
+    await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).click();
+    const pop = page.locator('#task-popover');
+    await expect(pop).toBeVisible();
+    await expect(pop.locator('label', { hasText: 'Titel' })).toBeVisible();
+    await expect(pop.locator('label', { hasText: 'Beschreibung' })).toBeVisible();
+    await expect(pop.locator('select[name=status] option[value="in-progress"]')).toHaveText('In Bearbeitung');
+    await expect(pop.locator('select[name=status] option[value="done"]')).toHaveText('Erledigt');
+  });
+
+  test('honors the Accept-Language header without an explicit switch', async ({ browser, request }) => {
+    await reset(request);
+    const ctx = await browser.newContext({ locale: 'de-DE' });
+    const page = await ctx.newPage();
+    // Log in fresh in this German-locale context.
+    await page.goto('/accounts/login/');
+    await expect(page.locator('.login-card .hint').first()).toHaveText('Melden Sie sich bei Ihren Projekten an.');
+    await page.fill('input[name=username]', 'demo');
+    await page.fill('input[name=password]', 'demo');
+    await page.click('button[type=submit]');
+    await page.waitForURL('/');
+    await expect(page.locator('.drawer-side .menu a', { hasText: 'Aufgaben' })).toBeVisible();
+    await ctx.close();
+  });
+});

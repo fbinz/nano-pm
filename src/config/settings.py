@@ -64,6 +64,10 @@ MIDDLEWARE = [
     # from STATICFILES_DIRS so this is a no-op locally.
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # LocaleMiddleware activates the request language from the session /
+    # language cookie / Accept-Language header. Must sit after the session
+    # middleware (it reads the session) and before CommonMiddleware.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -83,6 +87,7 @@ TEMPLATES = [
             "context_processors": [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
+                "django.template.context_processors.i18n",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
@@ -149,7 +154,16 @@ else:
         {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
     ]
 
+from django.utils.translation import gettext_lazy as _
+
+# Source language is English. German is the only translated catalog; add more
+# locales here and ship a matching locale/<code>/LC_MESSAGES/django.po.
 LANGUAGE_CODE = "en-us"
+LANGUAGES = [
+    ("en", _("English")),
+    ("de", _("German")),
+]
+LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True

@@ -66,3 +66,19 @@ css: css-deps
 # Watch input.css and rebuild on change.
 css-watch: css-deps
     ./bin/tailwindcss -i src/css/input.css -o src/static/css/app.css --watch
+
+# --- i18n -----------------------------------------------------------------
+# Both recipes need GNU gettext (xgettext / msgfmt). On Debian/Ubuntu:
+#   sudo apt-get install gettext
+
+# Extract translatable strings into locale/<lang>/LC_MESSAGES/*.po.
+# Runs both message domains: `django` (Python + templates) and `djangojs`
+# (static/js). Pass the locale, e.g. `just messages de`. Edit the msgstr
+# entries in the generated .po files, then run `just messages-compile`.
+messages lang:
+    cd src && uv run python manage.py makemessages -l {{lang}}
+    cd src && uv run python manage.py makemessages -l {{lang}} -d djangojs
+
+# Compile every .po into the .mo binaries Django loads at runtime.
+messages-compile:
+    cd src && uv run python manage.py compilemessages

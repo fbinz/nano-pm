@@ -1,3 +1,4 @@
+{% load i18n %}
 {# Milestone editor — rendered into the right drawer (#drawer-slot). #}
 <c-vars m projects />
 <div id="drawer-slot">
@@ -9,20 +10,20 @@
   >
     {% csrf_token %}
     <div>
-      <label>Title</label>
+      <label>{% trans "Title" %}</label>
       <input type="text" name="title" value="{{ m.title }}" autofocus>
     </div>
     <div>
-      <label>Description</label>
+      <label>{% trans "Description" %}</label>
       <textarea name="description" rows="3">{{ m.description }}</textarea>
     </div>
     <div class="row">
       <div>
-        <label>Date</label>
+        <label>{% trans "Date" %}</label>
         <input type="date" name="date" value="{{ m.date|date:'Y-m-d' }}">
       </div>
       <div>
-        <label>Project</label>
+        <label>{% trans "Project" %}</label>
         <select name="project_id">
           {% for p in projects %}
             <option value="{{ p.id }}" {% if p.id == m.project_id %}selected{% endif %}>{{ p.name }}</option>
@@ -32,8 +33,8 @@
     </div>
     <div class="actions">
       <button type="button" class="danger"
-              data-on:click="confirm('Delete this milestone?') && @post('/milestones/{{ m.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">Delete</button>
-      <button type="submit" class="primary">Done</button>
+              data-on:click="confirm('{% trans 'Delete this milestone?' %}') && @post('/milestones/{{ m.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete" %}</button>
+      <button type="submit" class="primary">{% trans "Done" %}</button>
     </div>
   </form>
 </div>

@@ -7,6 +7,8 @@ output absolute-positioned divs).
 from datetime import date, timedelta
 from dataclasses import dataclass, field
 
+from django.utils.translation import gettext as _
+
 from data.models import TaskStatus
 from readers.chart import ChartState
 
@@ -451,7 +453,7 @@ def build_resource_vm(
         ))
     # Unassigned group at the end
     row_groups.append(ProjectRowVM(
-        id=0, name="Unassigned", color="#9ca3af", order=len(row_groups),
+        id=0, name=_("Unassigned"), color="#9ca3af", order=len(row_groups),
         tasks=person_bars.get(None, []), milestones=[],
         collapsed=(0 in collapsed_ids),
     ))

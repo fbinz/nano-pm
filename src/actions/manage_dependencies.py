@@ -1,5 +1,7 @@
 """Dependency creation (with cycle prevention) and deletion."""
 
+from django.utils.translation import gettext as _
+
 from data.models import Dependency, Task
 from actions.auto_cascade import cascade_workspace
 
@@ -33,17 +35,17 @@ def add_dependency(
 ) -> tuple[Dependency | None, set[int], str | None]:
     """Add an FS dependency. Returns (dep, cascaded_task_ids, error_message)."""
     if predecessor_id == successor_id:
-        return None, set(), "A task cannot depend on itself."
+        return None, set(), _("A task cannot depend on itself.")
     pred_ok = Task.objects.filter(id=predecessor_id, project__workspace=workspace).exists()
     succ_ok = Task.objects.filter(id=successor_id, project__workspace=workspace).exists()
     if not (pred_ok and succ_ok):
-        return None, set(), "Task not found."
+        return None, set(), _("Task not found.")
     if Dependency.objects.filter(
         predecessor_id=predecessor_id, successor_id=successor_id
     ).exists():
-        return None, set(), "That dependency already exists."
+        return None, set(), _("That dependency already exists.")
     if _would_cycle(workspace, predecessor_id, successor_id):
-        return None, set(), "That dependency would create a cycle."
+        return None, set(), _("That dependency would create a cycle.")
     dep = Dependency.objects.create(
         predecessor_id=predecessor_id, successor_id=successor_id
     )

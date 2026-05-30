@@ -298,7 +298,11 @@
       let hit = target;
       while (hit && !(hit.classList && hit.classList.contains('bar'))) hit = hit.parentElement;
       if (!hit) {
-        flashHint('Drop on another task to create a dependency.');
+        // gettext() comes from Django's JavaScriptCatalog (djangojs domain),
+        // loaded via the jsi18n <script> in app-shell. Falls back to the
+        // source string if the catalog hasn't loaded.
+        const _ = window.gettext || (s => s);
+        flashHint(_('Drop on another task to create a dependency.'));
         return;
       }
       const toId = hit.dataset.taskId;

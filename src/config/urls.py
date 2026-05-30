@@ -6,8 +6,10 @@ from django.db import OperationalError, connection
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import path, include
+from django.utils.translation import gettext as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.views.i18n import JavaScriptCatalog
 
 from data.models import Invitation, Membership, WorkspaceRole
 
@@ -40,7 +42,7 @@ def invite_accept(request: HttpRequest, token: str):
     try:
         inv = Invitation.objects.select_related("workspace", "person").get(token=token)
     except Invitation.DoesNotExist:
-        return HttpResponse("Invalid or expired invite link.", status=404)
+        return HttpResponse(_("Invalid or expired invite link."), status=404)
 
     if request.method == "GET":
         return render(request, "accounts/invite.html", {
@@ -53,12 +55,12 @@ def invite_accept(request: HttpRequest, token: str):
     if not username or not password:
         return render(request, "accounts/invite.html", {
             "workspace_name": inv.workspace.name,
-            "error": "Username and password are required.",
+            "error": _("Username and password are required."),
         })
     if User.objects.filter(username=username).exists():
         return render(request, "accounts/invite.html", {
             "workspace_name": inv.workspace.name,
-            "error": "That username is already taken.",
+            "error": _("That username is already taken."),
         })
     user = User.objects.create_user(username=username, password=password)
     Membership.objects.create(user=user, workspace=inv.workspace, role=WorkspaceRole.MEMBER)
@@ -79,6 +81,12 @@ urlpatterns = [
         name="login",
     ),
     path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
+    # set_language view — POST {language, next} to switch the active locale
+    # (persisted in the language cookie / session). Powers the sidebar switcher.
+    path("i18n/", include("django.conf.urls.i18n")),
+    # Serves the djangojs message catalog as a JS module exposing gettext()
+    # for client-side strings in static/js/nano.js.
+    path("jsi18n/", JavaScriptCatalog.as_view(), name="javascript-catalog"),
     path("invite/<str:token>/", invite_accept, name="invite_accept"),
     path("", include("interfaces.web")),
 ]

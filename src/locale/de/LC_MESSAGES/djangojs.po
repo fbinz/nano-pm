@@ -1,0 +1,20 @@
+# German (de) translation for nano-pm (JavaScript catalog).
+# This file is distributed under the same license as the nano-pm package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: nano-pm\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-30 12:59+0200\n"
+"PO-Revision-Date: 2026-05-30 13:00+0200\n"
+"Last-Translator: nano-pm\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: static/js/nano.js:305
+msgid "Drop on another task to create a dependency."
+msgstr "Auf eine andere Aufgabe ziehen, um eine Abhängigkeit zu erstellen."
