@@ -1508,6 +1508,89 @@ test.describe('kanban board', () => {
     await expect(page.locator('[data-status="in-progress"] .kanban-card', { hasText: 'Cutover and deprecation' })).toBeVisible();
     await expect(page.locator('[data-status="planned"] .kanban-card', { hasText: 'Cutover and deprecation' })).toHaveCount(0);
   });
+
+  test('reordering a card within a column persists across the SSE re-render', async ({ appPage: page }) => {
+    await page.goto('/tasks/');
+
+    // Seeded planned order is by (start, id): Tutorial flow v2, Terraform
+    // module rewrites, Cutover and deprecation, A/B test setup.
+    const titles = () =>
+      page.locator('[data-status="planned"] .kanban-card .kanban-card-title').allTextContents();
+    expect(await titles()).toEqual([
+      'Tutorial flow v2',
+      'Terraform module rewrites',
+      'Cutover and deprecation',
+      'A/B test setup',
+    ]);
+
+    // Drag the last card (A/B test setup) to the top of the column.
+    const moving = page.locator('[data-status="planned"] .kanban-card', { hasText: 'A/B test setup' });
+    const target = page.locator('[data-status="planned"] .kanban-card', { hasText: 'Tutorial flow v2' });
+    await moving.scrollIntoViewIfNeeded();
+    const mBox = await moving.boundingBox();
+    const tBox = await target.boundingBox();
+    await page.mouse.move(mBox.x + mBox.width / 2, mBox.y + mBox.height / 2);
+    await page.mouse.down();
+    // Cross SortableJS's fallbackTolerance threshold, then aim at the top of
+    // the first card so the drop inserts before it.
+    await page.mouse.move(mBox.x + mBox.width / 2, mBox.y + mBox.height / 2 - 20, { steps: 5 });
+    await page.mouse.move(tBox.x + tBox.width / 2, tBox.y + 4, { steps: 15 });
+    await page.mouse.up();
+
+    // Wait for the server-committed state: the rebuilt first card carries a
+    // data-rank (only set once the reorder is persisted + re-rendered) and is
+    // A/B test setup. The local Sortable move alone would not set data-rank.
+    await page.waitForFunction(() => {
+      const col = document.querySelector('.kanban-col-body[data-status="planned"]');
+      const first = col && col.querySelector('.kanban-card');
+      return first && first.textContent.includes('A/B test setup') && first.getAttribute('data-rank');
+    }, null, { timeout: 5000 });
+
+    expect(await titles()).toEqual([
+      'A/B test setup',
+      'Tutorial flow v2',
+      'Terraform module rewrites',
+      'Cutover and deprecation',
+    ]);
+  });
+
+  test('a cross-column drop changes status and lands at the dropped position', async ({ appPage: page }) => {
+    await page.goto('/tasks/');
+
+    // Seeded in-progress order is by (start, id): User research interviews
+    // (D-7), Migrate /users endpoints (D-1).
+    const inProgress = () =>
+      page.locator('[data-status="in-progress"] .kanban-card .kanban-card-title').allTextContents();
+    expect(await inProgress()).toEqual(['User research interviews', 'Migrate /users endpoints']);
+
+    // Drag a Planned card to the TOP of the In-progress column.
+    const moving = page.locator('.kanban-card', { hasText: 'Cutover and deprecation' });
+    const target = page.locator('[data-status="in-progress"] .kanban-card', { hasText: 'User research interviews' });
+    await moving.scrollIntoViewIfNeeded();
+    const mBox = await moving.boundingBox();
+    const tBox = await target.boundingBox();
+    await page.mouse.move(mBox.x + mBox.width / 2, mBox.y + mBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(mBox.x + mBox.width / 2 + 20, mBox.y + mBox.height / 2 + 20, { steps: 5 });
+    await page.mouse.move(tBox.x + tBox.width / 2, tBox.y + 4, { steps: 15 });
+    await page.mouse.up();
+
+    // Wait for the server-committed state: the rebuilt card is now in-progress,
+    // first in the column, and carries a data-rank (proof the position stuck).
+    await page.waitForFunction(() => {
+      const col = document.querySelector('.kanban-col-body[data-status="in-progress"]');
+      const first = col && col.querySelector('.kanban-card');
+      return first && first.textContent.includes('Cutover and deprecation') && first.getAttribute('data-rank');
+    }, null, { timeout: 5000 });
+
+    expect(await inProgress()).toEqual([
+      'Cutover and deprecation',
+      'User research interviews',
+      'Migrate /users endpoints',
+    ]);
+    // And it's gone from Planned.
+    await expect(page.locator('[data-status="planned"] .kanban-card', { hasText: 'Cutover and deprecation' })).toHaveCount(0);
+  });
 });
 
 // =============================================================================

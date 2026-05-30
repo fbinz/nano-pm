@@ -6,6 +6,7 @@
 <div class="kanban-card{% if card.overdue %} overdue{% endif %}"
      data-task-id="{{ card.id }}"
      data-status="{{ status }}"
+     data-rank="{{ card.rank }}"
      data-on:click="nano.openTaskPopover({{ card.id }})">
   <div class="kanban-card-title">{{ card.title }}</div>
   <div class="kanban-card-project"

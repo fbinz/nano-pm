@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from django.utils.translation import gettext as _
 
-from data.models import TaskStatus
+from data.models import TaskStatus, TaskOrder
 from readers.chart import ChartState
 
 
@@ -488,6 +488,7 @@ class KanbanCardVM:
     end_iso: str
     date_range: str  # pre-formatted "May 12 – May 26" for display
     overdue: bool
+    rank: str  # lexicographic order key within the column ("" if not yet set)
 
 
 @dataclass
@@ -518,8 +519,14 @@ def _fmt_date_range(start: date, end: date) -> str:
 
 def build_kanban_vm(state: ChartState) -> KanbanVM:
     """Group every workspace task into TaskStatus columns for the kanban board.
-    Cards within a column are ordered by start date, then id (same as the
-    Task default ordering used elsewhere)."""
+    Cards within a column are ordered by their user-set lexicographic rank
+    (see actions.lexorank); cards without a rank yet fall back to start date,
+    then id, and sort after any ranked cards."""
+    task_ids = [t.id for proj in state.projects for t in proj.tasks.all()]
+    ranks = {
+        (o.group_key, o.task_id): o.rank
+        for o in TaskOrder.objects.filter(dimension="status", task_id__in=task_ids)
+    }
     buckets: dict[str, list[KanbanCardVM]] = {c.value: [] for c in TaskStatus}
     for proj in state.projects:
         text_color, text_dark = _text_color_for(proj.color)
@@ -537,9 +544,10 @@ def build_kanban_vm(state: ChartState) -> KanbanVM:
                 end_iso=t.end.isoformat(),
                 date_range=_fmt_date_range(t.start, t.end),
                 overdue=(t.status != TaskStatus.DONE and t.end < state.today),
+                rank=ranks.get((t.status, t.id), ""),
             ))
     for cards in buckets.values():
-        cards.sort(key=lambda c: (c.start_iso, c.id))
+        cards.sort(key=lambda c: (c.rank == "", c.rank, c.start_iso, c.id))
     columns = [
         KanbanColumnVM(status=c.value, label=c.label, cards=buckets[c.value])
         for c in TaskStatus

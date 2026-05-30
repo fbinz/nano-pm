@@ -493,11 +493,22 @@
           const newStatus = evt.to.dataset.status;
           const oldStatus = evt.from.dataset.status;
           const taskId = evt.item.dataset.taskId;
-          if (!taskId || newStatus === oldStatus) return;
+          if (!taskId) return;
+          // No-op: dropped back in the same column at the same index.
+          if (newStatus === oldStatus && evt.oldIndex === evt.newIndex) return;
+          // One endpoint handles both a column move and a same-column reorder:
+          // send the target status plus the ids of the cards now directly
+          // above/below the dropped one (empty at a column edge); the server
+          // changes status if needed, then ranks the card between them.
           // Reflect the new status locally so the e2e wait-for-fn (and the
-          // user) sees an immediate column move; SSE will re-render shortly.
+          // user) sees an immediate column move; SSE re-renders shortly.
           evt.item.dataset.status = newStatus;
-          commit(`/tasks/${taskId}/status/`, { status: newStatus });
+          const sib = (el) => (el && el.dataset && el.dataset.taskId) || '';
+          commit(`/tasks/${taskId}/board-move/`, {
+            status: newStatus,
+            before_id: sib(evt.item.previousElementSibling),
+            after_id: sib(evt.item.nextElementSibling),
+          });
         },
       });
     });

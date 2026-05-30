@@ -2,8 +2,9 @@
 
 from datetime import date, timedelta
 
-from data.models import Project, Task, TaskStatus, Person
+from data.models import Project, Task, TaskStatus, TaskOrder, Person
 from actions.auto_cascade import cascade_workspace
+from actions.lexorank import rank_between
 
 
 def _workspace_owns_project(workspace, project_id: int) -> Project | None:
@@ -80,6 +81,115 @@ def update_task(
         t.assignees.set(valid_ids)
     cascaded = cascade_workspace(workspace)
     return t, cascaded
+
+
+def _column_task_ids(
+    workspace, dimension: str, group_key: str, ranks: dict[int, str]
+) -> list[int]:
+    """Task ids currently in one board column, in display order — ranked cards
+    first (by rank), then not-yet-ranked cards (by start, id). Mirrors the sort
+    in readers.chart_view.build_kanban_vm so a seed matches what the user sees.
+    Only the "status" grouping exists today."""
+    if dimension != "status":
+        return []
+    tasks = Task.objects.filter(project__workspace=workspace, status=group_key)
+    return [
+        t.id
+        for t in sorted(
+            tasks,
+            key=lambda t: (t.id not in ranks, ranks.get(t.id, ""), t.start.isoformat(), t.id),
+        )
+    ]
+
+
+def _ensure_column_ranks(workspace, dimension: str, group_key: str) -> dict[int, str]:
+    """Return {task_id: rank} for a column, seeding ranks for the whole column
+    the first time it's touched (or whenever a card in it still lacks one). A
+    card reaches a column unranked when freshly created; seeding (re)spreads
+    evenly-gapped ranks in current display order so neighbour lookups during a
+    drop are always well-defined."""
+    ranks = {
+        o.task_id: o.rank
+        for o in TaskOrder.objects.filter(
+            dimension=dimension, group_key=group_key, task__project__workspace=workspace
+        )
+    }
+    ordered = _column_task_ids(workspace, dimension, group_key, ranks)
+    if all(tid in ranks for tid in ordered):
+        return ranks
+    prev = ""
+    for tid in ordered:
+        prev = rank_between(prev, "")
+        TaskOrder.objects.update_or_create(
+            task_id=tid,
+            dimension=dimension,
+            group_key=group_key,
+            defaults={"rank": prev},
+        )
+        ranks[tid] = prev
+    return ranks
+
+
+def reorder_task(
+    *,
+    workspace,
+    task_id: int,
+    dimension: str,
+    group_key: str,
+    before_id: int | None,
+    after_id: int | None,
+) -> Task | None:
+    """Persist a new position for `task_id` within (`dimension`, `group_key`),
+    dropped between `before_id` (the card above) and `after_id` (the card
+    below). Writes one TaskOrder row with a fractional rank between the two
+    neighbours — no other card is touched, apart from a one-off column seed."""
+    try:
+        task = Task.objects.get(id=task_id, project__workspace=workspace)
+    except Task.DoesNotExist:
+        return None
+    ranks = _ensure_column_ranks(workspace, dimension, group_key)
+    lo = ranks.get(before_id, "") if before_id else ""
+    hi = ranks.get(after_id, "") if after_id else ""
+    if lo and hi and lo >= hi:
+        # Neighbours not in the expected order (stale client) — append after the
+        # upper one rather than emit an invalid rank.
+        hi = ""
+    new_rank = rank_between(lo, hi)
+    TaskOrder.objects.update_or_create(
+        task=task,
+        dimension=dimension,
+        group_key=group_key,
+        defaults={"rank": new_rank},
+    )
+    return task
+
+
+def move_task_on_board(
+    *,
+    workspace,
+    task_id: int,
+    status: str,
+    before_id: int | None,
+    after_id: int | None,
+) -> Task | None:
+    """Apply a single kanban drag: place `task_id` in the `status` column,
+    between `before_id` and `after_id`. Both a same-column reorder and a
+    cross-column move go through here — status is updated first (only when it
+    actually changes, to skip a needless cascade) so the column membership the
+    rank is computed against is already correct."""
+    task = Task.objects.filter(id=task_id, project__workspace=workspace).first()
+    if task is None:
+        return None
+    if task.status != status:
+        update_task(workspace=workspace, task_id=task_id, status=status)
+    return reorder_task(
+        workspace=workspace,
+        task_id=task_id,
+        dimension="status",
+        group_key=status,
+        before_id=before_id,
+        after_id=after_id,
+    )
 
 
 def delete_task(*, workspace, task_id: int) -> bool:

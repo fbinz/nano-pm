@@ -1,4 +1,4 @@
-"""Kanban view — board page, status change endpoint, and the GET/POST dispatcher for /tasks/."""
+"""Kanban view — board page, the unified drag endpoint, and the GET/POST dispatcher for /tasks/."""
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
@@ -6,7 +6,7 @@ from django.shortcuts import render
 
 from datastar_py.django import datastar_response
 
-from actions.manage_tasks import update_task
+from actions.manage_tasks import move_task_on_board
 from data.models import TaskStatus
 from readers import get_chart_state
 from readers.chart_view import build_kanban_vm
@@ -32,13 +32,29 @@ def kanban_index(request: HttpRequest) -> HttpResponse:
     )
 
 
+def _to_int(raw: str | None) -> int | None:
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 @login_required
 @datastar_response
-def task_set_status(request: HttpRequest, task_id: int):
+def task_board_move(request: HttpRequest, task_id: int):
+    """Persist a single kanban drag — both column moves and same-column
+    reorders. `status` is the target column; `before_id`/`after_id` are the
+    cards now directly above/below the dropped card (empty at a column edge)."""
     if request.method != "POST":
         return HttpResponse(status=405)
-    new_status = request.POST.get("status", "")
-    if new_status not in {c.value for c in TaskStatus}:
+    status = request.POST.get("status", "")
+    if status not in {c.value for c in TaskStatus}:
         return
-    update_task(workspace=request.workspace, task_id=task_id, status=new_status)
+    move_task_on_board(
+        workspace=request.workspace,
+        task_id=task_id,
+        status=status,
+        before_id=_to_int(request.POST.get("before_id")),
+        after_id=_to_int(request.POST.get("after_id")),
+    )
     yield _patch_chart(request)
