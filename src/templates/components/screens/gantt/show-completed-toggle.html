@@ -1,0 +1,8 @@
+{% load i18n %}
+{# Topbar chip toggling whether completed projects are shown on the chart. #}
+<c-vars show_completed />
+<button id="show-completed-toggle" class="topbar-btn{% if show_completed %} active{% endif %}"
+        title="{% trans 'Show or hide completed projects' %}"
+        data-on:click="@post('/projects/toggle-completed/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
+  {% if show_completed %}{% trans "Hide completed" %}{% else %}{% trans "Show completed" %}{% endif %}
+</button>

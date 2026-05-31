@@ -53,6 +53,7 @@ html, body { height: 100%; }
   .topbar-btn { @apply btn btn-sm btn-ghost border border-base-300 font-normal; }
   .topbar-btn:hover { @apply bg-base-200; }
   .topbar-btn.danger { @apply text-error border-error; }
+  .topbar-btn.active { @apply bg-base-content text-base-100 border-base-content; }
 
   .workspace-menu[popover] {
     @apply bg-base-100 border border-base-300 rounded-md shadow-lg overflow-hidden;
@@ -219,6 +220,15 @@ html, body { height: 100%; }
   .left-cell.proj .swatch { @apply w-2.5 h-2.5 rounded-[2px] flex-shrink-0; }
   .left-cell.proj .name { @apply flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
   .left-cell.proj .actions { @apply text-base-content/60; }
+  /* Completed projects (only shown when the show-completed filter is on):
+     dim the whole group and strike the name; a small badge marks the header. */
+  .left-cell.proj.completed { @apply opacity-60; }
+  .left-cell.proj.completed .name { @apply line-through; }
+  .left-cell.task.completed, .chart-row.completed { @apply opacity-50; }
+  .left-cell.proj .done-badge {
+    @apply flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider
+           px-1.5 py-0.5 rounded bg-base-content/15 text-base-content/70;
+  }
   .left-cell.task {
     height: var(--row-h);
     @apply pl-7 text-base-content/80;

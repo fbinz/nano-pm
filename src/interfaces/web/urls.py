@@ -16,6 +16,7 @@ from .dependencies import dep_add, dep_delete
 from .projects import (
     project_create, project_popover, project_update, project_move,
     project_delete, project_toggle_collapse, set_all_collapsed,
+    project_toggle_completed, toggle_show_completed,
 )
 from .resources import (
     resource_index, person_toggle_collapse, set_all_people_collapsed,
@@ -54,6 +55,8 @@ urlpatterns = [
     path("projects/<int:project_id>/update/",        project_update,   name="project_update"),
     path("projects/<int:project_id>/move/",          project_move,     name="project_move"),
     path("projects/<int:project_id>/delete/",        project_delete,   name="project_delete"),
+    path("projects/<int:project_id>/set-completed/",  project_toggle_completed, name="project_set_completed"),
+    path("projects/toggle-completed/",               toggle_show_completed,  name="toggle_show_completed"),
     path("projects/<int:project_id>/toggle-collapse/",
                                                      project_toggle_collapse, name="project_toggle_collapse"),
     path("projects/set-collapsed/",                  set_all_collapsed,       name="set_all_collapsed"),

@@ -1653,3 +1653,63 @@ test.describe('i18n (German)', () => {
     await ctx.close();
   });
 });
+
+// =============================================================================
+// Project completion (manual status flag + show-completed filter)
+// =============================================================================
+test.describe('project completion', () => {
+  test('marking a project complete hides it from the chart by default', async ({ appPage: page }) => {
+    await expect(page.locator('.left-cell.proj')).toHaveCount(3);
+
+    // Open the project popover and mark it complete.
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await page.waitForSelector('#project-popover');
+    await page.click('#pp-toggle-complete');
+
+    // Completed projects are hidden by default → the row disappears.
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toHaveCount(0);
+    await expect(page.locator('.left-cell.proj')).toHaveCount(2);
+  });
+
+  test('the show-completed toggle reveals completed projects, dimmed', async ({ appPage: page }) => {
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await page.waitForSelector('#project-popover');
+    await page.click('#pp-toggle-complete');
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toHaveCount(0);
+
+    // Flip the topbar filter on.
+    await page.click('#show-completed-toggle');
+
+    const proj = page.locator('.left-cell.proj', { hasText: 'API Migration' });
+    await expect(proj).toHaveCount(1);
+    await expect(proj).toHaveClass(/completed/);
+  });
+
+  test('completion controls are translated (de)', async ({ appPage: page }) => {
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await expect(page.locator('#show-completed-toggle')).toHaveText(/Erledigte anzeigen/);
+
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await page.waitForSelector('#project-popover');
+    await expect(page.locator('#pp-toggle-complete')).toHaveText(/Als erledigt markieren/);
+  });
+
+  test('reopening a completed project keeps it visible with the filter off', async ({ appPage: page }) => {
+    // Complete it.
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await page.waitForSelector('#project-popover');
+    await page.click('#pp-toggle-complete');
+    await expect(page.locator('.left-cell.proj')).toHaveCount(2);
+
+    // Reveal completed, reopen it.
+    await page.click('#show-completed-toggle');
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await page.waitForSelector('#project-popover');
+    await page.click('#pp-toggle-complete');
+
+    // Turn the filter back off — the reopened project stays because it is active.
+    await page.click('#show-completed-toggle');
+    await expect(page.locator('.left-cell.proj')).toHaveCount(3);
+    await expect(page.locator('.left-cell.proj.completed')).toHaveCount(0);
+  });
+});

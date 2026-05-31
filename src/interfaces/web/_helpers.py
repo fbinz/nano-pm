@@ -64,6 +64,15 @@ def _set_collapsed_projects(request: HttpRequest, ids: set[int]) -> None:
     request.session["collapsed_projects"] = sorted(ids)
 
 
+def _show_completed(request: HttpRequest) -> bool:
+    """Whether completed projects are revealed on the chart (default: hidden)."""
+    return bool(request.session.get("show_completed", False))
+
+
+def _set_show_completed(request: HttpRequest, value: bool) -> None:
+    request.session["show_completed"] = bool(value)
+
+
 def _collapsed_people(request: HttpRequest) -> set[int]:
     raw = request.session.get("collapsed_people", [])
     return {int(x) for x in raw if isinstance(x, (int, str)) and str(x).lstrip("-").isdigit()}
@@ -138,6 +147,7 @@ def _patch_chart(request: HttpRequest, zoom: str | None = None):
     else:
         vm = build_chart_vm(state, z, px_per_day=ppd,
                             collapsed_project_ids=_collapsed_projects(request),
+                            show_completed=_show_completed(request),
                             is_pm=_is_pm(request))
         template = "screens/gantt/chart"
     return SSE.patch_elements(

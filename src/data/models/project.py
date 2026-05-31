@@ -19,6 +19,7 @@ class Project(models.Model):
     color = models.CharField(max_length=9, default=PROJECT_COLORS[0])
     # Float ordering keeps re-order cheap (insert between any two by averaging).
     order = models.FloatField(default=0)
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -27,3 +28,7 @@ class Project(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    @property
+    def is_completed(self) -> bool:
+        return self.completed_at is not None

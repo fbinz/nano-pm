@@ -27,6 +27,7 @@
                el.dispatchEvent(new Event('input', { bubbles: true }));
              }"
            data-on:input__debounce.150ms="@get(`/zoom/?ppd=${parseFloat(el.value)/parseFloat(el.dataset.daysPerUnit)}`)">
+    <c-screens.gantt.show-completed-toggle :show_completed="vm.show_completed" />
     <button class="topbar-btn" data-on:click="nano.scrollToToday()" title="{% trans 'Jump to today (T)' %}">{% trans "Today" %}</button>
   </div>
 

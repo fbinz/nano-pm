@@ -34,6 +34,12 @@
       <button type="button" id="pp-add-milestone" class="topbar-btn"
               data-on:click="nano.addMilestone({{ project.id }})">{% trans "+ Add milestone" %}</button>
     </div>
+    <div class="row">
+      <button type="button" id="pp-toggle-complete" class="topbar-btn"
+              data-on:click="@post('/projects/{{ project.id }}/set-completed/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
+        {% if project.is_completed %}↩ {% trans "Reopen project" %}{% else %}✓ {% trans "Mark complete" %}{% endif %}
+      </button>
+    </div>
     <div class="actions">
       <button type="button" class="danger"
               data-on:click="confirm('{% blocktrans with name=project.name|escapejs %}Delete project &quot;{{ name }}&quot; and all its tasks?{% endblocktrans %}') && @post('/projects/{{ project.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete project" %}</button>

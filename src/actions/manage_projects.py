@@ -1,5 +1,7 @@
 """Write operations for projects."""
 
+from django.utils import timezone
+
 from data.models import Project
 from data.models.project import PROJECT_COLORS
 
@@ -60,6 +62,17 @@ def move_project(*, workspace, project_id: int, direction: int) -> Project | Non
     a, b = ordered[idx], ordered[nidx]
     a.order, b.order = b.order, a.order
     Project.objects.bulk_update([a, b], fields=["order"])
+    return proj
+
+
+def set_project_completed(*, workspace, project_id: int, completed: bool) -> Project | None:
+    """Mark a project complete (stamp `completed_at`) or reopen it (clear it)."""
+    try:
+        proj = Project.objects.get(id=project_id, workspace=workspace)
+    except Project.DoesNotExist:
+        return None
+    proj.completed_at = timezone.now() if completed else None
+    proj.save(update_fields=["completed_at", "updated_at"])
     return proj
 
 

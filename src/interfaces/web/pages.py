@@ -15,7 +15,8 @@ from readers.chart_view import (
 )
 
 from ._helpers import (
-    _zoom, _ppd, _collapsed_projects, _is_pm, _workspace_context, _patch_chart,
+    _zoom, _ppd, _collapsed_projects, _show_completed,
+    _is_pm, _workspace_context, _patch_chart,
 )
 
 
@@ -30,6 +31,7 @@ def index(request: HttpRequest) -> HttpResponse:
         state, zoom,
         px_per_day=ppd,
         collapsed_project_ids=_collapsed_projects(request),
+        show_completed=_show_completed(request),
         is_pm=_is_pm(request),
     )
     days_per_unit = ZOOM_DAYS_PER_UNIT[zoom]

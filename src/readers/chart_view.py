@@ -79,6 +79,9 @@ class ProjectRowVM:
     # project's header row keep rendering — they live on the header line, not
     # the per-task rows.
     collapsed: bool = False
+    # True when the project is marked complete (only ever present in row_groups
+    # when the show-completed filter is on; rendered dimmed with a badge).
+    completed: bool = False
 
 
 @dataclass
@@ -111,6 +114,7 @@ class ChartVM:
     deps: list[DepArrowVM]
     show_today_line: bool
     all_collapsed: bool
+    show_completed: bool = False
     # Layout constants (kept here so the template doesn't have to know)
     left_w: int = 240
     axis_h: int = 48
@@ -275,6 +279,7 @@ def build_chart_vm(
     zoom: str = DEFAULT_ZOOM,
     px_per_day: int | None = None,
     collapsed_project_ids: set[int] | None = None,
+    show_completed: bool = False,
     is_pm: bool = False,
 ) -> ChartVM:
     if zoom not in ZOOM_PX_PER_DAY:
@@ -291,6 +296,9 @@ def build_chart_vm(
     # Row groups, with bars and milestones
     row_groups: list[ProjectRowVM] = []
     for proj in state.projects:
+        # Completed projects are hidden unless the show-completed filter is on.
+        if proj.is_completed and not show_completed:
+            continue
         bars: list[BarVM] = []
         text_color, text_dark = _text_color_for(proj.color)
         for t in proj.tasks.all():
@@ -327,6 +335,7 @@ def build_chart_vm(
             id=proj.id, name=proj.name, color=proj.color, order=proj.order,
             tasks=bars, milestones=miles,
             collapsed=(proj.id in collapsed_ids),
+            completed=proj.is_completed,
         ))
 
     # Dep arrows — orthogonal route through a small stub between rows.
@@ -392,6 +401,7 @@ def build_chart_vm(
         deps=deps,
         show_today_line=g.show_today,
         all_collapsed=bool(row_groups) and all(rg.collapsed for rg in row_groups),
+        show_completed=show_completed,
     )
 
 

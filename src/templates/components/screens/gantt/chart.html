@@ -41,7 +41,7 @@
     {% endif %}
 
     {% for rg in vm.row_groups %}
-      <div class="left-cell proj"
+      <div class="left-cell proj{% if rg.completed %} completed{% endif %}"
            id="proj-{{ rg.id }}"
            data-project-id="{{ rg.id }}"
            data-signals:_collapsed.{{ rg.id }}__ifmissing="{{ rg.collapsed|yesno:'true,false' }}"
@@ -53,9 +53,10 @@
         </button>
         <span class="swatch" style="background:{{ rg.color }}"></span>
         <span class="name">{{ rg.name }}</span>
+        {% if rg.completed %}<span class="done-badge">{% trans "Done" %}</span>{% endif %}
         <span class="actions">edit</span>
       </div>
-      <div class="chart-row proj"
+      <div class="chart-row proj{% if rg.completed %} completed{% endif %}"
            data-project-id="{{ rg.id }}"
            style="width:{{ vm.chart_width }}px;"
            data-on:mousedown="nano.projectRowMouseDown(evt, {{ rg.id }})">
@@ -67,13 +68,13 @@
         {% endfor %}
       </div>
       {% for bar in rg.tasks %}
-          <div class="left-cell task" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
+          <div class="left-cell task{% if rg.completed %} completed{% endif %}" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
                {% if rg.collapsed %}style="display:none"{% endif %}
                data-show="!$_collapsed.{{ rg.id }}">
             <span class="title">{{ bar.title }}</span>
             <span class="assignees">{{ bar.assignees }}</span>
           </div>
-          <div class="chart-row" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
+          <div class="chart-row{% if rg.completed %} completed{% endif %}" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
                style="{% if rg.collapsed %}display:none;{% endif %}width:{{ vm.chart_width }}px;"
                data-show="!$_collapsed.{{ rg.id }}">
             {% for tile in vm.weekend_tiles %}
