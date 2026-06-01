@@ -17,10 +17,10 @@ from actions.manage_tasks import (
 from data.models import Dependency
 from readers import get_chart_state, get_task
 
-from ._helpers import _is_pm, _is_assigned, _parse_iso, _patch_chart, _request_data
+from .helpers import is_pm, is_assigned, parse_iso, patch_chart, request_data
 
 
-def _render_task_popover(request: HttpRequest, task_id: int) -> str | None:
+def render_task_popover(request: HttpRequest, task_id: int) -> str | None:
     """Render the task-popover fragment for `task_id`, or None if it's gone."""
     task = get_task(request.workspace, task_id)
     if task is None:
@@ -36,7 +36,7 @@ def _render_task_popover(request: HttpRequest, task_id: int) -> str | None:
     )
     task.assignee_ids = list(task.assignees.values_list("id", flat=True))
     task.project_id = task.project.id
-    can_edit = _is_pm(request) or _is_assigned(request, task)
+    can_edit = is_pm(request) or is_assigned(request, task)
     return render_component(
         request, "screens/gantt/task-popover",
         task=task, projects=state.projects, people=state.people,
@@ -47,7 +47,7 @@ def _render_task_popover(request: HttpRequest, task_id: int) -> str | None:
 @login_required
 @datastar_response
 def task_popover(request: HttpRequest, task_id: int):
-    fragment = _render_task_popover(request, task_id)
+    fragment = render_task_popover(request, task_id)
     if fragment is None:
         return
     yield SSE.patch_elements(fragment)
@@ -59,8 +59,8 @@ def task_popover(request: HttpRequest, task_id: int):
 def task_update(request: HttpRequest, task_id: int):
     title = request.POST.get("title", "").strip() or None
     description = request.POST.get("description") if "description" in request.POST else None
-    start = _parse_iso(request.POST.get("start", ""))
-    end = _parse_iso(request.POST.get("end", ""))
+    start = parse_iso(request.POST.get("start", ""))
+    end = parse_iso(request.POST.get("end", ""))
     status = request.POST.get("status") or None
     project_id_raw = request.POST.get("project_id")
     project_id = int(project_id_raw) if project_id_raw and project_id_raw.isdigit() else None
@@ -76,7 +76,7 @@ def task_update(request: HttpRequest, task_id: int):
         project_id=project_id,
         assignee_ids=assignee_ids,
     )
-    yield _patch_chart(request)
+    yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
@@ -84,12 +84,12 @@ def task_update(request: HttpRequest, task_id: int):
 @login_required
 @datastar_response
 def task_move(request: HttpRequest, task_id: int):
-    data = _request_data(request)
-    new_start = _parse_iso(data.get("start", ""))
+    data = request_data(request)
+    new_start = parse_iso(data.get("start", ""))
     if new_start is None:
         return
     move_task(workspace=request.workspace, task_id=task_id, new_start=new_start)
-    yield _patch_chart(request)
+    yield patch_chart(request)
 
 
 @require_http_methods(["POST"])
@@ -97,7 +97,7 @@ def task_move(request: HttpRequest, task_id: int):
 @datastar_response
 def task_move_many(request: HttpRequest):
     """Bulk-shift a set of tasks by a common day delta."""
-    data = _request_data(request)
+    data = request_data(request)
     raw_ids = data.get("task_ids", "")
     task_ids = [int(x) for x in raw_ids.split(",") if x.strip().lstrip("-").isdigit()]
     try:
@@ -107,48 +107,48 @@ def task_move_many(request: HttpRequest):
     if not task_ids or delta_days == 0:
         return
     move_many_tasks(workspace=request.workspace, task_ids=task_ids, delta_days=delta_days)
-    yield _patch_chart(request)
+    yield patch_chart(request)
 
 
 @require_http_methods(["POST"])
 @login_required
 @datastar_response
 def task_resize_start(request: HttpRequest, task_id: int):
-    data = _request_data(request)
-    new_start = _parse_iso(data.get("start", ""))
+    data = request_data(request)
+    new_start = parse_iso(data.get("start", ""))
     if new_start is None:
         return
     resize_start(workspace=request.workspace, task_id=task_id, new_start=new_start)
-    yield _patch_chart(request)
+    yield patch_chart(request)
 
 
 @require_http_methods(["POST"])
 @login_required
 @datastar_response
 def task_resize_end(request: HttpRequest, task_id: int):
-    data = _request_data(request)
-    new_end = _parse_iso(data.get("end", ""))
+    data = request_data(request)
+    new_end = parse_iso(data.get("end", ""))
     if new_end is None:
         return
     resize_end(workspace=request.workspace, task_id=task_id, new_end=new_end)
-    yield _patch_chart(request)
+    yield patch_chart(request)
 
 
 @require_http_methods(["POST"])
 @login_required
 @datastar_response
 def task_create(request: HttpRequest):
-    data = _request_data(request)
+    data = request_data(request)
     project_id = int(data.get("project_id", 0) or 0)
-    start = _parse_iso(data.get("start", ""))
-    end = _parse_iso(data.get("end", ""))
+    start = parse_iso(data.get("start", ""))
+    end = parse_iso(data.get("end", ""))
     title = data.get("title", "").strip() or "New task"
     if not project_id or start is None or end is None:
         return
     create_task(
         workspace=request.workspace, project_id=project_id, title=title, start=start, end=end,
     )
-    yield _patch_chart(request)
+    yield patch_chart(request)
 
 
 @require_http_methods(["POST"])
@@ -156,5 +156,5 @@ def task_create(request: HttpRequest):
 @datastar_response
 def task_delete_view(request: HttpRequest, task_id: int):
     delete_task(workspace=request.workspace, task_id=task_id)
-    yield _patch_chart(request)
+    yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')

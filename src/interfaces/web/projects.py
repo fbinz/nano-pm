@@ -17,9 +17,9 @@ from actions.manage_projects import (
 from data.models.project import PROJECT_COLORS
 from readers import get_project
 
-from ._helpers import (
-    _collapsed_projects, _set_collapsed_projects,
-    _show_completed, _set_show_completed, _patch_chart,
+from .helpers import (
+    collapsed_projects, set_collapsed_projects,
+    show_completed, set_show_completed, patch_chart,
 )
 
 
@@ -31,7 +31,7 @@ def project_create(request: HttpRequest):
     if position not in ("start", "end"):
         position = "end"
     create_project(workspace=request.workspace, position=position)
-    yield _patch_chart(request)
+    yield patch_chart(request)
 
 
 @login_required
@@ -59,7 +59,7 @@ def project_update(request: HttpRequest, project_id: int):
         name=request.POST.get("name") or None,
         color=request.POST.get("color") or None,
     )
-    yield _patch_chart(request)
+    yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
@@ -69,7 +69,7 @@ def project_update(request: HttpRequest, project_id: int):
 def project_move(request: HttpRequest, project_id: int):
     direction = int(request.GET.get("dir", "0") or 0)
     move_project(workspace=request.workspace, project_id=project_id, direction=direction)
-    yield _patch_chart(request)
+    yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
@@ -84,7 +84,7 @@ def project_toggle_completed(request: HttpRequest, project_id: int):
         workspace=request.workspace, project_id=project_id,
         completed=not proj.is_completed,
     )
-    yield _patch_chart(request)
+    yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
@@ -92,12 +92,12 @@ def project_toggle_completed(request: HttpRequest, project_id: int):
 @login_required
 @datastar_response
 def toggle_show_completed(request: HttpRequest):
-    _set_show_completed(request, not _show_completed(request))
+    set_show_completed(request, not show_completed(request))
     request.session.save()
-    yield _patch_chart(request)
+    yield patch_chart(request)
     yield SSE.patch_elements(render_component(
         request, "screens/gantt/show-completed-toggle",
-        show_completed=_show_completed(request),
+        show_completed=show_completed(request),
     ))
 
 
@@ -106,7 +106,7 @@ def toggle_show_completed(request: HttpRequest):
 @datastar_response
 def project_delete(request: HttpRequest, project_id: int):
     delete_project(workspace=request.workspace, project_id=project_id)
-    yield _patch_chart(request)
+    yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
@@ -116,9 +116,9 @@ def project_toggle_collapse(request: HttpRequest, project_id: int):
     """Persist the collapsed/expanded state to the session (fire-and-forget)."""
     if get_project(request.workspace, project_id) is None:
         return HttpResponse(status=404)
-    collapsed = _collapsed_projects(request)
+    collapsed = collapsed_projects(request)
     collapsed.symmetric_difference_update({project_id})
-    _set_collapsed_projects(request, collapsed)
+    set_collapsed_projects(request, collapsed)
     request.session.save()
     return HttpResponse(status=204)
 
@@ -129,6 +129,6 @@ def set_all_collapsed(request: HttpRequest):
     """Persist the full collapsed set (fire-and-forget from collapse-all / expand-all)."""
     raw = request.POST.get("ids", "")
     ids = {int(x) for x in raw.split(",") if x.strip().isdigit()}
-    _set_collapsed_projects(request, ids)
+    set_collapsed_projects(request, ids)
     request.session.save()
     return HttpResponse(status=204)

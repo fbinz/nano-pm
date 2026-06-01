@@ -17,7 +17,7 @@ from actions.manage_milestones import (
 )
 from readers import get_chart_state, get_project, get_milestone
 
-from ._helpers import _parse_iso, _patch_chart, _request_data
+from .helpers import parse_iso, patch_chart, request_data
 
 
 @login_required
@@ -47,10 +47,10 @@ def milestone_update_view(request: HttpRequest, milestone_id: int):
         milestone_id=milestone_id,
         title=request.POST.get("title") or None,
         description=description,
-        on=_parse_iso(request.POST.get("date", "")),
+        on=parse_iso(request.POST.get("date", "")),
         project_id=int(project_id_raw) if project_id_raw.isdigit() else None,
     )
-    yield _patch_chart(request)
+    yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
@@ -59,7 +59,7 @@ def milestone_update_view(request: HttpRequest, milestone_id: int):
 @datastar_response
 def milestone_delete_view(request: HttpRequest, milestone_id: int):
     delete_milestone(workspace=request.workspace, milestone_id=milestone_id)
-    yield _patch_chart(request)
+    yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
 
@@ -67,12 +67,12 @@ def milestone_delete_view(request: HttpRequest, milestone_id: int):
 @login_required
 @datastar_response
 def milestone_move(request: HttpRequest, milestone_id: int):
-    data = _request_data(request)
-    new_date = _parse_iso(data.get("date", ""))
+    data = request_data(request)
+    new_date = parse_iso(data.get("date", ""))
     if new_date is None:
         return
     update_milestone(workspace=request.workspace, milestone_id=milestone_id, on=new_date)
-    yield _patch_chart(request)
+    yield patch_chart(request)
 
 
 @require_http_methods(["POST"])
@@ -83,8 +83,8 @@ def milestone_create(request: HttpRequest, project_id: int):
     proj = get_project(request.workspace, project_id)
     if proj is None:
         return
-    data = _request_data(request)
-    on = _parse_iso(data.get("date", "")) or date.today()
+    data = request_data(request)
+    on = parse_iso(data.get("date", "")) or date.today()
     m = create_milestone(
         workspace=request.workspace, project_id=project_id,
         title="New milestone", on=on,
@@ -92,7 +92,7 @@ def milestone_create(request: HttpRequest, project_id: int):
     if m is None:
         return
     state = get_chart_state(request.workspace)
-    yield _patch_chart(request)
+    yield patch_chart(request)
     m.project_id = m.project.id
     yield SSE.patch_elements(
         render_component(

@@ -11,15 +11,15 @@ from datastar_py.django import (
 
 from actions.manage_dependencies import add_dependency, delete_dependency
 
-from ._helpers import _patch_chart, _request_data
-from .tasks import _render_task_popover
+from .helpers import patch_chart, request_data
+from .tasks import render_task_popover
 
 
 @require_http_methods(["POST"])
 @login_required
 @datastar_response
 def dep_add(request: HttpRequest):
-    data = _request_data(request)
+    data = request_data(request)
     pred = int(data.get("predecessor", 0) or 0)
     succ = int(data.get("successor", 0) or 0)
     _, _, err = add_dependency(
@@ -30,7 +30,7 @@ def dep_add(request: HttpRequest):
             f'<div id="toast-slot"><div class="toast error">{err}</div></div>'
         )
         return
-    yield _patch_chart(request)
+    yield patch_chart(request)
 
 
 @require_http_methods(["POST"])
@@ -42,9 +42,9 @@ def dep_delete(request: HttpRequest, predecessor_id: int, successor_id: int):
         predecessor_id=predecessor_id,
         successor_id=successor_id,
     )
-    yield _patch_chart(request)
+    yield patch_chart(request)
     task_raw = request.GET.get("task", "")
     if task_raw.isdigit():
-        fragment = _render_task_popover(request, int(task_raw))
+        fragment = render_task_popover(request, int(task_raw))
         if fragment is not None:
             yield SSE.patch_elements(fragment)

@@ -16,7 +16,7 @@ from actions.manage_people import (
 )
 from data.models import Person
 
-from ._helpers import _is_pm, _patch_chart, _workspace_context
+from .helpers import is_pm, patch_chart, workspace_context
 
 
 @login_required
@@ -25,16 +25,16 @@ def people_page(request: HttpRequest):
     return render(request, "components/screens/people/index.html", {
         "people": people,
         "user": request.user,
-        "is_pm": _is_pm(request),
-        **_workspace_context(request),
+        "is_pm": is_pm(request),
+        **workspace_context(request),
     })
 
 
-def _patch_people_list(request):
+def patch_people_list(request):
     people = Person.objects.filter(workspace=request.workspace).select_related("user")
     return SSE.patch_elements(
         render_component(request, "screens/people/people-list",
-                         people=people, is_pm=_is_pm(request))
+                         people=people, is_pm=is_pm(request))
     )
 
 
@@ -59,7 +59,7 @@ def people_create(request: HttpRequest):
     if not name:
         return
     create_person(workspace=request.workspace, name=name)
-    yield _patch_people_list(request)
+    yield patch_people_list(request)
 
 
 @require_http_methods(["POST"])
@@ -69,8 +69,8 @@ def people_update(request: HttpRequest, person_id: int):
     update_person(
         workspace=request.workspace, person_id=person_id, name=request.POST.get("name", "")
     )
-    yield _patch_people_list(request)
-    yield _patch_chart(request)
+    yield patch_people_list(request)
+    yield patch_chart(request)
 
 
 @require_http_methods(["POST"])
@@ -78,5 +78,5 @@ def people_update(request: HttpRequest, person_id: int):
 @datastar_response
 def people_delete(request: HttpRequest, person_id: int):
     delete_person(workspace=request.workspace, person_id=person_id)
-    yield _patch_people_list(request)
-    yield _patch_chart(request)
+    yield patch_people_list(request)
+    yield patch_chart(request)
