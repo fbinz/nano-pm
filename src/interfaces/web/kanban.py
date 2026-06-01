@@ -11,7 +11,7 @@ from data.models import TaskStatus
 from readers import get_chart_state
 from readers.chart_view import build_kanban_vm
 
-from ._helpers import _is_pm, _patch_chart, _workspace_context
+from ._helpers import _is_pm, _patch_chart, _request_data, _workspace_context
 
 
 @login_required
@@ -47,14 +47,15 @@ def task_board_move(request: HttpRequest, task_id: int):
     cards now directly above/below the dropped card (empty at a column edge)."""
     if request.method != "POST":
         return HttpResponse(status=405)
-    status = request.POST.get("status", "")
+    data = _request_data(request)
+    status = data.get("status", "")
     if status not in {c.value for c in TaskStatus}:
         return
     move_task_on_board(
         workspace=request.workspace,
         task_id=task_id,
         status=status,
-        before_id=_to_int(request.POST.get("before_id")),
-        after_id=_to_int(request.POST.get("after_id")),
+        before_id=_to_int(data.get("before_id")),
+        after_id=_to_int(data.get("after_id")),
     )
     yield _patch_chart(request)

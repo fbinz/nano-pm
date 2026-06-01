@@ -810,8 +810,10 @@ test.describe('drag interactions', () => {
     );
     expect(before).toBe(240);
 
-    // Create a dep — same as the existing happy-path test.
-    const from = page.locator('.bar', { hasText: 'A/B test setup' });
+    // Create a dep with a source whose dep-handle remains inside the viewport
+    // at this scroll offset; otherwise the test would be exercising an
+    // off-screen mouse coordinate rather than scroll preservation.
+    const from = page.locator('.bar', { hasText: 'Tutorial flow v2' });
     const to = page.locator('.bar', { hasText: 'Audit IAM policies' });
     await from.hover();
     const fromBox = await from.boundingBox();

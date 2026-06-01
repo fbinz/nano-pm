@@ -4,7 +4,7 @@ from datetime import date
 
 from django.http import HttpRequest
 
-from datastar_py.django import ServerSentEventGenerator as SSE
+from datastar_py.django import ServerSentEventGenerator as SSE, read_signals
 from django_cotton import render_component
 
 from data.models import Membership, Person, TaskStatus, WorkspaceRole
@@ -153,6 +153,19 @@ def _patch_chart(request: HttpRequest, zoom: str | None = None):
     return SSE.patch_elements(
         render_component(request, template, vm=vm, is_pm=_is_pm(request))
     )
+
+
+def _request_data(request: HttpRequest) -> dict:
+    """Return command payload data from Datastar JSON, falling back to form POST.
+
+    Gesture commits use Datastar's `payload` option, which arrives as JSON and
+    is exposed by `read_signals()`. A POST fallback keeps ordinary form-encoded
+    callers/tests working.
+    """
+    signals = read_signals(request) or {}
+    if signals:
+        return signals
+    return request.POST
 
 
 def _parse_iso(s: str) -> date | None:

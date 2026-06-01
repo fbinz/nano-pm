@@ -22,11 +22,14 @@
   function addDays(d, n) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
   }
+  function csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content ||
+      document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+  }
   // Drag-gesture commits (move/resize/dep-add/rubber-band/milestone-move) are
-  // dispatched as custom events. The #nano-bridge in the gantt template
-  // listens for these, populates a hidden form, and lets Datastar fire the
-  // actual @post + apply the SSE response. Keeps the SSE handling on Datastar
-  // instead of hand-parsed in JS.
+  // dispatched as custom events. The app shell forwards these to Datastar's
+  // @post with the command data as JSON payload, and Datastar applies the SSE
+  // response. Keeps SSE handling on Datastar instead of hand-parsed in JS.
   function commit(url, data) {
     window.dispatchEvent(new CustomEvent('nano-commit', {
       detail: { url, data },
@@ -294,9 +297,15 @@
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       svg.remove();
-      const target = document.elementFromPoint(ev.clientX, ev.clientY);
-      let hit = target;
-      while (hit && !(hit.classList && hit.classList.contains('bar'))) hit = hit.parentElement;
+      let hit = document.elementsFromPoint(ev.clientX, ev.clientY)
+        .find(el => el.classList && el.classList.contains('bar'));
+      if (!hit) {
+        hit = [...document.querySelectorAll('.bar')].find(el => {
+          const r = el.getBoundingClientRect();
+          return ev.clientX >= r.left && ev.clientX <= r.right &&
+            ev.clientY >= r.top && ev.clientY <= r.bottom;
+        });
+      }
       if (!hit) {
         // gettext() comes from Django's JavaScriptCatalog (djangojs domain),
         // loaded via the jsi18n <script> in app-shell. Falls back to the
@@ -516,24 +525,24 @@
 
   function onCollapseChanged(id, urlBase) {
     requestAnimationFrame(recalcArrows);
-    const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (csrfEl) {
+    const token = csrfToken();
+    if (token) {
       const base = urlBase || '/projects';
       fetch(`${base}/${id}/toggle-collapse/`, {
         method: 'POST',
-        headers: { 'X-CSRFToken': csrfEl.value },
+        headers: { 'X-CSRFToken': token },
       });
     }
   }
 
   function onCollapseAllChanged(collapse, ids, urlBase) {
     requestAnimationFrame(recalcArrows);
-    const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (csrfEl) {
+    const token = csrfToken();
+    if (token) {
       const base = urlBase || '/projects';
       fetch(`${base}/set-collapsed/`, {
         method: 'POST',
-        headers: { 'X-CSRFToken': csrfEl.value, 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 'X-CSRFToken': token, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'ids=' + (collapse ? ids.join(',') : ''),
       });
     }

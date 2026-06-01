@@ -11,7 +11,7 @@ from datastar_py.django import (
 
 from actions.manage_dependencies import add_dependency, delete_dependency
 
-from ._helpers import _patch_chart
+from ._helpers import _patch_chart, _request_data
 from .tasks import _render_task_popover
 
 
@@ -19,8 +19,9 @@ from .tasks import _render_task_popover
 @login_required
 @datastar_response
 def dep_add(request: HttpRequest):
-    pred = int(request.POST.get("predecessor", 0) or 0)
-    succ = int(request.POST.get("successor", 0) or 0)
+    data = _request_data(request)
+    pred = int(data.get("predecessor", 0) or 0)
+    succ = int(data.get("successor", 0) or 0)
     _, _, err = add_dependency(
         workspace=request.workspace, predecessor_id=pred, successor_id=succ
     )

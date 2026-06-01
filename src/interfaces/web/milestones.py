@@ -17,7 +17,7 @@ from actions.manage_milestones import (
 )
 from readers import get_chart_state, get_project, get_milestone
 
-from ._helpers import _parse_iso, _patch_chart
+from ._helpers import _parse_iso, _patch_chart, _request_data
 
 
 @login_required
@@ -67,7 +67,8 @@ def milestone_delete_view(request: HttpRequest, milestone_id: int):
 @login_required
 @datastar_response
 def milestone_move(request: HttpRequest, milestone_id: int):
-    new_date = _parse_iso(request.POST.get("date", ""))
+    data = _request_data(request)
+    new_date = _parse_iso(data.get("date", ""))
     if new_date is None:
         return
     update_milestone(workspace=request.workspace, milestone_id=milestone_id, on=new_date)
@@ -82,7 +83,8 @@ def milestone_create(request: HttpRequest, project_id: int):
     proj = get_project(request.workspace, project_id)
     if proj is None:
         return
-    on = _parse_iso(request.POST.get("date", "")) or date.today()
+    data = _request_data(request)
+    on = _parse_iso(data.get("date", "")) or date.today()
     m = create_milestone(
         workspace=request.workspace, project_id=project_id,
         title="New milestone", on=on,

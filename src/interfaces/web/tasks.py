@@ -17,7 +17,7 @@ from actions.manage_tasks import (
 from data.models import Dependency
 from readers import get_chart_state, get_task
 
-from ._helpers import _is_pm, _is_assigned, _parse_iso, _patch_chart
+from ._helpers import _is_pm, _is_assigned, _parse_iso, _patch_chart, _request_data
 
 
 def _render_task_popover(request: HttpRequest, task_id: int) -> str | None:
@@ -84,7 +84,8 @@ def task_update(request: HttpRequest, task_id: int):
 @login_required
 @datastar_response
 def task_move(request: HttpRequest, task_id: int):
-    new_start = _parse_iso(request.POST.get("start", ""))
+    data = _request_data(request)
+    new_start = _parse_iso(data.get("start", ""))
     if new_start is None:
         return
     move_task(workspace=request.workspace, task_id=task_id, new_start=new_start)
@@ -96,10 +97,11 @@ def task_move(request: HttpRequest, task_id: int):
 @datastar_response
 def task_move_many(request: HttpRequest):
     """Bulk-shift a set of tasks by a common day delta."""
-    raw_ids = request.POST.get("task_ids", "")
+    data = _request_data(request)
+    raw_ids = data.get("task_ids", "")
     task_ids = [int(x) for x in raw_ids.split(",") if x.strip().lstrip("-").isdigit()]
     try:
-        delta_days = int(request.POST.get("delta_days", "0"))
+        delta_days = int(data.get("delta_days", "0"))
     except ValueError:
         delta_days = 0
     if not task_ids or delta_days == 0:
@@ -112,7 +114,8 @@ def task_move_many(request: HttpRequest):
 @login_required
 @datastar_response
 def task_resize_start(request: HttpRequest, task_id: int):
-    new_start = _parse_iso(request.POST.get("start", ""))
+    data = _request_data(request)
+    new_start = _parse_iso(data.get("start", ""))
     if new_start is None:
         return
     resize_start(workspace=request.workspace, task_id=task_id, new_start=new_start)
@@ -123,7 +126,8 @@ def task_resize_start(request: HttpRequest, task_id: int):
 @login_required
 @datastar_response
 def task_resize_end(request: HttpRequest, task_id: int):
-    new_end = _parse_iso(request.POST.get("end", ""))
+    data = _request_data(request)
+    new_end = _parse_iso(data.get("end", ""))
     if new_end is None:
         return
     resize_end(workspace=request.workspace, task_id=task_id, new_end=new_end)
@@ -134,10 +138,11 @@ def task_resize_end(request: HttpRequest, task_id: int):
 @login_required
 @datastar_response
 def task_create(request: HttpRequest):
-    project_id = int(request.POST.get("project_id", 0) or 0)
-    start = _parse_iso(request.POST.get("start", ""))
-    end = _parse_iso(request.POST.get("end", ""))
-    title = request.POST.get("title", "").strip() or "New task"
+    data = _request_data(request)
+    project_id = int(data.get("project_id", 0) or 0)
+    start = _parse_iso(data.get("start", ""))
+    end = _parse_iso(data.get("end", ""))
+    title = data.get("title", "").strip() or "New task"
     if not project_id or start is None or end is None:
         return
     create_task(
