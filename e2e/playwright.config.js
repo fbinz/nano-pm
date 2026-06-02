@@ -1,8 +1,9 @@
 // @ts-check
 const { defineConfig, devices } = require('@playwright/test');
 
-const PORT = 8765;
+const PORT = 8766;
 const BASE_URL = `http://localhost:${PORT}`;
+const TEST_DB_PATH = 'db.e2e.sqlite3';
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -30,7 +31,7 @@ module.exports = defineConfig({
       `uv run --project . python src/manage.py seed_data && ` +
       `uv run --project . python src/manage.py runserver ${PORT} --noreload`,
     url: BASE_URL + '/accounts/login/',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 60_000,
     env: {
       // Required by settings.py — DEBUG for static-file serving in
@@ -42,6 +43,7 @@ module.exports = defineConfig({
       DJANGO_ALLOWED_HOSTS: 'localhost,127.0.0.1',
       DJANGO_ENABLE_TEST_RESET: 'true',
       DJANGO_ALLOW_INSECURE_SEED: 'true',
+      DJANGO_DB_PATH: TEST_DB_PATH,
     },
   },
   projects: [
