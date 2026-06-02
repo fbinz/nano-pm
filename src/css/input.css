@@ -569,7 +569,7 @@ html, body { height: 100%; }
     @apply text-xs text-base-content/60 bg-base-100 rounded-full px-2 py-0.5;
   }
   .kanban-col-body {
-    @apply flex-1 overflow-y-auto p-2 flex flex-col gap-2 min-h-[40px];
+    @apply flex-1 overflow-y-auto overflow-x-hidden p-2 flex flex-col gap-2 min-h-[40px];
     /* Reserve scrollbar space so adding/removing a card mid-drag doesn't
        briefly show/hide the gutter and reflow card widths. */
     scrollbar-gutter: stable;

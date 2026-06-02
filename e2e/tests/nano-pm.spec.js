@@ -1487,6 +1487,11 @@ test.describe('kanban board', () => {
     await expect(page.locator('[data-status="done"] .kanban-card')).toHaveCount(1);
   });
 
+  test('task columns hide horizontal scrollbars', async ({ appPage: page }) => {
+    await page.goto('/tasks/');
+    await expect(page.locator('.kanban-col-body').first()).toHaveCSS('overflow-x', 'hidden');
+  });
+
   test('Tasks nav entry highlights when on the kanban page', async ({ appPage: page }) => {
     await page.goto('/tasks/');
     const navTasks = page.locator('.drawer-side .menu a', { hasText: 'Tasks' });
