@@ -4,18 +4,18 @@
   <main class="login-page">
     <form method="post" class="login-card">
       {% csrf_token %}
-      <h1>nano-pm</h1>
-      <p class="hint">{% blocktrans %}Join <strong>{{ workspace_name }}</strong>{% endblocktrans %}</p>
-      {% if error %}
-        <div class="error">{{ error }}</div>
-      {% endif %}
-      <label>{% trans "Username" %}
-        <input type="text" name="username" autocomplete="username" autofocus required>
-      </label>
-      <label>{% trans "Password" %}
-        <input type="password" name="password" autocomplete="new-password" required>
-      </label>
-      <button type="submit">{% trans "Sign up & join" %}</button>
+      <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+        <legend class="fieldset-legend">nano-pm</legend>
+        <p class="hint">{% blocktrans %}Join <strong>{{ workspace_name }}</strong>{% endblocktrans %}</p>
+        {% if error %}
+          <div class="error">{{ error }}</div>
+        {% endif %}
+        <label class="label" for="invite-username">{% trans "Username" %}</label>
+        <input id="invite-username" class="input text-base w-full" type="text" name="username" placeholder="{% trans 'Username' %}" autocomplete="username" autofocus required>
+        <label class="label" for="invite-password">{% trans "Password" %}</label>
+        <input id="invite-password" class="input text-base w-full" type="password" name="password" placeholder="{% trans 'Password' %}" autocomplete="new-password" required>
+        <button class="btn btn-neutral mt-4" type="submit">{% trans "Sign up & join" %}</button>
+      </fieldset>
     </form>
   </main>
 </c-layouts.base>

@@ -13,7 +13,7 @@
     <form class="add-person-form"
           data-on:submit__prevent="@post('/people/create/', { contentType: 'form' })">
       {% csrf_token %}
-      <input type="text" name="name" placeholder="{% trans 'Add a person…' %}" autocomplete="off">
+      <input class="input input-sm" type="text" name="name" placeholder="{% trans 'Add a person…' %}" autocomplete="off">
       <button type="submit" class="btn btn-sm btn-neutral">{% trans "Add" %}</button>
     </form>
     {% endif %}

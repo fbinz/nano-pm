@@ -9,32 +9,32 @@
     data-on:submit__prevent="@post('/milestones/{{ m.id }}/update/', { contentType: 'form' })"
   >
     {% csrf_token %}
-    <div>
-      <label>{% trans "Title" %}</label>
-      <input type="text" name="title" value="{{ m.title }}" autofocus>
-    </div>
-    <div>
-      <label>{% trans "Description" %}</label>
-      <textarea name="description" rows="3">{{ m.description }}</textarea>
-    </div>
+    <fieldset class="fieldset">
+      <label class="label" for="milestone-title">{% trans "Title" %}</label>
+      <input id="milestone-title" class="input input-sm w-full" type="text" name="title" value="{{ m.title }}" autofocus>
+    </fieldset>
+    <fieldset class="fieldset">
+      <label class="label" for="milestone-description">{% trans "Description" %}</label>
+      <textarea id="milestone-description" class="textarea textarea-sm w-full" name="description" rows="3">{{ m.description }}</textarea>
+    </fieldset>
     <div class="row">
-      <div>
-        <label>{% trans "Date" %}</label>
-        <input type="date" name="date" value="{{ m.date|date:'Y-m-d' }}">
-      </div>
-      <div>
-        <label>{% trans "Project" %}</label>
-        <select name="project_id">
+      <fieldset class="fieldset">
+        <label class="label" for="milestone-date">{% trans "Date" %}</label>
+        <input id="milestone-date" class="input input-sm w-full" type="date" name="date" value="{{ m.date|date:'Y-m-d' }}">
+      </fieldset>
+      <fieldset class="fieldset">
+        <label class="label" for="milestone-project">{% trans "Project" %}</label>
+        <select id="milestone-project" class="select select-sm w-full" name="project_id">
           {% for p in projects %}
             <option value="{{ p.id }}" {% if p.id == m.project_id %}selected{% endif %}>{{ p.name }}</option>
           {% endfor %}
         </select>
-      </div>
+      </fieldset>
     </div>
     <div class="actions">
-      <button type="button" class="danger"
+      <button type="button" class="btn btn-sm btn-ghost text-error danger"
               data-on:click="confirm('{% trans 'Delete this milestone?' %}') && @post('/milestones/{{ m.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete" %}</button>
-      <button type="submit" class="primary">{% trans "Done" %}</button>
+      <button type="submit" class="btn btn-sm btn-neutral primary">{% trans "Done" %}</button>
     </div>
   </form>
 </div>

@@ -7,6 +7,7 @@
     <label for="app-drawer" class="topbar-btn lg:hidden" aria-label="{% trans 'Open menu' %}">
       <c-lucide name="menu" size="18" />
     </label>
+    <c-screens.gantt.show-completed-toggle :show_completed="vm.show_completed" />
     <div class="spacer"></div>
     <div id="zoom-controls">
       <a href="?zoom=day"     class="{% if zoom == 'day' %}active{% endif %}">{% trans "Day" %}</a>
@@ -14,7 +15,7 @@
       <a href="?zoom=month"   class="{% if zoom == 'month' %}active{% endif %}">{% trans "Month" %}</a>
       <a href="?zoom=quarter" class="{% if zoom == 'quarter' %}active{% endif %}">{% trans "Quarter" %}</a>
     </div>
-    <input type="range" id="zoom-slider" aria-label="{% trans 'Zoom' %}" title="{% trans 'Zoom' %}"
+    <input class="range range-xs" type="range" id="zoom-slider" aria-label="{% trans 'Zoom' %}" title="{% trans 'Zoom' %}"
            min="{{ ppd_unit_min }}" max="{{ ppd_unit_max }}"
            step="{{ ppd_unit_step }}" value="{{ ppd_unit }}"
            data-days-per-unit="{{ days_per_unit }}"
@@ -27,7 +28,6 @@
                el.dispatchEvent(new Event('input', { bubbles: true }));
              }"
            data-on:input__debounce.150ms="@get(`/zoom/?ppd=${parseFloat(el.value)/parseFloat(el.dataset.daysPerUnit)}`)">
-    <c-screens.gantt.show-completed-toggle :show_completed="vm.show_completed" />
     <button class="topbar-btn" data-on:click="nano.scrollToToday()" title="{% trans 'Jump to today (T)' %}">{% trans "Today" %}</button>
   </div>
 

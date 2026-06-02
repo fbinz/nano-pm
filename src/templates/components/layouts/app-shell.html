@@ -34,8 +34,8 @@
             <form method="post" action="/workspaces/" class="workspace-create">
               {% csrf_token %}
               <c-lucide name="plus-circle" size="14" />
-              <input type="text" name="name" placeholder="{% trans 'Create workspace' %}" required>
-              <button type="submit" class="workspace-create-btn">{% trans "Create" %}</button>
+              <input class="input input-sm w-full" type="text" name="name" placeholder="{% trans 'Create workspace' %}" required>
+              <button type="submit" class="btn btn-sm btn-neutral workspace-create-btn">{% trans "Create" %}</button>
             </form>
           </div>
         </div>

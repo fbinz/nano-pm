@@ -8,46 +8,46 @@
     data-on:submit__prevent="@post('/tasks/{{ task.id }}/update/', { contentType: 'form' })"
   >
     {% csrf_token %}
-    <div>
-      <label>{% trans "Title" %}</label>
-      <input type="text" name="title" value="{{ task.title }}" autofocus>
-    </div>
-    <div>
-      <label>{% trans "Description" %}</label>
-      <textarea name="description" rows="3">{{ task.description }}</textarea>
+    <fieldset class="fieldset">
+      <label class="label" for="task-title">{% trans "Title" %}</label>
+      <input id="task-title" class="input input-sm w-full" type="text" name="title" value="{{ task.title }}" autofocus>
+    </fieldset>
+    <fieldset class="fieldset">
+      <label class="label" for="task-description">{% trans "Description" %}</label>
+      <textarea id="task-description" class="textarea textarea-sm w-full" name="description" rows="3">{{ task.description }}</textarea>
+    </fieldset>
+    <div class="row">
+      <fieldset class="fieldset">
+        <label class="label" for="task-start">{% trans "Start" %}</label>
+        <input id="task-start" class="input input-sm w-full" type="date" name="start" value="{{ task.start|date:'Y-m-d' }}">
+      </fieldset>
+      <fieldset class="fieldset">
+        <label class="label" for="task-end">{% trans "End" %}</label>
+        <input id="task-end" class="input input-sm w-full" type="date" name="end" value="{{ task.end|date:'Y-m-d' }}">
+      </fieldset>
     </div>
     <div class="row">
-      <div>
-        <label>{% trans "Start" %}</label>
-        <input type="date" name="start" value="{{ task.start|date:'Y-m-d' }}">
-      </div>
-      <div>
-        <label>{% trans "End" %}</label>
-        <input type="date" name="end" value="{{ task.end|date:'Y-m-d' }}">
-      </div>
-    </div>
-    <div class="row">
-      <div>
-        <label>{% trans "Status" %}</label>
-        <select name="status">
+      <fieldset class="fieldset">
+        <label class="label" for="task-status">{% trans "Status" %}</label>
+        <select id="task-status" class="select select-sm w-full" name="status">
           <option value="planned"     {% if task.status == 'planned' %}selected{% endif %}>{% trans "Planned" %}</option>
           <option value="in-progress" {% if task.status == 'in-progress' %}selected{% endif %}>{% trans "In progress" %}</option>
           <option value="blocked"     {% if task.status == 'blocked' %}selected{% endif %}>{% trans "Blocked" %}</option>
           <option value="done"        {% if task.status == 'done' %}selected{% endif %}>{% trans "Done" %}</option>
         </select>
-      </div>
-      <div>
-        <label>{% trans "Project" %}</label>
-        <select name="project_id">
+      </fieldset>
+      <fieldset class="fieldset">
+        <label class="label" for="task-project">{% trans "Project" %}</label>
+        <select id="task-project" class="select select-sm w-full" name="project_id">
           {% for p in projects %}
             <option value="{{ p.id }}" {% if p.id == task.project_id %}selected{% endif %}>{{ p.name }}</option>
           {% endfor %}
         </select>
-      </div>
+      </fieldset>
     </div>
-    <div>
-      <label>{% trans "Assignees" %}</label>
-      <select name="assignee_ids" multiple size="6">
+    <fieldset class="fieldset">
+      <label class="label" for="task-assignees">{% trans "Assignees" %}</label>
+      <select id="task-assignees" class="select select-sm w-full" name="assignee_ids" multiple size="6">
         {% for p in people %}
           {% if p.id in task.assignee_ids %}
             <option value="{{ p.id }}" selected>{{ p.name }}</option>
@@ -56,9 +56,9 @@
           {% endif %}
         {% endfor %}
       </select>
-    </div>
-    <div>
-      <label>{% trans "Dependencies" %}</label>
+    </fieldset>
+    <fieldset class="fieldset">
+      <label class="label">{% trans "Dependencies" %}</label>
       <div class="deps-list">
         {% for d in preds %}
           <div class="dep-row">
@@ -80,12 +80,12 @@
           <div class="deps-empty">{% trans "No dependencies. Drag from a bar's right-edge handle onto another bar to create one." %}</div>
         {% endif %}
       </div>
-    </div>
+    </fieldset>
     {% if can_edit %}
     <div class="actions">
-      <button type="button" class="danger"
+      <button type="button" class="btn btn-sm btn-ghost text-error danger"
               data-on:click="confirm('{% trans 'Delete this task?' %}') && @post('/tasks/{{ task.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete" %}</button>
-      <button type="submit" class="primary">{% trans "Done" %}</button>
+      <button type="submit" class="btn btn-sm btn-neutral primary">{% trans "Done" %}</button>
     </div>
     {% endif %}
   </form>

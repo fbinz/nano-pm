@@ -8,12 +8,12 @@
     data-on:submit__prevent="@post('/projects/{{ project.id }}/update/', { contentType: 'form' })"
   >
     {% csrf_token %}
-    <div>
-      <label>{% trans "Name" %}</label>
-      <input type="text" name="name" value="{{ project.name }}" autofocus>
-    </div>
-    <div>
-      <label>{% trans "Color" %}</label>
+    <fieldset class="fieldset">
+      <label class="label" for="project-name">{% trans "Name" %}</label>
+      <input id="project-name" class="input input-sm w-full" type="text" name="name" value="{{ project.name }}" autofocus>
+    </fieldset>
+    <fieldset class="fieldset">
+      <label class="label" for="proj-color-input">{% trans "Color" %}</label>
       <input type="hidden" name="color" value="{{ project.color }}" id="proj-color-input">
       <div class="colors">
         {% for c in colors %}
@@ -23,7 +23,7 @@
                   data-on:click="document.getElementById('proj-color-input').value = '{{ c }}'; el.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); el.classList.add('active')"></button>
         {% endfor %}
       </div>
-    </div>
+    </fieldset>
     <div class="row">
       <button type="button" class="topbar-btn"
               data-on:click="@post('/projects/{{ project.id }}/move/?dir=-1', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">↑ {% trans "move up" %}</button>
@@ -41,9 +41,9 @@
       </button>
     </div>
     <div class="actions">
-      <button type="button" class="danger"
+      <button type="button" class="btn btn-sm btn-ghost text-error danger"
               data-on:click="confirm('{% blocktrans with name=project.name|escapejs %}Delete project &quot;{{ name }}&quot; and all its tasks?{% endblocktrans %}') && @post('/projects/{{ project.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete project" %}</button>
-      <button type="submit" class="primary">{% trans "Done" %}</button>
+      <button type="submit" class="btn btn-sm btn-neutral primary">{% trans "Done" %}</button>
     </div>
   </form>
 </div>

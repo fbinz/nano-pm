@@ -599,6 +599,16 @@ test.describe('task popover', () => {
     await expect(page.locator('#task-popover select[name=project_id]')).toBeVisible();
   });
 
+  test('task popover fields use DaisyUI field components', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    await bar.click();
+    await expect(page.locator('#task-popover fieldset.fieldset')).toHaveCount(8);
+    await expect(page.locator('#task-popover label.label').first()).toHaveText('Title');
+    await expect(page.locator('#task-popover input[name=title]')).toHaveClass(/\binput\b/);
+    await expect(page.locator('#task-popover textarea[name=description]')).toHaveClass(/\btextarea\b/);
+    await expect(page.locator('#task-popover select[name=status]')).toHaveClass(/\bselect\b/);
+  });
+
   test('the popover surfaces predecessors and successors', async ({ appPage: page }) => {
     // Migrate /users → predecessor t1 ("Spike on auth"), successor t3 ("Cutover")
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
