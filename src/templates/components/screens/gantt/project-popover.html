@@ -1,6 +1,6 @@
 {% load i18n %}
 {# Project editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars project colors />
+<c-vars project colors destination_workspaces />
 <div id="drawer-slot">
   <form
     id="project-popover"
@@ -40,6 +40,22 @@
         {% if project.is_completed %}↩ {% trans "Reopen project" %}{% else %}✓ {% trans "Mark complete" %}{% endif %}
       </button>
     </div>
+    {% if destination_workspaces %}
+      <fieldset class="fieldset">
+        <label class="label" for="project-move-workspace">{% trans "Move to workspace" %}</label>
+        <select id="project-move-workspace" class="select select-sm w-full" name="workspace_id">
+          {% for ws in destination_workspaces %}
+            <option value="{{ ws.id }}">{{ ws.name }}</option>
+          {% endfor %}
+        </select>
+      </fieldset>
+      <div class="row">
+        <button type="button" id="pp-move-workspace" class="topbar-btn"
+                data-on:click="confirm('{% blocktrans with name=project.name|escapejs %}Move project &quot;{{ name }}&quot; to the selected workspace?{% endblocktrans %}') && @post('/projects/{{ project.id }}/move-workspace/', { contentType: 'form', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
+          {% trans "Move project" %}
+        </button>
+      </div>
+    {% endif %}
     <div class="actions">
       <button type="button" class="btn btn-sm btn-ghost text-error danger"
               data-on:click="confirm('{% blocktrans with name=project.name|escapejs %}Delete project &quot;{{ name }}&quot; and all its tasks?{% endblocktrans %}') && @post('/projects/{{ project.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete project" %}</button>

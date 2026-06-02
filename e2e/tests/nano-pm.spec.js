@@ -1315,6 +1315,56 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('#workspace-name')).toHaveText('Side project');
     await expect(page.locator('.left-cell.proj')).toHaveCount(0);
   });
+
+  test('PM can move a project to another workspace after confirmation', async ({ appPage: page }) => {
+    // Create a second workspace owned by demo; creation switches into it.
+    await page.locator('.ws-chevron-btn').click();
+    await page.fill('#workspace-menu input[name=name]', 'Side project');
+    await page.locator('#workspace-menu input[name=name]').press('Enter');
+    await page.waitForURL('/');
+    await expect(page.locator('#workspace-name')).toHaveText('Side project');
+    await expect(page.locator('.left-cell.proj')).toHaveCount(0);
+
+    // Switch back to the seeded workspace and open the project editor.
+    await page.locator('.ws-chevron-btn').click();
+    await page.locator('#workspace-menu .workspace-item', { hasText: "demo's workspace" }).click();
+    await page.waitForURL('/');
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toBeVisible();
+
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await page.waitForSelector('#project-popover');
+    await expect(page.locator('#project-move-workspace')).toBeVisible();
+    await page.selectOption('#project-move-workspace', { label: 'Side project' });
+
+    // Cancel keeps the project in the current workspace.
+    page.once('dialog', async dialog => {
+      expect(dialog.message()).toContain('Move project');
+      await dialog.dismiss();
+    });
+    await page.click('#pp-move-workspace');
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toBeVisible();
+
+    // Accept moves the project and patches it out of the source chart.
+    page.once('dialog', async dialog => {
+      expect(dialog.message()).toContain('Move project');
+      await dialog.accept();
+    });
+    await page.click('#pp-move-workspace');
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toHaveCount(0);
+    await expect(page.locator('.left-cell.proj')).toHaveCount(2);
+    // The old API → Onboarding cross-project dependency is removed at the workspace boundary.
+    await expect(page.locator('#arrows .hit')).toHaveCount(3);
+
+    // The destination workspace now contains the moved project with its tasks and milestone.
+    await page.locator('.ws-chevron-btn').click();
+    await page.locator('#workspace-menu .workspace-item', { hasText: 'Side project' }).click();
+    await page.waitForURL('/');
+    await expect(page.locator('#workspace-name')).toHaveText('Side project');
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toBeVisible();
+    await expect(page.locator('.bar', { hasText: 'Spike on auth changes' })).toBeVisible();
+    await expect(page.locator('.chart-row.proj .milestone-label', { hasText: 'v2 API beta' })).toBeVisible();
+    await expect(page.locator('#arrows .hit')).toHaveCount(2);
+  });
 });
 
 

@@ -12,8 +12,9 @@ from django_cotton import render_component
 
 from actions.manage_projects import (
     create_project, update_project, delete_project, move_project,
-    set_project_completed,
+    move_project_to_workspace, set_project_completed,
 )
+from data.models import Membership, WorkspaceRole
 from data.models.project import PROJECT_COLORS
 from readers import get_project
 
@@ -40,11 +41,20 @@ def project_popover(request: HttpRequest, project_id: int):
     proj = get_project(request.workspace, project_id)
     if proj is None:
         return
+    destination_workspaces = [
+        m.workspace for m in Membership.objects.filter(
+            user=request.user,
+            role=WorkspaceRole.PM,
+        ).exclude(
+            workspace=request.workspace,
+        ).select_related("workspace").order_by("workspace__name")
+    ]
     yield SSE.patch_elements(
         render_component(
             request, "screens/gantt/project-popover",
             project=proj,
             colors=PROJECT_COLORS,
+            destination_workspaces=destination_workspaces,
         )
     )
 
@@ -69,6 +79,26 @@ def project_update(request: HttpRequest, project_id: int):
 def project_move(request: HttpRequest, project_id: int):
     direction = int(request.GET.get("dir", "0") or 0)
     move_project(workspace=request.workspace, project_id=project_id, direction=direction)
+    yield patch_chart(request)
+    yield SSE.patch_elements('<div id="drawer-slot"></div>')
+
+
+@require_http_methods(["POST"])
+@login_required
+@datastar_response
+def project_move_workspace(request: HttpRequest, project_id: int):
+    try:
+        target_workspace_id = int(request.POST.get("workspace_id", "0") or 0)
+    except ValueError:
+        target_workspace_id = 0
+    moved = move_project_to_workspace(
+        user=request.user,
+        workspace=request.workspace,
+        project_id=project_id,
+        target_workspace_id=target_workspace_id,
+    )
+    if moved is None:
+        return
     yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 

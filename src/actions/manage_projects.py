@@ -1,8 +1,10 @@
 """Write operations for projects."""
 
+from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
-from data.models import Project
+from data.models import Dependency, Membership, Person, Project, WorkspaceRole
 from data.models.project import PROJECT_COLORS
 
 
@@ -74,6 +76,74 @@ def set_project_completed(*, workspace, project_id: int, completed: bool) -> Pro
     proj.completed_at = timezone.now() if completed else None
     proj.save(update_fields=["completed_at", "updated_at"])
     return proj
+
+
+def move_project_to_workspace(
+    *,
+    user,
+    workspace,
+    project_id: int,
+    target_workspace_id: int,
+) -> Project | None:
+    """Move a project and its children to another workspace.
+
+    Only PMs in both source and target workspaces may move projects. Tasks and
+    milestones follow the project. Dependencies wholly inside the moved project
+    are preserved; dependencies crossing the project boundary are removed so no
+    cross-workspace dependency remains. Task assignees are remapped by linked
+    user where possible and otherwise cleared.
+    """
+    source_pm = Membership.objects.filter(
+        user=user, workspace=workspace, role=WorkspaceRole.PM
+    ).exists()
+    target_membership = Membership.objects.filter(
+        user=user, workspace_id=target_workspace_id, role=WorkspaceRole.PM
+    ).select_related("workspace").first()
+    if not source_pm or target_membership is None or target_membership.workspace_id == workspace.id:
+        return None
+
+    with transaction.atomic():
+        try:
+            proj = Project.objects.select_for_update().get(id=project_id, workspace=workspace)
+        except Project.DoesNotExist:
+            return None
+
+        task_ids = set(proj.tasks.values_list("id", flat=True))
+        assignees_by_task = {
+            task.id: list(task.assignees.filter(user__isnull=False).values_list("user_id", flat=True))
+            for task in proj.tasks.prefetch_related("assignees")
+        }
+        target_people_by_user = {
+            p.user_id: p
+            for p in Person.objects.filter(
+                workspace_id=target_workspace_id,
+                user_id__in={uid for uids in assignees_by_task.values() for uid in uids},
+            )
+        }
+
+        if task_ids:
+            Dependency.objects.filter(
+                Q(predecessor_id__in=task_ids) | Q(successor_id__in=task_ids)
+            ).exclude(
+                predecessor_id__in=task_ids,
+                successor_id__in=task_ids,
+            ).delete()
+
+        last_order = (
+            Project.objects.filter(workspace_id=target_workspace_id)
+            .order_by("-order")
+            .values_list("order", flat=True)
+            .first()
+        )
+        proj.workspace = target_membership.workspace
+        proj.order = (last_order or 0) + 1.0
+        proj.save(update_fields=["workspace", "order", "updated_at"])
+
+        for task in proj.tasks.all():
+            remapped = [target_people_by_user[uid] for uid in assignees_by_task.get(task.id, []) if uid in target_people_by_user]
+            task.assignees.set(remapped)
+
+        return proj
 
 
 def delete_project(*, workspace, project_id: int) -> bool:
