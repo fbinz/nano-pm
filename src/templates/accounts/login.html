@@ -4,19 +4,19 @@
   <main class="login-page">
     <form method="post" class="login-card">
       {% csrf_token %}
-      <h1>nano-pm</h1>
-      <p class="hint">{% trans "Sign in to your projects." %}</p>
-      {% if form.errors %}
-        <div class="error">{% trans "Invalid username or password." %}</div>
-      {% endif %}
-      <label>{% trans "Username" %}
-        <input type="text" name="username" autocomplete="username" autofocus required>
-      </label>
-      <label>{% trans "Password" %}
-        <input type="password" name="password" autocomplete="current-password" required>
-      </label>
-      <button type="submit">{% trans "Sign in" %}</button>
-      <p class="hint small">{% blocktrans %}Seed data ships with user <code>demo</code> / password <code>demo</code>.{% endblocktrans %}</p>
+      <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+        <legend class="fieldset-legend">{% trans "Login" %}</legend>
+        <p class="hint">{% trans "Sign in to your projects." %}</p>
+        {% if form.errors %}
+          <div class="error">{% trans "Invalid username or password." %}</div>
+        {% endif %}
+        <label class="label" for="login-username">{% trans "Username" %}</label>
+        <input id="login-username" class="input text-base w-full" type="text" name="username" placeholder="{% trans 'Username' %}" autocomplete="username" autofocus required>
+        <label class="label" for="login-password">{% trans "Password" %}</label>
+        <input id="login-password" class="input text-base w-full" type="password" name="password" placeholder="{% trans 'Password' %}" autocomplete="current-password" required>
+        <button class="btn btn-neutral mt-4" type="submit">{% trans "Sign in" %}</button>
+        <p class="hint small">{% blocktrans %}Seed data ships with user <code>demo</code> / password <code>demo</code>.{% endblocktrans %}</p>
+      </fieldset>
     </form>
   </main>
 </c-layouts.base>

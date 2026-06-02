@@ -542,17 +542,10 @@ html, body { height: 100%; }
     @apply h-screen flex items-center justify-center bg-base-200;
   }
   .login-card {
-    @apply bg-base-100 p-8 rounded-2xl w-80 flex flex-col gap-3;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    @apply contents;
   }
-  .login-card h1 { @apply m-0 text-[22px] font-semibold; }
   .login-card .hint { @apply m-0 text-base-content/60; }
   .login-card .hint.small { @apply mt-1; }
-  .login-card label {
-    @apply flex flex-col gap-1 text-base-content/60;
-  }
-  .login-card input { @apply input input-sm; }
-  .login-card button { @apply btn btn-neutral; }
   .login-card .error {
     @apply text-error px-2.5 py-1.5 rounded;
     background: oklch(from var(--color-error) l c h / 0.08);

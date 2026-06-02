@@ -7,9 +7,29 @@ test.describe('auth + page render', () => {
   test('login page renders the form', async ({ page, request }) => {
     await reset(request);
     await page.goto('/accounts/login/');
-    await expect(page.locator('.login-card h1')).toHaveText('nano-pm');
+    await expect(page.locator('.login-card .fieldset-legend')).toHaveText('Login');
     await expect(page.locator('input[name=username]')).toBeVisible();
     await expect(page.locator('input[name=password]')).toBeVisible();
+  });
+
+  test('login inputs use readable text size', async ({ page, request }) => {
+    await reset(request);
+    await page.goto('/accounts/login/');
+
+    for (const name of ['username', 'password']) {
+      await expect(page.locator(`input[name=${name}]`)).toHaveCSS('font-size', '16px');
+    }
+  });
+
+  test('login form uses daisyUI fieldset labels', async ({ page, request }) => {
+    await reset(request);
+    await page.goto('/accounts/login/');
+
+    await expect(page.locator('.login-card fieldset.fieldset')).toHaveClass(/\bbg-base-200\b/);
+    await expect(page.locator('.login-card .fieldset-legend')).toHaveText('Login');
+    await expect(page.locator('.login-card label.label')).toHaveText(['Username', 'Password']);
+    await expect(page.locator('input[name=username]')).toHaveClass(/\binput\b/);
+    await expect(page.locator('input[name=password]')).toHaveClass(/\binput\b/);
   });
 
   test('an unauthenticated request to / redirects to login', async ({ page, request }) => {
