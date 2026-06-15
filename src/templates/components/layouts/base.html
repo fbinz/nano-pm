@@ -1,12 +1,57 @@
 {% load static %}
 <c-vars title="nano-pm" />
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title }}</title>
   <meta name="csrf-token" content="{{ csrf_token }}">
+  <script>
+    (function () {
+      const storageKey = 'nano-theme';
+      const validThemes = new Set(['light', 'dark']);
+
+      function savedTheme() {
+        try {
+          const theme = localStorage.getItem(storageKey);
+          return validThemes.has(theme) ? theme : null;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function applyTheme(theme, persist) {
+        const nextTheme = validThemes.has(theme) ? theme : 'light';
+        document.documentElement.setAttribute('data-theme', nextTheme);
+        if (persist) {
+          try { localStorage.setItem(storageKey, nextTheme); } catch (e) { /* ignore quota */ }
+        }
+        for (const button of document.querySelectorAll('[data-theme-toggle]')) {
+          const dark = nextTheme === 'dark';
+          const label = dark ? button.dataset.lightLabel : button.dataset.darkLabel;
+          button.setAttribute('aria-label', label);
+          button.setAttribute('title', label);
+          button.querySelector('[data-theme-icon="sun"]')?.toggleAttribute('hidden', !dark);
+          button.querySelector('[data-theme-icon="moon"]')?.toggleAttribute('hidden', dark);
+        }
+      }
+
+      window.nanoTheme = {
+        apply: applyTheme,
+        toggle: function () {
+          applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark', true);
+        },
+      };
+      applyTheme(savedTheme() || 'light', false);
+      document.addEventListener('DOMContentLoaded', function () {
+        applyTheme(document.documentElement.getAttribute('data-theme') || 'light', false);
+        for (const button of document.querySelectorAll('[data-theme-toggle]')) {
+          button.addEventListener('click', window.nanoTheme.toggle);
+        }
+      });
+    })();
+  </script>
   <link rel="stylesheet" href="{% static 'css/app.css' %}" />
   {% comment %}
     JS deps are vendored under static/vendor/. Upgrading: pull the new file

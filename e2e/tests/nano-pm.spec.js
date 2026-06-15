@@ -44,6 +44,19 @@ test.describe('auth + page render', () => {
     await expect(page.locator('.sidebar-brand')).toHaveText('nano-pm');
     await expect(page.locator('#zoom-controls')).toBeVisible();
   });
+
+  test('theme toggle switches to dark mode and persists', async ({ appPage: page }) => {
+    await page.evaluate(() => localStorage.removeItem('nano-theme'));
+    await page.reload();
+
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await page.getByRole('button', { name: 'Switch to dark mode' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.getByRole('button', { name: 'Switch to light mode' })).toBeVisible();
+
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  });
 });
 
 // =============================================================================

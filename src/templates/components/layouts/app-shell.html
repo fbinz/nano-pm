@@ -54,6 +54,19 @@
           </a></li>
         </ul>
         <div class="flex-1"></div>
+        <div class="px-4 py-3 border-t border-base-300">
+          <button type="button"
+                  class="btn btn-sm btn-ghost w-full justify-start font-normal"
+                  data-theme-toggle
+                  data-dark-label="{% trans 'Switch to dark mode' %}"
+                  data-light-label="{% trans 'Switch to light mode' %}"
+                  aria-label="{% trans 'Switch to dark mode' %}"
+                  title="{% trans 'Switch to dark mode' %}">
+            <span data-theme-icon="moon"><c-lucide name="moon" size="16" /></span>
+            <span data-theme-icon="sun" hidden><c-lucide name="sun" size="16" /></span>
+            <span>{% trans "Theme" %}</span>
+          </button>
+        </div>
         <form method="post" action="{% url 'set_language' %}" class="lang-switch">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.path }}">
