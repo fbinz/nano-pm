@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -153,8 +154,6 @@ else:
         {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
         {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
     ]
-
-from django.utils.translation import gettext_lazy as _
 
 # Source language is English. German is the only translated catalog; add more
 # locales here and ship a matching locale/<code>/LC_MESSAGES/django.po.

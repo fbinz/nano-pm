@@ -11,7 +11,6 @@ from data.models import Membership, Person, TaskStatus, WorkspaceRole
 from readers import get_chart_state
 from readers.chart_view import (
     build_chart_vm,
-    build_kanban_vm,
     build_resource_vm,
     DEFAULT_ZOOM,
     ZOOM_PX_PER_DAY,
@@ -82,7 +81,7 @@ def set_collapsed_people(request: HttpRequest, ids: set[int]) -> None:
     request.session["collapsed_people"] = sorted(ids)
 
 
-DEFAULT_STATUS_FILTER = {TaskStatus.PLANNED, TaskStatus.IN_PROGRESS, TaskStatus.BLOCKED}
+DEFAULT_STATUS_FILTER = {TaskStatus.PLANNED, TaskStatus.IN_PROGRESS}
 
 
 def status_filter(request: HttpRequest) -> set[str]:
@@ -98,7 +97,8 @@ def set_status_filter(request: HttpRequest, statuses: set[str]) -> None:
 
 
 def view_mode(request: HttpRequest) -> str:
-    return request.session.get("view_mode", "project")
+    mode = request.session.get("view_mode", "project")
+    return mode if mode in {"project", "resource"} else "project"
 
 
 def is_pm(request: HttpRequest) -> bool:
@@ -132,11 +132,6 @@ def patch_chart(request: HttpRequest, active_zoom: str | None = None):
     """Yield an SSE patch that replaces the chart fragment with a fresh render."""
     state = get_chart_state(request.workspace)
     mode = view_mode(request)
-    if mode == "kanban":
-        return SSE.patch_elements(render_component(
-            request, "screens/kanban/board",
-            vm=build_kanban_vm(state), is_pm=is_pm(request),
-        ))
     resolved_zoom = active_zoom or zoom(request)
     px_per_day = ppd(request, resolved_zoom)
     if mode == "resource":

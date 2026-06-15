@@ -5,11 +5,11 @@ output absolute-positioned divs).
 """
 
 from datetime import date, timedelta
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from django.utils.translation import gettext as _
 
-from data.models import TaskStatus, TaskOrder
+from data.models import TaskStatus, status_for_dates
 from readers.chart import ChartState
 
 
@@ -291,8 +291,6 @@ def build_chart_vm(
     def x_of(d: date) -> float:
         return (d - state.chart_start).days * ppd
 
-    chart_width = g.chart_width
-
     # Row groups, with bars and milestones
     row_groups: list[ProjectRowVM] = []
     for proj in state.projects:
@@ -305,6 +303,7 @@ def build_chart_vm(
             x = x_of(t.start)
             xe = x_of(t.end + timedelta(days=1))
             assignees = ", ".join(p.name.split(" ")[0] for p in t.assignees.all())
+            status = status_for_dates(t.start, t.end, state.today)
             bars.append(BarVM(
                 id=t.id,
                 project_id=proj.id,
@@ -313,9 +312,9 @@ def build_chart_vm(
                 color=proj.color,
                 text_color=text_color,
                 text_dark=text_dark,
-                status=t.status,
-                overdue=(t.end < state.today and t.status != TaskStatus.DONE),
-                is_done=(t.status == TaskStatus.DONE),
+                status=status,
+                overdue=False,
+                is_done=(status == TaskStatus.DONE),
                 start_iso=t.start.isoformat(),
                 end_iso=t.end.isoformat(),
                 assignees=assignees,
@@ -342,7 +341,6 @@ def build_chart_vm(
     deps: list[DepArrowVM] = []
     bar_lookup: dict[int, tuple[BarVM, int]] = {}  # task_id → (BarVM, project_index)
     bar_y_centers: dict[int, float] = {}
-    cy = state.chart_end  # placeholder — actual y computed below
 
     # Compute y-centers in the chart-area coordinate system (excluding axis).
     # Each project row group: 1 project header (proj_row_h) + N task rows (row_h each).
@@ -353,8 +351,6 @@ def build_chart_vm(
     y = 32.0 if is_pm else 0.0
     for rg_idx, rg in enumerate(row_groups):
         # project header row first
-        y += 0  # no bars on header rows except milestones (centered)
-        proj_y = y + 18  # ~half of proj_row_h for milestone marker centering
         y += 36  # proj_row_h
         if rg.collapsed:
             continue
@@ -430,7 +426,8 @@ def build_resource_vm(
     for proj in state.projects:
         text_color, text_dark = _text_color_for(proj.color)
         for t in proj.tasks.all():
-            if status_filter is not None and t.status not in status_filter:
+            status = status_for_dates(t.start, t.end, state.today)
+            if status_filter is not None and status not in status_filter:
                 continue
             assignee_list = list(t.assignees.all())
             bar = BarVM(
@@ -441,9 +438,9 @@ def build_resource_vm(
                 color=proj.color,
                 text_color=text_color,
                 text_dark=text_dark,
-                status=t.status,
-                overdue=(t.end < state.today and t.status != TaskStatus.DONE),
-                is_done=(t.status == TaskStatus.DONE),
+                status=status,
+                overdue=False,
+                is_done=(status == TaskStatus.DONE),
                 start_iso=t.start.isoformat(),
                 end_iso=t.end.isoformat(),
                 assignees=", ".join(p.name.split(" ")[0] for p in assignee_list),
@@ -483,83 +480,3 @@ def build_resource_vm(
         show_today_line=g.show_today,
         all_collapsed=bool(row_groups) and all(rg.collapsed for rg in row_groups),
     )
-
-
-@dataclass
-class KanbanCardVM:
-    id: int
-    title: str
-    project_name: str
-    project_color: str
-    project_text_color: str
-    project_text_dark: bool
-    assignees: str  # comma-joined first names; empty string if unassigned
-    start_iso: str
-    end_iso: str
-    date_range: str  # pre-formatted "May 12 – May 26" for display
-    overdue: bool
-    rank: str  # lexicographic order key within the column ("" if not yet set)
-
-
-@dataclass
-class KanbanColumnVM:
-    status: str  # TaskStatus value, e.g. "planned"
-    label: str   # human label, e.g. "Planned"
-    cards: list[KanbanCardVM]
-
-
-@dataclass
-class KanbanVM:
-    columns: list[KanbanColumnVM]
-
-
-_MONTH_SHORT = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-]
-
-
-def _fmt_date_range(start: date, end: date) -> str:
-    if start == end:
-        return f"{_MONTH_SHORT[start.month - 1]} {start.day}"
-    if start.month == end.month and start.year == end.year:
-        return f"{_MONTH_SHORT[start.month - 1]} {start.day} – {end.day}"
-    return f"{_MONTH_SHORT[start.month - 1]} {start.day} – {_MONTH_SHORT[end.month - 1]} {end.day}"
-
-
-def build_kanban_vm(state: ChartState) -> KanbanVM:
-    """Group every workspace task into TaskStatus columns for the kanban board.
-    Cards within a column are ordered by their user-set lexicographic rank
-    (see actions.lexorank); cards without a rank yet fall back to start date,
-    then id, and sort after any ranked cards."""
-    task_ids = [t.id for proj in state.projects for t in proj.tasks.all()]
-    ranks = {
-        (o.group_key, o.task_id): o.rank
-        for o in TaskOrder.objects.filter(dimension="status", task_id__in=task_ids)
-    }
-    buckets: dict[str, list[KanbanCardVM]] = {c.value: [] for c in TaskStatus}
-    for proj in state.projects:
-        text_color, text_dark = _text_color_for(proj.color)
-        for t in proj.tasks.all():
-            first_names = [p.name.split()[0] for p in t.assignees.all()]
-            buckets[t.status].append(KanbanCardVM(
-                id=t.id,
-                title=t.title,
-                project_name=proj.name,
-                project_color=proj.color,
-                project_text_color=text_color,
-                project_text_dark=text_dark,
-                assignees=", ".join(first_names),
-                start_iso=t.start.isoformat(),
-                end_iso=t.end.isoformat(),
-                date_range=_fmt_date_range(t.start, t.end),
-                overdue=(t.status != TaskStatus.DONE and t.end < state.today),
-                rank=ranks.get((t.status, t.id), ""),
-            ))
-    for cards in buckets.values():
-        cards.sort(key=lambda c: (c.rank == "", c.rank, c.start_iso, c.id))
-    columns = [
-        KanbanColumnVM(status=c.value, label=c.label, cards=buckets[c.value])
-        for c in TaskStatus
-    ]
-    return KanbanVM(columns=columns)

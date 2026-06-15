@@ -274,10 +274,6 @@ html, body { height: 100%; }
   .bar:not(.dark-text).planned { background-color: color-mix(in srgb, var(--bar-bg), black 25%); }
   .bar.dark-text.done       { background-color: color-mix(in srgb, var(--bar-bg), #888 50%); }
   .bar:not(.dark-text).done { background-color: color-mix(in srgb, var(--bar-bg), #444 45%); }
-  .bar.blocked {
-    background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.35) 5px, rgba(255,255,255,0.35) 10px);
-    box-shadow: 0 0 0 2px var(--color-error), inset 0 -1px 0 rgba(0,0,0,0.15);
-  }
   .bar.overdue {
     box-shadow: -3px 0 0 var(--color-error), inset 0 -1px 0 rgba(0,0,0,0.15);
   }
@@ -547,61 +543,5 @@ html, body { height: 100%; }
   }
   .toast.error { @apply bg-error; }
   .toast.success { @apply bg-success; }
-}
-
-/* ===================================================================
-   Kanban board
-   =================================================================== */
-@layer components {
-  #kanban-board {
-    @apply flex gap-3 items-start p-4 overflow-x-auto;
-    height: calc(100vh - var(--topbar-h));
-  }
-  .kanban-col {
-    @apply flex flex-col bg-base-200 rounded-md border border-base-300 flex-shrink-0;
-    width: 280px;
-    max-height: 100%;
-  }
-  .kanban-col-header {
-    @apply flex items-center justify-between px-3 py-2 border-b border-base-300 text-sm font-medium;
-  }
-  .kanban-col-count {
-    @apply text-xs text-base-content/60 bg-base-100 rounded-full px-2 py-0.5;
-  }
-  .kanban-col-body {
-    @apply flex-1 overflow-y-auto overflow-x-hidden p-2 flex flex-col gap-2 min-h-[40px];
-    /* Reserve scrollbar space so adding/removing a card mid-drag doesn't
-       briefly show/hide the gutter and reflow card widths. */
-    scrollbar-gutter: stable;
-  }
-  .kanban-card {
-    @apply bg-base-100 border border-base-300 rounded-md p-2.5 cursor-grab select-none;
-    @apply flex flex-col gap-1.5 text-sm;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  }
-  .kanban-card:hover { @apply border-base-content/30; }
-  .kanban-card.overdue { @apply border-error; }
-  .kanban-card-title { @apply font-medium leading-tight; }
-  .kanban-card-project {
-    @apply self-start text-xs px-1.5 py-0.5 rounded font-medium;
-  }
-  .kanban-card-assignees { @apply text-xs text-base-content/70; }
-  .kanban-card-dates { @apply text-xs text-base-content/50; }
-
-  /* Sortable.js drag states. The forceFallback mirror (.kanban-card-drag)
-     follows the cursor as a positioned clone:
-       — pointer-events:none keeps it from intercepting elementFromPoint
-         (otherwise drops never register).
-       — position:fixed pins it to the viewport. Sortable defaults to
-         position:absolute on document.body, which extends the document's
-         scroll area near viewport edges and makes html briefly grow
-         horizontal/vertical scrollbars during the drag. */
-  .kanban-card-ghost { @apply opacity-40; }
-  .kanban-card-chosen { @apply cursor-grabbing; }
-  .kanban-card-drag {
-    @apply shadow-lg rotate-1;
-    pointer-events: none !important;
-    position: fixed !important;
-  }
 }
 

@@ -26,25 +26,14 @@
         <input id="task-end" class="input input-sm w-full" type="date" name="end" value="{{ task.end|date:'Y-m-d' }}">
       </fieldset>
     </div>
-    <div class="row">
-      <fieldset class="fieldset">
-        <label class="label" for="task-status">{% trans "Status" %}</label>
-        <select id="task-status" class="select select-sm w-full" name="status">
-          <option value="planned"     {% if task.status == 'planned' %}selected{% endif %}>{% trans "Planned" %}</option>
-          <option value="in-progress" {% if task.status == 'in-progress' %}selected{% endif %}>{% trans "In progress" %}</option>
-          <option value="blocked"     {% if task.status == 'blocked' %}selected{% endif %}>{% trans "Blocked" %}</option>
-          <option value="done"        {% if task.status == 'done' %}selected{% endif %}>{% trans "Done" %}</option>
-        </select>
-      </fieldset>
-      <fieldset class="fieldset">
-        <label class="label" for="task-project">{% trans "Project" %}</label>
-        <select id="task-project" class="select select-sm w-full" name="project_id">
-          {% for p in projects %}
-            <option value="{{ p.id }}" {% if p.id == task.project_id %}selected{% endif %}>{{ p.name }}</option>
-          {% endfor %}
-        </select>
-      </fieldset>
-    </div>
+    <fieldset class="fieldset">
+      <label class="label" for="task-project">{% trans "Project" %}</label>
+      <select id="task-project" class="select select-sm w-full" name="project_id">
+        {% for p in projects %}
+          <option value="{{ p.id }}" {% if p.id == task.project_id %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </fieldset>
     <fieldset class="fieldset">
       <label class="label" for="task-assignees">{% trans "Assignees" %}</label>
       <select id="task-assignees" class="select select-sm w-full" name="assignee_ids" multiple size="6">

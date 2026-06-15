@@ -527,19 +527,19 @@ test.describe('resource view', () => {
 
   test('status filter toggles hide and show tasks', async ({ appPage: page }) => {
     await page.goto('/resources/');
-    // Default: Done is off, 3 active statuses are on
-    await expect(page.locator('#status-filter .status-chip.active')).toHaveCount(3);
+    // Default: Done is off, the two active date-derived statuses are on.
+    await expect(page.locator('#status-filter .status-chip.active')).toHaveCount(2);
     await expect(page.locator('.left-cell.task:visible')).toHaveCount(10);
 
     // Enable Done → all 11 bars visible
     await page.locator('#status-filter .status-chip', { hasText: 'Done' }).click();
     await expect(page.locator('.left-cell.task:visible')).toHaveCount(11);
-    await expect(page.locator('#status-filter .status-chip.active')).toHaveCount(4);
-
-    // Disable In progress → hides 2 in-progress tasks (t2 appears under Alex+Sam = 2 bars)
-    await page.locator('#status-filter .status-chip', { hasText: 'In progress' }).click();
-    await expect(page.locator('.left-cell.task:visible')).toHaveCount(8);
     await expect(page.locator('#status-filter .status-chip.active')).toHaveCount(3);
+
+    // Disable In progress → hides 4 bars (t2 under Alex+Sam, plus t4 and t7).
+    await page.locator('#status-filter .status-chip', { hasText: 'In progress' }).click();
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(7);
+    await expect(page.locator('#status-filter .status-chip.active')).toHaveCount(2);
   });
 
   test('no dependency arrows in resource view', async ({ appPage: page }) => {
@@ -601,25 +601,25 @@ test.describe('task popover', () => {
     expect(Math.abs(drawer.x + drawer.width - viewport.width)).toBeLessThan(2);
   });
 
-  test('clicking a bar opens the popover with all five fields', async ({ appPage: page }) => {
+  test('clicking a bar opens the popover without a manual status field', async ({ appPage: page }) => {
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
     await bar.click();
     await expect(page.locator('#task-popover')).toBeVisible();
     await expect(page.locator('#task-popover input[name=title]')).toHaveValue(/Migrate/);
     await expect(page.locator('#task-popover input[name=start]')).toBeVisible();
     await expect(page.locator('#task-popover input[name=end]')).toBeVisible();
-    await expect(page.locator('#task-popover select[name=status]')).toBeVisible();
+    await expect(page.locator('#task-popover select[name=status]')).toHaveCount(0);
     await expect(page.locator('#task-popover select[name=project_id]')).toBeVisible();
   });
 
   test('task popover fields use DaisyUI field components', async ({ appPage: page }) => {
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
     await bar.click();
-    await expect(page.locator('#task-popover fieldset.fieldset')).toHaveCount(8);
+    await expect(page.locator('#task-popover fieldset.fieldset')).toHaveCount(7);
     await expect(page.locator('#task-popover label.label').first()).toHaveText('Title');
     await expect(page.locator('#task-popover input[name=title]')).toHaveClass(/\binput\b/);
     await expect(page.locator('#task-popover textarea[name=description]')).toHaveClass(/\btextarea\b/);
-    await expect(page.locator('#task-popover select[name=status]')).toHaveClass(/\bselect\b/);
+    await expect(page.locator('#task-popover select[name=project_id]')).toHaveClass(/\bselect\b/);
   });
 
   test('the popover surfaces predecessors and successors', async ({ appPage: page }) => {
@@ -1537,159 +1537,17 @@ test.describe('per-person invitation', () => {
 });
 
 // =============================================================================
-// Kanban board
+// Removed board view
 // =============================================================================
-test.describe('kanban board', () => {
-  test('shows four status columns with seeded tasks grouped correctly', async ({ appPage: page }) => {
-    await page.goto('/tasks/');
-    await expect(page.locator('.kanban-col')).toHaveCount(4);
-    // Seed: 4 planned, 2 in-progress, 1 blocked, 1 done.
-    await expect(page.locator('[data-status="planned"] .kanban-card')).toHaveCount(4);
-    await expect(page.locator('[data-status="in-progress"] .kanban-card')).toHaveCount(2);
-    await expect(page.locator('[data-status="blocked"] .kanban-card')).toHaveCount(1);
-    await expect(page.locator('[data-status="done"] .kanban-card')).toHaveCount(1);
+test.describe('removed board view', () => {
+  test('sidebar no longer links to a task board', async ({ appPage: page }) => {
+    const nav = page.locator('.drawer-side .menu');
+    await expect(nav.locator('a', { hasText: 'Tasks' })).toHaveCount(0);
   });
 
-  test('task columns hide horizontal scrollbars', async ({ appPage: page }) => {
-    await page.goto('/tasks/');
-    await expect(page.locator('.kanban-col-body').first()).toHaveCSS('overflow-x', 'hidden');
-  });
-
-  test('Tasks nav entry highlights when on the kanban page', async ({ appPage: page }) => {
-    await page.goto('/tasks/');
-    const navTasks = page.locator('.drawer-side .menu a', { hasText: 'Tasks' });
-    await expect(navTasks).toHaveClass(/menu-active/);
-  });
-
-  test('a task card shows title, project chip, and date range', async ({ appPage: page }) => {
-    await page.goto('/tasks/');
-    const card = page.locator('.kanban-card', { hasText: 'Migrate /users endpoints' });
-    await expect(card).toBeVisible();
-    await expect(card.locator('.kanban-card-project')).toHaveText('API Migration');
-    await expect(card.locator('.kanban-card-dates')).toContainText('–');
-  });
-
-  test('clicking a card opens the task popover drawer', async ({ appPage: page }) => {
-    await page.goto('/tasks/');
-    await page.locator('.kanban-card', { hasText: 'Migrate /users endpoints' }).click();
-    await expect(page.locator('#task-popover')).toBeVisible();
-    await expect(page.locator('#task-popover input[name=title]')).toHaveValue('Migrate /users endpoints');
-  });
-
-  test('dragging a card from Planned to In progress changes its status', async ({ appPage: page }) => {
-    await page.goto('/tasks/');
-    const card = page.locator('.kanban-card', { hasText: 'Cutover and deprecation' });
-    // Confirm it starts in the planned column.
-    await expect(card).toHaveAttribute('data-status', 'planned');
-
-    // Drop onto an existing card in the target column — SortableJS only
-    // swaps lists when the cursor is over another draggable, not empty
-    // column space (the column has cards, so emptyInsertThreshold is moot).
-    const dropCard = page.locator('[data-status="in-progress"] .kanban-card').first();
-    await card.scrollIntoViewIfNeeded();
-    await dropCard.scrollIntoViewIfNeeded();
-
-    const cardBox = await card.boundingBox();
-    const dropBox = await dropCard.boundingBox();
-    await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
-    await page.mouse.down();
-    // Initial small move to cross SortableJS's fallbackTolerance threshold.
-    await page.mouse.move(cardBox.x + cardBox.width / 2 + 20, cardBox.y + cardBox.height / 2 + 20, { steps: 5 });
-    await page.mouse.move(dropBox.x + dropBox.width / 2, dropBox.y + dropBox.height / 2, { steps: 15 });
-    await page.mouse.up();
-
-    // Wait for the SSE re-render to flip data-status on the rebuilt card.
-    await page.waitForFunction(() => {
-      const c = [...document.querySelectorAll('.kanban-card')]
-        .find(el => el.textContent.includes('Cutover and deprecation'));
-      return c && c.dataset.status === 'in-progress';
-    }, null, { timeout: 5000 });
-
-    await expect(page.locator('[data-status="in-progress"] .kanban-card', { hasText: 'Cutover and deprecation' })).toBeVisible();
-    await expect(page.locator('[data-status="planned"] .kanban-card', { hasText: 'Cutover and deprecation' })).toHaveCount(0);
-  });
-
-  test('reordering a card within a column persists across the SSE re-render', async ({ appPage: page }) => {
-    await page.goto('/tasks/');
-
-    // Seeded planned order is by (start, id): Tutorial flow v2, Terraform
-    // module rewrites, Cutover and deprecation, A/B test setup.
-    const titles = () =>
-      page.locator('[data-status="planned"] .kanban-card .kanban-card-title').allTextContents();
-    expect(await titles()).toEqual([
-      'Tutorial flow v2',
-      'Terraform module rewrites',
-      'Cutover and deprecation',
-      'A/B test setup',
-    ]);
-
-    // Drag the last card (A/B test setup) to the top of the column.
-    const moving = page.locator('[data-status="planned"] .kanban-card', { hasText: 'A/B test setup' });
-    const target = page.locator('[data-status="planned"] .kanban-card', { hasText: 'Tutorial flow v2' });
-    await moving.scrollIntoViewIfNeeded();
-    const mBox = await moving.boundingBox();
-    const tBox = await target.boundingBox();
-    await page.mouse.move(mBox.x + mBox.width / 2, mBox.y + mBox.height / 2);
-    await page.mouse.down();
-    // Cross SortableJS's fallbackTolerance threshold, then aim at the top of
-    // the first card so the drop inserts before it.
-    await page.mouse.move(mBox.x + mBox.width / 2, mBox.y + mBox.height / 2 - 20, { steps: 5 });
-    await page.mouse.move(tBox.x + tBox.width / 2, tBox.y + 4, { steps: 15 });
-    await page.mouse.up();
-
-    // Wait for the server-committed state: the rebuilt first card carries a
-    // data-rank (only set once the reorder is persisted + re-rendered) and is
-    // A/B test setup. The local Sortable move alone would not set data-rank.
-    await page.waitForFunction(() => {
-      const col = document.querySelector('.kanban-col-body[data-status="planned"]');
-      const first = col && col.querySelector('.kanban-card');
-      return first && first.textContent.includes('A/B test setup') && first.getAttribute('data-rank');
-    }, null, { timeout: 5000 });
-
-    expect(await titles()).toEqual([
-      'A/B test setup',
-      'Tutorial flow v2',
-      'Terraform module rewrites',
-      'Cutover and deprecation',
-    ]);
-  });
-
-  test('a cross-column drop changes status and lands at the dropped position', async ({ appPage: page }) => {
-    await page.goto('/tasks/');
-
-    // Seeded in-progress order is by (start, id): User research interviews
-    // (D-7), Migrate /users endpoints (D-1).
-    const inProgress = () =>
-      page.locator('[data-status="in-progress"] .kanban-card .kanban-card-title').allTextContents();
-    expect(await inProgress()).toEqual(['User research interviews', 'Migrate /users endpoints']);
-
-    // Drag a Planned card to the TOP of the In-progress column.
-    const moving = page.locator('.kanban-card', { hasText: 'Cutover and deprecation' });
-    const target = page.locator('[data-status="in-progress"] .kanban-card', { hasText: 'User research interviews' });
-    await moving.scrollIntoViewIfNeeded();
-    const mBox = await moving.boundingBox();
-    const tBox = await target.boundingBox();
-    await page.mouse.move(mBox.x + mBox.width / 2, mBox.y + mBox.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(mBox.x + mBox.width / 2 + 20, mBox.y + mBox.height / 2 + 20, { steps: 5 });
-    await page.mouse.move(tBox.x + tBox.width / 2, tBox.y + 4, { steps: 15 });
-    await page.mouse.up();
-
-    // Wait for the server-committed state: the rebuilt card is now in-progress,
-    // first in the column, and carries a data-rank (proof the position stuck).
-    await page.waitForFunction(() => {
-      const col = document.querySelector('.kanban-col-body[data-status="in-progress"]');
-      const first = col && col.querySelector('.kanban-card');
-      return first && first.textContent.includes('Cutover and deprecation') && first.getAttribute('data-rank');
-    }, null, { timeout: 5000 });
-
-    expect(await inProgress()).toEqual([
-      'Cutover and deprecation',
-      'User research interviews',
-      'Migrate /users endpoints',
-    ]);
-    // And it's gone from Planned.
-    await expect(page.locator('[data-status="planned"] .kanban-card', { hasText: 'Cutover and deprecation' })).toHaveCount(0);
+  test('the former task board URL is gone', async ({ appPage: page }) => {
+    const response = await page.goto('/tasks/');
+    expect(response.status()).toBe(404);
   });
 });
 
@@ -1710,7 +1568,6 @@ test.describe('i18n (German)', () => {
     const nav = page.locator('.drawer-side .menu');
     await expect(nav.locator('a', { hasText: 'Projekte' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Ressourcen' })).toBeVisible();
-    await expect(nav.locator('a', { hasText: 'Aufgaben' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Personen' })).toBeVisible();
     await expect(page.locator('.sign-out-btn')).toHaveText('Abmelden');
     await expect(page.locator('.lang-btn', { hasText: 'DE' })).toHaveClass(/active/);
@@ -1724,18 +1581,17 @@ test.describe('i18n (German)', () => {
     await expect(page.locator('.drawer-side .menu a', { hasText: 'Projects' })).toBeVisible();
   });
 
-  test('task popover labels and status options are translated', async ({ appPage: page }) => {
+  test('task popover labels are translated', async ({ appPage: page }) => {
     await page.locator('.lang-btn', { hasText: 'DE' }).click();
     await expect(page.locator('.drawer-side .menu a', { hasText: 'Projekte' })).toBeVisible();
 
-    // Open a task popover and check translated field labels + status choices.
+    // Open a task popover and check translated field labels.
     await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).click();
     const pop = page.locator('#task-popover');
     await expect(pop).toBeVisible();
     await expect(pop.locator('label', { hasText: 'Titel' })).toBeVisible();
     await expect(pop.locator('label', { hasText: 'Beschreibung' })).toBeVisible();
-    await expect(pop.locator('select[name=status] option[value="in-progress"]')).toHaveText('In Bearbeitung');
-    await expect(pop.locator('select[name=status] option[value="done"]')).toHaveText('Erledigt');
+    await expect(pop.locator('select[name=status]')).toHaveCount(0);
   });
 
   test('honors the Accept-Language header without an explicit switch', async ({ browser, request }) => {
@@ -1749,7 +1605,7 @@ test.describe('i18n (German)', () => {
     await page.fill('input[name=password]', 'demo');
     await page.click('button[type=submit]');
     await page.waitForURL('/');
-    await expect(page.locator('.drawer-side .menu a', { hasText: 'Aufgaben' })).toBeVisible();
+    await expect(page.locator('.drawer-side .menu a', { hasText: 'Personen' })).toBeVisible();
     await ctx.close();
   });
 });

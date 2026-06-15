@@ -3,7 +3,6 @@
 from django.urls import path
 
 from .pages import index, zoom_set
-from .kanban import kanban_index, task_board_move
 from .tasks import (
     task_popover, task_update, task_move, task_move_many,
     task_resize_start, task_resize_end, task_create, task_delete_view,
@@ -35,9 +34,7 @@ urlpatterns = [
     path("tasks/move-many/",                    task_move_many,      name="task_move_many"),
     path("tasks/<int:task_id>/resize/start/",  task_resize_start,   name="task_resize_start"),
     path("tasks/<int:task_id>/resize/end/",    task_resize_end,     name="task_resize_end"),
-    path("tasks/<int:task_id>/board-move/",    task_board_move,     name="task_board_move"),
     path("tasks/create/",                       task_create,         name="task_create"),
-    path("tasks/",                              kanban_index,        name="kanban_index"),
     path("tasks/<int:task_id>/delete/",        task_delete_view,    name="task_delete"),
     # Milestones
     path("milestones/<int:milestone_id>/popover/", milestone_popover,     name="milestone_popover"),

@@ -8,7 +8,6 @@ from django.shortcuts import redirect, render
 from django.urls import path, include
 from django.utils.translation import gettext as _
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from django.views.i18n import JavaScriptCatalog
 
 from data.models import Invitation, Membership, WorkspaceRole

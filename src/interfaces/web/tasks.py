@@ -61,7 +61,6 @@ def task_update(request: HttpRequest, task_id: int):
     description = request.POST.get("description") if "description" in request.POST else None
     start = parse_iso(request.POST.get("start", ""))
     end = parse_iso(request.POST.get("end", ""))
-    status = request.POST.get("status") or None
     project_id_raw = request.POST.get("project_id")
     project_id = int(project_id_raw) if project_id_raw and project_id_raw.isdigit() else None
     assignee_ids = [int(x) for x in request.POST.getlist("assignee_ids") if x.isdigit()]
@@ -72,7 +71,6 @@ def task_update(request: HttpRequest, task_id: int):
         description=description,
         start=start,
         end=end,
-        status=status,
         project_id=project_id,
         assignee_ids=assignee_ids,
     )

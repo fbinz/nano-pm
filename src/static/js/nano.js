@@ -472,57 +472,6 @@
     if (slot) slot.innerHTML = '';
   }
 
-  // ---------------------------------------------------------------------- //
-  // Kanban — Sortable.js per-column instance, commit on drop.              //
-  // ---------------------------------------------------------------------- //
-  // The board fragment is replaced wholesale on every SSE patch, so we
-  // re-attach Sortable instances on each render via data-on:load on
-  // #kanban-board. Previous instances live on the old (detached) DOM and
-  // are GC'd along with it.
-  function initKanban() {
-    if (typeof window.Sortable !== 'function') return;
-    const cols = document.querySelectorAll('#kanban-board .kanban-col-body');
-    cols.forEach(col => {
-      window.Sortable.create(col, {
-        group: 'kanban-cards',
-        animation: 150,
-        draggable: '.kanban-card',
-        ghostClass: 'kanban-card-ghost',
-        chosenClass: 'kanban-card-chosen',
-        dragClass:  'kanban-card-drag',
-        // forceFallback bypasses the native HTML5 drag API (which Playwright's
-        // page.mouse doesn't drive) and uses pointer events instead, so the
-        // same code path works for mouse, touch, and e2e tests.
-        forceFallback: true,
-        // 4-px movement threshold separates a click (opens the popover) from
-        // a drag. A timed `delay:` would also work but breaks pointer-driven
-        // e2e tests that move faster than the delay elapses.
-        fallbackTolerance: 4,
-        onEnd(evt) {
-          const newStatus = evt.to.dataset.status;
-          const oldStatus = evt.from.dataset.status;
-          const taskId = evt.item.dataset.taskId;
-          if (!taskId) return;
-          // No-op: dropped back in the same column at the same index.
-          if (newStatus === oldStatus && evt.oldIndex === evt.newIndex) return;
-          // One endpoint handles both a column move and a same-column reorder:
-          // send the target status plus the ids of the cards now directly
-          // above/below the dropped one (empty at a column edge); the server
-          // changes status if needed, then ranks the card between them.
-          // Reflect the new status locally so the e2e wait-for-fn (and the
-          // user) sees an immediate column move; SSE re-renders shortly.
-          evt.item.dataset.status = newStatus;
-          const sib = (el) => (el && el.dataset && el.dataset.taskId) || '';
-          commit(`/tasks/${taskId}/board-move/`, {
-            status: newStatus,
-            before_id: sib(evt.item.previousElementSibling),
-            after_id: sib(evt.item.nextElementSibling),
-          });
-        },
-      });
-    });
-  }
-
   function onCollapseChanged(id, urlBase) {
     requestAnimationFrame(recalcArrows);
     const token = csrfToken();
@@ -682,7 +631,6 @@
     openTaskPopover, openProjectPopover, openMilestonePopover, addMilestone,
     closeDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
     scrollToToday, positionWorkspaceMenu,
-    initKanban,
   };
 
   // Restore sidebar width before first paint so the chart doesn't flash at the
@@ -708,14 +656,10 @@
     if (evt.detail && evt.detail.type === 'finished') {
       applySelection();
       recalcArrows();
-      // The kanban board fragment is replaced wholesale on every status
-      // change — re-attach Sortable to the freshly-rendered column bodies.
-      if (document.getElementById('kanban-board')) initKanban();
     }
   });
 
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(scrollToToday, 0);
-    if (document.getElementById('kanban-board')) initKanban();
   });
 })();

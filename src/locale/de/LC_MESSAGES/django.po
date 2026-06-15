@@ -69,11 +69,6 @@ msgstr "Geplant"
 msgid "In progress"
 msgstr "In Bearbeitung"
 
-#: src/data/models/task.py:8
-#: src/templates/components/screens/gantt/task-popover.html:35
-msgid "Blocked"
-msgstr "Blockiert"
-
 #: src/data/models/task.py:9
 #: src/templates/components/screens/gantt/chart.html:56
 #: src/templates/components/screens/gantt/milestone-popover.html:37
@@ -158,10 +153,6 @@ msgstr "Projekte"
 #: src/templates/components/layouts/app-shell.html:47
 msgid "Resources"
 msgstr "Ressourcen"
-
-#: src/templates/components/layouts/app-shell.html:50
-msgid "Tasks"
-msgstr "Aufgaben"
 
 #: src/templates/components/layouts/app-shell.html:53
 #: src/templates/components/screens/people/index.html:8

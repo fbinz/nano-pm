@@ -1,7 +1,7 @@
 """Seed example data for nano-pm.
 
 Creates a 'demo' user (password 'demo') with a workspace containing 3 projects,
-3 people, 8 tasks (with multi-assignee + every status), 6 dependencies (incl.
+3 people, 8 tasks (with multi-assignee + date-derived statuses), 6 dependencies (incl.
 one cross-project), and 2 milestones — all dated relative to today.
 
 Also creates a second user 'pm2' (password 'pm2') with an empty workspace,
@@ -17,7 +17,7 @@ from django.db import transaction
 
 from data.models import (
     Workspace, Membership, WorkspaceRole,
-    Project, Person, Task, TaskStatus, Dependency, Milestone,
+    Project, Person, Task, Dependency, Milestone,
 )
 
 
@@ -67,17 +67,17 @@ class Command(BaseCommand):
         # Project 1: API Migration
         t1 = Task.objects.create(
             project=p1, title="Spike on auth changes",
-            start=D(-12), end=D(-3), status=TaskStatus.DONE,
+            start=D(-12), end=D(-3),
         )
         t1.assignees.set([alex])
         t2 = Task.objects.create(
             project=p1, title="Migrate /users endpoints",
-            start=D(-1), end=D(10), status=TaskStatus.IN_PROGRESS,
+            start=D(-1), end=D(10),
         )
         t2.assignees.set([alex, sam])
         t3 = Task.objects.create(
             project=p1, title="Cutover and deprecation",
-            start=D(11), end=D(20), status=TaskStatus.PLANNED,
+            start=D(11), end=D(20),
         )
         t3.assignees.set([sam])
         Milestone.objects.create(project=p1, title="v2 API beta", date=D(22))
@@ -85,17 +85,17 @@ class Command(BaseCommand):
         # Project 2: Onboarding revamp
         t4 = Task.objects.create(
             project=p2, title="User research interviews",
-            start=D(-7), end=D(2), status=TaskStatus.IN_PROGRESS,
+            start=D(-7), end=D(2),
         )
         t4.assignees.set([riley])
         t5 = Task.objects.create(
             project=p2, title="Tutorial flow v2",
-            start=D(3), end=D(18), status=TaskStatus.PLANNED,
+            start=D(3), end=D(18),
         )
         t5.assignees.set([riley, sam])
         t6 = Task.objects.create(
             project=p2, title="A/B test setup",
-            start=D(19), end=D(26), status=TaskStatus.PLANNED,
+            start=D(19), end=D(26),
         )
         t6.assignees.set([riley])
         Milestone.objects.create(project=p2, title="Soft launch", date=D(28))
@@ -103,12 +103,12 @@ class Command(BaseCommand):
         # Project 3: Infra hardening
         t7 = Task.objects.create(
             project=p3, title="Audit IAM policies",
-            start=D(-4), end=D(4), status=TaskStatus.BLOCKED,
+            start=D(-4), end=D(4),
         )
         t7.assignees.set([alex])
         t8 = Task.objects.create(
             project=p3, title="Terraform module rewrites",
-            start=D(5), end=D(16), status=TaskStatus.PLANNED,
+            start=D(5), end=D(16),
         )
         t8.assignees.set([alex, riley])
 

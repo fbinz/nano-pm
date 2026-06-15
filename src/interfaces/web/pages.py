@@ -9,7 +9,6 @@ from datastar_py.django import datastar_response
 from readers import get_chart_state
 from readers.chart_view import (
     build_chart_vm,
-    ZOOM_PX_PER_DAY,
     ZOOM_PPD_RANGE,
     ZOOM_DAYS_PER_UNIT,
 )
