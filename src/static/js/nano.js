@@ -546,10 +546,9 @@
   // ---------------------------------------------------------------------- //
   // The sidebar is the sticky-left column controlled by the --left-w CSS
   // variable on :root. Setting it on document.documentElement.style survives
-  // SSE chart patches (which only replace #grid-scroll's contents) and we
-  // persist the chosen value to localStorage so it survives reloads — there's
-  // no server-side notion of per-user UI prefs to push to.
-  const SIDEBAR_KEY = 'nano-pm:sidebar-width';
+  // SSE chart patches (which only replace #grid-scroll's contents). The final
+  // width is persisted to the Django session via Datastar so the server can
+  // render --left-w on the next full page load.
   const SIDEBAR_MIN = 140;
   const SIDEBAR_MAX = 600;
 
@@ -581,19 +580,11 @@
       handle.classList.remove('dragging');
       document.body.style.cursor = '';
       const finalW = setSidebarWidth(origW + (ev.clientX - startX));
-      try { localStorage.setItem(SIDEBAR_KEY, String(finalW)); } catch (e) { /* ignore quota */ }
+      commit('/ui/sidebar-width/', { width: finalW });
     }
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
-  }
-
-  function restoreSidebarWidth() {
-    let saved;
-    try { saved = localStorage.getItem(SIDEBAR_KEY); } catch (e) { return; }
-    if (saved == null) return;
-    const px = parseFloat(saved);
-    if (Number.isFinite(px)) setSidebarWidth(px);
   }
 
   // ---------------------------------------------------------------------- //
@@ -632,10 +623,6 @@
     closeDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
     scrollToToday, positionWorkspaceMenu,
   };
-
-  // Restore sidebar width before first paint so the chart doesn't flash at the
-  // default 240 then jump to the saved value on the next frame.
-  restoreSidebarWidth();
 
   // Re-apply .bar.selected whenever the chart fragment is patched in (SSE
   // round-trips replace bar elements wholesale, so the class is gone otherwise).

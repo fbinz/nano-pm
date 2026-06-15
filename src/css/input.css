@@ -153,6 +153,7 @@ html, body { height: 100%; }
 @layer components {
   #grid-scroll {
     height: calc(100vh - var(--topbar-h));
+    scrollbar-gutter: stable;
     @apply overflow-auto relative bg-base-100;
   }
   #grid {

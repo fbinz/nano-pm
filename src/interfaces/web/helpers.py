@@ -19,6 +19,31 @@ from readers.chart_view import (
 
 
 VALID_ZOOMS = {"day", "week", "month", "quarter"}
+SIDEBAR_WIDTH_SESSION_KEY = "sidebar_width"
+SIDEBAR_WIDTH_DEFAULT = 240
+SIDEBAR_WIDTH_MIN = 140
+SIDEBAR_WIDTH_MAX = 600
+
+
+def clamp_sidebar_width(value: object) -> int | None:
+    try:
+        px = int(round(float(value)))
+    except (TypeError, ValueError):
+        return None
+    return max(SIDEBAR_WIDTH_MIN, min(SIDEBAR_WIDTH_MAX, px))
+
+
+def sidebar_width(request: HttpRequest) -> int:
+    stored = clamp_sidebar_width(request.session.get(SIDEBAR_WIDTH_SESSION_KEY))
+    return stored if stored is not None else SIDEBAR_WIDTH_DEFAULT
+
+
+def set_sidebar_width(request: HttpRequest, value: object) -> int | None:
+    px = clamp_sidebar_width(value)
+    if px is None:
+        return None
+    request.session[SIDEBAR_WIDTH_SESSION_KEY] = px
+    return px
 
 
 def zoom(request: HttpRequest) -> str:

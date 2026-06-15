@@ -1,8 +1,8 @@
 {% load static i18n %}
-<c-vars vm zoom user is_pm workspace workspaces has_multiple_workspaces ppd_unit ppd_unit_min ppd_unit_max ppd_unit_step days_per_unit />
+<c-vars vm zoom user is_pm workspace workspaces has_multiple_workspaces ppd_unit ppd_unit_min ppd_unit_max ppd_unit_step days_per_unit sidebar_width />
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
     :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
-    active_nav="resources">
+    :sidebar_width="sidebar_width" active_nav="resources">
   <div id="topbar">
     <label for="app-drawer" class="topbar-btn lg:hidden" aria-label="{% trans 'Open menu' %}">
       <c-lucide name="menu" size="18" />

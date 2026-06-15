@@ -2,7 +2,7 @@
 
 from django.urls import path
 
-from .pages import index, zoom_set
+from .pages import index, zoom_set, sidebar_width_set
 from .tasks import (
     task_popover, task_update, task_move, task_move_many,
     task_resize_start, task_resize_end, task_create, task_delete_view,
@@ -27,6 +27,7 @@ from .workspaces import workspace_switch, workspace_create
 urlpatterns = [
     path("", index, name="gantt_index"),
     path("zoom/", zoom_set, name="zoom_set"),
+    path("ui/sidebar-width/", sidebar_width_set, name="sidebar_width_set"),
     # Tasks
     path("tasks/<int:task_id>/popover/",       task_popover,        name="task_popover"),
     path("tasks/<int:task_id>/update/",        task_update,         name="task_update"),

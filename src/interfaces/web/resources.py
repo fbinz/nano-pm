@@ -23,7 +23,7 @@ from .helpers import (
     zoom, ppd,
     collapsed_people, set_collapsed_people,
     status_filter, set_status_filter,
-    is_pm, workspace_context, patch_chart,
+    is_pm, workspace_context, patch_chart, sidebar_width,
 )
 
 
@@ -58,6 +58,7 @@ def resource_index(request: HttpRequest) -> HttpResponse:
             "days_per_unit": days_per_unit,
             "status_choices": status_choices,
             "status_filter": sf,
+            "sidebar_width": sidebar_width(request),
             **workspace_context(request),
         },
     )

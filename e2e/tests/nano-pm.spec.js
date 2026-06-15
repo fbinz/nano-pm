@@ -57,6 +57,43 @@ test.describe('auth + page render', () => {
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
+
+  test('session sidebar width is server-rendered before app JS loads', async ({ page, request }) => {
+    await reset(request);
+    await login(page);
+    await page.evaluate(async () => {
+      const csrf = document.querySelector('meta[name="csrf-token"]').content;
+      await fetch('/ui/sidebar-width/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'width=320',
+      });
+    });
+
+    await page.route('**/static/js/nano.js', route => route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: '',
+    }));
+
+    await page.goto('/');
+    await expect(page.locator('#grid')).toBeVisible();
+
+    const layout = await page.evaluate(() => {
+      const htmlStyle = getComputedStyle(document.documentElement);
+      const cell = document.querySelector('.left-cell').getBoundingClientRect();
+      const gridStyle = getComputedStyle(document.getElementById('grid'));
+      return {
+        leftW: parseFloat(htmlStyle.getPropertyValue('--left-w')),
+        cellWidth: cell.width,
+        gridTemplateColumns: gridStyle.gridTemplateColumns,
+      };
+    });
+
+    expect(layout.leftW).toBe(320);
+    expect(layout.cellWidth).toBe(320);
+    expect(layout.gridTemplateColumns).toContain('320px');
+  });
 });
 
 // =============================================================================
@@ -181,10 +218,6 @@ test.describe('chart structure', () => {
   });
 
   test('the sidebar width can be resized by dragging the resizer handle', async ({ appPage: page }) => {
-    // Clear any persisted width from prior tests so we start at the default.
-    await page.evaluate(() => localStorage.removeItem('nano-pm:sidebar-width'));
-    await page.reload();
-
     const widthVar = () => page.evaluate(() =>
       parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w'))
     );
@@ -213,8 +246,26 @@ test.describe('chart structure', () => {
     expect(cellWidth).toBeLessThan(330);
   });
 
-  test('the sidebar width persists across reloads (localStorage)', async ({ appPage: page }) => {
-    await page.evaluate(() => localStorage.setItem('nano-pm:sidebar-width', '300'));
+  test('the sidebar width persists across reloads (session)', async ({ appPage: page }) => {
+    const resizer = page.locator('#sidebar-resizer');
+    const box = await resizer.boundingBox();
+    const startX = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    const saved = page.waitForResponse(response =>
+      response.url().includes('/ui/sidebar-width/') && response.status() === 204
+    );
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.mouse.move(startX + 60, y, { steps: 10 });
+    await page.mouse.up();
+    await saved;
+
+    await page.route('**/static/js/nano.js', route => route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: '',
+    }));
     await page.reload();
     const w = await page.evaluate(() =>
       parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w'))
@@ -223,9 +274,6 @@ test.describe('chart structure', () => {
   });
 
   test('the sidebar resize handle clamps to a minimum width', async ({ appPage: page }) => {
-    await page.evaluate(() => localStorage.removeItem('nano-pm:sidebar-width'));
-    await page.reload();
-
     const resizer = page.locator('#sidebar-resizer');
     const box = await resizer.boundingBox();
     const startX = box.x + box.width / 2;
@@ -248,9 +296,6 @@ test.describe('chart structure', () => {
     // Touch devices don't fire mousedown/mousemove/mouseup for finger drags —
     // only pointer events (and touch events). Verify the gesture works for
     // pointerType='touch' so the resizer is usable on tablets/phones.
-    await page.evaluate(() => localStorage.removeItem('nano-pm:sidebar-width'));
-    await page.reload();
-
     const box = await page.locator('#sidebar-resizer').boundingBox();
     const startX = box.x + box.width / 2;
     const y = box.y + box.height / 2;

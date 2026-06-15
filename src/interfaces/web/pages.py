@@ -1,8 +1,9 @@
 """Full-page renders — project view index and zoom endpoint."""
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
+from django.views.decorators.http import require_http_methods
 
 from datastar_py.django import datastar_response
 
@@ -16,6 +17,7 @@ from readers.chart_view import (
 from .helpers import (
     zoom, ppd, collapsed_projects, show_completed,
     is_pm, workspace_context, patch_chart,
+    sidebar_width, set_sidebar_width, request_data,
 )
 
 
@@ -48,6 +50,7 @@ def index(request: HttpRequest) -> HttpResponse:
             "ppd_unit_max": hi * days_per_unit,
             "ppd_unit_step": days_per_unit,
             "days_per_unit": days_per_unit,
+            "sidebar_width": sidebar_width(request),
             **workspace_context(request),
         },
     )
@@ -62,3 +65,13 @@ def zoom_set(request: HttpRequest):
     ppd(request, active_zoom)
     request.session.save()
     yield patch_chart(request, active_zoom=active_zoom)
+
+
+@require_http_methods(["POST"])
+@login_required
+def sidebar_width_set(request: HttpRequest) -> HttpResponse:
+    data = request_data(request)
+    if set_sidebar_width(request, data.get("width")) is None:
+        return HttpResponseBadRequest("invalid width")
+    request.session.save()
+    return HttpResponse(status=204)

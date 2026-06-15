@@ -1,6 +1,6 @@
 {% load static i18n %}
-<c-vars user is_pm workspace workspaces has_multiple_workspaces active_nav />
-<c-layouts.base title="nano-pm">
+<c-vars user is_pm workspace workspaces has_multiple_workspaces active_nav sidebar_width="" />
+<c-layouts.base title="nano-pm" :sidebar_width="sidebar_width">
   <div class="drawer lg:drawer-open">
     <input id="app-drawer" type="checkbox" class="drawer-toggle" />
     <div class="drawer-content flex flex-col min-h-screen">
