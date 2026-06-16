@@ -667,6 +667,29 @@ test.describe('task popover', () => {
     await expect(page.locator('#task-popover select[name=project_id]')).toHaveClass(/\bselect\b/);
   });
 
+  test('assignee multi-select options are shown as a vertical list', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    await bar.click();
+    const assignees = page.locator('#task-assignees');
+    await expect(assignees).toBeVisible();
+
+    const layout = await assignees.evaluate(el => {
+      const rects = Array.from(el.options).map(option => {
+        const rect = option.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      });
+      const style = getComputedStyle(el);
+      return { display: style.display, appearance: style.appearance, rects };
+    });
+
+    expect(layout.display).toBe('block');
+    expect(layout.appearance).not.toBe('base-select');
+    for (let i = 1; i < layout.rects.length; i++) {
+      expect(Math.abs(layout.rects[i].x - layout.rects[0].x)).toBeLessThan(2);
+      expect(layout.rects[i].y).toBeGreaterThan(layout.rects[i - 1].y + 1);
+    }
+  });
+
   test('the popover surfaces predecessors and successors', async ({ appPage: page }) => {
     // Migrate /users → predecessor t1 ("Spike on auth"), successor t3 ("Cutover")
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });

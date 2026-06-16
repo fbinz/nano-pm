@@ -438,8 +438,8 @@ html, body { height: 100%; }
   .popover select {
     @apply select select-sm w-full font-[inherit];
   }
-  /* Multi-selects need to grow to show all their rows — `.select-sm`
-     pins single-line controls to ~32px and clips the option list otherwise. */
+  /* Multi-selects need to grow to show their rows — `.select-sm`
+     pins single-line controls to ~32px otherwise. */
   .popover select[multiple] {
     @apply h-auto py-1 leading-tight;
   }
@@ -488,6 +488,15 @@ html, body { height: 100%; }
   .colors button.active { border-color: var(--color-base-content); }
 }
 
+/* Unlayered on purpose: DaisyUI's layered `.select`/base-select rules would
+   otherwise win in Chromium and turn the multi-select into a flex dropdown. */
+.popover select[multiple] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  display: block;
+  background-image: none;
+  overflow-y: auto;
+}
 
 /* ===================================================================
    People page
