@@ -7,7 +7,7 @@ from django.http import HttpRequest
 from datastar_py.django import ServerSentEventGenerator as SSE, read_signals
 from django_cotton import render_component
 
-from data.models import Membership, Person, TaskStatus, WorkspaceRole
+from data.models import Membership, Person, TaskStatus, Team, WorkspaceRole
 from readers import get_chart_state
 from readers.chart_view import (
     build_chart_vm,
@@ -121,6 +121,23 @@ def set_status_filter(request: HttpRequest, statuses: set[str]) -> None:
     request.session["status_filter"] = sorted(statuses)
 
 
+def team_choices(request: HttpRequest):
+    return Team.objects.filter(workspace=request.workspace).order_by("name", "id")
+
+
+def team_filter(request: HttpRequest) -> set[int]:
+    raw = request.session.get("team_filter", [])
+    ids = {int(x) for x in raw if isinstance(x, (int, str)) and str(x).isdigit()}
+    if not ids:
+        return set()
+    valid = set(Team.objects.filter(workspace=request.workspace, id__in=ids).values_list("id", flat=True))
+    return ids & valid
+
+
+def set_team_filter(request: HttpRequest, team_ids: set[int]) -> None:
+    request.session["team_filter"] = sorted(team_ids)
+
+
 def view_mode(request: HttpRequest) -> str:
     mode = request.session.get("view_mode", "project")
     return mode if mode in {"project", "resource"} else "project"
@@ -162,13 +179,15 @@ def patch_chart(request: HttpRequest, active_zoom: str | None = None):
     if mode == "resource":
         vm = build_resource_vm(state, resolved_zoom, px_per_day=px_per_day,
                                collapsed_person_ids=collapsed_people(request),
-                               status_filter=status_filter(request))
+                               status_filter=status_filter(request),
+                               team_filter=team_filter(request))
         template = "screens/gantt/chart_resource"
     else:
         vm = build_chart_vm(state, resolved_zoom, px_per_day=px_per_day,
                             collapsed_project_ids=collapsed_projects(request),
                             show_completed=show_completed(request),
-                            is_pm=is_pm(request))
+                            is_pm=is_pm(request),
+                            team_filter=team_filter(request))
         template = "screens/gantt/chart"
     return SSE.patch_elements(
         render_component(request, template, vm=vm, is_pm=is_pm(request))

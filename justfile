@@ -61,7 +61,7 @@ css-deps:
 # Source lives outside src/static/ so whitenoise's collectstatic doesn't
 # try to parse it as a deliverable CSS file.
 css: css-deps
-    ./bin/tailwindcss -i src/css/input.css -o src/static/css/app.css --minify
+    ./bin/tailwindcss -i src/css/input.css -o src/static/css/app.css --minify=true
 
 # Watch input.css and rebuild on change.
 css-watch: css-deps

@@ -18,6 +18,7 @@ from .helpers import (
     zoom, ppd, collapsed_projects, show_completed,
     is_pm, workspace_context, patch_chart,
     sidebar_width, set_sidebar_width, request_data,
+    team_choices, team_filter,
 )
 
 
@@ -34,6 +35,7 @@ def index(request: HttpRequest) -> HttpResponse:
         collapsed_project_ids=collapsed_projects(request),
         show_completed=show_completed(request),
         is_pm=is_pm(request),
+        team_filter=team_filter(request),
     )
     days_per_unit = ZOOM_DAYS_PER_UNIT[active_zoom]
     lo, hi = ZOOM_PPD_RANGE[active_zoom]
@@ -51,6 +53,8 @@ def index(request: HttpRequest) -> HttpResponse:
             "ppd_unit_step": days_per_unit,
             "days_per_unit": days_per_unit,
             "sidebar_width": sidebar_width(request),
+            "team_choices": team_choices(request),
+            "team_filter": team_filter(request),
             **workspace_context(request),
         },
     )

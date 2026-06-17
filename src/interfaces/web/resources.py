@@ -1,7 +1,7 @@
-"""Resource view — page render, person collapse, status filter."""
+"""Resource view — page render, person collapse, status/team filters."""
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
@@ -11,7 +11,7 @@ from datastar_py.django import (
 )
 from django_cotton import render_component
 
-from data.models import TaskStatus
+from data.models import TaskStatus, Team
 from readers import get_chart_state
 from readers.chart_view import (
     build_resource_vm,
@@ -23,6 +23,7 @@ from .helpers import (
     zoom, ppd,
     collapsed_people, set_collapsed_people,
     status_filter, set_status_filter,
+    team_choices, team_filter, set_team_filter,
     is_pm, workspace_context, patch_chart, sidebar_width,
 )
 
@@ -39,6 +40,7 @@ def resource_index(request: HttpRequest) -> HttpResponse:
         state, active_zoom, px_per_day=px_per_day,
         collapsed_person_ids=collapsed_people(request),
         status_filter=sf,
+        team_filter=team_filter(request),
     )
     status_choices = [(c.value, c.label) for c in TaskStatus]
     days_per_unit = ZOOM_DAYS_PER_UNIT[active_zoom]
@@ -58,6 +60,8 @@ def resource_index(request: HttpRequest) -> HttpResponse:
             "days_per_unit": days_per_unit,
             "status_choices": status_choices,
             "status_filter": sf,
+            "team_choices": team_choices(request),
+            "team_filter": team_filter(request),
             "sidebar_width": sidebar_width(request),
             **workspace_context(request),
         },
@@ -99,5 +103,28 @@ def toggle_status_filter(request: HttpRequest):
         request, "screens/gantt/status-filter",
         status_choices=[(c.value, c.label) for c in TaskStatus],
         status_filter=sf,
+    ))
+    yield patch_chart(request)
+
+
+@login_required
+@datastar_response
+def toggle_team_filter(request: HttpRequest):
+    raw_team_id = request.GET.get("team", "")
+    if not raw_team_id.isdigit():
+        return HttpResponseBadRequest("invalid team")
+    team_id = int(raw_team_id)
+    if not Team.objects.filter(workspace=request.workspace, id=team_id).exists():
+        return HttpResponseBadRequest("invalid team")
+
+    selected = team_filter(request)
+    selected.symmetric_difference_update({team_id})
+    set_team_filter(request, selected)
+    request.session.save()
+
+    yield SSE.patch_elements(render_component(
+        request, "screens/gantt/team-filter",
+        teams=team_choices(request),
+        team_filter=selected,
     ))
     yield patch_chart(request)

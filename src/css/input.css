@@ -95,6 +95,19 @@ html, body { height: 100%; }
   #status-filter > *:last-child { @apply border-r-0; }
   #status-filter .status-chip.active { @apply bg-base-content text-base-100; }
 
+  #team-filter { @apply relative; }
+  #team-filter summary { @apply list-none; }
+  #team-filter summary::-webkit-details-marker { display: none; }
+  #team-filter .team-filter-menu {
+    @apply absolute left-0 mt-2 min-w-48 rounded-md border border-base-300 bg-base-100 p-1 shadow-lg;
+    z-index: 60;
+  }
+  #team-filter .team-filter-option {
+    @apply flex w-full items-center justify-between gap-3 rounded px-3 py-2 text-left text-sm hover:bg-base-200;
+  }
+  #team-filter .team-filter-option.active { @apply bg-base-content text-base-100; }
+  #team-filter .team-filter-empty { @apply px-3 py-2 text-sm text-base-content/60; }
+
   @media (max-width: 900px) {
     #topbar { @apply gap-2 px-2.5; }
     #topbar #zoom-slider { display: none; }

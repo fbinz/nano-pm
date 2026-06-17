@@ -15,6 +15,18 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: src/templates/components/screens/gantt/team-filter.html:6
+msgid "Teams"
+msgstr "Teams"
+
+#: src/templates/components/screens/gantt/team-filter.html:8
+msgid "Filter by team"
+msgstr "Nach Team filtern"
+
+#: src/templates/components/screens/gantt/team-filter.html:19
+msgid "No teams yet."
+msgstr "Noch keine Teams."
+
 #: src/actions/manage_dependencies.py:38
 msgid "A task cannot depend on itself."
 msgstr "Eine Aufgabe kann nicht von sich selbst abhängen."

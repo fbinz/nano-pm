@@ -133,6 +133,25 @@ test.describe('chart structure', () => {
     await expect(page.locator('#arrows .hit')).toHaveCount(6);
   });
 
+  test('team filter limits project view to tasks assigned to selected teams', async ({ appPage: page }) => {
+    await page.locator('#team-filter summary').click();
+    await page.locator('#team-filter .team-filter-option', { hasText: 'Design' }).click();
+
+    await expect(page.locator('#team-filter summary')).toContainText('Teams (1)');
+    await expect(page.locator('#team-filter .team-filter-option.active', { hasText: 'Design' })).toHaveCount(1);
+    await expect(page.locator('.left-cell.proj')).toHaveCount(2);
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toHaveCount(0);
+    await expect(page.locator('.left-cell.proj', { hasText: 'Onboarding revamp' })).toBeVisible();
+    await expect(page.locator('.left-cell.proj', { hasText: 'Infra hardening' })).toBeVisible();
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(4);
+    await expect(page.locator('#arrows .hit')).toHaveCount(2);
+
+    await page.locator('#team-filter summary').click();
+    await page.locator('#team-filter .team-filter-option', { hasText: 'Design' }).click();
+    await expect(page.locator('.left-cell.proj')).toHaveCount(3);
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(8);
+  });
+
   test('every dep arrow terminates on its target bar (y-aligned)', async ({ appPage: page }) => {
     // Each .hit path ends at the LEFT edge of its successor bar. The end-y of
     // the path (last L command) must land inside the target bar's vertical
@@ -587,6 +606,25 @@ test.describe('resource view', () => {
     await page.locator('#status-filter .status-chip', { hasText: 'In progress' }).click();
     await expect(page.locator('.left-cell.task:visible')).toHaveCount(7);
     await expect(page.locator('#status-filter .status-chip.active')).toHaveCount(2);
+  });
+
+  test('team filter limits resource view to people in selected teams', async ({ appPage: page }) => {
+    await page.goto('/resources/');
+    await page.locator('#team-filter summary').click();
+    await page.locator('#team-filter .team-filter-option', { hasText: 'Backend' }).click();
+
+    await expect(page.locator('#team-filter summary')).toContainText('Teams (1)');
+    await expect(page.locator('.left-cell.proj')).toHaveCount(2);
+    await expect(page.locator('.left-cell.proj', { hasText: 'Alex Chen' })).toBeVisible();
+    await expect(page.locator('.left-cell.proj', { hasText: 'Sam Patel' })).toBeVisible();
+    await expect(page.locator('.left-cell.proj', { hasText: 'Riley Wong' })).toHaveCount(0);
+    await expect(page.locator('.left-cell.proj', { hasText: 'Unassigned' })).toHaveCount(0);
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(6);
+
+    await page.locator('#team-filter summary').click();
+    await page.locator('#team-filter .team-filter-option', { hasText: 'Backend' }).click();
+    await expect(page.locator('.left-cell.proj')).toHaveCount(4);
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(10);
   });
 
   test('no dependency arrows in resource view', async ({ appPage: page }) => {

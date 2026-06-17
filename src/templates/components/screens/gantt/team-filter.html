@@ -1,0 +1,22 @@
+{% load i18n %}
+<c-vars teams team_filter />
+<div id="team-filter">
+  <details>
+    <summary class="topbar-btn team-filter-trigger">
+      {% trans "Teams" %}{% if team_filter %} ({{ team_filter|length }}){% endif %}
+    </summary>
+    <div class="team-filter-menu" role="menu" aria-label="{% trans 'Filter by team' %}">
+      {% for team in teams %}
+        <button type="button"
+                class="team-filter-option{% if team.id in team_filter %} active{% endif %}"
+                aria-pressed="{% if team.id in team_filter %}true{% else %}false{% endif %}"
+                data-on:click="@get('/teams/toggle-filter/?team={{ team.id }}')">
+          <span>{{ team.name }}</span>
+          {% if team.id in team_filter %}<c-lucide name="check" size="14" />{% endif %}
+        </button>
+      {% empty %}
+        <div class="team-filter-empty">{% trans "No teams yet." %}</div>
+      {% endfor %}
+    </div>
+  </details>
+</div>

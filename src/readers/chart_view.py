@@ -275,6 +275,17 @@ def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
     )
 
 
+def _person_matches_team_filter(person, team_ids: set[int]) -> bool:
+    return any(team.id in team_ids for team in person.teams.all())
+
+
+def _task_matches_team_filter(task, team_ids: set[int]) -> bool:
+    return any(
+        _person_matches_team_filter(person, team_ids)
+        for person in task.assignees.all()
+    )
+
+
 def build_chart_vm(
     state: ChartState,
     zoom: str = DEFAULT_ZOOM,
@@ -282,11 +293,13 @@ def build_chart_vm(
     collapsed_project_ids: set[int] | None = None,
     show_completed: bool = False,
     is_pm: bool = False,
+    team_filter: set[int] | None = None,
 ) -> ChartVM:
     if zoom not in ZOOM_PX_PER_DAY:
         zoom = DEFAULT_ZOOM
     ppd = px_per_day if px_per_day is not None else ZOOM_PX_PER_DAY[zoom]
     collapsed_ids = collapsed_project_ids or set()
+    team_ids = team_filter or set()
     g = _build_grid_context(state, zoom, ppd)
 
     def x_of(d: date) -> float:
@@ -301,6 +314,8 @@ def build_chart_vm(
         bars: list[BarVM] = []
         text_color, text_dark = _text_color_for(proj.color)
         for t in proj.tasks.all():
+            if team_ids and not _task_matches_team_filter(t, team_ids):
+                continue
             x = x_of(t.start)
             xe = x_of(t.end + timedelta(days=1))
             assignees = ", ".join(p.name.split(" ")[0] for p in t.assignees.all())
@@ -331,6 +346,8 @@ def build_chart_vm(
                 color=proj.color,
                 overdue=(m.date < state.today),
             ))
+        if team_ids and not bars:
+            continue
         row_groups.append(ProjectRowVM(
             id=proj.id, name=proj.name, color=proj.color, order=proj.order,
             tasks=bars, milestones=miles,
@@ -408,11 +425,13 @@ def build_resource_vm(
     px_per_day: int | None = None,
     collapsed_person_ids: set[int] | None = None,
     status_filter: set[str] | None = None,
+    team_filter: set[int] | None = None,
 ) -> ChartVM:
     if zoom not in ZOOM_PX_PER_DAY:
         zoom = DEFAULT_ZOOM
     ppd = px_per_day if px_per_day is not None else ZOOM_PX_PER_DAY[zoom]
     collapsed_ids = collapsed_person_ids or set()
+    team_ids = team_filter or set()
     g = _build_grid_context(state, zoom, ppd)
 
     def x_of(d: date) -> float:
@@ -453,19 +472,22 @@ def build_resource_vm(
                     person_bars.setdefault(p.id, []).append(bar)
 
     row_groups: list[ProjectRowVM] = []
-    for idx, person in enumerate(sorted(state.people, key=lambda p: p.name)):
+    for person in sorted(state.people, key=lambda p: p.name):
+        if team_ids and not _person_matches_team_filter(person, team_ids):
+            continue
         row_groups.append(ProjectRowVM(
-            id=person.id, name=person.name, color="#6b7280", order=idx,
+            id=person.id, name=person.name, color="#6b7280", order=len(row_groups),
             tasks=person_bars.get(person.id, []), milestones=[],
             collapsed=(person.id in collapsed_ids),
             teams=[team.name for team in person.teams.all()],
         ))
-    # Unassigned group at the end
-    row_groups.append(ProjectRowVM(
-        id=0, name=_("Unassigned"), color="#9ca3af", order=len(row_groups),
-        tasks=person_bars.get(None, []), milestones=[],
-        collapsed=(0 in collapsed_ids),
-    ))
+    # Unassigned group at the end, unless a team filter is active.
+    if not team_ids:
+        row_groups.append(ProjectRowVM(
+            id=0, name=_("Unassigned"), color="#9ca3af", order=len(row_groups),
+            tasks=person_bars.get(None, []), milestones=[],
+            collapsed=(0 in collapsed_ids),
+        ))
 
     return ChartVM(
         zoom=zoom,
