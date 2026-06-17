@@ -1,5 +1,5 @@
 {% load i18n %}
-<c-vars people is_pm />
+<c-vars people teams is_pm />
 <div id="people-list">
   {% for p in people %}
     <div class="person-row" id="person-row-{{ p.id }}">
@@ -13,6 +13,58 @@
         {% else %}
           {{ p.name }}
         {% endif %}
+      </div>
+      <div class="person-teams">
+        <div class="team-badges" aria-label="{% trans 'Teams' %}">
+          {% for team in p.teams.all %}
+            {% if is_pm %}
+              <form class="person-team-pill team-badge badge badge-sm badge-ghost"
+                    data-on:submit__prevent="@post('/people/{{ p.id }}/teams/', { contentType: 'form' })">
+                {% csrf_token %}
+                {% for other in p.teams.all %}
+                  {% if other.id != team.id %}
+                    <input type="hidden" name="team_ids" value="{{ other.id }}">
+                  {% endif %}
+                {% endfor %}
+                <span>{{ team.name }}</span>
+                <button type="submit" class="person-team-remove"
+                        data-on:click="confirm('{% blocktrans with person_name=p.name|escapejs team_name=team.name|escapejs %}Remove {{ person_name }} from {{ team_name }}?{% endblocktrans %}') || evt.preventDefault()"
+                        aria-label="{% blocktrans with person_name=p.name team_name=team.name %}Remove {{ person_name }} from {{ team_name }}{% endblocktrans %}"
+                        title="{% trans 'Remove from team' %}">
+                  <c-lucide name="x" size="10" />
+                </button>
+              </form>
+            {% else %}
+              <span class="team-badge badge badge-sm badge-ghost">{{ team.name }}</span>
+            {% endif %}
+          {% empty %}
+            <span class="person-no-teams">{% trans "No teams" %}</span>
+          {% endfor %}
+          {% if is_pm %}
+            <details class="person-teams-popup">
+              <summary class="btn btn-xs btn-ghost rounded-full"
+                       aria-label="{% blocktrans with name=p.name %}Add team for {{ name }}{% endblocktrans %}">
+                <c-lucide name="plus" size="12" />
+              </summary>
+              <div class="person-teams-panel" role="menu" aria-label="{% blocktrans with name=p.name %}Add team for {{ name }}{% endblocktrans %}">
+                {% for team in teams %}
+                  {% if team not in p.teams.all %}
+                    <form class="person-teams-form" data-on:submit__prevent="@post('/people/{{ p.id }}/teams/', { contentType: 'form' })">
+                      {% csrf_token %}
+                      {% for existing_team in p.teams.all %}
+                        <input type="hidden" name="team_ids" value="{{ existing_team.id }}">
+                      {% endfor %}
+                      <input type="hidden" name="team_ids" value="{{ team.id }}">
+                      <button type="submit" class="person-team-add-option" role="menuitem">{{ team.name }}</button>
+                    </form>
+                  {% endif %}
+                {% empty %}
+                  <span class="person-no-teams">{% trans "No teams available." %}</span>
+                {% endfor %}
+              </div>
+            </details>
+          {% endif %}
+        </div>
       </div>
       <div class="person-linked">
         {% if p.user %}

@@ -1,5 +1,5 @@
 {% load static i18n %}
-<c-vars people user is_pm workspace workspaces has_multiple_workspaces />
+<c-vars people teams user is_pm workspace workspaces has_multiple_workspaces />
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
     :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
     active_nav="people">
@@ -8,15 +8,7 @@
       <h1>{% trans "People" %}</h1>
       <p>{% trans "Team members you can assign to tasks." %}</p>
     </div>
-    <c-screens.people.people-list :people="people" :is_pm="is_pm" />
-    {% if is_pm %}
-    <form class="add-person-form"
-          data-on:submit__prevent="@post('/people/create/', { contentType: 'form' })">
-      {% csrf_token %}
-      <input class="input input-sm" type="text" name="name" placeholder="{% trans 'Add a person…' %}" autocomplete="off">
-      <button type="submit" class="btn btn-sm btn-neutral">{% trans "Add" %}</button>
-    </form>
-    {% endif %}
+    <c-screens.people.people-content :people="people" :teams="teams" :is_pm="is_pm" />
     <div id="invite-link-slot"></div>
   </div>
 </c-layouts.app-shell>

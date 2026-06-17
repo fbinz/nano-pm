@@ -48,7 +48,7 @@ def get_chart_state(workspace) -> ChartState:
         .prefetch_related(
             Prefetch(
                 "tasks",
-                queryset=Task.objects.order_by("start", "id").prefetch_related("assignees"),
+                queryset=Task.objects.order_by("start", "id").prefetch_related("assignees__teams"),
             ),
             Prefetch(
                 "milestones",
@@ -56,7 +56,7 @@ def get_chart_state(workspace) -> ChartState:
             ),
         )
     )
-    people = list(Person.objects.filter(workspace=workspace))
+    people = list(Person.objects.filter(workspace=workspace).prefetch_related("teams"))
 
     deps = list(
         Dependency.objects.filter(predecessor__project__workspace=workspace).select_related(

@@ -1,10 +1,12 @@
-"""People endpoints — page + CRUD."""
+"""People and teams endpoints — page + CRUD."""
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest
 from django.shortcuts import render
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
 
+from datastar_py.consts import ElementPatchMode
 from datastar_py.django import (
     ServerSentEventGenerator as SSE,
     datastar_response,
@@ -14,28 +16,50 @@ from django_cotton import render_component
 from actions.manage_people import (
     create_person, update_person, delete_person, get_or_create_person_invite,
 )
-from data.models import Person
+from actions.manage_teams import create_team, update_team, delete_team, set_person_teams
+from data.models import Person, Team
 
 from .helpers import is_pm, patch_chart, workspace_context
 
 
+def _people_queryset(request: HttpRequest):
+    return Person.objects.filter(workspace=request.workspace).select_related("user").prefetch_related("teams")
+
+
+def _teams_queryset(request: HttpRequest):
+    return Team.objects.filter(workspace=request.workspace)
+
+
+def patch_add_team_input_clear():
+    return SSE.patch_elements(
+        '<input class="input input-sm" type="text" name="name" value="" '
+        f'placeholder="{_("Add a team…")}" autocomplete="off">',
+        selector='.add-team-form input[name="name"]',
+        mode=ElementPatchMode.REPLACE,
+    )
+
+
 @login_required
 def people_page(request: HttpRequest):
-    people = Person.objects.filter(workspace=request.workspace).select_related("user")
     return render(request, "components/screens/people/index.html", {
-        "people": people,
+        "people": _people_queryset(request),
+        "teams": _teams_queryset(request),
         "user": request.user,
         "is_pm": is_pm(request),
         **workspace_context(request),
     })
 
 
-def patch_people_list(request):
-    people = Person.objects.filter(workspace=request.workspace).select_related("user")
+def patch_people_content(request):
     return SSE.patch_elements(
-        render_component(request, "screens/people/people-list",
-                         people=people, is_pm=is_pm(request))
+        render_component(request, "screens/people/people-content",
+                         people=_people_queryset(request), teams=_teams_queryset(request),
+                         is_pm=is_pm(request))
     )
+
+
+def patch_people_list(request):
+    return patch_people_content(request)
 
 
 @login_required
@@ -59,7 +83,7 @@ def people_create(request: HttpRequest):
     if not name:
         return
     create_person(workspace=request.workspace, name=name)
-    yield patch_people_list(request)
+    yield patch_people_content(request)
 
 
 @require_http_methods(["POST"])
@@ -69,7 +93,7 @@ def people_update(request: HttpRequest, person_id: int):
     update_person(
         workspace=request.workspace, person_id=person_id, name=request.POST.get("name", "")
     )
-    yield patch_people_list(request)
+    yield patch_people_content(request)
     yield patch_chart(request)
 
 
@@ -78,5 +102,45 @@ def people_update(request: HttpRequest, person_id: int):
 @datastar_response
 def people_delete(request: HttpRequest, person_id: int):
     delete_person(workspace=request.workspace, person_id=person_id)
-    yield patch_people_list(request)
+    yield patch_people_content(request)
+    yield patch_chart(request)
+
+
+@require_http_methods(["POST"])
+@login_required
+@datastar_response
+def person_teams_update(request: HttpRequest, person_id: int):
+    team_ids = [int(x) for x in request.POST.getlist("team_ids") if x.isdigit()]
+    set_person_teams(workspace=request.workspace, person_id=person_id, team_ids=team_ids)
+    yield patch_people_content(request)
+    yield patch_chart(request)
+
+
+@require_http_methods(["POST"])
+@login_required
+@datastar_response
+def team_create(request: HttpRequest):
+    name = request.POST.get("name", "").strip()
+    team = create_team(workspace=request.workspace, name=name) if name else None
+    yield patch_people_content(request)
+    if team is not None:
+        yield patch_add_team_input_clear()
+    yield patch_chart(request)
+
+
+@require_http_methods(["POST"])
+@login_required
+@datastar_response
+def team_update(request: HttpRequest, team_id: int):
+    update_team(workspace=request.workspace, team_id=team_id, name=request.POST.get("name", ""))
+    yield patch_people_content(request)
+    yield patch_chart(request)
+
+
+@require_http_methods(["POST"])
+@login_required
+@datastar_response
+def team_delete(request: HttpRequest, team_id: int):
+    delete_team(workspace=request.workspace, team_id=team_id)
+    yield patch_people_content(request)
     yield patch_chart(request)

@@ -507,20 +507,57 @@ html, body { height: 100%; }
   }
   .people-page-header h1 { @apply text-xl font-semibold m-0 mb-1; }
   .people-page-header p { @apply text-base-content/60 m-0 mb-4; }
+  #people-content { @apply flex flex-col gap-6; }
+  .teams-section,
+  .people-section { @apply flex flex-col gap-2; }
+  .teams-section h2,
+  .people-section h2 { @apply text-sm font-semibold uppercase tracking-wide text-base-content/60 m-0; }
+  #teams-list { @apply flex flex-col gap-2; }
+  #people-list { @apply flex flex-col gap-1; }
+  .team-row,
   .person-row {
-    @apply flex items-center gap-3 px-3 py-2 border border-base-300 rounded mb-1;
+    @apply flex items-center gap-3 px-3 py-2 border border-base-300 rounded;
   }
-  .person-name { @apply flex-1; }
+  .team-name,
+  .person-name { @apply flex-1 min-w-0; }
+  .team-name form,
   .person-name form { @apply contents; }
+  .team-name input,
   .person-name input { @apply w-full; }
-  .person-linked { @apply text-sm flex-shrink-0; }
+  .team-actions,
   .person-actions { @apply flex gap-1 flex-shrink-0; }
-  .add-person-form { @apply flex gap-2 mt-2; }
+  .person-teams { @apply relative flex flex-col gap-1 w-52 flex-shrink-0; }
+  .team-badges { @apply flex flex-wrap gap-1 items-center; }
+  .person-team-pill { @apply inline-flex items-center gap-1; }
+  .person-team-remove { @apply -mr-1 inline-flex h-4 w-4 items-center justify-center rounded-full hover:bg-base-300; }
+  .person-teams-popup { @apply relative w-fit; }
+  .person-teams-popup summary { @apply list-none min-h-5 h-5 px-2; }
+  .person-teams-popup summary::-webkit-details-marker { display: none; }
+  .person-teams-panel {
+    @apply absolute left-0 top-full z-30 mt-1 flex w-56 flex-col gap-1 rounded border border-base-300 bg-base-100 p-2 shadow-lg;
+  }
+  .person-team-add-option { @apply btn btn-sm btn-ghost justify-start w-full; }
+  .person-no-teams,
+  .teams-empty { @apply text-xs text-base-content/50; }
+  .person-linked { @apply text-sm flex-shrink-0 min-w-16; }
+  .add-team-form,
+  .add-person-form { @apply flex items-center gap-3 px-3; }
+  .add-team-form input,
   .add-person-form input { @apply input input-sm flex-1; }
   .invite-reveal {
     @apply mt-4 p-3 bg-base-200 border border-base-300 rounded flex items-center gap-2 text-sm;
   }
   .invite-reveal input { @apply input input-sm flex-1 font-mono text-xs; }
+}
+
+/* Keep native listbox layout for multi-select controls styled with DaisyUI's
+   `.select`; otherwise Chromium can apply base-select/flex dropdown styling. */
+.person-teams select[multiple] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  display: block;
+  background-image: none;
+  overflow-y: auto;
 }
 
 /* ===================================================================

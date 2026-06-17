@@ -43,6 +43,13 @@
         </button>
         <span class="swatch" style="background:{{ rg.color }}"></span>
         <span class="name">{{ rg.name }}</span>
+        {% if rg.teams %}
+          <span class="team-badges resource-team-badges">
+            {% for team in rg.teams %}
+              <span class="team-badge badge badge-sm badge-ghost">{{ team }}</span>
+            {% endfor %}
+          </span>
+        {% endif %}
       </div>
       <div class="chart-row proj"
            data-project-id="{{ rg.id }}"

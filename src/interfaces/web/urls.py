@@ -21,7 +21,10 @@ from .resources import (
     resource_index, person_toggle_collapse, set_all_people_collapsed,
     toggle_status_filter,
 )
-from .people import people_page, people_invite_link, people_create, people_update, people_delete
+from .people import (
+    people_page, people_invite_link, people_create, people_update, people_delete,
+    person_teams_update, team_create, team_update, team_delete,
+)
 from .workspaces import workspace_switch, workspace_create
 
 urlpatterns = [
@@ -70,7 +73,12 @@ urlpatterns = [
     path("people/create/",                           people_create,    name="people_create"),
     path("people/<int:person_id>/invite-link/",      people_invite_link, name="people_invite_link"),
     path("people/<int:person_id>/update/",           people_update,    name="people_update"),
+    path("people/<int:person_id>/teams/",            person_teams_update, name="person_teams_update"),
     path("people/<int:person_id>/delete/",           people_delete,    name="people_delete"),
+    # Teams
+    path("teams/create/",                            team_create,      name="team_create"),
+    path("teams/<int:team_id>/update/",              team_update,      name="team_update"),
+    path("teams/<int:team_id>/delete/",              team_delete,      name="team_delete"),
     # Workspaces
     path("workspaces/",                              workspace_create, name="workspace_create"),
     path("workspaces/<int:workspace_id>/switch/",    workspace_switch, name="workspace_switch"),

@@ -39,9 +39,9 @@
       <select id="task-assignees" class="select select-sm w-full" name="assignee_ids" multiple size="6">
         {% for p in people %}
           {% if p.id in task.assignee_ids %}
-            <option value="{{ p.id }}" selected>{{ p.name }}</option>
+            <option value="{{ p.id }}" selected>{{ p.name }}{% if p.teams.all %} — {% for team in p.teams.all %}{{ team.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</option>
           {% else %}
-            <option value="{{ p.id }}">{{ p.name }}</option>
+            <option value="{{ p.id }}">{{ p.name }}{% if p.teams.all %} — {% for team in p.teams.all %}{{ team.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</option>
           {% endif %}
         {% endfor %}
       </select>

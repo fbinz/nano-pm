@@ -18,6 +18,7 @@ class Person(models.Model):
         related_name="person_profiles",
     )
     name = models.CharField(max_length=100)
+    teams = models.ManyToManyField("data.Team", related_name="people", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -5,7 +5,7 @@ output absolute-positioned divs).
 """
 
 from datetime import date, timedelta
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from django.utils.translation import gettext as _
 
@@ -82,6 +82,7 @@ class ProjectRowVM:
     # True when the project is marked complete (only ever present in row_groups
     # when the show-completed filter is on; rendered dimmed with a badge).
     completed: bool = False
+    teams: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -457,6 +458,7 @@ def build_resource_vm(
             id=person.id, name=person.name, color="#6b7280", order=idx,
             tasks=person_bars.get(person.id, []), milestones=[],
             collapsed=(person.id in collapsed_ids),
+            teams=[team.name for team in person.teams.all()],
         ))
     # Unassigned group at the end
     row_groups.append(ProjectRowVM(

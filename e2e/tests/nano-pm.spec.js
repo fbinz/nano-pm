@@ -559,6 +559,8 @@ test.describe('resource view', () => {
     await expect(page.locator('.left-cell.proj', { hasText: 'Sam Patel' })).toBeVisible();
     await expect(page.locator('.left-cell.proj', { hasText: 'Riley Wong' })).toBeVisible();
     await expect(page.locator('.left-cell.proj', { hasText: 'Unassigned' })).toBeVisible();
+    await expect(page.locator('.left-cell.proj', { hasText: 'Alex Chen' }).locator('.team-badge')).toHaveText(['Backend', 'Infrastructure']);
+    await expect(page.locator('.left-cell.proj', { hasText: 'Sam Patel' }).locator('.team-badge')).toHaveText(['Backend']);
 
     // Default filter hides "done" tasks. 7 non-done tasks → 10 bars
     // Alex: t2,t7,t8=3  Sam: t2,t3,t5=3  Riley: t4,t5,t6,t8=4  Unassigned: 0
@@ -672,6 +674,7 @@ test.describe('task popover', () => {
     await bar.click();
     const assignees = page.locator('#task-assignees');
     await expect(assignees).toBeVisible();
+    await expect(assignees.locator('option', { hasText: 'Alex Chen — Backend, Infrastructure' })).toHaveCount(1);
 
     const layout = await assignees.evaluate(el => {
       const rects = Array.from(el.options).map(option => {
@@ -1325,6 +1328,107 @@ test.describe('project & people management', () => {
     await page.click('.add-person-form button[type=submit]');
     await expect(page.locator('.person-row')).toHaveCount(4);
   });
+
+  test('People page aligns the add-team form with editable team rows', async ({ appPage: page }) => {
+    await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
+    await page.waitForURL('**/people/');
+
+    const firstTeamInput = page.locator('#teams-list .team-row').first().locator('input[name=name]');
+    const addTeamInput = page.locator('.add-team-form input[name=name]');
+    const firstTeamBox = await firstTeamInput.boundingBox();
+    const addTeamBox = await addTeamInput.boundingBox();
+    expect(firstTeamBox).not.toBeNull();
+    expect(addTeamBox).not.toBeNull();
+    expect(Math.abs(firstTeamBox.x - addTeamBox.x)).toBeLessThanOrEqual(1);
+
+    const rows = page.locator('#teams-list .team-row');
+    const firstRowBox = await rows.nth(0).boundingBox();
+    const secondRowBox = await rows.nth(1).boundingBox();
+    const lastRowBox = await rows.last().boundingBox();
+    const addFormBox = await page.locator('.add-team-form').boundingBox();
+    expect(firstRowBox).not.toBeNull();
+    expect(secondRowBox).not.toBeNull();
+    expect(lastRowBox).not.toBeNull();
+    expect(addFormBox).not.toBeNull();
+    const rowGap = Math.round(secondRowBox.y - firstRowBox.y - firstRowBox.height);
+    const addFormGap = Math.round(addFormBox.y - lastRowBox.y - lastRowBox.height);
+    expect(addFormGap).toBe(rowGap);
+  });
+
+  test('People page keeps add-team choices behind a plus pill popup', async ({ appPage: page }) => {
+    await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
+    await page.waitForURL('**/people/');
+
+    const alexRow = page.locator('.person-row').filter({ has: page.locator('input[name=name][value="Alex Chen"]') });
+    await expect(alexRow.locator('.person-team-add-option')).toBeHidden();
+    await expect(alexRow.locator('select[name=team_ids]')).toHaveCount(0);
+    await expect(alexRow.locator('.person-teams-popup summary svg')).toHaveCount(1);
+    await expect(alexRow.locator('.person-teams-popup summary')).toHaveClass(/rounded-full/);
+    await expect(alexRow.locator('.person-teams-popup', { hasText: 'Edit teams' })).toHaveCount(0);
+    await alexRow.locator('.person-teams-popup summary').click();
+    await expect(alexRow.locator('.person-team-add-option')).toHaveText(['Design']);
+  });
+
+  test('People page team popup directly adds available teams only', async ({ appPage: page }) => {
+    await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
+    await page.waitForURL('**/people/');
+
+    const alexRow = page.locator('.person-row').filter({ has: page.locator('input[name=name][value="Alex Chen"]') });
+    await expect(alexRow.locator('.team-badge > span')).toHaveText(['Backend', 'Infrastructure']);
+    await alexRow.locator('.person-teams-popup summary').click();
+    const options = alexRow.locator('.person-team-add-option');
+    await expect(options).toHaveText(['Design']);
+    await options.getByText('Design').click();
+    await expect(alexRow.locator('.team-badge > span')).toHaveText(['Backend', 'Design', 'Infrastructure']);
+  });
+
+  test('People page removes a person from a team via the team pill remove button', async ({ appPage: page }) => {
+    await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
+    await page.waitForURL('**/people/');
+
+    const alexRow = page.locator('.person-row').filter({ has: page.locator('input[name=name][value="Alex Chen"]') });
+    await expect(alexRow.locator('.team-badge > span')).toHaveText(['Backend', 'Infrastructure']);
+    await expect(alexRow.locator('.team-badge', { hasText: 'Infrastructure' }).locator('.person-team-remove svg')).toHaveCount(1);
+    page.once('dialog', dialog => dialog.accept());
+    await alexRow.locator('.team-badge', { hasText: 'Infrastructure' }).locator('.person-team-remove').click();
+    await expect(alexRow.locator('.team-badge > span')).toHaveText(['Backend']);
+  });
+
+  test('People page manages teams and assigns multiple teams to a person', async ({ appPage: page }) => {
+    await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
+    await page.waitForURL('**/people/');
+
+    await expect(page.locator('#teams-list .team-row')).toHaveCount(3);
+    await expect(page.locator('#teams-list input[value="Backend"]')).toHaveCount(1);
+    await expect(page.locator('#teams-list input[value="Infrastructure"]')).toHaveCount(1);
+
+    // Team names are unique within the workspace (case-insensitive).
+    await page.fill('.add-team-form input[name=name]', 'backend');
+    await page.click('.add-team-form button[type=submit]');
+    await expect(page.locator('#teams-list .team-row')).toHaveCount(3);
+
+    await page.fill('.add-team-form input[name=name]', 'QA');
+    await page.click('.add-team-form button[type=submit]');
+    await expect(page.locator('#teams-list .team-row')).toHaveCount(4);
+    await expect(page.locator('.add-team-form input[name=name]')).toHaveValue('');
+
+    const qaInput = page.locator('#teams-list input[value="QA"]');
+    await qaInput.fill('Quality');
+    await qaInput.evaluate(el => el.blur());
+    await expect(page.locator('#teams-list input[value="Quality"]')).toHaveCount(1);
+
+    const alexRow = page.locator('.person-row').filter({ has: page.locator('input[name=name][value="Alex Chen"]') });
+    await alexRow.locator('.person-teams-popup summary').click();
+    await expect(alexRow.locator('.person-team-add-option', { hasText: 'Quality' })).toBeVisible();
+    await alexRow.locator('.person-team-add-option', { hasText: 'Quality' }).click();
+    await expect(alexRow.locator('.team-badge > span')).toHaveText(['Backend', 'Infrastructure', 'Quality']);
+
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#teams-list .team-row').filter({ has: page.locator('input[value="Quality"]') })
+      .locator('.team-actions button').click();
+    await expect(page.locator('#teams-list .team-row')).toHaveCount(3);
+    await expect(alexRow.locator('.team-badge > span')).toHaveText(['Backend', 'Infrastructure']);
+  });
 });
 
 
@@ -1598,7 +1702,7 @@ test.describe('per-person invitation', () => {
     await newPage.locator('.drawer-side .menu a', { hasText: 'People' }).click();
     await newPage.waitForURL('**/people/');
     const samLinked = newPage.locator('.person-row', { hasText: 'Sam Patel' });
-    await expect(samLinked.locator('.badge')).toContainText('sampatel');
+    await expect(samLinked.locator('.person-linked .badge')).toContainText('sampatel');
 
     await newCtx.close();
   });

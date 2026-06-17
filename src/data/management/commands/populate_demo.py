@@ -18,7 +18,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from data.models import (
-    Dependency, Membership, Milestone, Person, Project, Task,
+    Dependency, Membership, Milestone, Person, Project, Task, Team,
     Workspace, WorkspaceRole,
 )
 
@@ -88,10 +88,17 @@ def _make_task(project, title, start_offset, duration, assignees, today):
 
 def build_alice(ws, today):
     # Team
+    engineering = Team.objects.create(workspace=ws, name="Engineering")
+    product = Team.objects.create(workspace=ws, name="Product")
+    design_team = Team.objects.create(workspace=ws, name="Design")
     maya = Person.objects.create(workspace=ws, name="Maya Patel")
+    maya.teams.set([product, engineering])
     ravi = Person.objects.create(workspace=ws, name="Ravi Kumar")
+    ravi.teams.set([engineering])
     jordan = Person.objects.create(workspace=ws, name="Jordan Reyes")
+    jordan.teams.set([product, design_team])
     olivia = Person.objects.create(workspace=ws, name="Olivia Brandt")
+    olivia.teams.set([design_team])
 
     n_tasks = n_deps = n_ms = 0
 
@@ -172,12 +179,21 @@ def build_alice(ws, today):
 # --------------------------------------------------------------------------- #
 
 def build_bob(ws, today):
+    platform = Team.objects.create(workspace=ws, name="Platform")
+    compliance = Team.objects.create(workspace=ws, name="Compliance")
+    rollout_team = Team.objects.create(workspace=ws, name="Rollout")
     taylor = Person.objects.create(workspace=ws, name="Taylor Singh")
+    taylor.teams.set([platform])
     lin = Person.objects.create(workspace=ws, name="Lin Hayashi")
+    lin.teams.set([platform])
     nia = Person.objects.create(workspace=ws, name="Nia Okafor")
+    nia.teams.set([compliance])
     dev = Person.objects.create(workspace=ws, name="Dev Alvarez")
+    dev.teams.set([platform])
     robin = Person.objects.create(workspace=ws, name="Robin Hartley")
+    robin.teams.set([compliance, rollout_team])
     casey = Person.objects.create(workspace=ws, name="Casey Mensah")
+    casey.teams.set([rollout_team])
 
     n_tasks = n_deps = n_ms = 0
 

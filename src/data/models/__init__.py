@@ -1,6 +1,7 @@
 from data.models.workspace import Workspace
 from data.models.membership import Membership, WorkspaceRole
 from data.models.project import Project
+from data.models.team import Team
 from data.models.person import Person
 from data.models.task import Task, TaskStatus, status_for_dates
 from data.models.dependency import Dependency
@@ -12,6 +13,7 @@ __all__ = [
     "Membership",
     "WorkspaceRole",
     "Project",
+    "Team",
     "Person",
     "Task",
     "TaskStatus",

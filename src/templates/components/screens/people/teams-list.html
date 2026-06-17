@@ -1,0 +1,30 @@
+{% load i18n %}
+<c-vars teams is_pm />
+<div id="teams-list">
+  {% for team in teams %}
+    <div class="team-row" id="team-row-{{ team.id }}">
+      <div class="team-name">
+        {% if is_pm %}
+        <form data-on:submit__prevent="@post('/teams/{{ team.id }}/update/', { contentType: 'form' })">
+          {% csrf_token %}
+          <input class="input input-sm w-full" type="text" name="name" value="{{ team.name }}"
+                 data-on:blur="evt.target.form.requestSubmit()">
+        </form>
+        {% else %}
+          {{ team.name }}
+        {% endif %}
+      </div>
+      {% if is_pm %}
+      <div class="team-actions">
+        <button type="button" class="btn btn-sm btn-ghost text-error"
+                data-on:click="confirm('{% blocktrans with name=team.name|escapejs %}Remove team &quot;{{ name }}&quot;?{% endblocktrans %}') && @post('/teams/{{ team.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })"
+                title="{% trans 'Remove' %}">
+          <c-lucide name="trash-2" size="14" />
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  {% empty %}
+    <div class="teams-empty">{% trans "No teams yet." %}</div>
+  {% endfor %}
+</div>

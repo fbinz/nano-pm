@@ -1,8 +1,8 @@
 """Seed example data for nano-pm.
 
 Creates a 'demo' user (password 'demo') with a workspace containing 3 projects,
-3 people, 8 tasks (with multi-assignee + date-derived statuses), 6 dependencies (incl.
-one cross-project), and 2 milestones — all dated relative to today.
+3 people, 3 teams, 8 tasks (with multi-assignee + date-derived statuses),
+6 dependencies (incl. one cross-project), and 2 milestones — all dated relative to today.
 
 Also creates a second user 'pm2' (password 'pm2') with an empty workspace,
 for multi-tenancy testing.
@@ -17,7 +17,7 @@ from django.db import transaction
 
 from data.models import (
     Workspace, Membership, WorkspaceRole,
-    Project, Person, Task, Dependency, Milestone,
+    Project, Team, Person, Task, Dependency, Milestone,
 )
 
 
@@ -56,9 +56,16 @@ class Command(BaseCommand):
         def D(offset: int) -> date:
             return today + timedelta(days=offset)
 
+        backend = Team.objects.create(workspace=ws, name="Backend")
+        design = Team.objects.create(workspace=ws, name="Design")
+        infra = Team.objects.create(workspace=ws, name="Infrastructure")
+
         alex = Person.objects.create(workspace=ws, name="Alex Chen")
+        alex.teams.set([backend, infra])
         sam = Person.objects.create(workspace=ws, name="Sam Patel")
+        sam.teams.set([backend])
         riley = Person.objects.create(workspace=ws, name="Riley Wong")
+        riley.teams.set([design, infra])
 
         p1 = Project.objects.create(workspace=ws, name="API Migration", color="#3b82f6", order=1)
         p2 = Project.objects.create(workspace=ws, name="Onboarding revamp", color="#10b981", order=2)
@@ -130,7 +137,7 @@ class Command(BaseCommand):
         alex.save()
 
         self.stdout.write(self.style.SUCCESS(
-            "Seeded 3 projects, 3 people, 8 tasks, 2 milestones, 6 deps for user 'demo'."
+            "Seeded 3 projects, 3 people, 3 teams, 8 tasks, 2 milestones, 6 deps for user 'demo'."
         ))
 
         # --- pm2 user + empty workspace (for isolation tests) ---
