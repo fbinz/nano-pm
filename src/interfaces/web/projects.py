@@ -1,5 +1,7 @@
 """Project endpoints — CRUD, popover, collapse."""
 
+from functools import wraps
+
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.views.decorators.http import require_http_methods
@@ -21,7 +23,18 @@ from readers import get_project
 from .helpers import (
     collapsed_projects, set_collapsed_projects,
     show_completed, set_show_completed, patch_chart,
+    is_pm,
 )
+
+
+def pm_required(view_func):
+    @wraps(view_func)
+    def wrapper(request: HttpRequest, *args, **kwargs):
+        if not is_pm(request):
+            return HttpResponse(status=403)
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
 
 
 @require_http_methods(["POST"])
@@ -55,6 +68,7 @@ def project_popover(request: HttpRequest, project_id: int):
             project=proj,
             colors=PROJECT_COLORS,
             destination_workspaces=destination_workspaces,
+            is_pm=is_pm(request),
         )
     )
 
@@ -133,6 +147,7 @@ def toggle_show_completed(request: HttpRequest):
 
 @require_http_methods(["POST"])
 @login_required
+@pm_required
 @datastar_response
 def project_delete(request: HttpRequest, project_id: int):
     delete_project(workspace=request.workspace, project_id=project_id)

@@ -363,10 +363,10 @@ def build_chart_vm(
     # Compute y-centers in the chart-area coordinate system (excluding axis).
     # Each project row group: 1 project header (proj_row_h) + N task rows (row_h each).
     # Collapsed projects contribute their header row but no task rows.
-    # PMs see an "Add Project" spacer row above the first project (chart.html);
-    # shift everything below it down by one row_h so dep arrows still terminate
-    # on the correct bars.
-    y = 32.0 if is_pm else 0.0
+    # Project view always shows an "Add Project" spacer row above the first
+    # project (chart.html); shift everything below it down by one row_h so dep
+    # arrows still terminate on the correct bars.
+    y = 32.0
     for rg_idx, rg in enumerate(row_groups):
         # project header row first
         y += 36  # proj_row_h

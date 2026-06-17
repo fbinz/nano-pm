@@ -32,13 +32,11 @@
       </div>
     </div>
 
-    {% if is_pm %}
-      <div class="left-cell add-project-row"
-           data-on:click="@post('/projects/?position=start', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
-        <c-lucide name="plus" size="14" /><span class="add-project-label">{% trans "Add Project" %}</span>
-      </div>
-      <div class="chart-row add-project-spacer" style="width:{{ vm.chart_width }}px;"></div>
-    {% endif %}
+    <div class="left-cell add-project-row"
+         data-on:click="@post('/projects/?position=start', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
+      <c-lucide name="plus" size="14" /><span class="add-project-label">{% trans "Add Project" %}</span>
+    </div>
+    <div class="chart-row add-project-spacer" style="width:{{ vm.chart_width }}px;"></div>
 
     {% for rg in vm.row_groups %}
       <div class="left-cell proj{% if rg.completed %} completed{% endif %}"
@@ -85,13 +83,11 @@
         {% endfor %}
     {% endfor %}
 
-    {% if is_pm %}
-      <div class="left-cell add-project-row"
-           data-on:click="@post('/projects/?position=end', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
-        <c-lucide name="plus" size="14" /><span class="add-project-label">{% trans "Add Project" %}</span>
-      </div>
-      <div class="chart-row add-project-spacer" style="width:{{ vm.chart_width }}px;"></div>
-    {% endif %}
+    <div class="left-cell add-project-row"
+         data-on:click="@post('/projects/?position=end', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
+      <c-lucide name="plus" size="14" /><span class="add-project-label">{% trans "Add Project" %}</span>
+    </div>
+    <div class="chart-row add-project-spacer" style="width:{{ vm.chart_width }}px;"></div>
 
     <div id="overlay">
       <svg id="arrows" width="{{ vm.chart_width }}">

@@ -156,7 +156,7 @@ test.describe('chart structure', () => {
     // Each .hit path ends at the LEFT edge of its successor bar. The end-y of
     // the path (last L command) must land inside the target bar's vertical
     // bounds, otherwise the arrow points to empty space — the regression we
-    // saw when the is_pm add-project-spacer row offset everything by row_h.
+    // saw when the add-project-spacer row offset everything by row_h.
     const info = await page.evaluate(() => {
       const grid = document.getElementById('grid-scroll');
       const gridRect = grid.getBoundingClientRect();
@@ -1603,7 +1603,7 @@ test.describe('member role', () => {
     await page.waitForURL('/');
   }
 
-  test('member sees the full chart but not the + Project button', async ({ page, request }) => {
+  test('member sees the full chart and can create projects', async ({ page, request }) => {
     await reset(request);
     await loginAsMember(page);
 
@@ -1611,8 +1611,35 @@ test.describe('member role', () => {
     await expect(page.locator('.left-cell.proj')).toHaveCount(3);
     await expect(page.locator('.bar')).toHaveCount(8);
 
-    // No "+ Project" rows for members
-    await expect(page.locator('.add-project-row')).toHaveCount(0);
+    // Members can add projects.
+    await expect(page.locator('.add-project-row')).toHaveCount(2);
+    await page.locator('.add-project-row').last().click();
+    await expect(page.locator('.left-cell.proj')).toHaveCount(4);
+    await expect(page.locator('.left-cell.proj', { hasText: 'New project' })).toBeVisible();
+  });
+
+  test('member cannot delete a project', async ({ page, request }) => {
+    await reset(request);
+    await loginAsMember(page);
+
+    const project = page.locator('.left-cell.proj', { hasText: 'API Migration' });
+    const projectId = await project.getAttribute('data-project-id');
+    await project.click();
+    await expect(page.locator('#project-popover')).toBeVisible();
+    await expect(page.locator('#project-popover button', { hasText: 'Delete project' })).toHaveCount(0);
+
+    const status = await page.evaluate(async (id) => {
+      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
+      const response = await fetch(`/projects/${id}/delete/`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': decodeURIComponent(token) },
+      });
+      return response.status;
+    }, projectId);
+    expect(status).toBe(403);
+    await expect(page.locator('.left-cell.proj')).toHaveCount(3);
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toBeVisible();
   });
 
   test('member can update a task assigned to them', async ({ page, request }) => {
