@@ -1539,6 +1539,52 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('.left-cell.proj')).toHaveCount(0);
   });
 
+  test('PM can enable and revoke a public roadmap generated from milestones', async ({ appPage: page, request }) => {
+    await page.locator('.ws-chevron-btn').click();
+    await expect(page.locator('#workspace-menu')).toBeVisible();
+    await expect(page.locator('#public-roadmap-link')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Enable public roadmap' }).click();
+    await page.waitForURL('/');
+
+    await page.locator('.ws-chevron-btn').click();
+    const href = await page.locator('#public-roadmap-link').getAttribute('href');
+    expect(href).toMatch(/^\/roadmap\/[\w-]+\/$/);
+
+    const publicResponse = await request.get(href);
+    expect(publicResponse.status()).toBe(200);
+    const body = await publicResponse.text();
+    expect(body).toContain('demo&#x27;s workspace Roadmap');
+    expect(body).toContain('API Migration');
+    expect(body).toContain('v2 API beta');
+    expect(body).toContain('Soft launch');
+    expect(body).not.toContain('Migrate /users endpoints');
+    expect(body).not.toContain('Alex Chen');
+
+    await page.getByRole('button', { name: 'Disable public roadmap' }).click();
+    await page.waitForURL('/');
+    const revoked = await request.get(href);
+    expect(revoked.status()).toBe(404);
+  });
+
+  test('regenerating the public roadmap link revokes the old URL', async ({ appPage: page, request }) => {
+    await page.locator('.ws-chevron-btn').click();
+    await page.getByRole('button', { name: 'Enable public roadmap' }).click();
+    await page.waitForURL('/');
+
+    await page.locator('.ws-chevron-btn').click();
+    const oldHref = await page.locator('#public-roadmap-link').getAttribute('href');
+    await page.getByRole('button', { name: 'Regenerate public link' }).click();
+    await page.waitForURL('/');
+
+    await page.locator('.ws-chevron-btn').click();
+    const newHref = await page.locator('#public-roadmap-link').getAttribute('href');
+    expect(newHref).toMatch(/^\/roadmap\/[\w-]+\/$/);
+    expect(newHref).not.toBe(oldHref);
+    expect((await request.get(oldHref)).status()).toBe(404);
+    expect((await request.get(newHref)).status()).toBe(200);
+  });
+
   test('PM can move a project to another workspace after confirmation', async ({ appPage: page }) => {
     // Create a second workspace owned by demo; creation switches into it.
     await page.locator('.ws-chevron-btn').click();

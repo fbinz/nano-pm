@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-31 11:06+0000\n"
+"POT-Creation-Date: 2026-06-19 06:58+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -15,356 +15,419 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/templates/components/screens/gantt/team-filter.html:6
-msgid "Teams"
-msgstr "Teams"
-
-#: src/templates/components/screens/gantt/team-filter.html:8
-msgid "Filter by team"
-msgstr "Nach Team filtern"
-
-#: src/templates/components/screens/gantt/team-filter.html:19
-msgid "No teams yet."
-msgstr "Noch keine Teams."
-
-#: src/actions/manage_dependencies.py:38
+#: actions/manage_dependencies.py:38
 msgid "A task cannot depend on itself."
 msgstr "Eine Aufgabe kann nicht von sich selbst abhängen."
 
-#: src/actions/manage_dependencies.py:42
+#: actions/manage_dependencies.py:42
 msgid "Task not found."
 msgstr "Aufgabe nicht gefunden."
 
-#: src/actions/manage_dependencies.py:46
+#: actions/manage_dependencies.py:46
 msgid "That dependency already exists."
 msgstr "Diese Abhängigkeit existiert bereits."
 
-#: src/actions/manage_dependencies.py:48
+#: actions/manage_dependencies.py:48
 msgid "That dependency would create a cycle."
 msgstr "Diese Abhängigkeit würde einen Zyklus erzeugen."
 
-#: src/config/settings.py:163
+#: config/settings.py:162
 msgid "English"
 msgstr "Englisch"
 
-#: src/config/settings.py:164
+#: config/settings.py:163
 msgid "German"
 msgstr "Deutsch"
 
-#: src/config/urls.py:45
+#: config/urls.py:44
 msgid "Invalid or expired invite link."
 msgstr "Ungültiger oder abgelaufener Einladungslink."
 
-#: src/config/urls.py:58
+#: config/urls.py:57
 msgid "Username and password are required."
 msgstr "Benutzername und Passwort sind erforderlich."
 
-#: src/config/urls.py:63
+#: config/urls.py:62
 msgid "That username is already taken."
 msgstr "Dieser Benutzername ist bereits vergeben."
 
-#: src/data/models/membership.py:7
+#: data/models/membership.py:7
 msgid "PM"
 msgstr "PM"
 
-#: src/data/models/membership.py:8
+#: data/models/membership.py:8
 msgid "Member"
 msgstr "Mitglied"
 
-#: src/data/models/task.py:6
-#: src/templates/components/screens/gantt/task-popover.html:33
+#: data/models/task.py:8
 msgid "Planned"
 msgstr "Geplant"
 
-#: src/data/models/task.py:7
-#: src/templates/components/screens/gantt/task-popover.html:34
+#: data/models/task.py:9
 msgid "In progress"
 msgstr "In Bearbeitung"
 
-#: src/data/models/task.py:9
-#: src/templates/components/screens/gantt/chart.html:56
-#: src/templates/components/screens/gantt/milestone-popover.html:37
-#: src/templates/components/screens/gantt/project-popover.html:46
-#: src/templates/components/screens/gantt/task-popover.html:36
-#: src/templates/components/screens/gantt/task-popover.html:88
+#: data/models/task.py:10 templates/components/screens/gantt/chart.html:54
+#: templates/components/screens/gantt/milestone-popover.html:37
+#: templates/components/screens/gantt/project-popover.html:64
+#: templates/components/screens/gantt/task-popover.html:77
 msgid "Done"
 msgstr "Erledigt"
 
-#: src/readers/chart_view.py:466
+#: interfaces/web/people.py:36
+#: templates/components/screens/people/people-content.html:11
+#, fuzzy
+#| msgid "Add a person…"
+msgid "Add a team…"
+msgstr "Person hinzufügen…"
+
+#: readers/chart_view.py:487
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
 
-#: src/templates/accounts/invite.html:2
+#: templates/accounts/invite.html:2
 msgid "Join — nano-pm"
 msgstr "Beitreten — nano-pm"
 
-#: src/templates/accounts/invite.html:8
+#: templates/accounts/invite.html:9
 #, python-format
 msgid "Join <strong>%(workspace_name)s</strong>"
 msgstr "<strong>%(workspace_name)s</strong> beitreten"
 
-#: src/templates/accounts/invite.html:12 src/templates/accounts/login.html:12
+#: templates/accounts/invite.html:13 templates/accounts/invite.html:14
+#: templates/accounts/login.html:13 templates/accounts/login.html:14
 msgid "Username"
 msgstr "Benutzername"
 
-#: src/templates/accounts/invite.html:15 src/templates/accounts/login.html:15
+#: templates/accounts/invite.html:15 templates/accounts/invite.html:16
+#: templates/accounts/login.html:15 templates/accounts/login.html:16
 msgid "Password"
 msgstr "Passwort"
 
-#: src/templates/accounts/invite.html:18
+#: templates/accounts/invite.html:17
 msgid "Sign up & join"
 msgstr "Registrieren & beitreten"
 
-#: src/templates/accounts/login.html:2
+#: templates/accounts/login.html:2
 msgid "Sign in — nano-pm"
 msgstr "Anmelden — nano-pm"
 
-#: src/templates/accounts/login.html:8
+#: templates/accounts/login.html:8
+msgid "Login"
+msgstr ""
+
+#: templates/accounts/login.html:9
 msgid "Sign in to your projects."
 msgstr "Melden Sie sich bei Ihren Projekten an."
 
-#: src/templates/accounts/login.html:10
+#: templates/accounts/login.html:11
 msgid "Invalid username or password."
 msgstr "Ungültiger Benutzername oder ungültiges Passwort."
 
-#: src/templates/accounts/login.html:18
+#: templates/accounts/login.html:17
 msgid "Sign in"
 msgstr "Anmelden"
 
-#: src/templates/accounts/login.html:19
+#: templates/accounts/login.html:18
 msgid ""
 "Seed data ships with user <code>demo</code> / password <code>demo</code>."
 msgstr ""
 "Die Beispieldaten enthalten den Benutzer <code>demo</code> / Passwort "
 "<code>demo</code>."
 
-#: src/templates/components/layouts/app-shell.html:10
+#: templates/components/layouts/app-shell.html:10
 msgid "Close sidebar"
 msgstr "Seitenleiste schließen"
 
-#: src/templates/components/layouts/app-shell.html:17
+#: templates/components/layouts/app-shell.html:17
 msgid "Switch workspace"
 msgstr "Arbeitsbereich wechseln"
 
-#: src/templates/components/layouts/app-shell.html:24
+#: templates/components/layouts/app-shell.html:24
 msgid "Workspaces"
 msgstr "Arbeitsbereiche"
 
-#: src/templates/components/layouts/app-shell.html:37
+#: templates/components/layouts/app-shell.html:37
 msgid "Create workspace"
 msgstr "Arbeitsbereich erstellen"
 
-#: src/templates/components/layouts/app-shell.html:38
+#: templates/components/layouts/app-shell.html:38
 msgid "Create"
 msgstr "Erstellen"
 
-#: src/templates/components/layouts/app-shell.html:44
+#: templates/components/layouts/app-shell.html:41
+msgid "Public roadmap"
+msgstr "Öffentliche Roadmap"
+
+#: templates/components/layouts/app-shell.html:48
+msgid "Open public roadmap"
+msgstr "Öffentliche Roadmap öffnen"
+
+#: templates/components/layouts/app-shell.html:53
+msgid "Roadmap"
+msgstr "Roadmap"
+
+#: templates/components/layouts/app-shell.html:55
+msgid "Optional public description"
+msgstr "Optionale öffentliche Beschreibung"
+
+#: templates/components/layouts/app-shell.html:57
+msgid "Save"
+msgstr "Speichern"
+
+#: templates/components/layouts/app-shell.html:58
+msgid "Disable public roadmap"
+msgstr "Öffentliche Roadmap deaktivieren"
+
+#: templates/components/layouts/app-shell.html:63
+msgid "Regenerate public link"
+msgstr "Öffentlichen Link neu erzeugen"
+
+#: templates/components/layouts/app-shell.html:66
+msgid "Share milestones without exposing tasks or people."
+msgstr "Meilensteine teilen, ohne Aufgaben oder Personen offenzulegen."
+
+#: templates/components/layouts/app-shell.html:69
+msgid "Enable public roadmap"
+msgstr "Öffentliche Roadmap aktivieren"
+
+#: templates/components/layouts/app-shell.html:78
 msgid "Projects"
 msgstr "Projekte"
 
-#: src/templates/components/layouts/app-shell.html:47
+#: templates/components/layouts/app-shell.html:81
 msgid "Resources"
 msgstr "Ressourcen"
 
-#: src/templates/components/layouts/app-shell.html:53
-#: src/templates/components/screens/people/index.html:8
+#: templates/components/layouts/app-shell.html:84
+#: templates/components/screens/people/index.html:8
+#: templates/components/screens/people/people-content.html:18
 msgid "People"
 msgstr "Personen"
 
-#: src/templates/components/layouts/app-shell.html:69
+#: templates/components/layouts/app-shell.html:92
+#: templates/components/layouts/app-shell.html:94
+#: templates/components/layouts/app-shell.html:95
+#, fuzzy
+#| msgid "Switch workspace"
+msgid "Switch to dark mode"
+msgstr "Arbeitsbereich wechseln"
+
+#: templates/components/layouts/app-shell.html:93
+msgid "Switch to light mode"
+msgstr ""
+
+#: templates/components/layouts/app-shell.html:98
+msgid "Theme"
+msgstr ""
+
+#: templates/components/layouts/app-shell.html:113
 msgid "Sign out"
 msgstr "Abmelden"
 
-#: src/templates/components/layouts/app-shell.html:81
+#: templates/components/layouts/app-shell.html:125
 msgid "Close"
 msgstr "Schließen"
 
-#: src/templates/components/screens/gantt/chart.html:19
+#: templates/components/screens/gantt/chart.html:19
 msgid "Collapse all"
 msgstr "Alle einklappen"
 
-#: src/templates/components/screens/gantt/chart.html:19
+#: templates/components/screens/gantt/chart.html:19
 msgid "Expand all"
 msgstr "Alle ausklappen"
 
-#: src/templates/components/screens/gantt/chart.html:21
+#: templates/components/screens/gantt/chart.html:21
 msgid "timeline"
 msgstr "Zeitachse"
 
-#: src/templates/components/screens/gantt/chart.html:38
-#: src/templates/components/screens/gantt/chart.html:91
+#: templates/components/screens/gantt/chart.html:37
+#: templates/components/screens/gantt/chart.html:88
 msgid "Add Project"
 msgstr "Projekt hinzufügen"
 
-#: src/templates/components/screens/gantt/chart.html:107
+#: templates/components/screens/gantt/chart.html:103
 msgid "Click to remove this dependency"
 msgstr "Klicken, um diese Abhängigkeit zu entfernen"
 
-#: src/templates/components/screens/gantt/chart.html:120
+#: templates/components/screens/gantt/chart.html:116
 msgid "No projects yet."
 msgstr "Noch keine Projekte."
 
-#: src/templates/components/screens/gantt/chart.html:121
+#: templates/components/screens/gantt/chart.html:117
 msgid "+ Create your first project"
 msgstr "+ Erstellen Sie Ihr erstes Projekt"
 
-#: src/templates/components/screens/gantt/index.html:7
-#: src/templates/components/screens/gantt/resource_index.html:7
-#: src/templates/components/screens/kanban/index.html:7
+#: templates/components/screens/gantt/index.html:7
+#: templates/components/screens/gantt/resource_index.html:7
 msgid "Open menu"
 msgstr "Menü öffnen"
 
-#: src/templates/components/screens/gantt/index.html:12
-#: src/templates/components/screens/gantt/resource_index.html:13
+#: templates/components/screens/gantt/index.html:14
+#: templates/components/screens/gantt/resource_index.html:14
 msgid "Day"
 msgstr "Tag"
 
-#: src/templates/components/screens/gantt/index.html:13
-#: src/templates/components/screens/gantt/resource_index.html:14
+#: templates/components/screens/gantt/index.html:15
+#: templates/components/screens/gantt/resource_index.html:15
 msgid "Week"
 msgstr "Woche"
 
-#: src/templates/components/screens/gantt/index.html:14
-#: src/templates/components/screens/gantt/resource_index.html:15
+#: templates/components/screens/gantt/index.html:16
+#: templates/components/screens/gantt/resource_index.html:16
 msgid "Month"
 msgstr "Monat"
 
-#: src/templates/components/screens/gantt/index.html:15
-#: src/templates/components/screens/gantt/resource_index.html:16
+#: templates/components/screens/gantt/index.html:17
+#: templates/components/screens/gantt/resource_index.html:17
 msgid "Quarter"
 msgstr "Quartal"
 
-#: src/templates/components/screens/gantt/index.html:17
-#: src/templates/components/screens/gantt/resource_index.html:18
+#: templates/components/screens/gantt/index.html:19
+#: templates/components/screens/gantt/resource_index.html:19
 msgid "Zoom"
 msgstr "Zoom"
 
-#: src/templates/components/screens/gantt/index.html:31
-#: src/templates/components/screens/gantt/resource_index.html:31
+#: templates/components/screens/gantt/index.html:32
+#: templates/components/screens/gantt/resource_index.html:32
 msgid "Jump to today (T)"
 msgstr "Zu heute springen (T)"
 
-#: src/templates/components/screens/gantt/index.html:31
-#: src/templates/components/screens/gantt/resource_index.html:31
+#: templates/components/screens/gantt/index.html:32
+#: templates/components/screens/gantt/resource_index.html:32
 msgid "Today"
 msgstr "Heute"
 
-#: src/templates/components/screens/gantt/index.html:37
-#: src/templates/components/screens/gantt/resource_index.html:37
+#: templates/components/screens/gantt/index.html:38
+#: templates/components/screens/gantt/resource_index.html:38
 msgid "Drag to resize sidebar"
 msgstr "Ziehen, um die Größe der Seitenleiste zu ändern"
 
-#: src/templates/components/screens/gantt/milestone-popover.html:13
-#: src/templates/components/screens/gantt/task-popover.html:12
+#: templates/components/screens/gantt/milestone-popover.html:13
+#: templates/components/screens/gantt/task-popover.html:12
 msgid "Title"
 msgstr "Titel"
 
-#: src/templates/components/screens/gantt/milestone-popover.html:17
-#: src/templates/components/screens/gantt/task-popover.html:16
+#: templates/components/screens/gantt/milestone-popover.html:17
+#: templates/components/screens/gantt/task-popover.html:16
 msgid "Description"
 msgstr "Beschreibung"
 
-#: src/templates/components/screens/gantt/milestone-popover.html:22
+#: templates/components/screens/gantt/milestone-popover.html:22
 msgid "Date"
 msgstr "Datum"
 
-#: src/templates/components/screens/gantt/milestone-popover.html:26
-#: src/templates/components/screens/gantt/task-popover.html:40
+#: templates/components/screens/gantt/milestone-popover.html:26
+#: templates/components/screens/gantt/task-popover.html:30
 msgid "Project"
 msgstr "Projekt"
 
-#: src/templates/components/screens/gantt/milestone-popover.html:36
+#: templates/components/screens/gantt/milestone-popover.html:36
 msgid "Delete this milestone?"
 msgstr "Diesen Meilenstein löschen?"
 
-#: src/templates/components/screens/gantt/milestone-popover.html:36
-#: src/templates/components/screens/gantt/task-popover.html:87
+#: templates/components/screens/gantt/milestone-popover.html:36
+#: templates/components/screens/gantt/task-popover.html:76
 msgid "Delete"
 msgstr "Löschen"
 
-#: src/templates/components/screens/gantt/project-popover.html:12
+#: templates/components/screens/gantt/project-popover.html:12
 msgid "Name"
 msgstr "Name"
 
-#: src/templates/components/screens/gantt/project-popover.html:16
+#: templates/components/screens/gantt/project-popover.html:16
 msgid "Color"
 msgstr "Farbe"
 
-#: src/templates/components/screens/gantt/project-popover.html:29
+#: templates/components/screens/gantt/project-popover.html:29
 msgid "move up"
 msgstr "nach oben"
 
-#: src/templates/components/screens/gantt/project-popover.html:31
+#: templates/components/screens/gantt/project-popover.html:31
 msgid "move down"
 msgstr "nach unten"
 
-#: src/templates/components/screens/gantt/project-popover.html:35
+#: templates/components/screens/gantt/project-popover.html:35
 msgid "+ Add milestone"
 msgstr "+ Meilenstein hinzufügen"
 
-#: src/templates/components/screens/gantt/project-popover.html:40
+#: templates/components/screens/gantt/project-popover.html:40
 msgid "Reopen project"
 msgstr "Projekt wieder öffnen"
 
-#: src/templates/components/screens/gantt/project-popover.html:40
+#: templates/components/screens/gantt/project-popover.html:40
 msgid "Mark complete"
 msgstr "Als erledigt markieren"
 
-#: src/templates/components/screens/gantt/project-popover.html:45
+#: templates/components/screens/gantt/project-popover.html:45
+#, fuzzy
+#| msgid "Create workspace"
+msgid "Move to workspace"
+msgstr "Arbeitsbereich erstellen"
+
+#: templates/components/screens/gantt/project-popover.html:54
+#, fuzzy, python-format
+#| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
+msgid "Move project &quot;%(name)s&quot; to the selected workspace?"
+msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
+
+#: templates/components/screens/gantt/project-popover.html:55
+#, fuzzy
+#| msgid "Reopen project"
+msgid "Move project"
+msgstr "Projekt wieder öffnen"
+
+#: templates/components/screens/gantt/project-popover.html:62
 #, python-format
 msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: src/templates/components/screens/gantt/project-popover.html:45
+#: templates/components/screens/gantt/project-popover.html:62
 msgid "Delete project"
 msgstr "Projekt löschen"
 
-#: src/templates/components/screens/gantt/show-completed-toggle.html:5
+#: templates/components/screens/gantt/show-completed-toggle.html:5
 msgid "Show or hide completed projects"
 msgstr "Erledigte Projekte ein- oder ausblenden"
 
-#: src/templates/components/screens/gantt/show-completed-toggle.html:7
+#: templates/components/screens/gantt/show-completed-toggle.html:7
 msgid "Hide completed"
 msgstr "Erledigte ausblenden"
 
-#: src/templates/components/screens/gantt/show-completed-toggle.html:7
+#: templates/components/screens/gantt/show-completed-toggle.html:7
 msgid "Show completed"
 msgstr "Erledigte anzeigen"
 
-#: src/templates/components/screens/gantt/task-popover.html:21
+#: templates/components/screens/gantt/task-popover.html:21
 msgid "Start"
 msgstr "Start"
 
-#: src/templates/components/screens/gantt/task-popover.html:25
+#: templates/components/screens/gantt/task-popover.html:25
 msgid "End"
 msgstr "Ende"
 
-#: src/templates/components/screens/gantt/task-popover.html:31
-msgid "Status"
-msgstr "Status"
-
-#: src/templates/components/screens/gantt/task-popover.html:49
+#: templates/components/screens/gantt/task-popover.html:38
 msgid "Assignees"
 msgstr "Zuständige"
 
-#: src/templates/components/screens/gantt/task-popover.html:61
+#: templates/components/screens/gantt/task-popover.html:50
 msgid "Dependencies"
 msgstr "Abhängigkeiten"
 
-#: src/templates/components/screens/gantt/task-popover.html:65
+#: templates/components/screens/gantt/task-popover.html:54
 msgid "depends on"
 msgstr "hängt ab von"
 
-#: src/templates/components/screens/gantt/task-popover.html:67
-#: src/templates/components/screens/gantt/task-popover.html:75
+#: templates/components/screens/gantt/task-popover.html:56
+#: templates/components/screens/gantt/task-popover.html:64
 msgid "Remove dependency"
 msgstr "Abhängigkeit entfernen"
 
-#: src/templates/components/screens/gantt/task-popover.html:73
+#: templates/components/screens/gantt/task-popover.html:62
 msgid "blocks"
 msgstr "blockiert"
 
-#: src/templates/components/screens/gantt/task-popover.html:80
+#: templates/components/screens/gantt/task-popover.html:69
 msgid ""
 "No dependencies. Drag from a bar's right-edge handle onto another bar to "
 "create one."
@@ -372,36 +435,102 @@ msgstr ""
 "Keine Abhängigkeiten. Ziehen Sie vom rechten Rand eines Balkens auf einen "
 "anderen Balken, um eine zu erstellen."
 
-#: src/templates/components/screens/gantt/task-popover.html:87
+#: templates/components/screens/gantt/task-popover.html:76
 msgid "Delete this task?"
 msgstr "Diese Aufgabe löschen?"
 
-#: src/templates/components/screens/people/index.html:9
+#: templates/components/screens/gantt/team-filter.html:6
+#: templates/components/screens/people/people-content.html:5
+#: templates/components/screens/people/people-list.html:18
+msgid "Teams"
+msgstr "Teams"
+
+#: templates/components/screens/gantt/team-filter.html:8
+msgid "Filter by team"
+msgstr "Nach Team filtern"
+
+#: templates/components/screens/gantt/team-filter.html:18
+#: templates/components/screens/people/teams-list.html:28
+msgid "No teams yet."
+msgstr "Noch keine Teams."
+
+#: templates/components/screens/people/index.html:9
 msgid "Team members you can assign to tasks."
 msgstr "Teammitglieder, die Sie Aufgaben zuweisen können."
 
-#: src/templates/components/screens/people/index.html:16
-msgid "Add a person…"
-msgstr "Person hinzufügen…"
-
-#: src/templates/components/screens/people/index.html:17
-msgid "Add"
-msgstr "Hinzufügen"
-
-#: src/templates/components/screens/people/invite-reveal.html:5
+#: templates/components/screens/people/invite-reveal.html:5
 #, python-format
 msgid "Invite link for <strong>%(person_name)s</strong>:"
 msgstr "Einladungslink für <strong>%(person_name)s</strong>:"
 
-#: src/templates/components/screens/people/people-list.html:27
+#: templates/components/screens/people/people-content.html:12
+#: templates/components/screens/people/people-content.html:25
+msgid "Add"
+msgstr "Hinzufügen"
+
+#: templates/components/screens/people/people-content.html:24
+msgid "Add a person…"
+msgstr "Person hinzufügen…"
+
+#: templates/components/screens/people/people-list.html:31
+#, python-format
+msgid "Remove %(person_name)s from %(team_name)s?"
+msgstr ""
+
+#: templates/components/screens/people/people-list.html:32
+#, python-format
+msgid "Remove %(person_name)s from %(team_name)s"
+msgstr ""
+
+#: templates/components/screens/people/people-list.html:33
+msgid "Remove from team"
+msgstr ""
+
+#: templates/components/screens/people/people-list.html:41
+#, fuzzy
+#| msgid "No teams yet."
+msgid "No teams"
+msgstr "Noch keine Teams."
+
+#: templates/components/screens/people/people-list.html:46
+#: templates/components/screens/people/people-list.html:49
+#, python-format
+msgid "Add team for %(name)s"
+msgstr ""
+
+#: templates/components/screens/people/people-list.html:62
+#, fuzzy
+#| msgid "No teams yet."
+msgid "No teams available."
+msgstr "Noch keine Teams."
+
+#: templates/components/screens/people/people-list.html:79
 msgid "Invite"
 msgstr "Einladen"
 
-#: src/templates/components/screens/people/people-list.html:31
+#: templates/components/screens/people/people-list.html:83
 #, python-format
 msgid "Remove &quot;%(name)s&quot;?"
 msgstr "&quot;%(name)s&quot; entfernen?"
 
-#: src/templates/components/screens/people/people-list.html:32
+#: templates/components/screens/people/people-list.html:84
+#: templates/components/screens/people/teams-list.html:21
 msgid "Remove"
 msgstr "Entfernen"
+
+#: templates/components/screens/people/teams-list.html:20
+#, fuzzy, python-format
+#| msgid "Remove &quot;%(name)s&quot;?"
+msgid "Remove team &quot;%(name)s&quot;?"
+msgstr "&quot;%(name)s&quot; entfernen?"
+
+#: templates/public/roadmap.html:34
+msgid "No public milestones yet"
+msgstr "Noch keine öffentlichen Meilensteine"
+
+#: templates/public/roadmap.html:35
+msgid "Check back later for roadmap updates."
+msgstr "Schauen Sie später wieder vorbei, um Roadmap-Updates zu sehen."
+
+#~ msgid "Status"
+#~ msgstr "Status"

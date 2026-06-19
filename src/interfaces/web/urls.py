@@ -25,10 +25,14 @@ from .people import (
     people_page, people_invite_link, people_create, people_update, people_delete,
     person_teams_update, team_create, team_update, team_delete,
 )
-from .workspaces import workspace_switch, workspace_create
+from .workspaces import (
+    workspace_switch, workspace_create,
+    public_roadmap, public_roadmap_update, public_roadmap_regenerate,
+)
 
 urlpatterns = [
     path("", index, name="gantt_index"),
+    path("roadmap/<slug:token>/", public_roadmap, name="public_roadmap"),
     path("zoom/", zoom_set, name="zoom_set"),
     path("ui/sidebar-width/", sidebar_width_set, name="sidebar_width_set"),
     # Tasks
@@ -83,4 +87,6 @@ urlpatterns = [
     # Workspaces
     path("workspaces/",                              workspace_create, name="workspace_create"),
     path("workspaces/<int:workspace_id>/switch/",    workspace_switch, name="workspace_switch"),
+    path("workspaces/public-roadmap/",               public_roadmap_update, name="public_roadmap_update"),
+    path("workspaces/public-roadmap/regenerate/",    public_roadmap_regenerate, name="public_roadmap_regenerate"),
 ]
