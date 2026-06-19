@@ -18,9 +18,13 @@
             <ol class="mt-4 space-y-4">
               {% for milestone in project.milestones %}
                 <li class="rounded-box bg-base-100 p-4 shadow-sm">
-                  <time class="text-sm font-medium opacity-70" datetime="{{ milestone.date|date:'Y-m-d' }}">
-                    {{ milestone.date|date:"M j, Y" }}
-                  </time>
+                  <div class="flex flex-wrap items-baseline gap-x-2 text-sm font-medium opacity-70">
+                    <time datetime="{{ milestone.date|date:'Y-m-d' }}">
+                      {{ milestone.date|date:"M j, Y" }}
+                    </time>
+                    <span aria-hidden="true">·</span>
+                    <span>{{ milestone.relative_date }}</span>
+                  </div>
                   <h3 class="mt-1 text-lg font-semibold">{{ milestone.title }}</h3>
                   {% if milestone.description %}
                     <p class="mt-2 opacity-80">{{ milestone.description|linebreaksbr }}</p>

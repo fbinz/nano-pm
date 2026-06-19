@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from django.db.models import Prefetch
+from django.utils.translation import gettext as _, ngettext
 
 from data.models import Milestone, Project, Workspace
 
@@ -18,6 +19,7 @@ class PublicMilestoneVM:
     title: str
     description: str
     date: date
+    relative_date: str
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,36 @@ class PublicRoadmapVM:
     description: str
     workspace_name: str
     projects: list[PublicProjectVM]
+
+
+def _relative_date_label(target: date, today: date) -> str:
+    days = (target - today).days
+    if days == 0:
+        return _("today")
+    if days == 1:
+        return _("tomorrow")
+    if days == -1:
+        return _("yesterday")
+
+    abs_days = abs(days)
+    if abs_days < 14:
+        value = abs_days
+        future = ngettext("in %(count)d day", "in %(count)d days", value)
+        past = ngettext("%(count)d day ago", "%(count)d days ago", value)
+    elif abs_days < 60:
+        value = max(1, (abs_days + 3) // 7)
+        future = ngettext("in %(count)d week", "in %(count)d weeks", value)
+        past = ngettext("%(count)d week ago", "%(count)d weeks ago", value)
+    elif abs_days < 730:
+        value = max(1, (abs_days + 15) // 30)
+        future = ngettext("in %(count)d month", "in %(count)d months", value)
+        past = ngettext("%(count)d month ago", "%(count)d months ago", value)
+    else:
+        value = max(1, (abs_days + 182) // 365)
+        future = ngettext("in %(count)d year", "in %(count)d years", value)
+        past = ngettext("%(count)d year ago", "%(count)d years ago", value)
+
+    return (future if days > 0 else past) % {"count": value}
 
 
 def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
@@ -56,6 +88,7 @@ def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
         )
     )
 
+    today = date.today()
     project_vms = []
     for project in projects:
         milestones = [
@@ -63,6 +96,7 @@ def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
                 title=milestone.title,
                 description=milestone.description,
                 date=milestone.date,
+                relative_date=_relative_date_label(milestone.date, today),
             )
             for milestone in project.milestones.all()
         ]

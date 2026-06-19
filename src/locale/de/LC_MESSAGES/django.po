@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-19 06:58+0000\n"
+"POT-Creation-Date: 2026-06-19 07:23+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -84,6 +84,74 @@ msgstr "Person hinzufügen…"
 #: readers/chart_view.py:487
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
+
+#: readers/public_roadmap.py:43
+msgid "today"
+msgstr "heute"
+
+#: readers/public_roadmap.py:45
+msgid "tomorrow"
+msgstr "morgen"
+
+#: readers/public_roadmap.py:47
+msgid "yesterday"
+msgstr "gestern"
+
+#: readers/public_roadmap.py:52
+#, python-format
+msgid "in %(count)d day"
+msgid_plural "in %(count)d days"
+msgstr[0] "in %(count)d Tag"
+msgstr[1] "in %(count)d Tagen"
+
+#: readers/public_roadmap.py:53
+#, python-format
+msgid "%(count)d day ago"
+msgid_plural "%(count)d days ago"
+msgstr[0] "vor %(count)d Tag"
+msgstr[1] "vor %(count)d Tagen"
+
+#: readers/public_roadmap.py:56
+#, python-format
+msgid "in %(count)d week"
+msgid_plural "in %(count)d weeks"
+msgstr[0] "in %(count)d Woche"
+msgstr[1] "in %(count)d Wochen"
+
+#: readers/public_roadmap.py:57
+#, python-format
+msgid "%(count)d week ago"
+msgid_plural "%(count)d weeks ago"
+msgstr[0] "vor %(count)d Woche"
+msgstr[1] "vor %(count)d Wochen"
+
+#: readers/public_roadmap.py:60
+#, python-format
+msgid "in %(count)d month"
+msgid_plural "in %(count)d months"
+msgstr[0] "in %(count)d Monat"
+msgstr[1] "in %(count)d Monaten"
+
+#: readers/public_roadmap.py:61
+#, python-format
+msgid "%(count)d month ago"
+msgid_plural "%(count)d months ago"
+msgstr[0] "vor %(count)d Monat"
+msgstr[1] "vor %(count)d Monaten"
+
+#: readers/public_roadmap.py:64
+#, python-format
+msgid "in %(count)d year"
+msgid_plural "in %(count)d years"
+msgstr[0] "in %(count)d Jahr"
+msgstr[1] "in %(count)d Jahren"
+
+#: readers/public_roadmap.py:65
+#, python-format
+msgid "%(count)d year ago"
+msgid_plural "%(count)d years ago"
+msgstr[0] "vor %(count)d Jahr"
+msgstr[1] "vor %(count)d Jahren"
 
 #: templates/accounts/invite.html:2
 msgid "Join — nano-pm"
@@ -524,11 +592,11 @@ msgstr "Entfernen"
 msgid "Remove team &quot;%(name)s&quot;?"
 msgstr "&quot;%(name)s&quot; entfernen?"
 
-#: templates/public/roadmap.html:34
+#: templates/public/roadmap.html:38
 msgid "No public milestones yet"
 msgstr "Noch keine öffentlichen Meilensteine"
 
-#: templates/public/roadmap.html:35
+#: templates/public/roadmap.html:39
 msgid "Check back later for roadmap updates."
 msgstr "Schauen Sie später wieder vorbei, um Roadmap-Updates zu sehen."
 

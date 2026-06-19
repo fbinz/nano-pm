@@ -1558,6 +1558,7 @@ test.describe('workspace isolation', () => {
     expect(body).toContain('API Migration');
     expect(body).toContain('v2 API beta');
     expect(body).toContain('Soft launch');
+    expect(body).toContain('in 3 weeks');
     expect(body).not.toContain('Migrate /users endpoints');
     expect(body).not.toContain('Alex Chen');
 
