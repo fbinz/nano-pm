@@ -13,6 +13,10 @@
       <input id="project-name" class="input input-sm w-full" type="text" name="name" value="{{ project.name }}" autofocus>
     </fieldset>
     <fieldset class="fieldset">
+      <label class="label" for="project-description">{% trans "Description" %}</label>
+      <textarea id="project-description" class="textarea textarea-sm w-full" name="description" rows="3">{{ project.description }}</textarea>
+    </fieldset>
+    <fieldset class="fieldset">
       <label class="label" for="proj-color-input">{% trans "Color" %}</label>
       <input type="hidden" name="color" value="{{ project.color }}" id="proj-color-input">
       <div class="colors">

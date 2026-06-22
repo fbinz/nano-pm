@@ -35,6 +35,7 @@ def update_project(
     workspace,
     project_id: int,
     name: str | None = None,
+    description: str | None = None,
     color: str | None = None,
 ) -> Project | None:
     try:
@@ -43,6 +44,8 @@ def update_project(
         return None
     if name is not None:
         proj.name = name
+    if description is not None:
+        proj.description = description
     if color is not None:
         proj.color = color
     proj.save()

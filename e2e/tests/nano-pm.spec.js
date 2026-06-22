@@ -1356,6 +1356,17 @@ test.describe('project & people management', () => {
     await expect(page.locator('#project-popover input[name=name]')).toHaveValue('API Migration');
   });
 
+  test('project descriptions can be edited from the sidebar', async ({ appPage: page }) => {
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await expect(page.locator('#project-popover')).toBeVisible();
+    await page.locator('#project-popover textarea[name=description]').fill('Move all public API traffic to v2 before GA.');
+    await page.locator('#project-popover button[type=submit]').click();
+    await expect(page.locator('#project-popover')).toHaveCount(0);
+
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await expect(page.locator('#project-popover textarea[name=description]')).toHaveValue('Move all public API traffic to v2 before GA.');
+  });
+
   test('People page lists seeded team and accepts an Add', async ({ appPage: page }) => {
     await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
     await page.waitForURL('**/people/');

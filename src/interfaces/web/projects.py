@@ -81,6 +81,7 @@ def project_update(request: HttpRequest, project_id: int):
         workspace=request.workspace,
         project_id=project_id,
         name=request.POST.get("name") or None,
+        description=request.POST.get("description") if "description" in request.POST else None,
         color=request.POST.get("color") or None,
     )
     yield patch_chart(request)

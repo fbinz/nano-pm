@@ -16,6 +16,7 @@ class Project(models.Model):
         related_name="projects",
     )
     name = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
     color = models.CharField(max_length=9, default=PROJECT_COLORS[0])
     # Float ordering keeps re-order cheap (insert between any two by averaging).
     order = models.FloatField(default=0)
