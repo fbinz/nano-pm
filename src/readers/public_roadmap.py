@@ -77,18 +77,17 @@ def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
     except Workspace.DoesNotExist:
         return None
 
+    today = date.today()
     projects = list(
         Project.objects.filter(workspace=workspace, completed_at__isnull=True)
         .order_by("order", "id")
         .prefetch_related(
             Prefetch(
                 "milestones",
-                queryset=Milestone.objects.order_by("date", "id"),
+                queryset=Milestone.objects.filter(date__gte=today).order_by("date", "id"),
             )
         )
     )
-
-    today = date.today()
     project_vms = []
     for project in projects:
         milestones = [

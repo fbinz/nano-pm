@@ -1556,6 +1556,19 @@ test.describe('workspace isolation', () => {
   });
 
   test('PM can enable and revoke a public roadmap generated from milestones', async ({ appPage: page, request }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const pastDate = new Date();
+    pastDate.setDate(pastDate.getDate() - 7);
+    const pastDateIso = pastDate.toISOString().slice(0, 10);
+
+    await page.evaluate(({ projectId, pastDateIso }) => {
+      window.nano.addMilestone(Number(projectId), pastDateIso);
+    }, { projectId, pastDateIso });
+    await expect(page.locator('#milestone-popover')).toBeVisible();
+    await page.locator('#milestone-title').fill('Already shipped checkpoint');
+    await page.locator('#milestone-popover button[type=submit]').click();
+    await expect(page.locator('#milestone-popover')).toHaveCount(0);
+
     await page.locator('.ws-chevron-btn').click();
     await expect(page.locator('#workspace-menu')).toBeVisible();
     await expect(page.locator('#public-roadmap-link')).toHaveCount(0);
@@ -1575,6 +1588,7 @@ test.describe('workspace isolation', () => {
     expect(body).toContain('v2 API beta');
     expect(body).toContain('Soft launch');
     expect(body).toContain('in 3 weeks');
+    expect(body).not.toContain('Already shipped checkpoint');
     expect(body).not.toContain('Migrate /users endpoints');
     expect(body).not.toContain('Alex Chen');
 
