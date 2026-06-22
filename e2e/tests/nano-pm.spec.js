@@ -1367,6 +1367,21 @@ test.describe('project & people management', () => {
     await expect(page.locator('#project-popover textarea[name=description]')).toHaveValue('Move all public API traffic to v2 before GA.');
   });
 
+  test('PM can delete a project from the sidebar', async ({ appPage: page }) => {
+    await page.locator('.left-cell.proj', { hasText: 'Infra hardening' }).click();
+    await expect(page.locator('#project-popover')).toBeVisible();
+
+    page.once('dialog', async dialog => {
+      expect(dialog.message()).toContain('Delete project');
+      await dialog.accept();
+    });
+    await page.locator('#project-popover button', { hasText: 'Delete project' }).click();
+
+    await expect(page.locator('#project-popover')).toHaveCount(0);
+    await expect(page.locator('.left-cell.proj')).toHaveCount(2);
+    await expect(page.locator('.left-cell.proj', { hasText: 'Infra hardening' })).toHaveCount(0);
+  });
+
   test('People page lists seeded team and accepts an Add', async ({ appPage: page }) => {
     await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
     await page.waitForURL('**/people/');

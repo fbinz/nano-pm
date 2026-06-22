@@ -1,6 +1,7 @@
 """Project endpoints — CRUD, popover, collapse."""
 
 from functools import wraps
+from inspect import iscoroutinefunction
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
@@ -28,6 +29,15 @@ from .helpers import (
 
 
 def pm_required(view_func):
+    if iscoroutinefunction(view_func):
+        @wraps(view_func)
+        async def async_wrapper(request: HttpRequest, *args, **kwargs):
+            if not is_pm(request):
+                return HttpResponse(status=403)
+            return await view_func(request, *args, **kwargs)
+
+        return async_wrapper
+
     @wraps(view_func)
     def wrapper(request: HttpRequest, *args, **kwargs):
         if not is_pm(request):
