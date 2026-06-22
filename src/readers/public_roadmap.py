@@ -24,9 +24,22 @@ class PublicMilestoneVM:
 
 @dataclass(frozen=True)
 class PublicProjectVM:
+    key: str
     name: str
+    description: str
     color: str
     milestones: list[PublicMilestoneVM] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class PublicTimelineMilestoneVM:
+    title: str
+    description: str
+    date: date
+    relative_date: str
+    project_key: str
+    project_name: str
+    project_color: str
 
 
 @dataclass(frozen=True)
@@ -35,6 +48,7 @@ class PublicRoadmapVM:
     description: str
     workspace_name: str
     projects: list[PublicProjectVM]
+    milestones: list[PublicTimelineMilestoneVM]
 
 
 def _relative_date_label(target: date, today: date) -> str:
@@ -89,26 +103,42 @@ def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
         )
     )
     project_vms = []
-    for project in projects:
-        milestones = [
-            PublicMilestoneVM(
+    timeline_milestones = []
+    for index, project in enumerate(projects, start=1):
+        project_key = f"p{index}"
+        milestones = []
+        for milestone in project.milestones.all():
+            relative_date = _relative_date_label(milestone.date, today)
+            milestones.append(PublicMilestoneVM(
                 title=milestone.title,
                 description=milestone.description,
                 date=milestone.date,
-                relative_date=_relative_date_label(milestone.date, today),
-            )
-            for milestone in project.milestones.all()
-        ]
-        if milestones:
-            project_vms.append(PublicProjectVM(
-                name=project.name,
-                color=project.color,
-                milestones=milestones,
+                relative_date=relative_date,
             ))
+            timeline_milestones.append(PublicTimelineMilestoneVM(
+                title=milestone.title,
+                description=milestone.description,
+                date=milestone.date,
+                relative_date=relative_date,
+                project_key=project_key,
+                project_name=project.name,
+                project_color=project.color,
+            ))
+
+        project_vms.append(PublicProjectVM(
+            key=project_key,
+            name=project.name,
+            description=project.description.strip(),
+            color=project.color,
+            milestones=milestones,
+        ))
+
+    timeline_milestones.sort(key=lambda milestone: (milestone.date, milestone.project_name, milestone.title))
 
     return PublicRoadmapVM(
         title=workspace.public_roadmap_display_title,
         description=workspace.public_roadmap_description.strip(),
         workspace_name=workspace.name,
         projects=project_vms,
+        milestones=timeline_milestones,
     )

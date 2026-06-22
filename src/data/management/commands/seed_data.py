@@ -67,9 +67,27 @@ class Command(BaseCommand):
         riley = Person.objects.create(workspace=ws, name="Riley Wong")
         riley.teams.set([design, infra])
 
-        p1 = Project.objects.create(workspace=ws, name="API Migration", color="#3b82f6", order=1)
-        p2 = Project.objects.create(workspace=ws, name="Onboarding revamp", color="#10b981", order=2)
-        p3 = Project.objects.create(workspace=ws, name="Infra hardening", color="#f59e0b", order=3)
+        p1 = Project.objects.create(
+            workspace=ws,
+            name="API Migration",
+            description="Move public API traffic to the new v2 platform.",
+            color="#3b82f6",
+            order=1,
+        )
+        p2 = Project.objects.create(
+            workspace=ws,
+            name="Onboarding revamp",
+            description="Improve activation for first-time customers.",
+            color="#10b981",
+            order=2,
+        )
+        p3 = Project.objects.create(
+            workspace=ws,
+            name="Infra hardening",
+            description="Reduce production risk across core infrastructure.",
+            color="#f59e0b",
+            order=3,
+        )
 
         # Project 1: API Migration
         t1 = Task.objects.create(

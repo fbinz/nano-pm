@@ -1,45 +1,240 @@
 {% load i18n %}
 <c-layouts.base :title="vm.title">
+  <style>
+    .roadmap-layout { display: grid; gap: 1.5rem; }
+    @media (min-width: 1024px) {
+      .roadmap-layout { grid-template-columns: 20rem minmax(0, 1fr); }
+      .roadmap-sidebar { position: sticky; top: 1.5rem; align-self: start; }
+    }
+    .roadmap-project-toggle {
+      align-items: flex-start;
+      flex-direction: column;
+      height: auto;
+      min-height: 0;
+      white-space: normal;
+    }
+    .roadmap-project-toggle[aria-pressed="true"] {
+      border-color: currentColor;
+    }
+    .roadmap-project-toggle[aria-pressed="false"] {
+      opacity: 0.6;
+    }
+    .roadmap-project-toggle[aria-pressed="false"] .roadmap-project-color {
+      background: #6b7280 !important;
+    }
+  </style>
   <main class="min-h-screen bg-base-100 text-base-content">
-    <section class="mx-auto max-w-4xl px-6 py-12">
+    <section class="mx-auto max-w-6xl px-6 py-12">
       <p class="text-sm font-semibold uppercase tracking-wide opacity-60">{{ vm.workspace_name }}</p>
       <h1 class="mt-2 text-4xl font-bold">{{ vm.title }}</h1>
       {% if vm.description %}
         <p class="mt-4 max-w-2xl text-lg opacity-80">{{ vm.description|linebreaksbr }}</p>
       {% endif %}
 
-      <div class="mt-10 space-y-8">
-        {% for project in vm.projects %}
-          <section class="rounded-box border border-base-300 bg-base-200 p-5">
-            <h2 class="flex items-center gap-2 text-xl font-semibold">
-              <span class="inline-block h-3 w-3 rounded-full" style="background: {{ project.color }}"></span>
-              {{ project.name }}
-            </h2>
-            <ol class="mt-4 space-y-4">
-              {% for milestone in project.milestones %}
-                <li class="rounded-box bg-base-100 p-4 shadow-sm">
-                  <div class="flex flex-wrap items-baseline gap-x-2 text-sm font-medium opacity-70">
-                    <time datetime="{{ milestone.date|date:'Y-m-d' }}">
-                      {{ milestone.date|date:"M j, Y" }}
-                    </time>
-                    <span aria-hidden="true">·</span>
-                    <span>{{ milestone.relative_date }}</span>
-                  </div>
-                  <h3 class="mt-1 text-lg font-semibold">{{ milestone.title }}</h3>
-                  {% if milestone.description %}
-                    <p class="mt-2 opacity-80">{{ milestone.description|linebreaksbr }}</p>
+      {% if vm.projects %}
+        <div class="roadmap-layout mt-10" data-roadmap>
+          <aside class="roadmap-sidebar rounded-box border border-base-300 bg-base-200 p-4">
+            <h2 class="text-sm font-semibold uppercase tracking-wide opacity-60">{% trans "Projects" %}</h2>
+            <div id="roadmap-project-filter" class="mt-4 space-y-3">
+              {% for project in vm.projects %}
+                <button type="button"
+                        class="roadmap-project-toggle btn btn-outline w-full rounded-box p-4 text-left shadow-sm"
+                        data-project-filter="{{ project.key }}"
+                        aria-pressed="true">
+                  <span class="flex items-center gap-2 font-semibold">
+                    <span class="roadmap-project-color inline-block h-3 w-3 rounded-full shrink-0" style="background: {{ project.color }}"></span>
+                    <span>{{ project.name }}</span>
+                  </span>
+                  {% if project.description %}
+                    <span class="mt-2 block text-sm font-normal opacity-75">{{ project.description|linebreaksbr }}</span>
                   {% endif %}
-                </li>
+                </button>
               {% endfor %}
-            </ol>
+            </div>
+          </aside>
+
+          <section class="min-w-0">
+            {% if vm.milestones %}
+              <div class="tabs tabs-boxed" role="tablist" aria-label="{% trans 'Roadmap views' %}">
+                <button id="roadmap-tab-grouped"
+                        type="button"
+                        class="tab tab-active"
+                        role="tab"
+                        aria-selected="true"
+                        aria-controls="roadmap-panel-grouped"
+                        data-roadmap-tab="grouped">{% trans "Grouped" %}</button>
+                <button id="roadmap-tab-timeline"
+                        type="button"
+                        class="tab"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="roadmap-panel-timeline"
+                        data-roadmap-tab="timeline">{% trans "Timeline" %}</button>
+              </div>
+
+              <div id="roadmap-panel-grouped"
+                   class="mt-6 space-y-6"
+                   role="tabpanel"
+                   aria-label="{% trans 'Grouped' %}"
+                   aria-labelledby="roadmap-tab-grouped"
+                   data-roadmap-panel="grouped">
+                {% for project in vm.projects %}
+                  <section class="roadmap-group rounded-box border border-base-300 bg-base-200 p-5"
+                           data-roadmap-project-card
+                           data-project-id="{{ project.key }}"
+                           {% if not project.milestones %}hidden{% endif %}>
+                    <h2 class="flex items-center gap-2 text-xl font-semibold">
+                      <span class="inline-block h-3 w-3 rounded-full" style="background: {{ project.color }}"></span>
+                      {{ project.name }}
+                    </h2>
+                    <ol class="mt-4 space-y-4">
+                      {% for milestone in project.milestones %}
+                        <li class="roadmap-milestone-card rounded-box bg-base-100 p-4 shadow-sm"
+                            data-roadmap-milestone-card
+                            data-project-id="{{ project.key }}">
+                          <div class="flex flex-wrap items-baseline gap-x-2 text-sm font-medium opacity-70">
+                            <time datetime="{{ milestone.date|date:'Y-m-d' }}">
+                              {{ milestone.date|date:"M j, Y" }}
+                            </time>
+                            <span aria-hidden="true">·</span>
+                            <span>{{ milestone.relative_date }}</span>
+                          </div>
+                          <h3 class="mt-1 text-lg font-semibold">{{ milestone.title }}</h3>
+                          {% if milestone.description %}
+                            <p class="mt-2 opacity-80">{{ milestone.description|linebreaksbr }}</p>
+                          {% endif %}
+                        </li>
+                      {% endfor %}
+                    </ol>
+                  </section>
+                {% endfor %}
+              </div>
+
+              <div id="roadmap-panel-timeline"
+                   class="mt-6"
+                   role="tabpanel"
+                   aria-label="{% trans 'Timeline' %}"
+                   aria-labelledby="roadmap-tab-timeline"
+                   data-roadmap-panel="timeline"
+                   hidden>
+                <ol class="space-y-4">
+                  {% for milestone in vm.milestones %}
+                    <li class="roadmap-timeline-card rounded-box border border-base-300 bg-base-200 p-4 shadow-sm"
+                        data-roadmap-milestone-card
+                        data-project-id="{{ milestone.project_key }}">
+                      <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium opacity-70">
+                        <span class="inline-flex items-center gap-2">
+                          <span class="inline-block h-3 w-3 rounded-full" style="background: {{ milestone.project_color }}"></span>
+                          <span>{{ milestone.project_name }}</span>
+                        </span>
+                        <span aria-hidden="true">·</span>
+                        <time datetime="{{ milestone.date|date:'Y-m-d' }}">
+                          {{ milestone.date|date:"M j, Y" }}
+                        </time>
+                        <span aria-hidden="true">·</span>
+                        <span>{{ milestone.relative_date }}</span>
+                      </div>
+                      <h3 class="mt-1 text-lg font-semibold">{{ milestone.title }}</h3>
+                      {% if milestone.description %}
+                        <p class="mt-2 opacity-80">{{ milestone.description|linebreaksbr }}</p>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                </ol>
+              </div>
+
+              <section class="rounded-box border border-base-300 bg-base-200 p-6" data-roadmap-empty hidden>
+                <h2 class="text-xl font-semibold">{% trans "No milestones match these projects" %}</h2>
+                <p class="mt-2 opacity-75">{% trans "Toggle a project on to see its roadmap milestones." %}</p>
+              </section>
+            {% else %}
+              <section class="rounded-box border border-base-300 bg-base-200 p-6">
+                <h2 class="text-xl font-semibold">{% trans "No public milestones yet" %}</h2>
+                <p class="mt-2 opacity-75">{% trans "Check back later for roadmap updates." %}</p>
+              </section>
+            {% endif %}
           </section>
-        {% empty %}
-          <section class="rounded-box border border-base-300 bg-base-200 p-6">
-            <h2 class="text-xl font-semibold">{% trans "No public milestones yet" %}</h2>
-            <p class="mt-2 opacity-75">{% trans "Check back later for roadmap updates." %}</p>
-          </section>
-        {% endfor %}
-      </div>
+        </div>
+      {% else %}
+        <section class="mt-10 rounded-box border border-base-300 bg-base-200 p-6">
+          <h2 class="text-xl font-semibold">{% trans "No public milestones yet" %}</h2>
+          <p class="mt-2 opacity-75">{% trans "Check back later for roadmap updates." %}</p>
+        </section>
+      {% endif %}
     </section>
   </main>
+
+  <script>
+    (function () {
+      function initRoadmap(root) {
+        if (!root || root.dataset.roadmapReady === 'true') return;
+        root.dataset.roadmapReady = 'true';
+
+        const projectButtons = Array.from(root.querySelectorAll('[data-project-filter]'));
+        const tabs = Array.from(root.querySelectorAll('[data-roadmap-tab]'));
+        const panels = Array.from(root.querySelectorAll('[data-roadmap-panel]'));
+
+        function activeProjectIds() {
+          return new Set(
+            projectButtons
+              .filter((button) => button.getAttribute('aria-pressed') === 'true')
+              .map((button) => button.dataset.projectFilter)
+          );
+        }
+
+        function renderFilters() {
+          const active = activeProjectIds();
+
+          root.querySelectorAll('[data-roadmap-milestone-card]').forEach((card) => {
+            card.hidden = !active.has(card.dataset.projectId);
+          });
+
+          root.querySelectorAll('[data-roadmap-project-card]').forEach((group) => {
+            const hasVisibleMilestone = !!group.querySelector('[data-roadmap-milestone-card]:not([hidden])');
+            group.hidden = !active.has(group.dataset.projectId) || !hasVisibleMilestone;
+          });
+
+          const hasAnyVisibleMilestone = !!root.querySelector('[data-roadmap-milestone-card]:not([hidden])');
+          root.querySelectorAll('[data-roadmap-empty]').forEach((empty) => {
+            empty.hidden = hasAnyVisibleMilestone;
+          });
+        }
+
+        function selectTab(tabName) {
+          tabs.forEach((tab) => {
+            const selected = tab.dataset.roadmapTab === tabName;
+            tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+            tab.classList.toggle('tab-active', selected);
+          });
+          panels.forEach((panel) => {
+            panel.hidden = panel.dataset.roadmapPanel !== tabName;
+          });
+        }
+
+        projectButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            const pressed = button.getAttribute('aria-pressed') === 'true';
+            button.setAttribute('aria-pressed', pressed ? 'false' : 'true');
+            renderFilters();
+          });
+        });
+
+        tabs.forEach((tab) => {
+          tab.addEventListener('click', () => selectTab(tab.dataset.roadmapTab));
+        });
+
+        renderFilters();
+      }
+
+      function initAllRoadmaps() {
+        document.querySelectorAll('[data-roadmap]').forEach(initRoadmap);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAllRoadmaps);
+      } else {
+        initAllRoadmaps();
+      }
+    })();
+  </script>
 </c-layouts.base>

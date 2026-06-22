@@ -1624,6 +1624,39 @@ test.describe('workspace isolation', () => {
     expect(revoked.status()).toBe(404);
   });
 
+  test('public roadmap filters milestones by project and switches grouped/timeline views', async ({ appPage: page }) => {
+    await page.locator('.ws-chevron-btn').click();
+    await page.getByRole('button', { name: 'Enable public roadmap' }).click();
+    await page.waitForURL('/');
+
+    await page.locator('.ws-chevron-btn').click();
+    const href = await page.locator('#public-roadmap-link').getAttribute('href');
+    await page.goto(href);
+
+    const filters = page.locator('#roadmap-project-filter');
+    await expect(filters.getByRole('button', { name: /API Migration/ })).toHaveAttribute('aria-pressed', 'true');
+    await expect(filters.getByRole('button')).toHaveCount(3);
+    await expect(filters).toContainText('Move public API traffic to the new v2 platform.');
+
+    await expect(page.getByRole('tabpanel', { name: 'Grouped' })).toBeVisible();
+    await expect(page.locator('.roadmap-group:visible')).toHaveCount(2);
+    await expect(page.locator('.roadmap-milestone-card:visible', { hasText: 'v2 API beta' })).toBeVisible();
+    await expect(page.locator('.roadmap-milestone-card:visible', { hasText: 'Soft launch' })).toBeVisible();
+
+    await filters.getByRole('button', { name: /API Migration/ }).click();
+    await expect(filters.getByRole('button', { name: /API Migration/ })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('.roadmap-milestone-card:visible', { hasText: 'v2 API beta' })).toHaveCount(0);
+    await expect(page.locator('.roadmap-milestone-card:visible', { hasText: 'Soft launch' })).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Timeline' }).click();
+    await expect(page.getByRole('tabpanel', { name: 'Timeline' })).toBeVisible();
+    await expect(page.locator('.roadmap-timeline-card:visible')).toHaveCount(1);
+    await expect(page.locator('.roadmap-timeline-card:visible')).toContainText('Onboarding revamp');
+
+    await filters.getByRole('button', { name: /API Migration/ }).click();
+    await expect(page.locator('.roadmap-timeline-card:visible')).toHaveCount(2);
+  });
+
   test('regenerating the public roadmap link revokes the old URL', async ({ appPage: page, request }) => {
     await page.locator('.ws-chevron-btn').click();
     await page.getByRole('button', { name: 'Enable public roadmap' }).click();

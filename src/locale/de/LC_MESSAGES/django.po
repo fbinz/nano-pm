@@ -235,6 +235,26 @@ msgstr "Öffentliche Roadmap öffnen"
 msgid "Roadmap"
 msgstr "Roadmap"
 
+#: templates/public/roadmap.html:49
+msgid "Roadmap views"
+msgstr "Roadmap-Ansichten"
+
+#: templates/public/roadmap.html:57
+msgid "Grouped"
+msgstr "Gruppiert"
+
+#: templates/public/roadmap.html:65
+msgid "Timeline"
+msgstr "Zeitachse"
+
+#: templates/public/roadmap.html:141
+msgid "No milestones match these projects"
+msgstr "Keine Meilensteine passen zu diesen Projekten"
+
+#: templates/public/roadmap.html:142
+msgid "Toggle a project on to see its roadmap milestones."
+msgstr "Aktivieren Sie ein Projekt, um seine Roadmap-Meilensteine zu sehen."
+
 #: templates/components/layouts/app-shell.html:55
 msgid "Optional public description"
 msgstr "Optionale öffentliche Beschreibung"
