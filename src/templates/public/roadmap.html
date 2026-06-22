@@ -36,6 +36,11 @@
           <aside class="roadmap-sidebar rounded-box border border-base-300 bg-base-200 p-4">
             <h2 class="text-sm font-semibold uppercase tracking-wide opacity-60">{% trans "Projects" %}</h2>
             <div id="roadmap-project-filter" class="mt-4 space-y-3">
+              <button type="button"
+                      class="btn btn-sm btn-ghost w-full"
+                      data-roadmap-bulk-toggle
+                      data-select-all-label="{% trans 'Select all' %}"
+                      data-deselect-all-label="{% trans 'Deselect all' %}">{% trans "Deselect all" %}</button>
               {% for project in vm.projects %}
                 <button type="button"
                         class="roadmap-project-toggle btn btn-outline w-full rounded-box p-4 text-left shadow-sm"
@@ -171,6 +176,7 @@
         root.dataset.roadmapReady = 'true';
 
         const projectButtons = Array.from(root.querySelectorAll('[data-project-filter]'));
+        const bulkToggleButton = root.querySelector('[data-roadmap-bulk-toggle]');
         const tabs = Array.from(root.querySelectorAll('[data-roadmap-tab]'));
         const panels = Array.from(root.querySelectorAll('[data-roadmap-panel]'));
 
@@ -198,6 +204,13 @@
           root.querySelectorAll('[data-roadmap-empty]').forEach((empty) => {
             empty.hidden = hasAnyVisibleMilestone;
           });
+
+          if (bulkToggleButton) {
+            const allSelected = projectButtons.length > 0 && projectButtons.every((button) => button.getAttribute('aria-pressed') === 'true');
+            const label = allSelected ? bulkToggleButton.dataset.deselectAllLabel : bulkToggleButton.dataset.selectAllLabel;
+            bulkToggleButton.textContent = label;
+            bulkToggleButton.setAttribute('aria-label', label);
+          }
         }
 
         function selectTab(tabName) {
@@ -218,6 +231,16 @@
             renderFilters();
           });
         });
+
+        if (bulkToggleButton) {
+          bulkToggleButton.addEventListener('click', () => {
+            const allSelected = projectButtons.length > 0 && projectButtons.every((button) => button.getAttribute('aria-pressed') === 'true');
+            projectButtons.forEach((button) => {
+              button.setAttribute('aria-pressed', allSelected ? 'false' : 'true');
+            });
+            renderFilters();
+          });
+        }
 
         tabs.forEach((tab) => {
           tab.addEventListener('click', () => selectTab(tab.dataset.roadmapTab));

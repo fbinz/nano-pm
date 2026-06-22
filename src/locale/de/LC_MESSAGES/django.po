@@ -239,6 +239,14 @@ msgstr "Roadmap"
 msgid "Roadmap views"
 msgstr "Roadmap-Ansichten"
 
+#: templates/public/roadmap.html:44
+msgid "Select all"
+msgstr "Alle auswählen"
+
+#: templates/public/roadmap.html:45
+msgid "Deselect all"
+msgstr "Alle abwählen"
+
 #: templates/public/roadmap.html:57
 msgid "Grouped"
 msgstr "Gruppiert"

@@ -1635,8 +1635,18 @@ test.describe('workspace isolation', () => {
 
     const filters = page.locator('#roadmap-project-filter');
     await expect(filters.getByRole('button', { name: /API Migration/ })).toHaveAttribute('aria-pressed', 'true');
-    await expect(filters.getByRole('button')).toHaveCount(3);
+    await expect(filters.locator('[data-project-filter]')).toHaveCount(3);
     await expect(filters).toContainText('Move public API traffic to the new v2 platform.');
+
+    await filters.getByRole('button', { name: 'Deselect all' }).click();
+    await expect(filters.locator('[data-project-filter][aria-pressed="true"]')).toHaveCount(0);
+    await expect(page.locator('.roadmap-milestone-card:visible')).toHaveCount(0);
+    await expect(page.locator('[data-roadmap-empty]')).toBeVisible();
+    await expect(filters.getByRole('button', { name: 'Select all' })).toBeVisible();
+
+    await filters.getByRole('button', { name: 'Select all' }).click();
+    await expect(filters.locator('[data-project-filter][aria-pressed="true"]')).toHaveCount(3);
+    await expect(filters.getByRole('button', { name: 'Deselect all' })).toBeVisible();
 
     await expect(page.getByRole('tabpanel', { name: 'Grouped' })).toBeVisible();
     await expect(page.locator('.roadmap-group:visible')).toHaveCount(2);
