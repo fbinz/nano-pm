@@ -31,10 +31,19 @@
                 </button>
               </form>
             {% endfor %}
+            {% if is_pm %}
+              <form method="post" action="/workspaces/rename/" class="workspace-create">
+                {% csrf_token %}
+                <c-lucide name="pencil" size="14" />
+                <input id="workspace-rename-name" class="input input-sm w-full" type="text" name="name"
+                       value="{{ workspace.name }}" maxlength="200" aria-label="{% trans 'Workspace name' %}" required>
+                <button type="submit" class="btn btn-sm btn-neutral workspace-create-btn">{% trans "Rename" %}</button>
+              </form>
+            {% endif %}
             <form method="post" action="/workspaces/" class="workspace-create">
               {% csrf_token %}
               <c-lucide name="plus-circle" size="14" />
-              <input class="input input-sm w-full" type="text" name="name" placeholder="{% trans 'Create workspace' %}" required>
+              <input id="workspace-create-name" class="input input-sm w-full" type="text" name="name" placeholder="{% trans 'Create workspace' %}" required>
               <button type="submit" class="btn btn-sm btn-neutral workspace-create-btn">{% trans "Create" %}</button>
             </form>
             {% if is_pm %}

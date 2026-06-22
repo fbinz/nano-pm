@@ -34,6 +34,22 @@ def workspace_create(request: HttpRequest):
     return redirect("/")
 
 
+@require_http_methods(["POST"])
+@login_required
+def workspace_rename(request: HttpRequest):
+    if not is_pm(request):
+        return HttpResponse(status=403)
+
+    name = request.POST.get("name", "").strip()
+    if not name:
+        return HttpResponse(status=400)
+
+    workspace = request.workspace
+    workspace.name = name[:200]
+    workspace.save(update_fields=["name", "updated_at"])
+    return redirect("/")
+
+
 def _generate_public_roadmap_token() -> str:
     while True:
         token = secrets.token_urlsafe(18)

@@ -26,7 +26,7 @@ from .people import (
     person_teams_update, team_create, team_update, team_delete,
 )
 from .workspaces import (
-    workspace_switch, workspace_create,
+    workspace_switch, workspace_create, workspace_rename,
     public_roadmap, public_roadmap_update, public_roadmap_regenerate,
 )
 
@@ -86,6 +86,7 @@ urlpatterns = [
     path("teams/<int:team_id>/delete/",              team_delete,      name="team_delete"),
     # Workspaces
     path("workspaces/",                              workspace_create, name="workspace_create"),
+    path("workspaces/rename/",                       workspace_rename, name="workspace_rename"),
     path("workspaces/<int:workspace_id>/switch/",    workspace_switch, name="workspace_switch"),
     path("workspaces/public-roadmap/",               public_roadmap_update, name="public_roadmap_update"),
     path("workspaces/public-roadmap/regenerate/",    public_roadmap_regenerate, name="public_roadmap_regenerate"),

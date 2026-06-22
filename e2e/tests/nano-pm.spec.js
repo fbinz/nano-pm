@@ -1530,13 +1530,29 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('#workspace-menu')).toBeVisible();
 
     // Type the name into the "Create workspace" input and press Enter
-    await page.fill('#workspace-menu input[name=name]', 'Side project');
-    await page.locator('#workspace-menu input[name=name]').press('Enter');
+    await page.fill('#workspace-create-name', 'Side project');
+    await page.locator('#workspace-create-name').press('Enter');
     await page.waitForURL('/');
 
     // Now in the new empty workspace
     await expect(page.locator('#workspace-name')).toHaveText('Side project');
     await expect(page.locator('.left-cell.proj')).toHaveCount(0);
+  });
+
+  test('PM can rename the current workspace from the switcher', async ({ appPage: page }) => {
+    await expect(page.locator('#workspace-name')).toHaveText("demo's workspace");
+
+    await page.locator('.ws-chevron-btn').click();
+    await expect(page.locator('#workspace-menu')).toBeVisible();
+
+    await page.fill('#workspace-rename-name', 'Roadmap HQ');
+    await page.locator('#workspace-rename-name').press('Enter');
+    await page.waitForURL('/');
+
+    await expect(page.locator('#workspace-name')).toHaveText('Roadmap HQ');
+
+    await page.locator('.ws-chevron-btn').click();
+    await expect(page.locator('#workspace-menu .workspace-item.active')).toContainText('Roadmap HQ');
   });
 
   test('PM can enable and revoke a public roadmap generated from milestones', async ({ appPage: page, request }) => {
@@ -1589,8 +1605,8 @@ test.describe('workspace isolation', () => {
   test('PM can move a project to another workspace after confirmation', async ({ appPage: page }) => {
     // Create a second workspace owned by demo; creation switches into it.
     await page.locator('.ws-chevron-btn').click();
-    await page.fill('#workspace-menu input[name=name]', 'Side project');
-    await page.locator('#workspace-menu input[name=name]').press('Enter');
+    await page.fill('#workspace-create-name', 'Side project');
+    await page.locator('#workspace-create-name').press('Enter');
     await page.waitForURL('/');
     await expect(page.locator('#workspace-name')).toHaveText('Side project');
     await expect(page.locator('.left-cell.proj')).toHaveCount(0);
