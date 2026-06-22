@@ -1746,6 +1746,33 @@ test.describe('member role', () => {
     await expect(page.locator('.bar', { hasText: 'Migrate users (updated by member)' })).toBeVisible();
   });
 
+  test('member can update an unassigned task', async ({ page, request }) => {
+    await reset(request);
+    await loginAsMember(page);
+
+    const barsBefore = await page.locator('.bar').count();
+    const row = page.locator('.chart-row.proj').first();
+    const rowBox = await row.boundingBox();
+    const sidebar = await page.locator('.left-cell.proj').first().boundingBox();
+    const chartX = sidebar.x + sidebar.width + 20;
+    await page.mouse.move(chartX, rowBox.y + rowBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(chartX + 120, rowBox.y + rowBox.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await expect(page.locator('.bar')).toHaveCount(barsBefore + 1);
+
+    const newTask = page.locator('.bar', { hasText: 'New task' });
+    await newTask.click();
+    await expect(page.locator('#task-popover')).toBeVisible();
+    await expect(page.locator('#task-popover button[type=submit]')).toBeVisible();
+    await expect(page.locator('#task-popover button', { hasText: 'Delete' })).toBeVisible();
+
+    await page.fill('#task-popover input[name=title]', 'Unassigned task updated by member');
+    await page.click('#task-popover button[type=submit]');
+    await expect(page.locator('#task-popover')).toHaveCount(0);
+    await expect(page.locator('.bar', { hasText: 'Unassigned task updated by member' })).toBeVisible();
+  });
+
   test('member cannot update a task not assigned to them', async ({ page, request }) => {
     await reset(request);
     await loginAsMember(page);

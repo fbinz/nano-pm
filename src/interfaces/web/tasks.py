@@ -36,7 +36,7 @@ def render_task_popover(request: HttpRequest, task_id: int) -> str | None:
     )
     task.assignee_ids = list(task.assignees.values_list("id", flat=True))
     task.project_id = task.project.id
-    can_edit = is_pm(request) or is_assigned(request, task)
+    can_edit = is_pm(request) or not task.assignee_ids or is_assigned(request, task)
     return render_component(
         request, "screens/gantt/task-popover",
         task=task, projects=state.projects, people=state.people,
