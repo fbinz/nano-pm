@@ -1,4 +1,5 @@
 {% load static i18n %}
+{% get_static_prefix as STATIC_PREFIX %}
 <c-vars idea statuses projects default_start default_end can_edit can_delete user is_pm workspace workspaces has_multiple_workspaces />
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
     :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
@@ -56,7 +57,7 @@
       <label class="idea-field idea-body-field">
         <span>{% trans "Markdown notes" %}</span>
         <textarea id="idea-body-editor" class="textarea idea-body-editor" name="body" rows="24"
-                  data-tinymce-base-url="{% static 'vendor/tinymce' %}"
+                  data-tinymce-base-url="{{ STATIC_PREFIX }}vendor/tinymce"
                   placeholder="{% trans 'Brainstorm goals, open questions, links, pros and cons…' %}"{% if not can_edit %} readonly{% endif %}>{{ idea.body }}</textarea>
       </label>
 
