@@ -21,6 +21,14 @@
 #   DJANGO_HSTS_SECONDS      — start small (e.g. 3600); ramp up only when
 #                              you're confident the cert won't lapse.
 #
+# Optional logging env:
+#   DJANGO_LOG_LEVEL         — Django logger level; set DEBUG temporarily when
+#                              diagnosing prod issues. Defaults to INFO.
+#   NANO_PM_LOG_LEVEL        — app package logger level. Defaults to
+#                              DJANGO_LOG_LEVEL.
+#   DJANGO_DB_LOG_LEVEL      — SQL logger level. Defaults to WARNING; DEBUG is
+#                              very noisy and may include query parameters.
+#
 # Persistent state: SQLite lives at /data/db.sqlite3 (DJANGO_DB_PATH).
 # CapRover users MUST attach a persistent directory to /data via "App Configs"
 # → "Persistent Directories" before the first deploy — otherwise the DB lives

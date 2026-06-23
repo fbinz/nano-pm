@@ -11,6 +11,12 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _env_log_level(name: str, default: str) -> str:
+    level = os.environ.get(name, default).strip().upper()
+    valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+    return level if level in valid_levels else default.upper()
+
+
 # DEBUG defaults to False — production-safe by default. Set DJANGO_DEBUG=true
 # in dev (the justfile and Playwright's webServer do this for you).
 DEBUG = _env_bool("DJANGO_DEBUG", False)
@@ -34,6 +40,68 @@ ALLOWED_HOSTS = [
     for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
     if h.strip()
 ]
+
+# Console logging. In production these go to stdout/stderr for the container
+# platform to collect. Raise DJANGO_LOG_LEVEL or NANO_PM_LOG_LEVEL to DEBUG
+# temporarily when investigating prod-only behaviour.
+LOG_LEVEL = _env_log_level("DJANGO_LOG_LEVEL", "INFO")
+APP_LOG_LEVEL = _env_log_level("NANO_PM_LOG_LEVEL", LOG_LEVEL)
+DB_LOG_LEVEL = _env_log_level("DJANGO_DB_LOG_LEVEL", "WARNING")
+ROOT_LOG_LEVEL = _env_log_level("PYTHON_LOG_LEVEL", "WARNING")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{levelname}] {asctime} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": ROOT_LOG_LEVEL,
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.security": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": DB_LOG_LEVEL,
+            "propagate": False,
+        },
+        "actions": {"handlers": ["console"], "level": APP_LOG_LEVEL, "propagate": False},
+        "config": {"handlers": ["console"], "level": APP_LOG_LEVEL, "propagate": False},
+        "data": {"handlers": ["console"], "level": APP_LOG_LEVEL, "propagate": False},
+        "interfaces": {"handlers": ["console"], "level": APP_LOG_LEVEL, "propagate": False},
+        "middleware": {"handlers": ["console"], "level": APP_LOG_LEVEL, "propagate": False},
+        "readers": {"handlers": ["console"], "level": APP_LOG_LEVEL, "propagate": False},
+    },
+}
 
 # Test-only data-reset endpoint (`/__reset__/`). Off by default; enabled
 # explicitly in CI/local-test environments. Decoupled from DEBUG so a deploy
