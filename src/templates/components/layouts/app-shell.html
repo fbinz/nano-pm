@@ -1,5 +1,5 @@
 {% load static i18n %}
-<c-vars user is_pm workspace workspaces has_multiple_workspaces active_nav sidebar_width="" />
+<c-vars user is_pm workspace workspaces has_multiple_workspaces can_view_ideas active_nav sidebar_width="" />
 <c-layouts.base title="nano-pm" :sidebar_width="sidebar_width">
   <div class="drawer lg:drawer-open">
     <input id="app-drawer" type="checkbox" class="drawer-toggle" />
@@ -89,6 +89,11 @@
           <li><a href="/resources/"{% if active_nav == "resources" %} class="menu-active"{% endif %}>
             <c-lucide name="users" size="18" /> {% trans "Resources" %}
           </a></li>
+          {% if can_view_ideas %}
+            <li><a href="/ideas/"{% if active_nav == "ideas" %} class="menu-active"{% endif %}>
+              <c-lucide name="lightbulb" size="18" /> {% trans "Ideas" %}
+            </a></li>
+          {% endif %}
           <li><a href="/people/"{% if active_nav == "people" %} class="menu-active"{% endif %}>
             <c-lucide name="user-cog" size="18" /> {% trans "People" %}
           </a></li>

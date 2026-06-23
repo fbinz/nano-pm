@@ -1,0 +1,43 @@
+{% load i18n %}
+<c-vars groups can_add user is_pm workspace workspaces has_multiple_workspaces />
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
+    :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
+    active_nav="ideas">
+  <main id="ideas-page">
+    <header class="ideas-header">
+      <div>
+        <h1>{% trans "Ideas" %}</h1>
+        <p>{% trans "Capture rough project thoughts before they become scheduled work." %}</p>
+      </div>
+      {% if can_add %}
+        <form method="post" action="/ideas/create/" class="idea-quick-create">
+          {% csrf_token %}
+          <input class="input input-sm" type="text" name="title"
+                 placeholder="{% trans 'Sketch a new idea…' %}" maxlength="200" required>
+          <button class="btn btn-sm btn-neutral" type="submit">{% trans "Add idea" %}</button>
+        </form>
+      {% endif %}
+    </header>
+
+    <section class="ideas-board" aria-label="{% trans 'Ideas by status' %}">
+      {% for group in groups %}
+        <section class="idea-column" data-status="{{ group.value }}">
+          <h2>{{ group.label }} <span>{{ group.ideas|length }}</span></h2>
+          <div class="idea-cards">
+            {% for idea in group.ideas %}
+              <a class="idea-card" href="/ideas/{{ idea.id }}/">
+                <strong>{{ idea.title }}</strong>
+                <div class="idea-card-meta">
+                  {% for tag in idea.tag_list %}<span class="badge badge-ghost badge-sm">{{ tag }}</span>{% endfor %}
+                  <time datetime="{{ idea.updated_at|date:'c' }}">{{ idea.updated_at|date:"M j" }}</time>
+                </div>
+              </a>
+            {% empty %}
+              <p class="ideas-empty">{% trans "No ideas here yet." %}</p>
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    </section>
+  </main>
+</c-layouts.app-shell>

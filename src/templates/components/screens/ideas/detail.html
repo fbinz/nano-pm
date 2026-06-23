@@ -1,0 +1,126 @@
+{% load static i18n %}
+<c-vars idea statuses projects default_start default_end can_edit can_delete user is_pm workspace workspaces has_multiple_workspaces />
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
+    :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
+    active_nav="ideas">
+  <main id="idea-detail-page">
+    <nav class="idea-breadcrumb">
+      <a class="btn btn-sm btn-ghost" href="/ideas/" aria-label="{% trans 'Back to Ideas' %}">
+        <c-lucide name="arrow-left" size="16" />
+        <span>{% trans "Back to Ideas" %}</span>
+      </a>
+    </nav>
+
+    {% if messages %}
+      <div class="idea-messages">
+        {% for message in messages %}
+          <div class="idea-flash alert alert-success">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if idea.converted_project %}
+      <div class="idea-conversion alert alert-info">
+        {% trans "Converted to project" %}:
+        <a class="link" href="/">{{ idea.converted_project.name }}</a>
+      </div>
+    {% elif idea.converted_task %}
+      <div class="idea-conversion alert alert-info">
+        {% trans "Converted to task" %}: {{ idea.converted_task.title }}
+      </div>
+    {% endif %}
+
+    {% if not can_edit %}
+      <div class="idea-permission-note alert alert-warning">
+        {% trans "You need the Django change idea permission to edit this idea." %}
+      </div>
+    {% endif %}
+
+    <form method="post" action="/ideas/{{ idea.id }}/update/" class="idea-editor">
+      {% csrf_token %}
+      <div class="idea-title-row">
+        <input class="idea-title-input" type="text" name="title" value="{{ idea.title }}" maxlength="200" required{% if not can_edit %} readonly{% endif %}>
+        <select class="select select-sm" name="status" aria-label="{% trans 'Idea status' %}"{% if not can_edit %} disabled{% endif %}>
+          {% for status in statuses %}
+            <option value="{{ status.value }}"{% if idea.status == status.value %} selected{% endif %}>{{ status.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <label class="idea-field">
+        <span>{% trans "Tags" %}</span>
+        <input class="input input-sm" type="text" name="tags" value="{{ idea.tags }}"
+               placeholder="{% trans 'client, roadmap, quick-win' %}"{% if not can_edit %} readonly{% endif %}>
+      </label>
+
+      <label class="idea-field idea-body-field">
+        <span>{% trans "Markdown notes" %}</span>
+        <textarea id="idea-body-editor" class="textarea idea-body-editor" name="body" rows="24"
+                  data-tinymce-base-url="{% static 'vendor/tinymce' %}"
+                  placeholder="{% trans 'Brainstorm goals, open questions, links, pros and cons…' %}"{% if not can_edit %} readonly{% endif %}>{{ idea.body }}</textarea>
+      </label>
+
+      {% if can_edit %}
+        <div class="idea-editor-actions">
+          <button class="btn btn-neutral" type="submit">{% trans "Save idea" %}</button>
+        </div>
+      {% endif %}
+    </form>
+
+    {% if can_edit or can_delete %}
+    <section class="idea-actions-panel" aria-label="{% trans 'Idea actions' %}">
+      {% if can_edit %}
+        <form method="post" action="/ideas/{{ idea.id }}/convert/project/" class="idea-action-card">
+          {% csrf_token %}
+          <h2>{% trans "Promote to project" %}</h2>
+          <p>{% trans "Create a project using this idea title and notes." %}</p>
+          <button class="btn btn-sm btn-neutral" type="submit">{% trans "Convert to project" %}</button>
+        </form>
+
+        <form method="post" action="/ideas/{{ idea.id }}/create-task/" class="idea-action-card">
+          {% csrf_token %}
+          <h2>{% trans "Create task" %}</h2>
+          <p>{% trans "Turn this idea into a scheduled task in an existing project." %}</p>
+          <input class="input input-sm" type="text" name="title" value="{{ idea.title }}" aria-label="{% trans 'Task title' %}">
+          <div class="idea-task-row">
+            <select class="select select-sm" name="project_id" aria-label="{% trans 'Project' %}" required>
+              {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.name }}</option>
+              {% endfor %}
+            </select>
+            <input class="input input-sm" type="date" name="start" value="{{ default_start }}" aria-label="{% trans 'Start date' %}" required>
+            <input class="input input-sm" type="date" name="end" value="{{ default_end }}" aria-label="{% trans 'End date' %}" required>
+          </div>
+          <button class="btn btn-sm btn-outline" type="submit"{% if not projects %} disabled{% endif %}>{% trans "Create task from idea" %}</button>
+        </form>
+
+        <div class="idea-action-card">
+          <h2>{% trans "Triage" %}</h2>
+          <p>{% trans "Move the idea out of active exploration without deleting it." %}</p>
+          <div class="idea-triage-actions">
+            <form method="post" action="/ideas/{{ idea.id }}/status/parked/">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-ghost" type="submit">{% trans "Park" %}</button>
+            </form>
+            <form method="post" action="/ideas/{{ idea.id }}/status/rejected/">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-ghost text-error" type="submit">{% trans "Reject" %}</button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+      {% if can_delete %}
+        <form method="post" action="/ideas/{{ idea.id }}/delete/" class="idea-action-card"
+              onsubmit="return confirm('{% trans 'Delete idea' %}: {{ idea.title|escapejs }}?')">
+          {% csrf_token %}
+          <h2>{% trans "Danger zone" %}</h2>
+          <p>{% trans "Delete this idea permanently." %}</p>
+          <button class="btn btn-sm btn-ghost text-error" type="submit">{% trans "Delete idea" %}</button>
+        </form>
+      {% endif %}
+    </section>
+    {% endif %}
+  </main>
+  <script src="{% static 'vendor/tinymce/tinymce.min.js' %}"></script>
+  <script src="{% static 'js/idea-editor.js' %}"></script>
+</c-layouts.app-shell>

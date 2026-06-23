@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-19 07:23+0000\n"
+"POT-Creation-Date: 2026-06-23 11:17+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -51,6 +51,30 @@ msgstr "Benutzername und Passwort sind erforderlich."
 msgid "That username is already taken."
 msgstr "Dieser Benutzername ist bereits vergeben."
 
+#: data/models/idea.py:7
+msgid "Inbox"
+msgstr "Eingang"
+
+#: data/models/idea.py:8
+msgid "Exploring"
+msgstr "In Prüfung"
+
+#: data/models/idea.py:9
+msgid "Promising"
+msgstr "Vielversprechend"
+
+#: data/models/idea.py:10
+msgid "Parked"
+msgstr "Geparkt"
+
+#: data/models/idea.py:11
+msgid "Rejected"
+msgstr "Abgelehnt"
+
+#: data/models/idea.py:12
+msgid "Converted"
+msgstr "Umgewandelt"
+
 #: data/models/membership.py:7
 msgid "PM"
 msgstr "PM"
@@ -69,10 +93,26 @@ msgstr "In Bearbeitung"
 
 #: data/models/task.py:10 templates/components/screens/gantt/chart.html:54
 #: templates/components/screens/gantt/milestone-popover.html:37
-#: templates/components/screens/gantt/project-popover.html:64
+#: templates/components/screens/gantt/project-popover.html:68
 #: templates/components/screens/gantt/task-popover.html:77
 msgid "Done"
 msgstr "Erledigt"
+
+#: interfaces/web/ideas.py:120
+msgid "Idea saved."
+msgstr "Idee gespeichert."
+
+#: interfaces/web/ideas.py:147
+msgid "Idea converted to a project."
+msgstr "Idee in ein Projekt umgewandelt."
+
+#: interfaces/web/ideas.py:171
+msgid "Idea converted to a task."
+msgstr "Idee in eine Aufgabe umgewandelt."
+
+#: interfaces/web/ideas.py:182
+msgid "Idea deleted."
+msgstr "Idee gelöscht."
 
 #: interfaces/web/people.py:36
 #: templates/components/screens/people/people-content.html:11
@@ -85,68 +125,68 @@ msgstr "Person hinzufügen…"
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
 
-#: readers/public_roadmap.py:43
+#: readers/public_roadmap.py:57
 msgid "today"
 msgstr "heute"
 
-#: readers/public_roadmap.py:45
+#: readers/public_roadmap.py:59
 msgid "tomorrow"
 msgstr "morgen"
 
-#: readers/public_roadmap.py:47
+#: readers/public_roadmap.py:61
 msgid "yesterday"
 msgstr "gestern"
 
-#: readers/public_roadmap.py:52
+#: readers/public_roadmap.py:66
 #, python-format
 msgid "in %(count)d day"
 msgid_plural "in %(count)d days"
 msgstr[0] "in %(count)d Tag"
 msgstr[1] "in %(count)d Tagen"
 
-#: readers/public_roadmap.py:53
+#: readers/public_roadmap.py:67
 #, python-format
 msgid "%(count)d day ago"
 msgid_plural "%(count)d days ago"
 msgstr[0] "vor %(count)d Tag"
 msgstr[1] "vor %(count)d Tagen"
 
-#: readers/public_roadmap.py:56
+#: readers/public_roadmap.py:70
 #, python-format
 msgid "in %(count)d week"
 msgid_plural "in %(count)d weeks"
 msgstr[0] "in %(count)d Woche"
 msgstr[1] "in %(count)d Wochen"
 
-#: readers/public_roadmap.py:57
+#: readers/public_roadmap.py:71
 #, python-format
 msgid "%(count)d week ago"
 msgid_plural "%(count)d weeks ago"
 msgstr[0] "vor %(count)d Woche"
 msgstr[1] "vor %(count)d Wochen"
 
-#: readers/public_roadmap.py:60
+#: readers/public_roadmap.py:74
 #, python-format
 msgid "in %(count)d month"
 msgid_plural "in %(count)d months"
 msgstr[0] "in %(count)d Monat"
 msgstr[1] "in %(count)d Monaten"
 
-#: readers/public_roadmap.py:61
+#: readers/public_roadmap.py:75
 #, python-format
 msgid "%(count)d month ago"
 msgid_plural "%(count)d months ago"
 msgstr[0] "vor %(count)d Monat"
 msgstr[1] "vor %(count)d Monaten"
 
-#: readers/public_roadmap.py:64
+#: readers/public_roadmap.py:78
 #, python-format
 msgid "in %(count)d year"
 msgid_plural "in %(count)d years"
 msgstr[0] "in %(count)d Jahr"
 msgstr[1] "in %(count)d Jahren"
 
-#: readers/public_roadmap.py:65
+#: readers/public_roadmap.py:79
 #, python-format
 msgid "%(count)d year ago"
 msgid_plural "%(count)d years ago"
@@ -215,113 +255,97 @@ msgstr "Arbeitsbereich wechseln"
 msgid "Workspaces"
 msgstr "Arbeitsbereiche"
 
-#: templates/components/layouts/app-shell.html:37
+#: templates/components/layouts/app-shell.html:39
+msgid "Workspace name"
+msgstr "Arbeitsbereichsname"
+
+#: templates/components/layouts/app-shell.html:40
+msgid "Rename"
+msgstr "Umbenennen"
+
+#: templates/components/layouts/app-shell.html:46
 msgid "Create workspace"
 msgstr "Arbeitsbereich erstellen"
 
-#: templates/components/layouts/app-shell.html:38
+#: templates/components/layouts/app-shell.html:47
 msgid "Create"
 msgstr "Erstellen"
 
-#: templates/components/layouts/app-shell.html:41
+#: templates/components/layouts/app-shell.html:50
 msgid "Public roadmap"
 msgstr "Öffentliche Roadmap"
 
-#: templates/components/layouts/app-shell.html:48
+#: templates/components/layouts/app-shell.html:57
 msgid "Open public roadmap"
 msgstr "Öffentliche Roadmap öffnen"
 
-#: templates/components/layouts/app-shell.html:53
+#: templates/components/layouts/app-shell.html:62
 msgid "Roadmap"
 msgstr "Roadmap"
 
-#: templates/public/roadmap.html:49
-msgid "Roadmap views"
-msgstr "Roadmap-Ansichten"
-
-#: templates/public/roadmap.html:44
-msgid "Select all"
-msgstr "Alle auswählen"
-
-#: templates/public/roadmap.html:45
-msgid "Deselect all"
-msgstr "Alle abwählen"
-
-#: templates/public/roadmap.html:57
-msgid "Grouped"
-msgstr "Gruppiert"
-
-#: templates/public/roadmap.html:65
-msgid "Timeline"
-msgstr "Zeitachse"
-
-#: templates/public/roadmap.html:141
-msgid "No milestones match these projects"
-msgstr "Keine Meilensteine passen zu diesen Projekten"
-
-#: templates/public/roadmap.html:142
-msgid "Toggle a project on to see its roadmap milestones."
-msgstr "Aktivieren Sie ein Projekt, um seine Roadmap-Meilensteine zu sehen."
-
-#: templates/components/layouts/app-shell.html:55
+#: templates/components/layouts/app-shell.html:64
 msgid "Optional public description"
 msgstr "Optionale öffentliche Beschreibung"
 
-#: templates/components/layouts/app-shell.html:57
+#: templates/components/layouts/app-shell.html:66
 msgid "Save"
 msgstr "Speichern"
 
-#: templates/components/layouts/app-shell.html:58
+#: templates/components/layouts/app-shell.html:67
 msgid "Disable public roadmap"
 msgstr "Öffentliche Roadmap deaktivieren"
 
-#: templates/components/layouts/app-shell.html:63
+#: templates/components/layouts/app-shell.html:72
 msgid "Regenerate public link"
 msgstr "Öffentlichen Link neu erzeugen"
 
-#: templates/components/layouts/app-shell.html:66
+#: templates/components/layouts/app-shell.html:75
 msgid "Share milestones without exposing tasks or people."
 msgstr "Meilensteine teilen, ohne Aufgaben oder Personen offenzulegen."
 
-#: templates/components/layouts/app-shell.html:69
+#: templates/components/layouts/app-shell.html:78
 msgid "Enable public roadmap"
 msgstr "Öffentliche Roadmap aktivieren"
 
-#: templates/components/layouts/app-shell.html:78
+#: templates/components/layouts/app-shell.html:87
+#: templates/public/roadmap.html:37
 msgid "Projects"
 msgstr "Projekte"
 
-#: templates/components/layouts/app-shell.html:81
+#: templates/components/layouts/app-shell.html:90
 msgid "Resources"
 msgstr "Ressourcen"
 
-#: templates/components/layouts/app-shell.html:84
+#: templates/components/layouts/app-shell.html:94
+#: templates/components/screens/ideas/index.html:9
+msgid "Ideas"
+msgstr "Ideen"
+
+#: templates/components/layouts/app-shell.html:98
 #: templates/components/screens/people/index.html:8
 #: templates/components/screens/people/people-content.html:18
 msgid "People"
 msgstr "Personen"
 
-#: templates/components/layouts/app-shell.html:92
-#: templates/components/layouts/app-shell.html:94
-#: templates/components/layouts/app-shell.html:95
-#, fuzzy
-#| msgid "Switch workspace"
+#: templates/components/layouts/app-shell.html:106
+#: templates/components/layouts/app-shell.html:108
+#: templates/components/layouts/app-shell.html:109
 msgid "Switch to dark mode"
-msgstr "Arbeitsbereich wechseln"
+msgstr "In den Dunkelmodus wechseln"
 
-#: templates/components/layouts/app-shell.html:93
+#: templates/components/layouts/app-shell.html:107
 msgid "Switch to light mode"
-msgstr ""
+msgstr "In den Hellmodus wechseln"
 
-#: templates/components/layouts/app-shell.html:98
+#: templates/components/layouts/app-shell.html:112
 msgid "Theme"
-msgstr ""
+msgstr "Design"
 
-#: templates/components/layouts/app-shell.html:113
+#: templates/components/layouts/app-shell.html:127
 msgid "Sign out"
 msgstr "Abmelden"
 
-#: templates/components/layouts/app-shell.html:125
+#: templates/components/layouts/app-shell.html:139
 msgid "Close"
 msgstr "Schließen"
 
@@ -405,6 +429,7 @@ msgid "Title"
 msgstr "Titel"
 
 #: templates/components/screens/gantt/milestone-popover.html:17
+#: templates/components/screens/gantt/project-popover.html:16
 #: templates/components/screens/gantt/task-popover.html:16
 msgid "Description"
 msgstr "Beschreibung"
@@ -415,6 +440,7 @@ msgstr "Datum"
 
 #: templates/components/screens/gantt/milestone-popover.html:26
 #: templates/components/screens/gantt/task-popover.html:30
+#: templates/components/screens/ideas/detail.html:86
 msgid "Project"
 msgstr "Projekt"
 
@@ -431,54 +457,54 @@ msgstr "Löschen"
 msgid "Name"
 msgstr "Name"
 
-#: templates/components/screens/gantt/project-popover.html:16
+#: templates/components/screens/gantt/project-popover.html:20
 msgid "Color"
 msgstr "Farbe"
 
-#: templates/components/screens/gantt/project-popover.html:29
+#: templates/components/screens/gantt/project-popover.html:33
 msgid "move up"
 msgstr "nach oben"
 
-#: templates/components/screens/gantt/project-popover.html:31
+#: templates/components/screens/gantt/project-popover.html:35
 msgid "move down"
 msgstr "nach unten"
 
-#: templates/components/screens/gantt/project-popover.html:35
+#: templates/components/screens/gantt/project-popover.html:39
 msgid "+ Add milestone"
 msgstr "+ Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:40
+#: templates/components/screens/gantt/project-popover.html:44
 msgid "Reopen project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:40
+#: templates/components/screens/gantt/project-popover.html:44
 msgid "Mark complete"
 msgstr "Als erledigt markieren"
 
-#: templates/components/screens/gantt/project-popover.html:45
+#: templates/components/screens/gantt/project-popover.html:49
 #, fuzzy
 #| msgid "Create workspace"
 msgid "Move to workspace"
 msgstr "Arbeitsbereich erstellen"
 
-#: templates/components/screens/gantt/project-popover.html:54
+#: templates/components/screens/gantt/project-popover.html:58
 #, fuzzy, python-format
 #| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgid "Move project &quot;%(name)s&quot; to the selected workspace?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:55
+#: templates/components/screens/gantt/project-popover.html:59
 #, fuzzy
 #| msgid "Reopen project"
 msgid "Move project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:62
+#: templates/components/screens/gantt/project-popover.html:66
 #, python-format
 msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:62
+#: templates/components/screens/gantt/project-popover.html:66
 msgid "Delete project"
 msgstr "Projekt löschen"
 
@@ -550,6 +576,136 @@ msgstr "Nach Team filtern"
 msgid "No teams yet."
 msgstr "Noch keine Teams."
 
+#: templates/components/screens/ideas/detail.html:8
+#: templates/components/screens/ideas/detail.html:10
+msgid "Back to Ideas"
+msgstr "Zurück zu Ideen"
+
+#: templates/components/screens/ideas/detail.html:24
+msgid "Converted to project"
+msgstr "In Projekt umgewandelt"
+
+#: templates/components/screens/ideas/detail.html:29
+msgid "Converted to task"
+msgstr "In Aufgabe umgewandelt"
+
+#: templates/components/screens/ideas/detail.html:35
+msgid "You need the Django change idea permission to edit this idea."
+msgstr "Du benötigst die Django-Berechtigung change_idea, um diese Idee zu bearbeiten."
+
+#: templates/components/screens/ideas/detail.html:43
+msgid "Idea status"
+msgstr "Ideenstatus"
+
+#: templates/components/screens/ideas/detail.html:51
+msgid "Tags"
+msgstr "Tags"
+
+#: templates/components/screens/ideas/detail.html:53
+msgid "client, roadmap, quick-win"
+msgstr "Kunde, Roadmap, Quick-Win"
+
+#: templates/components/screens/ideas/detail.html:57
+msgid "Markdown notes"
+msgstr "Markdown-Notizen"
+
+#: templates/components/screens/ideas/detail.html:60
+msgid "Brainstorm goals, open questions, links, pros and cons…"
+msgstr "Ziele, offene Fragen, Links, Vor- und Nachteile brainstormen…"
+
+#: templates/components/screens/ideas/detail.html:65
+msgid "Save idea"
+msgstr "Idee speichern"
+
+#: templates/components/screens/ideas/detail.html:71
+msgid "Idea actions"
+msgstr "Ideenaktionen"
+
+#: templates/components/screens/ideas/detail.html:75
+msgid "Promote to project"
+msgstr "Zum Projekt machen"
+
+#: templates/components/screens/ideas/detail.html:76
+msgid "Create a project using this idea title and notes."
+msgstr "Erstellt ein Projekt aus Titel und Notizen dieser Idee."
+
+#: templates/components/screens/ideas/detail.html:77
+msgid "Convert to project"
+msgstr "In Projekt umwandeln"
+
+#: templates/components/screens/ideas/detail.html:82
+msgid "Create task"
+msgstr "Aufgabe erstellen"
+
+#: templates/components/screens/ideas/detail.html:83
+msgid "Turn this idea into a scheduled task in an existing project."
+msgstr ""
+"Diese Idee in eine geplante Aufgabe in einem bestehenden Projekt umwandeln."
+
+#: templates/components/screens/ideas/detail.html:84
+msgid "Task title"
+msgstr "Aufgabentitel"
+
+#: templates/components/screens/ideas/detail.html:91
+msgid "Start date"
+msgstr "Startdatum"
+
+#: templates/components/screens/ideas/detail.html:92
+msgid "End date"
+msgstr "Enddatum"
+
+#: templates/components/screens/ideas/detail.html:94
+msgid "Create task from idea"
+msgstr "Aufgabe aus Idee erstellen"
+
+#: templates/components/screens/ideas/detail.html:98
+msgid "Triage"
+msgstr "Einordnen"
+
+#: templates/components/screens/ideas/detail.html:99
+msgid "Move the idea out of active exploration without deleting it."
+msgstr "Die Idee aus der aktiven Prüfung nehmen, ohne sie zu löschen."
+
+#: templates/components/screens/ideas/detail.html:103
+msgid "Park"
+msgstr "Parken"
+
+#: templates/components/screens/ideas/detail.html:107
+msgid "Reject"
+msgstr "Ablehnen"
+
+#: templates/components/screens/ideas/detail.html:115
+msgid "Danger zone"
+msgstr "Gefahrenbereich"
+
+#: templates/components/screens/ideas/detail.html:116
+msgid "Delete this idea permanently."
+msgstr "Diese Idee dauerhaft löschen."
+
+#: templates/components/screens/ideas/detail.html:117
+msgid "Delete idea"
+msgstr "Idee löschen"
+
+#: templates/components/screens/ideas/index.html:10
+msgid "Capture rough project thoughts before they become scheduled work."
+msgstr "Grobe Projektgedanken erfassen, bevor sie geplante Arbeit werden."
+
+#: templates/components/screens/ideas/index.html:16
+msgid "Sketch a new idea…"
+msgstr "Neue Idee skizzieren…"
+
+#: templates/components/screens/ideas/index.html:17
+msgid "Add idea"
+msgstr "Idee hinzufügen"
+
+#: templates/components/screens/ideas/index.html:22
+msgid "Ideas by status"
+msgstr "Ideen nach Status"
+
+#: templates/components/screens/ideas/index.html:37
+msgid "No ideas here yet."
+msgstr "Hier gibt es noch keine Ideen."
+
 #: templates/components/screens/people/index.html:9
 msgid "Team members you can assign to tasks."
 msgstr "Teammitglieder, die Sie Aufgaben zuweisen können."
@@ -620,13 +776,44 @@ msgstr "Entfernen"
 msgid "Remove team &quot;%(name)s&quot;?"
 msgstr "&quot;%(name)s&quot; entfernen?"
 
-#: templates/public/roadmap.html:38
+#: templates/public/roadmap.html:42
+msgid "Select all"
+msgstr "Alle auswählen"
+
+#: templates/public/roadmap.html:43
+msgid "Deselect all"
+msgstr "Alle abwählen"
+
+#: templates/public/roadmap.html:63
+msgid "Roadmap views"
+msgstr "Roadmap-Ansichten"
+
+#: templates/public/roadmap.html:70 templates/public/roadmap.html:83
+msgid "Grouped"
+msgstr "Gruppiert"
+
+#: templates/public/roadmap.html:77 templates/public/roadmap.html:121
+msgid "Timeline"
+msgstr "Zeitachse"
+
+#: templates/public/roadmap.html:152
+msgid "No milestones match these projects"
+msgstr "Keine Meilensteine passen zu diesen Projekten"
+
+#: templates/public/roadmap.html:153
+msgid "Toggle a project on to see its roadmap milestones."
+msgstr "Aktivieren Sie ein Projekt, um seine Roadmap-Meilensteine zu sehen."
+
+#: templates/public/roadmap.html:157 templates/public/roadmap.html:165
 msgid "No public milestones yet"
 msgstr "Noch keine öffentlichen Meilensteine"
 
-#: templates/public/roadmap.html:39
+#: templates/public/roadmap.html:158 templates/public/roadmap.html:166
 msgid "Check back later for roadmap updates."
 msgstr "Schauen Sie später wieder vorbei, um Roadmap-Updates zu sehen."
+
+#~ msgid "Only the creator or PMs can edit this idea."
+#~ msgstr "Nur der Ersteller oder PMs können diese Idee bearbeiten."
 
 #~ msgid "Status"
 #~ msgstr "Status"

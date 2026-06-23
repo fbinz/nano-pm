@@ -512,6 +512,85 @@ html, body { height: 100%; }
 }
 
 /* ===================================================================
+   Ideas pages
+   =================================================================== */
+@layer components {
+  #ideas-page,
+  #idea-detail-page {
+    @apply p-6 max-w-6xl;
+  }
+  .ideas-header {
+    @apply flex flex-wrap items-start justify-between gap-4 mb-6;
+  }
+  .ideas-header h1 { @apply text-xl font-semibold m-0 mb-1; }
+  .ideas-header p { @apply text-base-content/60 m-0; }
+  .idea-quick-create { @apply flex gap-2; }
+  .idea-quick-create input { @apply w-72; }
+  .ideas-board {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  .idea-column {
+    @apply min-h-48 rounded-lg border border-base-300 bg-base-200/60 p-3;
+  }
+  .idea-column h2 {
+    @apply m-0 mb-3 flex items-center justify-between text-sm font-semibold uppercase tracking-wide text-base-content/60;
+  }
+  .idea-column h2 span { @apply badge badge-sm badge-ghost; }
+  .idea-cards { @apply flex flex-col gap-2; }
+  .idea-card {
+    @apply block rounded border border-base-300 bg-base-100 p-3 no-underline shadow-sm hover:border-base-content/30;
+  }
+  .idea-card strong { @apply block text-sm text-base-content; }
+  .idea-card p { @apply mt-1 mb-2 text-sm text-base-content/65; }
+  .idea-card-meta { @apply flex flex-wrap items-center gap-1.5 text-xs text-base-content/50; }
+  .idea-card-meta time { @apply ml-auto; }
+  .ideas-empty { @apply rounded border border-dashed border-base-300 p-3 text-sm text-base-content/50; }
+
+  #idea-detail-page { @apply max-w-5xl; }
+  .idea-breadcrumb { @apply mb-4; }
+  .idea-breadcrumb a { @apply inline-flex items-center justify-center gap-1.5 leading-none; }
+  .idea-breadcrumb a span { @apply leading-none; }
+  .idea-breadcrumb svg { @apply flex-shrink-0 self-center; }
+  .idea-messages,
+  .idea-conversion,
+  .idea-permission-note { @apply mb-4; }
+  .idea-editor { @apply flex flex-col gap-4; }
+  .idea-title-row { @apply flex gap-3; }
+  .idea-title-input {
+    @apply input w-full text-2xl font-semibold h-auto py-2;
+  }
+  .idea-title-row select { @apply flex-shrink-0 mt-1; }
+  .idea-field { @apply flex flex-col gap-1; }
+  .idea-field > span { @apply text-sm font-medium text-base-content/60; }
+  .idea-body-editor {
+    @apply w-full min-h-[32rem] resize-y font-mono text-sm leading-6;
+  }
+  .idea-editor-actions { @apply flex justify-end; }
+  .idea-actions-panel {
+    @apply mt-8 grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+  .idea-action-card {
+    @apply flex flex-col gap-3 rounded-lg border border-base-300 bg-base-100 p-4;
+  }
+  .idea-action-card h2 { @apply m-0 text-sm font-semibold uppercase tracking-wide text-base-content/60; }
+  .idea-action-card p { @apply m-0 text-sm text-base-content/60; }
+  .idea-task-row { @apply grid gap-2; }
+  .idea-triage-actions { @apply flex gap-2; }
+  .idea-triage-actions form { @apply contents; }
+
+  @media (max-width: 700px) {
+    #ideas-page,
+    #idea-detail-page { @apply p-4; }
+    .idea-quick-create,
+    .idea-title-row { @apply flex-col; }
+    .idea-quick-create input { @apply w-full; }
+    .idea-title-row select { @apply w-full; }
+  }
+}
+
+/* ===================================================================
    People page
    =================================================================== */
 @layer components {

@@ -12,6 +12,7 @@ from datetime import date, timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -153,6 +154,18 @@ class Command(BaseCommand):
         Membership.objects.create(user=member1, workspace=ws, role=WorkspaceRole.MEMBER)
         alex.user = member1
         alex.save()
+
+        # --- ideaeditor member with explicit Django model permissions for Ideas ---
+        ideaeditor, created = User.objects.get_or_create(username="ideaeditor")
+        if created or not ideaeditor.has_usable_password():
+            ideaeditor.set_password("ideaeditor")
+            ideaeditor.save()
+        Membership.objects.create(user=ideaeditor, workspace=ws, role=WorkspaceRole.MEMBER)
+        idea_perms = Permission.objects.filter(
+            content_type__app_label="data",
+            codename__in=["add_idea", "view_idea", "change_idea", "delete_idea"],
+        )
+        ideaeditor.user_permissions.set(idea_perms)
 
         self.stdout.write(self.style.SUCCESS(
             "Seeded 3 projects, 3 people, 3 teams, 8 tasks, 2 milestones, 6 deps for user 'demo'."

@@ -158,6 +158,7 @@ def workspace_context(request: HttpRequest) -> dict:
         "workspace": request.workspace,
         "workspaces": [m.workspace for m in workspaces],
         "has_multiple_workspaces": len(workspaces) > 1,
+        "can_view_ideas": is_pm(request) or request.user.has_perm("data.view_idea"),
     }
 
 

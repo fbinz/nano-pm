@@ -97,6 +97,168 @@ test.describe('auth + page render', () => {
 });
 
 // =============================================================================
+// Ideas
+// =============================================================================
+test.describe('ideas', () => {
+  async function loginAs(page, username, password = username) {
+    await page.goto('/accounts/login/');
+    await page.fill('input[name=username]', username);
+    await page.fill('input[name=password]', password);
+    await page.click('button[type=submit]');
+    await page.waitForURL('/');
+  }
+
+  test('ideas can be captured, edited in a full-page detail view, and promoted', async ({ appPage: page }) => {
+    await page.getByRole('link', { name: 'Ideas' }).click();
+    await expect(page).toHaveURL('/ideas/');
+    await expect(page.getByRole('heading', { name: 'Ideas' })).toBeVisible();
+
+    await page.getByPlaceholder('Sketch a new idea…').fill('Client-facing timeline');
+    await page.getByRole('button', { name: 'Add idea' }).click();
+    await expect(page).toHaveURL(/\/ideas\/\d+\/$/);
+
+    await page.waitForFunction(() => window.tinymce?.get('idea-body-editor'));
+    const textarea = page.locator('textarea[name="body"]');
+    await expect(textarea).toHaveAttribute('rows', '24');
+    await expect(page.locator('.tox-tinymce')).toBeVisible();
+    const editor = page.frameLocator('iframe.tox-edit-area__iframe').locator('body');
+    await editor.click();
+    await expect(page.getByRole('button', { name: /Insert image|Insert table/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Select the .* element/i })).toHaveCount(0);
+
+    await page.locator('select[name="status"]').selectOption('exploring');
+    await page.locator('input[name="tags"]').fill('client, roadmap');
+    await editor.click();
+    await page.keyboard.type('Goal');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Let customers see a simplified schedule.');
+    await page.getByRole('button', { name: 'Save idea' }).click();
+
+    await expect(page.locator('.idea-flash')).toContainText('Idea saved');
+    await expect(page.locator('select[name="status"]')).toHaveValue('exploring');
+    await page.waitForFunction(() => window.tinymce?.get('idea-body-editor'));
+    await expect(page.frameLocator('iframe.tox-edit-area__iframe').locator('body')).toContainText('simplified schedule');
+    await expect(textarea).toHaveValue(/simplified schedule/);
+
+    await page.getByRole('button', { name: 'Convert to project' }).click();
+    await expect(page.locator('.idea-conversion')).toContainText('Converted to project');
+
+    await page.getByRole('link', { name: 'Projects' }).click();
+    await expect(page.locator('.left-cell.proj', { hasText: 'Client-facing timeline' })).toBeVisible();
+  });
+
+  test('idea cards do not show body previews', async ({ appPage: page }) => {
+    await page.goto('/ideas/');
+    await page.getByPlaceholder('Sketch a new idea…').fill('HTML preview idea');
+    await page.getByRole('button', { name: 'Add idea' }).click();
+    await expect(page).toHaveURL(/\/ideas\/\d+\/$/);
+    const ideaId = page.url().match(/\/ideas\/(\d+)\//)[1];
+
+    await page.evaluate(async (id) => {
+      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
+      await fetch(`/ideas/${id}/update/`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': decodeURIComponent(token), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          title: 'HTML preview idea',
+          body: '<p>Customer <strong>research</strong> notes</p>',
+          status: 'inbox',
+          tags: '',
+        }),
+      });
+    }, ideaId);
+
+    await page.goto('/ideas/');
+    const card = page.locator('.idea-card', { hasText: 'HTML preview idea' });
+    await expect(card).toBeVisible();
+    await expect(card).not.toContainText('Customer research notes');
+    await expect(card).not.toContainText('<p>');
+    await expect(card).not.toContainText('<strong>');
+  });
+
+  test('idea CRUD uses Django model permissions, with PMs as workspace admins', async ({ page, request }) => {
+    await reset(request);
+    await loginAs(page, 'member1');
+    await expect(page.getByRole('link', { name: 'Ideas' })).toHaveCount(0);
+    const deniedList = await page.goto('/ideas/');
+    expect(deniedList.status()).toBe(403);
+
+    await loginAs(page, 'ideaeditor');
+    await expect(page.getByRole('link', { name: 'Ideas' })).toBeVisible();
+    await page.getByRole('link', { name: 'Ideas' }).click();
+    await page.getByPlaceholder('Sketch a new idea…').fill('Permissioned idea');
+    await page.getByRole('button', { name: 'Add idea' }).click();
+    await expect(page).toHaveURL(/\/ideas\/\d+\/$/);
+    const ideaUrl = page.url();
+    const ideaId = ideaUrl.match(/\/ideas\/(\d+)\//)[1];
+
+    await page.waitForFunction(() => window.tinymce?.get('idea-body-editor'));
+    await expect(page.getByRole('button', { name: 'Save idea' })).toBeVisible();
+    await page.locator('.idea-title-input').fill('Permissioned idea updated');
+    await page.getByRole('button', { name: 'Save idea' }).click();
+    await expect(page.locator('.idea-flash')).toContainText('Idea saved');
+
+    const allowed = await page.evaluate(async (id) => {
+      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
+      const response = await fetch(`/ideas/${id}/update/`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': decodeURIComponent(token), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'title=Permission+updated+via+fetch&body=Allowed&status=exploring&tags=permitted',
+      });
+      return response.status;
+    }, ideaId);
+    expect(allowed).toBe(200);
+
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await login(page);
+    await page.goto(ideaUrl);
+    await expect(page.getByRole('button', { name: 'Save idea' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete idea' })).toBeVisible();
+    await page.locator('.idea-title-input').fill('PM updated permissioned idea');
+    await page.getByRole('button', { name: 'Save idea' }).click();
+    await expect(page.locator('.idea-flash')).toContainText('Idea saved');
+
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await loginAs(page, 'member1');
+    const deniedUpdate = await page.evaluate(async (id) => {
+      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
+      const response = await fetch(`/ideas/${id}/update/`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': decodeURIComponent(token), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'title=Denied&body=Nope&status=exploring&tags=',
+      });
+      return response.status;
+    }, ideaId);
+    expect(deniedUpdate).toBe(403);
+
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await loginAs(page, 'ideaeditor');
+    await page.goto(ideaUrl);
+    let sawCancelDialog = false;
+    page.once('dialog', async dialog => {
+      sawCancelDialog = true;
+      expect(dialog.message()).toContain('Delete idea');
+      await dialog.dismiss();
+    });
+    await page.getByRole('button', { name: 'Delete idea' }).click();
+    expect(sawCancelDialog).toBe(true);
+    await expect(page).toHaveURL(ideaUrl);
+    await expect(page.getByRole('button', { name: 'Delete idea' })).toBeVisible();
+
+    page.once('dialog', async dialog => {
+      expect(dialog.message()).toContain('Delete idea');
+      await dialog.accept();
+    });
+    await page.getByRole('button', { name: 'Delete idea' }).click();
+    await expect(page).toHaveURL('/ideas/');
+    await expect(page.locator('.idea-card', { hasText: 'PM updated permissioned idea' })).toHaveCount(0);
+  });
+});
+
+// =============================================================================
 // Topbar responsiveness
 // =============================================================================
 test.describe('topbar responsiveness', () => {

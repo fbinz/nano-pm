@@ -25,6 +25,10 @@ from .people import (
     people_page, people_invite_link, people_create, people_update, people_delete,
     person_teams_update, team_create, team_update, team_delete,
 )
+from .ideas import (
+    ideas_page, idea_create, idea_detail, idea_update, idea_status,
+    idea_convert_project, idea_create_task, idea_delete,
+)
 from .workspaces import (
     workspace_switch, workspace_create, workspace_rename,
     public_roadmap, public_roadmap_update, public_roadmap_regenerate,
@@ -72,6 +76,15 @@ urlpatterns = [
                                                      person_toggle_collapse,  name="person_toggle_collapse"),
     path("resources/people/set-collapsed/",          set_all_people_collapsed, name="set_all_people_collapsed"),
     path("resources/toggle-status/",                 toggle_status_filter,     name="toggle_status_filter"),
+    # Ideas
+    path("ideas/",                                  ideas_page,       name="ideas_page"),
+    path("ideas/create/",                           idea_create,      name="idea_create"),
+    path("ideas/<int:idea_id>/",                    idea_detail,      name="idea_detail"),
+    path("ideas/<int:idea_id>/update/",             idea_update,      name="idea_update"),
+    path("ideas/<int:idea_id>/status/<str:status>/", idea_status,     name="idea_status"),
+    path("ideas/<int:idea_id>/convert/project/",    idea_convert_project, name="idea_convert_project"),
+    path("ideas/<int:idea_id>/create-task/",        idea_create_task, name="idea_create_task"),
+    path("ideas/<int:idea_id>/delete/",             idea_delete,      name="idea_delete"),
     # People
     path("people/",                                  people_page,      name="people_page"),
     path("people/create/",                           people_create,    name="people_create"),
