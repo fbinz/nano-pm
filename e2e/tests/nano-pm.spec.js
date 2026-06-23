@@ -117,28 +117,25 @@ test.describe('ideas', () => {
     await page.getByRole('button', { name: 'Add idea' }).click();
     await expect(page).toHaveURL(/\/ideas\/\d+\/$/);
 
-    await page.waitForFunction(() => window.tinymce?.get('idea-body-editor'));
+    await page.waitForFunction(() => window.nanoIdeaEditor);
     const textarea = page.locator('textarea[name="body"]');
     await expect(textarea).toHaveAttribute('rows', '24');
-    await expect(page.locator('.tox-tinymce')).toBeVisible();
-    const editor = page.frameLocator('iframe.tox-edit-area__iframe').locator('body');
-    await editor.click();
-    await expect(page.getByRole('button', { name: /Insert image|Insert table/i })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /Select the .* element/i })).toHaveCount(0);
+    await expect(page.locator('.toastui-editor-defaultUI')).toBeVisible();
+    await expect(page.locator('.toastui-editor-toolbar-icons.image')).toHaveCount(0);
+    await expect(page.locator('.toastui-editor-toolbar-icons.table')).toHaveCount(0);
 
     await page.locator('select[name="status"]').selectOption('exploring');
     await page.locator('input[name="tags"]').fill('client, roadmap');
-    await editor.click();
-    await page.keyboard.type('Goal');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('Let customers see a simplified schedule.');
+    await page.evaluate(() => {
+      window.nanoIdeaEditor.setMarkdown('# Goal\n\nLet customers see a simplified schedule.');
+    });
     await page.getByRole('button', { name: 'Save idea' }).click();
 
     await expect(page.locator('.idea-flash')).toContainText('Idea saved');
     await expect(page.locator('select[name="status"]')).toHaveValue('exploring');
-    await page.waitForFunction(() => window.tinymce?.get('idea-body-editor'));
-    await expect(page.frameLocator('iframe.tox-edit-area__iframe').locator('body')).toContainText('simplified schedule');
+    await page.waitForFunction(() => window.nanoIdeaEditor);
     await expect(textarea).toHaveValue(/simplified schedule/);
+    await expect.poll(() => page.evaluate(() => window.nanoIdeaEditor.getMarkdown())).toContain('simplified schedule');
 
     await page.getByRole('button', { name: 'Convert to project' }).click();
     await expect(page.locator('.idea-conversion')).toContainText('Converted to project');
@@ -193,7 +190,7 @@ test.describe('ideas', () => {
     const ideaUrl = page.url();
     const ideaId = ideaUrl.match(/\/ideas\/(\d+)\//)[1];
 
-    await page.waitForFunction(() => window.tinymce?.get('idea-body-editor'));
+    await page.waitForFunction(() => window.nanoIdeaEditor);
     await expect(page.getByRole('button', { name: 'Save idea' })).toBeVisible();
     await page.locator('.idea-title-input').fill('Permissioned idea updated');
     await page.getByRole('button', { name: 'Save idea' }).click();
