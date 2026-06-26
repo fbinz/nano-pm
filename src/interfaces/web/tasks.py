@@ -73,6 +73,7 @@ def task_update(request: HttpRequest, task_id: int):
         end=end,
         project_id=project_id,
         assignee_ids=assignee_ids,
+        actor=request.user,
     )
     yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
@@ -86,7 +87,7 @@ def task_move(request: HttpRequest, task_id: int):
     new_start = parse_iso(data.get("start", ""))
     if new_start is None:
         return
-    move_task(workspace=request.workspace, task_id=task_id, new_start=new_start)
+    move_task(workspace=request.workspace, task_id=task_id, new_start=new_start, actor=request.user)
     yield patch_chart(request)
 
 
@@ -104,7 +105,7 @@ def task_move_many(request: HttpRequest):
         delta_days = 0
     if not task_ids or delta_days == 0:
         return
-    move_many_tasks(workspace=request.workspace, task_ids=task_ids, delta_days=delta_days)
+    move_many_tasks(workspace=request.workspace, task_ids=task_ids, delta_days=delta_days, actor=request.user)
     yield patch_chart(request)
 
 
@@ -116,7 +117,7 @@ def task_resize_start(request: HttpRequest, task_id: int):
     new_start = parse_iso(data.get("start", ""))
     if new_start is None:
         return
-    resize_start(workspace=request.workspace, task_id=task_id, new_start=new_start)
+    resize_start(workspace=request.workspace, task_id=task_id, new_start=new_start, actor=request.user)
     yield patch_chart(request)
 
 
@@ -128,7 +129,7 @@ def task_resize_end(request: HttpRequest, task_id: int):
     new_end = parse_iso(data.get("end", ""))
     if new_end is None:
         return
-    resize_end(workspace=request.workspace, task_id=task_id, new_end=new_end)
+    resize_end(workspace=request.workspace, task_id=task_id, new_end=new_end, actor=request.user)
     yield patch_chart(request)
 
 
@@ -145,6 +146,7 @@ def task_create(request: HttpRequest):
         return
     create_task(
         workspace=request.workspace, project_id=project_id, title=title, start=start, end=end,
+        actor=request.user,
     )
     yield patch_chart(request)
 
@@ -153,6 +155,6 @@ def task_create(request: HttpRequest):
 @login_required
 @datastar_response
 def task_delete_view(request: HttpRequest, task_id: int):
-    delete_task(workspace=request.workspace, task_id=task_id)
+    delete_task(workspace=request.workspace, task_id=task_id, actor=request.user)
     yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')

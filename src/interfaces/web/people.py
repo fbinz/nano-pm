@@ -66,7 +66,7 @@ def patch_people_list(request):
 @datastar_response
 def people_invite_link(request: HttpRequest, person_id: int):
     inv = get_or_create_person_invite(
-        workspace=request.workspace, person_id=person_id
+        workspace=request.workspace, person_id=person_id, actor=request.user
     )
     invite_url = request.build_absolute_uri(f"/invite/{inv.token}/")
     yield SSE.patch_elements(
@@ -82,7 +82,7 @@ def people_create(request: HttpRequest):
     name = request.POST.get("name", "").strip()
     if not name:
         return
-    create_person(workspace=request.workspace, name=name)
+    create_person(workspace=request.workspace, name=name, actor=request.user)
     yield patch_people_content(request)
 
 
@@ -91,7 +91,8 @@ def people_create(request: HttpRequest):
 @datastar_response
 def people_update(request: HttpRequest, person_id: int):
     update_person(
-        workspace=request.workspace, person_id=person_id, name=request.POST.get("name", "")
+        workspace=request.workspace, person_id=person_id, name=request.POST.get("name", ""),
+        actor=request.user,
     )
     yield patch_people_content(request)
     yield patch_chart(request)
@@ -101,7 +102,7 @@ def people_update(request: HttpRequest, person_id: int):
 @login_required
 @datastar_response
 def people_delete(request: HttpRequest, person_id: int):
-    delete_person(workspace=request.workspace, person_id=person_id)
+    delete_person(workspace=request.workspace, person_id=person_id, actor=request.user)
     yield patch_people_content(request)
     yield patch_chart(request)
 
@@ -111,7 +112,7 @@ def people_delete(request: HttpRequest, person_id: int):
 @datastar_response
 def person_teams_update(request: HttpRequest, person_id: int):
     team_ids = [int(x) for x in request.POST.getlist("team_ids") if x.isdigit()]
-    set_person_teams(workspace=request.workspace, person_id=person_id, team_ids=team_ids)
+    set_person_teams(workspace=request.workspace, person_id=person_id, team_ids=team_ids, actor=request.user)
     yield patch_people_content(request)
     yield patch_chart(request)
 
@@ -121,7 +122,7 @@ def person_teams_update(request: HttpRequest, person_id: int):
 @datastar_response
 def team_create(request: HttpRequest):
     name = request.POST.get("name", "").strip()
-    team = create_team(workspace=request.workspace, name=name) if name else None
+    team = create_team(workspace=request.workspace, name=name, actor=request.user) if name else None
     yield patch_people_content(request)
     if team is not None:
         yield patch_add_team_input_clear()
@@ -132,7 +133,7 @@ def team_create(request: HttpRequest):
 @login_required
 @datastar_response
 def team_update(request: HttpRequest, team_id: int):
-    update_team(workspace=request.workspace, team_id=team_id, name=request.POST.get("name", ""))
+    update_team(workspace=request.workspace, team_id=team_id, name=request.POST.get("name", ""), actor=request.user)
     yield patch_people_content(request)
     yield patch_chart(request)
 
@@ -141,6 +142,6 @@ def team_update(request: HttpRequest, team_id: int):
 @login_required
 @datastar_response
 def team_delete(request: HttpRequest, team_id: int):
-    delete_team(workspace=request.workspace, team_id=team_id)
+    delete_team(workspace=request.workspace, team_id=team_id, actor=request.user)
     yield patch_people_content(request)
     yield patch_chart(request)

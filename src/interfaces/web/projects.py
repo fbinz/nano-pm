@@ -54,7 +54,7 @@ def project_create(request: HttpRequest):
     position = request.GET.get("position", "end")
     if position not in ("start", "end"):
         position = "end"
-    create_project(workspace=request.workspace, position=position)
+    create_project(workspace=request.workspace, position=position, actor=request.user)
     yield patch_chart(request)
 
 
@@ -93,6 +93,7 @@ def project_update(request: HttpRequest, project_id: int):
         name=request.POST.get("name") or None,
         description=request.POST.get("description") if "description" in request.POST else None,
         color=request.POST.get("color") or None,
+        actor=request.user,
     )
     yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
@@ -103,7 +104,7 @@ def project_update(request: HttpRequest, project_id: int):
 @datastar_response
 def project_move(request: HttpRequest, project_id: int):
     direction = int(request.GET.get("dir", "0") or 0)
-    move_project(workspace=request.workspace, project_id=project_id, direction=direction)
+    move_project(workspace=request.workspace, project_id=project_id, direction=direction, actor=request.user)
     yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
@@ -121,6 +122,7 @@ def project_move_workspace(request: HttpRequest, project_id: int):
         workspace=request.workspace,
         project_id=project_id,
         target_workspace_id=target_workspace_id,
+        actor=request.user,
     )
     if moved is None:
         return
@@ -138,6 +140,7 @@ def project_toggle_completed(request: HttpRequest, project_id: int):
     set_project_completed(
         workspace=request.workspace, project_id=project_id,
         completed=not proj.is_completed,
+        actor=request.user,
     )
     yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
@@ -161,7 +164,7 @@ def toggle_show_completed(request: HttpRequest):
 @pm_required
 @datastar_response
 def project_delete(request: HttpRequest, project_id: int):
-    delete_project(workspace=request.workspace, project_id=project_id)
+    delete_project(workspace=request.workspace, project_id=project_id, actor=request.user)
     yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 

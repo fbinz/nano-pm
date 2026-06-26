@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-23 11:17+0000\n"
+"POT-Creation-Date: 2026-06-26 10:23+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -15,27 +15,27 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: actions/manage_dependencies.py:38
+#: actions/manage_dependencies.py:50
 msgid "A task cannot depend on itself."
 msgstr "Eine Aufgabe kann nicht von sich selbst abhängen."
 
-#: actions/manage_dependencies.py:42
+#: actions/manage_dependencies.py:54
 msgid "Task not found."
 msgstr "Aufgabe nicht gefunden."
 
-#: actions/manage_dependencies.py:46
+#: actions/manage_dependencies.py:58
 msgid "That dependency already exists."
 msgstr "Diese Abhängigkeit existiert bereits."
 
-#: actions/manage_dependencies.py:48
+#: actions/manage_dependencies.py:60
 msgid "That dependency would create a cycle."
 msgstr "Diese Abhängigkeit würde einen Zyklus erzeugen."
 
-#: config/settings.py:162
+#: config/settings.py:230
 msgid "English"
 msgstr "Englisch"
 
-#: config/settings.py:163
+#: config/settings.py:231
 msgid "German"
 msgstr "Deutsch"
 
@@ -50,6 +50,252 @@ msgstr "Benutzername und Passwort sind erforderlich."
 #: config/urls.py:62
 msgid "That username is already taken."
 msgstr "Dieser Benutzername ist bereits vergeben."
+
+#: data/models/activity.py:44
+msgid "Someone"
+msgstr "Jemand"
+
+#: data/models/activity.py:53
+msgid "created"
+msgstr "erstellt"
+
+#: data/models/activity.py:54
+msgid "updated"
+msgstr "aktualisiert"
+
+#: data/models/activity.py:55
+msgid "deleted"
+msgstr "gelöscht"
+
+#: data/models/activity.py:56 data/models/activity.py:58
+msgid "moved"
+msgstr "verschoben"
+
+#: data/models/activity.py:57
+msgid "resized"
+msgstr "angepasst"
+
+#: data/models/activity.py:59
+msgid "completed"
+msgstr "abgeschlossen"
+
+#: data/models/activity.py:60
+msgid "reopened"
+msgstr "wieder geöffnet"
+
+#: data/models/activity.py:61
+msgid "converted"
+msgstr "umgewandelt"
+
+#: data/models/activity.py:62
+msgid "enabled"
+msgstr "aktiviert"
+
+#: data/models/activity.py:63
+msgid "disabled"
+msgstr "deaktiviert"
+
+#: data/models/activity.py:64
+msgid "regenerated"
+msgstr "neu generiert"
+
+#: data/models/activity.py:65
+msgid "created an invite for"
+msgstr "eingeladen"
+
+#: data/models/activity.py:73
+msgid "dependency"
+msgstr "Abhängigkeit"
+
+#: data/models/activity.py:74
+msgid "idea"
+msgstr "Idee"
+
+#: data/models/activity.py:75
+msgid "milestone"
+msgstr "Meilenstein"
+
+#: data/models/activity.py:76
+msgid "person"
+msgstr "Person"
+
+#: data/models/activity.py:77
+msgid "project"
+msgstr "Projekt"
+
+#: data/models/activity.py:78
+msgid "task"
+msgstr "Aufgabe"
+
+#: data/models/activity.py:79
+msgid "team"
+msgstr "Team"
+
+#: data/models/activity.py:80
+msgid "workspace"
+msgstr "Arbeitsbereich"
+
+#: data/models/activity.py:81
+msgid "tasks"
+msgstr "Aufgaben"
+
+#: data/models/activity.py:89
+#, python-format
+msgid "moved %(count)s tasks"
+msgstr "%(count)s Aufgaben verschoben"
+
+#: data/models/activity.py:91
+#, python-format
+msgid "changed duration of task %(label)s"
+msgstr "Dauer der Aufgabe %(label)s geändert"
+
+#: data/models/activity.py:94
+#, python-format
+msgid "%(verb)s %(entity)s %(label)s"
+msgstr "%(entity)s %(label)s %(verb)s"
+
+#: data/models/activity.py:104
+#, python-format
+msgid "%(actor)s moved %(count)s tasks"
+msgstr "%(actor)s hat %(count)s Aufgaben verschoben"
+
+#: data/models/activity.py:109
+#, python-format
+msgid "%(actor)s changed duration of task %(label)s"
+msgstr "%(actor)s hat die Dauer der Aufgabe %(label)s geändert"
+
+#: data/models/activity.py:113
+#, python-format
+msgid "%(actor)s %(verb)s %(entity)s %(label)s"
+msgstr "%(actor)s hat %(entity)s %(label)s %(verb)s"
+
+#: data/models/activity.py:129
+#: templates/components/screens/gantt/task-popover.html:38
+msgid "Assignees"
+msgstr "Zuständige"
+
+#: data/models/activity.py:130
+msgid "Body"
+msgstr "Text"
+
+#: data/models/activity.py:131
+#: templates/components/screens/gantt/project-popover.html:20
+msgid "Color"
+msgstr "Farbe"
+
+#: data/models/activity.py:132
+msgid "Completed at"
+msgstr "Abgeschlossen am"
+
+#: data/models/activity.py:133
+msgid "Converted project"
+msgstr "Umgewandeltes Projekt"
+
+#: data/models/activity.py:134
+msgid "Converted task"
+msgstr "Umgewandelte Aufgabe"
+
+#: data/models/activity.py:135
+#: templates/components/screens/gantt/milestone-popover.html:22
+msgid "Date"
+msgstr "Datum"
+
+#: data/models/activity.py:136
+#: templates/components/screens/gantt/milestone-popover.html:17
+#: templates/components/screens/gantt/project-popover.html:16
+#: templates/components/screens/gantt/task-popover.html:16
+msgid "Description"
+msgstr "Beschreibung"
+
+#: data/models/activity.py:137
+#: templates/components/screens/gantt/task-popover.html:25
+msgid "End"
+msgstr "Ende"
+
+#: data/models/activity.py:138
+#: templates/components/screens/gantt/project-popover.html:12
+msgid "Name"
+msgstr "Name"
+
+#: data/models/activity.py:139
+msgid "Order"
+msgstr "Reihenfolge"
+
+#: data/models/activity.py:140
+msgid "Predecessor"
+msgstr "Vorgänger"
+
+#: data/models/activity.py:141
+#: templates/components/screens/gantt/milestone-popover.html:26
+#: templates/components/screens/gantt/task-popover.html:30
+#: templates/components/screens/ideas/detail.html:88
+msgid "Project"
+msgstr "Projekt"
+
+#: data/models/activity.py:142
+msgid "Public roadmap description"
+msgstr "Beschreibung der öffentlichen Roadmap"
+
+#: data/models/activity.py:143
+msgid "Public roadmap enabled"
+msgstr "Öffentliche Roadmap aktiviert"
+
+#: data/models/activity.py:144
+msgid "Public roadmap title"
+msgstr "Titel der öffentlichen Roadmap"
+
+#: data/models/activity.py:145
+msgid "Public roadmap token"
+msgstr "Token der öffentlichen Roadmap"
+
+#: data/models/activity.py:146
+#: templates/components/screens/gantt/task-popover.html:21
+msgid "Start"
+msgstr "Start"
+
+#: data/models/activity.py:147
+msgid "Status"
+msgstr "Status"
+
+#: data/models/activity.py:148
+msgid "Successor"
+msgstr "Nachfolger"
+
+#: data/models/activity.py:149
+#: templates/components/screens/ideas/detail.html:53
+msgid "Tags"
+msgstr "Tags"
+
+#: data/models/activity.py:150
+#: templates/components/screens/gantt/team-filter.html:6
+#: templates/components/screens/people/people-content.html:5
+#: templates/components/screens/people/people-list.html:18
+msgid "Teams"
+msgstr "Teams"
+
+#: data/models/activity.py:151
+#: templates/components/screens/gantt/milestone-popover.html:13
+#: templates/components/screens/gantt/task-popover.html:12
+msgid "Title"
+msgstr "Titel"
+
+#: data/models/activity.py:152
+msgid "Workspace"
+msgstr "Arbeitsbereich"
+
+#: data/models/activity.py:169
+msgid "changed"
+msgstr "geändert"
+
+#: data/models/activity.py:173
+#, python-format
+msgid "%(before)s → %(after)s"
+msgstr "%(before)s → %(after)s"
+
+#: data/models/activity.py:189
+#, python-format
+msgid "%(label)s: %(value)s"
+msgstr "%(label)s: %(value)s"
 
 #: data/models/idea.py:7
 msgid "Inbox"
@@ -98,19 +344,19 @@ msgstr "In Bearbeitung"
 msgid "Done"
 msgstr "Erledigt"
 
-#: interfaces/web/ideas.py:120
+#: interfaces/web/ideas.py:122
 msgid "Idea saved."
 msgstr "Idee gespeichert."
 
-#: interfaces/web/ideas.py:147
+#: interfaces/web/ideas.py:150
 msgid "Idea converted to a project."
 msgstr "Idee in ein Projekt umgewandelt."
 
-#: interfaces/web/ideas.py:171
+#: interfaces/web/ideas.py:175
 msgid "Idea converted to a task."
 msgstr "Idee in eine Aufgabe umgewandelt."
 
-#: interfaces/web/ideas.py:182
+#: interfaces/web/ideas.py:186
 msgid "Idea deleted."
 msgstr "Idee gelöscht."
 
@@ -327,27 +573,60 @@ msgstr "Ideen"
 msgid "People"
 msgstr "Personen"
 
-#: templates/components/layouts/app-shell.html:106
-#: templates/components/layouts/app-shell.html:108
+#: templates/components/layouts/app-shell.html:101
+#: templates/components/screens/activity/index.html:9
+msgid "Activity"
+msgstr "Aktivität"
+
 #: templates/components/layouts/app-shell.html:109
+#: templates/components/layouts/app-shell.html:111
+#: templates/components/layouts/app-shell.html:112
 msgid "Switch to dark mode"
 msgstr "In den Dunkelmodus wechseln"
 
-#: templates/components/layouts/app-shell.html:107
+#: templates/components/layouts/app-shell.html:110
 msgid "Switch to light mode"
 msgstr "In den Hellmodus wechseln"
 
-#: templates/components/layouts/app-shell.html:112
+#: templates/components/layouts/app-shell.html:115
 msgid "Theme"
 msgstr "Design"
 
-#: templates/components/layouts/app-shell.html:127
+#: templates/components/layouts/app-shell.html:130
 msgid "Sign out"
 msgstr "Abmelden"
 
-#: templates/components/layouts/app-shell.html:139
+#: templates/components/layouts/app-shell.html:142
 msgid "Close"
 msgstr "Schließen"
+
+#: templates/components/screens/activity/index.html:10
+msgid "Everything recently done in this workspace."
+msgstr "Alles, was kürzlich in diesem Arbeitsbereich getan wurde."
+
+#: templates/components/screens/activity/index.html:14
+msgid "Activity log"
+msgstr "Aktivitätsprotokoll"
+
+#: templates/components/screens/activity/index.html:17
+msgid "Time"
+msgstr "Zeit"
+
+#: templates/components/screens/activity/index.html:18
+msgid "Actor"
+msgstr "Person"
+
+#: templates/components/screens/activity/index.html:19
+msgid "Event"
+msgstr "Ereignis"
+
+#: templates/components/screens/activity/index.html:20
+msgid "Details"
+msgstr "Details"
+
+#: templates/components/screens/activity/index.html:52
+msgid "No activity yet."
+msgstr "Noch keine Aktivität."
 
 #: templates/components/screens/gantt/chart.html:19
 msgid "Collapse all"
@@ -423,27 +702,6 @@ msgstr "Heute"
 msgid "Drag to resize sidebar"
 msgstr "Ziehen, um die Größe der Seitenleiste zu ändern"
 
-#: templates/components/screens/gantt/milestone-popover.html:13
-#: templates/components/screens/gantt/task-popover.html:12
-msgid "Title"
-msgstr "Titel"
-
-#: templates/components/screens/gantt/milestone-popover.html:17
-#: templates/components/screens/gantt/project-popover.html:16
-#: templates/components/screens/gantt/task-popover.html:16
-msgid "Description"
-msgstr "Beschreibung"
-
-#: templates/components/screens/gantt/milestone-popover.html:22
-msgid "Date"
-msgstr "Datum"
-
-#: templates/components/screens/gantt/milestone-popover.html:26
-#: templates/components/screens/gantt/task-popover.html:30
-#: templates/components/screens/ideas/detail.html:86
-msgid "Project"
-msgstr "Projekt"
-
 #: templates/components/screens/gantt/milestone-popover.html:36
 msgid "Delete this milestone?"
 msgstr "Diesen Meilenstein löschen?"
@@ -452,14 +710,6 @@ msgstr "Diesen Meilenstein löschen?"
 #: templates/components/screens/gantt/task-popover.html:76
 msgid "Delete"
 msgstr "Löschen"
-
-#: templates/components/screens/gantt/project-popover.html:12
-msgid "Name"
-msgstr "Name"
-
-#: templates/components/screens/gantt/project-popover.html:20
-msgid "Color"
-msgstr "Farbe"
 
 #: templates/components/screens/gantt/project-popover.html:33
 msgid "move up"
@@ -520,18 +770,6 @@ msgstr "Erledigte ausblenden"
 msgid "Show completed"
 msgstr "Erledigte anzeigen"
 
-#: templates/components/screens/gantt/task-popover.html:21
-msgid "Start"
-msgstr "Start"
-
-#: templates/components/screens/gantt/task-popover.html:25
-msgid "End"
-msgstr "Ende"
-
-#: templates/components/screens/gantt/task-popover.html:38
-msgid "Assignees"
-msgstr "Zuständige"
-
 #: templates/components/screens/gantt/task-popover.html:50
 msgid "Dependencies"
 msgstr "Abhängigkeiten"
@@ -561,12 +799,6 @@ msgstr ""
 msgid "Delete this task?"
 msgstr "Diese Aufgabe löschen?"
 
-#: templates/components/screens/gantt/team-filter.html:6
-#: templates/components/screens/people/people-content.html:5
-#: templates/components/screens/people/people-list.html:18
-msgid "Teams"
-msgstr "Teams"
-
 #: templates/components/screens/gantt/team-filter.html:8
 msgid "Filter by team"
 msgstr "Nach Team filtern"
@@ -576,115 +808,114 @@ msgstr "Nach Team filtern"
 msgid "No teams yet."
 msgstr "Noch keine Teams."
 
-#: templates/components/screens/ideas/detail.html:8
 #: templates/components/screens/ideas/detail.html:10
+#: templates/components/screens/ideas/detail.html:12
 msgid "Back to Ideas"
 msgstr "Zurück zu Ideen"
 
-#: templates/components/screens/ideas/detail.html:24
+#: templates/components/screens/ideas/detail.html:26
 msgid "Converted to project"
 msgstr "In Projekt umgewandelt"
 
-#: templates/components/screens/ideas/detail.html:29
+#: templates/components/screens/ideas/detail.html:31
 msgid "Converted to task"
 msgstr "In Aufgabe umgewandelt"
 
-#: templates/components/screens/ideas/detail.html:35
+#: templates/components/screens/ideas/detail.html:37
 msgid "You need the Django change idea permission to edit this idea."
-msgstr "Du benötigst die Django-Berechtigung change_idea, um diese Idee zu bearbeiten."
+msgstr ""
+"Du benötigst die Django-Berechtigung change_idea, um diese Idee zu "
+"bearbeiten."
 
-#: templates/components/screens/ideas/detail.html:43
+#: templates/components/screens/ideas/detail.html:45
 msgid "Idea status"
 msgstr "Ideenstatus"
 
-#: templates/components/screens/ideas/detail.html:51
-msgid "Tags"
-msgstr "Tags"
-
-#: templates/components/screens/ideas/detail.html:53
+#: templates/components/screens/ideas/detail.html:55
 msgid "client, roadmap, quick-win"
 msgstr "Kunde, Roadmap, Quick-Win"
 
-#: templates/components/screens/ideas/detail.html:57
+#: templates/components/screens/ideas/detail.html:59
 msgid "Markdown notes"
 msgstr "Markdown-Notizen"
 
-#: templates/components/screens/ideas/detail.html:60
+#: templates/components/screens/ideas/detail.html:61
 msgid "Brainstorm goals, open questions, links, pros and cons…"
 msgstr "Ziele, offene Fragen, Links, Vor- und Nachteile brainstormen…"
 
-#: templates/components/screens/ideas/detail.html:65
+#: templates/components/screens/ideas/detail.html:67
 msgid "Save idea"
 msgstr "Idee speichern"
 
-#: templates/components/screens/ideas/detail.html:71
+#: templates/components/screens/ideas/detail.html:73
 msgid "Idea actions"
 msgstr "Ideenaktionen"
 
-#: templates/components/screens/ideas/detail.html:75
+#: templates/components/screens/ideas/detail.html:77
 msgid "Promote to project"
 msgstr "Zum Projekt machen"
 
-#: templates/components/screens/ideas/detail.html:76
+#: templates/components/screens/ideas/detail.html:78
 msgid "Create a project using this idea title and notes."
 msgstr "Erstellt ein Projekt aus Titel und Notizen dieser Idee."
 
-#: templates/components/screens/ideas/detail.html:77
+#: templates/components/screens/ideas/detail.html:79
 msgid "Convert to project"
 msgstr "In Projekt umwandeln"
 
-#: templates/components/screens/ideas/detail.html:82
+#: templates/components/screens/ideas/detail.html:84
 msgid "Create task"
 msgstr "Aufgabe erstellen"
 
-#: templates/components/screens/ideas/detail.html:83
+#: templates/components/screens/ideas/detail.html:85
 msgid "Turn this idea into a scheduled task in an existing project."
 msgstr ""
 "Diese Idee in eine geplante Aufgabe in einem bestehenden Projekt umwandeln."
 
-#: templates/components/screens/ideas/detail.html:84
+#: templates/components/screens/ideas/detail.html:86
 msgid "Task title"
 msgstr "Aufgabentitel"
 
-#: templates/components/screens/ideas/detail.html:91
+#: templates/components/screens/ideas/detail.html:93
 msgid "Start date"
 msgstr "Startdatum"
 
-#: templates/components/screens/ideas/detail.html:92
+#: templates/components/screens/ideas/detail.html:94
 msgid "End date"
 msgstr "Enddatum"
 
-#: templates/components/screens/ideas/detail.html:94
+#: templates/components/screens/ideas/detail.html:96
 msgid "Create task from idea"
 msgstr "Aufgabe aus Idee erstellen"
 
-#: templates/components/screens/ideas/detail.html:98
+#: templates/components/screens/ideas/detail.html:100
 msgid "Triage"
 msgstr "Einordnen"
 
-#: templates/components/screens/ideas/detail.html:99
+#: templates/components/screens/ideas/detail.html:101
 msgid "Move the idea out of active exploration without deleting it."
 msgstr "Die Idee aus der aktiven Prüfung nehmen, ohne sie zu löschen."
 
-#: templates/components/screens/ideas/detail.html:103
+#: templates/components/screens/ideas/detail.html:105
 msgid "Park"
 msgstr "Parken"
 
-#: templates/components/screens/ideas/detail.html:107
+#: templates/components/screens/ideas/detail.html:109
 msgid "Reject"
 msgstr "Ablehnen"
 
-#: templates/components/screens/ideas/detail.html:115
+#: templates/components/screens/ideas/detail.html:116
+#: templates/components/screens/ideas/detail.html:120
+msgid "Delete idea"
+msgstr "Idee löschen"
+
+#: templates/components/screens/ideas/detail.html:118
 msgid "Danger zone"
 msgstr "Gefahrenbereich"
 
-#: templates/components/screens/ideas/detail.html:116
+#: templates/components/screens/ideas/detail.html:119
 msgid "Delete this idea permanently."
 msgstr "Diese Idee dauerhaft löschen."
-
-#: templates/components/screens/ideas/detail.html:117
-msgid "Delete idea"
-msgstr "Idee löschen"
 
 #: templates/components/screens/ideas/index.html:10
 msgid "Capture rough project thoughts before they become scheduled work."
@@ -702,7 +933,7 @@ msgstr "Idee hinzufügen"
 msgid "Ideas by status"
 msgstr "Ideen nach Status"
 
-#: templates/components/screens/ideas/index.html:37
+#: templates/components/screens/ideas/index.html:36
 msgid "No ideas here yet."
 msgstr "Hier gibt es noch keine Ideen."
 
@@ -814,6 +1045,3 @@ msgstr "Schauen Sie später wieder vorbei, um Roadmap-Updates zu sehen."
 
 #~ msgid "Only the creator or PMs can edit this idea."
 #~ msgstr "Nur der Ersteller oder PMs können diese Idee bearbeiten."
-
-#~ msgid "Status"
-#~ msgstr "Status"

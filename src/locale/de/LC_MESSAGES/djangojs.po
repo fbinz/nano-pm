@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-30 12:59+0200\n"
+"POT-Creation-Date: 2026-06-25 08:34+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -15,6 +15,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: static/js/nano.js:305
+#: static/js/nano.js:314
 msgid "Drop on another task to create a dependency."
 msgstr "Auf eine andere Aufgabe ziehen, um eine Abhängigkeit zu erstellen."

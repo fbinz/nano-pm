@@ -1,0 +1,61 @@
+{% load i18n %}
+<c-vars events user is_pm workspace workspaces has_multiple_workspaces />
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
+    :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
+    active_nav="activity">
+  <main id="activity-page" class="min-h-screen bg-base-100 p-6">
+    <div class="mx-auto max-w-6xl space-y-4">
+      <header>
+        <h1 class="text-xl font-semibold">{% trans "Activity" %}</h1>
+        <p class="text-sm opacity-70">{% trans "Everything recently done in this workspace." %}</p>
+      </header>
+
+      <div class="activity-list overflow-x-auto rounded-box border border-base-300 bg-base-200">
+        <table class="table table-sm table-zebra w-full" aria-label="{% trans 'Activity log' %}">
+          <thead>
+            <tr class="border-base-300">
+              <th class="w-28 font-medium">{% trans "Time" %}</th>
+              <th class="w-32 font-medium">{% trans "Actor" %}</th>
+              <th class="font-medium">{% trans "Event" %}</th>
+              <th class="hidden font-medium lg:table-cell">{% trans "Details" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for event in events %}
+              <tr class="activity-event border-base-300" data-action="{{ event.action }}">
+                <td class="whitespace-nowrap tabular-nums opacity-60">
+                  <time datetime="{{ event.created_at|date:'c' }}" title="{{ event.created_at|date:'Y-m-d H:i' }}">
+                    {{ event.created_at|date:"m-d H:i" }}
+                  </time>
+                </td>
+                <td class="max-w-0 truncate font-medium">{{ event.actor_name }}</td>
+                <td class="activity-summary max-w-0 truncate font-medium">
+                  {{ event.summary_without_actor }}
+                  {% if event.change_items %}
+                    <span class="activity-changes opacity-70 lg:hidden">
+                      <span class="mx-1 opacity-50">—</span>{% for item in event.change_items %}<span><strong class="font-semibold">{{ item.label }}</strong><br>{{ item.detail }}</span>{% if not forloop.last %}<span class="mx-1 opacity-50">•</span>{% endif %}{% endfor %}
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="activity-changes hidden max-w-0 truncate opacity-70 lg:table-cell">
+                  {% for item in event.change_items %}
+                    <span class="mr-4 inline-block align-top">
+                      <strong class="font-semibold">{{ item.label }}</strong><br>
+                      <span>{{ item.detail }}</span>
+                    </span>
+                  {% endfor %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-center opacity-70">
+                  {% trans "No activity yet." %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</c-layouts.app-shell>

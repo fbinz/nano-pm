@@ -23,7 +23,8 @@ def dep_add(request: HttpRequest):
     pred = int(data.get("predecessor", 0) or 0)
     succ = int(data.get("successor", 0) or 0)
     _, _, err = add_dependency(
-        workspace=request.workspace, predecessor_id=pred, successor_id=succ
+        workspace=request.workspace, predecessor_id=pred, successor_id=succ,
+        actor=request.user,
     )
     if err:
         yield SSE.patch_elements(
@@ -41,6 +42,7 @@ def dep_delete(request: HttpRequest, predecessor_id: int, successor_id: int):
         workspace=request.workspace,
         predecessor_id=predecessor_id,
         successor_id=successor_id,
+        actor=request.user,
     )
     yield patch_chart(request)
     task_raw = request.GET.get("task", "")

@@ -33,6 +33,7 @@ from .workspaces import (
     workspace_switch, workspace_create, workspace_rename,
     public_roadmap, public_roadmap_update, public_roadmap_regenerate,
 )
+from .activity import activity_page
 
 urlpatterns = [
     path("", index, name="gantt_index"),
@@ -87,6 +88,7 @@ urlpatterns = [
     path("ideas/<int:idea_id>/delete/",             idea_delete,      name="idea_delete"),
     # People
     path("people/",                                  people_page,      name="people_page"),
+    path("activity/",                                activity_page,    name="activity_page"),
     path("people/create/",                           people_create,    name="people_create"),
     path("people/<int:person_id>/invite-link/",      people_invite_link, name="people_invite_link"),
     path("people/<int:person_id>/update/",           people_update,    name="people_update"),

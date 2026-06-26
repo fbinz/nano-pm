@@ -49,6 +49,7 @@ def milestone_update_view(request: HttpRequest, milestone_id: int):
         description=description,
         on=parse_iso(request.POST.get("date", "")),
         project_id=int(project_id_raw) if project_id_raw.isdigit() else None,
+        actor=request.user,
     )
     yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
@@ -58,7 +59,7 @@ def milestone_update_view(request: HttpRequest, milestone_id: int):
 @login_required
 @datastar_response
 def milestone_delete_view(request: HttpRequest, milestone_id: int):
-    delete_milestone(workspace=request.workspace, milestone_id=milestone_id)
+    delete_milestone(workspace=request.workspace, milestone_id=milestone_id, actor=request.user)
     yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
 
@@ -71,7 +72,7 @@ def milestone_move(request: HttpRequest, milestone_id: int):
     new_date = parse_iso(data.get("date", ""))
     if new_date is None:
         return
-    update_milestone(workspace=request.workspace, milestone_id=milestone_id, on=new_date)
+    update_milestone(workspace=request.workspace, milestone_id=milestone_id, on=new_date, actor=request.user)
     yield patch_chart(request)
 
 
@@ -88,6 +89,7 @@ def milestone_create(request: HttpRequest, project_id: int):
     m = create_milestone(
         workspace=request.workspace, project_id=project_id,
         title="New milestone", on=on,
+        actor=request.user,
     )
     if m is None:
         return

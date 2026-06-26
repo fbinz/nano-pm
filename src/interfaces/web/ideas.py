@@ -79,6 +79,7 @@ def idea_create(request: HttpRequest) -> HttpResponse:
         workspace=request.workspace,
         creator=request.user,
         title=request.POST.get("title", ""),
+        actor=request.user,
     )
     return redirect("idea_detail", idea_id=idea.id)
 
@@ -116,6 +117,7 @@ def idea_update(request: HttpRequest, idea_id: int) -> HttpResponse:
         body=request.POST.get("body", ""),
         status=request.POST.get("status", ""),
         tags=request.POST.get("tags", ""),
+        actor=request.user,
     )
     messages.success(request, _("Idea saved."))
     return redirect("idea_detail", idea_id=idea_id)
@@ -128,7 +130,7 @@ def idea_status(request: HttpRequest, idea_id: int, status: str) -> HttpResponse
         return forbidden()
     _idea_or_404(request, idea_id)
     if status in IdeaStatus.values:
-        set_idea_status(workspace=request.workspace, idea_id=idea_id, status=status)
+        set_idea_status(workspace=request.workspace, idea_id=idea_id, status=status, actor=request.user)
     return redirect("idea_detail", idea_id=idea_id)
 
 
@@ -142,6 +144,7 @@ def idea_convert_project(request: HttpRequest, idea_id: int) -> HttpResponse:
         workspace=request.workspace,
         idea_id=idea_id,
         name=request.POST.get("name", ""),
+        actor=request.user,
     )
     if idea is not None:
         messages.success(request, _("Idea converted to a project."))
@@ -166,6 +169,7 @@ def idea_create_task(request: HttpRequest, idea_id: int) -> HttpResponse:
             title=request.POST.get("title", ""),
             start=start,
             end=end,
+            actor=request.user,
         )
         if idea is not None and idea.converted_task_id:
             messages.success(request, _("Idea converted to a task."))
@@ -178,6 +182,6 @@ def idea_delete(request: HttpRequest, idea_id: int) -> HttpResponse:
     if not has_idea_perm(request, "delete"):
         return forbidden()
     _idea_or_404(request, idea_id)
-    delete_idea(workspace=request.workspace, idea_id=idea_id)
+    delete_idea(workspace=request.workspace, idea_id=idea_id, actor=request.user)
     messages.success(request, _("Idea deleted."))
     return redirect("ideas_page")

@@ -2,6 +2,7 @@
 
 from django.utils.translation import gettext as _
 
+from actions.activity import created_changes, deleted_changes, log_activity
 from data.models import Dependency, Task
 from actions.auto_cascade import cascade_workspace
 
@@ -30,8 +31,19 @@ def _would_cycle(workspace, predecessor_id: int, successor_id: int) -> bool:
     return False
 
 
+def _dependency_values(dep: Dependency) -> dict:
+    return {
+        "predecessor": dep.predecessor.title,
+        "successor": dep.successor.title,
+    }
+
+
+def _dependency_label(dep: Dependency) -> str:
+    return f"{dep.predecessor.title} → {dep.successor.title}"
+
+
 def add_dependency(
-    *, workspace, predecessor_id: int, successor_id: int
+    *, workspace, predecessor_id: int, successor_id: int, actor=None
 ) -> tuple[Dependency | None, set[int], str | None]:
     """Add an FS dependency. Returns (dep, cascaded_task_ids, error_message)."""
     if predecessor_id == successor_id:
@@ -46,19 +58,44 @@ def add_dependency(
         return None, set(), _("That dependency already exists.")
     if _would_cycle(workspace, predecessor_id, successor_id):
         return None, set(), _("That dependency would create a cycle.")
-    dep = Dependency.objects.create(
+    dep = Dependency.objects.select_related("predecessor", "successor").create(
         predecessor_id=predecessor_id, successor_id=successor_id
+    )
+    dep = Dependency.objects.select_related("predecessor", "successor").get(id=dep.id)
+    log_activity(
+        workspace=workspace,
+        actor=actor,
+        action="dependency.created",
+        entity=dep,
+        entity_type="dependency",
+        entity_label=_dependency_label(dep),
+        changes=created_changes(_dependency_values(dep)),
     )
     cascaded = cascade_workspace(workspace)
     return dep, cascaded, None
 
 
 def delete_dependency(
-    *, workspace, predecessor_id: int, successor_id: int
+    *, workspace, predecessor_id: int, successor_id: int, actor=None
 ) -> bool:
-    deleted, _ = Dependency.objects.filter(
+    dep = Dependency.objects.filter(
         predecessor_id=predecessor_id,
         successor_id=successor_id,
         predecessor__project__workspace=workspace,
-    ).delete()
-    return deleted > 0
+    ).select_related("predecessor", "successor").first()
+    if dep is None:
+        return False
+    values = _dependency_values(dep)
+    label = _dependency_label(dep)
+    entity_id = dep.id
+    dep.delete()
+    log_activity(
+        workspace=workspace,
+        actor=actor,
+        action="dependency.deleted",
+        entity_type="dependency",
+        entity_id=entity_id,
+        entity_label=label,
+        changes=deleted_changes(values),
+    )
+    return True

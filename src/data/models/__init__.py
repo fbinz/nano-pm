@@ -8,6 +8,7 @@ from data.models.idea import Idea, IdeaStatus
 from data.models.dependency import Dependency
 from data.models.milestone import Milestone
 from data.models.invitation import Invitation
+from data.models.activity import ActivityEvent
 
 __all__ = [
     "Workspace",
@@ -24,4 +25,5 @@ __all__ = [
     "Dependency",
     "Milestone",
     "Invitation",
+    "ActivityEvent",
 ]

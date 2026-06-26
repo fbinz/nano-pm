@@ -97,6 +97,79 @@ test.describe('auth + page render', () => {
 });
 
 // =============================================================================
+// Activity log
+// =============================================================================
+test.describe('activity log', () => {
+  test('task changes are recorded with actor and old/new values', async ({ appPage: page }) => {
+    await page.getByRole('link', { name: 'Activity' }).click();
+    await expect(page).toHaveURL('/activity/');
+    await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible();
+    await expect(page.locator('.activity-event', { hasText: 'Migrate users (activity)' })).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Projects' }).click();
+    await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).click();
+    await expect(page.locator('#task-popover')).toBeVisible();
+    await page.fill('#task-popover input[name=title]', 'Migrate users (activity)');
+    await page.click('#task-popover button[type=submit]');
+    await expect(page.locator('#task-popover')).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Activity' }).click();
+    const event = page.locator('.activity-event').first();
+    await expect(event.locator('td').nth(1)).toHaveText('demo');
+    await expect(event).toContainText('updated task Migrate users (activity)');
+    await expect(event).toContainText('Title');
+    await expect(event).toContainText('Migrate /users endpoints → Migrate users (activity)');
+  });
+
+  test('list-like task changes render as plain comma-separated values', async ({ appPage: page }) => {
+    await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).click();
+    await expect(page.locator('#task-popover')).toBeVisible();
+
+    const alexValue = await page.locator('#task-assignees option', { hasText: 'Alex Chen' }).first().getAttribute('value');
+    await page.locator('#task-assignees').selectOption([alexValue]);
+    await page.click('#task-popover button[type=submit]');
+    await expect(page.locator('#task-popover')).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Activity' }).click();
+    const event = page.locator('.activity-event').first();
+    await expect(event).toContainText('Assignees');
+    await expect(event).toContainText('Alex Chen, Sam Patel → Alex Chen');
+    await expect(event).not.toContainText("['Alex Chen', 'Sam Patel']");
+  });
+
+  test('activity event text is translated to German', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    const taskId = await bar.getAttribute('data-task-id');
+    const currentEnd = await bar.getAttribute('data-end');
+    const nextEnd = await page.evaluate((iso) => {
+      const date = new Date(`${iso}T00:00:00Z`);
+      date.setUTCDate(date.getUTCDate() + 1);
+      return date.toISOString().slice(0, 10);
+    }, currentEnd);
+
+    const status = await page.evaluate(async ({ taskId, nextEnd }) => {
+      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
+      const response = await fetch(`/tasks/${taskId}/resize/end/`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': decodeURIComponent(token), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ end: nextEnd }),
+      });
+      return response.status;
+    }, { taskId, nextEnd });
+    expect(status).toBe(200);
+
+    await page.getByRole('link', { name: 'Activity' }).click();
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    const event = page.locator('.activity-event').first();
+    await expect(page.getByRole('heading', { name: 'Aktivität' })).toBeVisible();
+    await expect(event.locator('td').nth(1)).toHaveText('demo');
+    await expect(event).toContainText('Dauer der Aufgabe Migrate /users endpoints geändert');
+    await expect(event).toContainText('Ende');
+  });
+});
+
+// =============================================================================
 // Ideas
 // =============================================================================
 test.describe('ideas', () => {
