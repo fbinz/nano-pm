@@ -39,9 +39,9 @@ def render_task_popover(request: HttpRequest, task_id: int) -> str | None:
     task.milestone_title = task.milestone.title if hasattr(task, "milestone") else ""
     milestone_options = list(
         Milestone.objects.filter(
-            project__workspace=request.workspace,
+            project=task.project,
             task__isnull=True,
-        ).select_related("project").order_by("project__order", "date", "id")
+        ).select_related("project").order_by("date", "id")
     )
     can_edit = is_pm(request) or not task.assignee_ids or is_assigned(request, task)
     return render_component(

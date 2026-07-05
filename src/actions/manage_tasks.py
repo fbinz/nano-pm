@@ -50,14 +50,14 @@ def _sync_linked_milestones(workspace) -> None:
 
 
 def _find_free_milestone_for_title(task: Task, title: str) -> Milestone | None:
-    candidates = Milestone.objects.filter(
-        task__isnull=True,
-        project__workspace_id=task.project.workspace_id,
-        title=title,
-    )
     return (
-        candidates.filter(project_id=task.project_id).order_by("date", "id").first()
-        or candidates.order_by("date", "id").first()
+        Milestone.objects.filter(
+            task__isnull=True,
+            project_id=task.project_id,
+            title=title,
+        )
+        .order_by("date", "id")
+        .first()
     )
 
 

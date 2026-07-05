@@ -1504,6 +1504,22 @@ test.describe('project & people management', () => {
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(1);
   });
 
+  test('task milestone input autocomplete only lists free milestones from the same project', async ({ appPage: page }) => {
+    await page.locator('.left-cell.proj', { hasText: 'Onboarding revamp' }).click();
+    await expect(page.locator('#project-popover')).toBeVisible();
+    await page.click('#project-popover #pp-add-milestone');
+    await expect(page.locator('#milestone-popover')).toBeVisible();
+    await page.fill('#milestone-popover input[name=title]', 'Onboarding-only checkpoint');
+    await page.click('#milestone-popover button[type=submit]');
+    await expect(page.locator('#milestone-popover')).toHaveCount(0);
+
+    await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).click();
+    await expect(page.locator('#task-popover')).toBeVisible();
+    const listId = await page.locator('#task-milestone-title').getAttribute('list');
+    expect(listId).toBeTruthy();
+    await expect(page.locator(`#${listId} option[value="Onboarding-only checkpoint"]`)).toHaveCount(0);
+  });
+
   test('task milestone input can autocomplete and link an existing free milestone', async ({ appPage: page }) => {
     await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
     await expect(page.locator('#project-popover')).toBeVisible();
