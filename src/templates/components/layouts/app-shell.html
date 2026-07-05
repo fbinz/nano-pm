@@ -72,7 +72,7 @@
                     <button type="submit" class="btn btn-xs btn-ghost">{% trans "Regenerate public link" %}</button>
                   </form>
                 {% else %}
-                  <p class="mb-2 text-xs opacity-70">{% trans "Share milestones without exposing tasks or people." %}</p>
+                  <p class="mb-2 text-xs opacity-70">{% trans "Share task milestones without exposing people or dependencies." %}</p>
                   <form method="post" action="/workspaces/public-roadmap/">
                     {% csrf_token %}
                     <button type="submit" name="action" value="enable" class="btn btn-sm btn-neutral w-full">{% trans "Enable public roadmap" %}</button>

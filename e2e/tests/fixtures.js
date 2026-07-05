@@ -3,7 +3,7 @@
 //   * `appPage`  — a Page already logged in as `demo` and parked at `/`.
 //                  Before each test the DB is reset to the seeded state via
 //                  the DEBUG-only `/__reset__/` endpoint, so every test starts
-//                  from the same 3-projects-3-teams-8-tasks-6-deps-2-milestones fixture.
+//                  from the same 3-projects-3-teams-8-tasks-6-deps-2-task-milestones fixture.
 
 const { test: base, expect } = require('@playwright/test');
 

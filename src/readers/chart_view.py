@@ -59,6 +59,7 @@ class BarVM:
 @dataclass
 class MilestoneVM:
     id: int
+    task_id: int | None
     project_id: int
     title: str
     date_iso: str
@@ -317,7 +318,7 @@ def build_chart_vm(
             if team_ids and not _task_matches_team_filter(t, team_ids):
                 continue
             x = x_of(t.start)
-            xe = x_of(t.end + timedelta(days=1))
+            xe = x_of(t.end)
             assignees = ", ".join(p.name.split(" ")[0] for p in t.assignees.all())
             status = status_for_dates(t.start, t.end, state.today)
             bars.append(BarVM(
@@ -337,14 +338,20 @@ def build_chart_vm(
             ))
         miles: list[MilestoneVM] = []
         for m in proj.milestones.all():
+            task = m.task
+            if task is not None and team_ids and not _task_matches_team_filter(task, team_ids):
+                continue
+            milestone_date = task.end if task is not None else m.date
+            milestone_x = x_of(milestone_date)
             miles.append(MilestoneVM(
                 id=m.id,
+                task_id=task.id if task is not None else None,
                 project_id=proj.id,
                 title=m.title,
-                date_iso=m.date.isoformat(),
-                x=x_of(m.date),
+                date_iso=milestone_date.isoformat(),
+                x=milestone_x,
                 color=proj.color,
-                overdue=(m.date < state.today),
+                overdue=(milestone_date < state.today),
             ))
         if team_ids and not bars:
             continue
@@ -454,7 +461,7 @@ def build_resource_vm(
                 id=t.id,
                 project_id=proj.id,
                 title=t.title,
-                x=x_of(t.start), w=max(2.0, x_of(t.end + timedelta(days=1)) - x_of(t.start)),
+                x=x_of(t.start), w=max(2.0, x_of(t.end) - x_of(t.start)),
                 color=proj.color,
                 text_color=text_color,
                 text_dark=text_dark,

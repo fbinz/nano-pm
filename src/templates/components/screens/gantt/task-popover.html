@@ -1,6 +1,6 @@
 {% load i18n %}
 {# Task editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars task projects people preds succs can_edit />
+<c-vars task projects people milestone_options preds succs can_edit />
 <div id="drawer-slot">
   <form
     id="task-popover"
@@ -33,6 +33,16 @@
           <option value="{{ p.id }}" {% if p.id == task.project_id %}selected{% endif %}>{{ p.name }}</option>
         {% endfor %}
       </select>
+    </fieldset>
+    <fieldset class="fieldset">
+      <label class="label" for="task-milestone-title">{% trans "Milestone" %}</label>
+      <input id="task-milestone-title" class="input input-sm w-full" type="text" name="milestone_title" value="{{ task.milestone_title }}" placeholder="{% trans 'Leave empty for no milestone' %}" list="task-milestone-options">
+      <datalist id="task-milestone-options">
+        {% for milestone in milestone_options %}
+          <option value="{{ milestone.title }}" label="{{ milestone.project.name }} · {{ milestone.date|date:'Y-m-d' }}"></option>
+        {% endfor %}
+      </datalist>
+      <p class="text-xs opacity-70">{% trans "A non-empty milestone title creates a milestone using this task's project and end date. Click the milestone to edit its description." %}</p>
     </fieldset>
     <fieldset class="fieldset">
       <label class="label" for="task-assignees">{% trans "Assignees" %}</label>

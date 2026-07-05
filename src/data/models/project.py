@@ -8,7 +8,7 @@ PROJECT_COLORS = [
 
 
 class Project(models.Model):
-    """A project within a workspace. Groups tasks and milestones."""
+    """A project within a workspace. Groups tasks, including task milestones."""
 
     workspace = models.ForeignKey(
         "data.Workspace",

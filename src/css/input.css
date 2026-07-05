@@ -114,18 +114,35 @@ html, body { height: 100%; }
   }
 }
 
+/* DaisyUI's .textarea-sm is compact but its 12px font is too small for
+   editing descriptions. Keep the compact control chrome but use normal text. */
+@layer utilities {
+  .textarea.textarea-sm {
+    @apply text-base;
+  }
+
+  /* DaisyUI's compact controls use very small text. In the app sidebar this
+     made mixed nav/forms/actions look inconsistent, so keep compact spacing
+     while normalising readable typography across all sidebar text and controls. */
+  .drawer-side :is(a, button, input, select, textarea, label, summary, p, .sidebar-brand, .ws-name, .lang-btn, .user-name, .sign-out-btn, .workspace-menu-header, .workspace-item),
+  .workspace-menu[popover] :is(a, button, input, select, textarea, label, summary, p, .workspace-menu-header, .workspace-item) {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+
 /* ===================================================================
    App sidebar (DaisyUI drawer + menu)
    =================================================================== */
 @layer components {
   .sidebar-brand {
-    @apply px-4 py-3 font-semibold text-[15px] tracking-tight;
+    @apply px-4 py-3 font-semibold text-base tracking-tight;
   }
   .sidebar-workspace {
     @apply relative px-3 py-2 border-b border-base-300;
   }
   .sidebar-workspace-display {
-    @apply flex items-center gap-2 px-2 py-1.5;
+    @apply flex items-center gap-2 px-2 py-1.5 text-base;
   }
   .sidebar-workspace-display .ws-name {
     @apply flex-1 font-medium truncate;
@@ -139,14 +156,14 @@ html, body { height: 100%; }
   /* Sidebar nav menu items span the full sidebar width — no inset, no rounded
      corners — so the active pill flushes against the sidebar edges. */
   .drawer-side .menu > li > a {
-    @apply rounded-none px-4 py-2.5;
+    @apply rounded-none px-4 py-2.5 text-base;
   }
   .sidebar-user {
     @apply px-4 py-3 border-t border-base-300 flex items-center justify-between;
   }
-  .sidebar-user .user-name { @apply text-sm text-base-content/60; }
+  .sidebar-user .user-name { @apply text-base text-base-content/70; }
   .sidebar-user .sign-out-btn {
-    @apply text-sm text-base-content/60 bg-transparent border-0 cursor-pointer hover:text-base-content;
+    @apply text-base text-base-content/70 bg-transparent border-0 cursor-pointer hover:text-base-content;
   }
   .lang-switch {
     @apply px-4 py-3 flex gap-1;
@@ -457,7 +474,7 @@ html, body { height: 100%; }
     @apply h-auto py-1 leading-tight;
   }
   .popover textarea {
-    @apply textarea textarea-sm w-full min-h-[4rem] resize-y font-[inherit];
+    @apply textarea textarea-sm w-full min-h-[4rem] resize-y font-[inherit] text-base;
   }
   .popover .row { @apply flex gap-2; }
   .popover .row > div { @apply flex-1; }

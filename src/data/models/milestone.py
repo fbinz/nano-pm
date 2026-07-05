@@ -9,6 +9,13 @@ class Milestone(models.Model):
         on_delete=models.CASCADE,
         related_name="milestones",
     )
+    task = models.OneToOneField(
+        "data.Task",
+        on_delete=models.CASCADE,
+        related_name="milestone",
+        null=True,
+        blank=True,
+    )
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
     date = models.DateField()

@@ -52,7 +52,7 @@ def get_chart_state(workspace) -> ChartState:
             ),
             Prefetch(
                 "milestones",
-                queryset=Milestone.objects.order_by("date", "id"),
+                queryset=Milestone.objects.select_related("task").order_by("date", "id"),
             ),
         )
     )

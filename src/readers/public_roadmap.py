@@ -1,8 +1,8 @@
 """Public roadmap state loading.
 
 The public roadmap intentionally does not reuse the private chart reader: it
-loads only workspace, projects and milestones so tasks, people, dependencies,
-and internal planning state cannot leak through the public page.
+loads only workspace, projects and milestones so people, dependencies,
+and other internal planning state cannot leak through the public page.
 """
 
 from dataclasses import dataclass, field
@@ -98,7 +98,7 @@ def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
         .prefetch_related(
             Prefetch(
                 "milestones",
-                queryset=Milestone.objects.filter(date__gte=today).order_by("date", "id"),
+                queryset=Milestone.objects.select_related("task").filter(date__gte=today).order_by("date", "id"),
             )
         )
     )
@@ -108,17 +108,20 @@ def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
         project_key = f"p{index}"
         milestones = []
         for milestone in project.milestones.all():
-            relative_date = _relative_date_label(milestone.date, today)
+            task = milestone.task
+            milestone_date = task.end if task is not None else milestone.date
+            relative_date = _relative_date_label(milestone_date, today)
+            title = milestone.title
             milestones.append(PublicMilestoneVM(
-                title=milestone.title,
+                title=title,
                 description=milestone.description,
-                date=milestone.date,
+                date=milestone_date,
                 relative_date=relative_date,
             ))
             timeline_milestones.append(PublicTimelineMilestoneVM(
-                title=milestone.title,
+                title=title,
                 description=milestone.description,
-                date=milestone.date,
+                date=milestone_date,
                 relative_date=relative_date,
                 project_key=project_key,
                 project_name=project.name,

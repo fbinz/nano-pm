@@ -4,9 +4,10 @@
   class="milestone{% if m.overdue %} overdue{% endif %}"
   style="left:{{ m.x|add:'-7' }}px;background:{{ m.color }};"
   data-milestone-id="{{ m.id }}"
+  {% if m.task_id %}data-task-id="{{ m.task_id }}"{% endif %}
   data-project-id="{{ m.project_id }}"
   data-date="{{ m.date_iso }}"
-  data-on:mousedown="nano.milestoneMouseDown(evt, {{ m.id }})"
+  data-on:mousedown="nano.milestoneMouseDown(evt, {{ m.id }}, {% if m.task_id %}{{ m.task_id }}{% else %}null{% endif %})"
   title="{{ m.title }}  {{ m.date_iso }}"
 ></div>
 <div class="milestone-label" style="left:{{ m.x|add:'8' }}px;">{{ m.title }}</div>

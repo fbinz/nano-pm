@@ -14,7 +14,7 @@ from actions.manage_tasks import (
     create_task, update_task, delete_task, move_task, move_many_tasks,
     resize_start, resize_end,
 )
-from data.models import Dependency
+from data.models import Dependency, Milestone
 from readers import get_chart_state, get_task
 
 from .helpers import is_pm, is_assigned, parse_iso, patch_chart, request_data
@@ -36,10 +36,18 @@ def render_task_popover(request: HttpRequest, task_id: int) -> str | None:
     )
     task.assignee_ids = list(task.assignees.values_list("id", flat=True))
     task.project_id = task.project.id
+    task.milestone_title = task.milestone.title if hasattr(task, "milestone") else ""
+    milestone_options = list(
+        Milestone.objects.filter(
+            project__workspace=request.workspace,
+            task__isnull=True,
+        ).select_related("project").order_by("project__order", "date", "id")
+    )
     can_edit = is_pm(request) or not task.assignee_ids or is_assigned(request, task)
     return render_component(
         request, "screens/gantt/task-popover",
         task=task, projects=state.projects, people=state.people,
+        milestone_options=milestone_options,
         preds=preds, succs=succs, can_edit=can_edit,
     )
 
@@ -64,6 +72,7 @@ def task_update(request: HttpRequest, task_id: int):
     project_id_raw = request.POST.get("project_id")
     project_id = int(project_id_raw) if project_id_raw and project_id_raw.isdigit() else None
     assignee_ids = [int(x) for x in request.POST.getlist("assignee_ids") if x.isdigit()]
+    milestone_title = request.POST.get("milestone_title") if "milestone_title" in request.POST else None
     update_task(
         workspace=request.workspace,
         task_id=task_id,
@@ -73,6 +82,7 @@ def task_update(request: HttpRequest, task_id: int):
         end=end,
         project_id=project_id,
         assignee_ids=assignee_ids,
+        milestone_title=milestone_title,
         actor=request.user,
     )
     yield patch_chart(request)

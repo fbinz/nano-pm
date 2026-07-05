@@ -371,7 +371,7 @@
       document.removeEventListener('mouseup', onUp);
       rb.remove();
       if (!moved) {
-        // Click without a drag → create a milestone at the click date.
+        // Click without a drag → create a free milestone at the click date.
         const days = Math.round((ev.clientX - rect.left) / ppd);
         addMilestone(projectId, fmt(addDays(cs, days)));
         return;
@@ -386,7 +386,7 @@
         project_id: projectId,
         title: 'New task',
         start: fmt(addDays(cs, startDays)),
-        end: fmt(addDays(cs, endDays - 1)),
+        end: fmt(addDays(cs, endDays)),
       });
     }
     document.addEventListener('mousemove', onMove);
@@ -394,12 +394,10 @@
   }
 
   // ---------------------------------------------------------------------- //
-  // Milestone — drag to reschedule, click (no movement) to open editor     //
+  // Milestone — drag to reschedule, click to edit (task-linked or free)    //
   // ---------------------------------------------------------------------- //
-  function milestoneMouseDown(evt, milestoneId) {
+  function milestoneMouseDown(evt, milestoneId, taskId) {
     if (evt.button !== 0) return;
-    // Stop propagation so the project-row's mousedown doesn't kick off a
-    // rubber-band gesture beneath the milestone.
     evt.preventDefault();
     evt.stopPropagation();
 
@@ -411,7 +409,6 @@
     const [oy, om, od] = origDate.split('-').map(Number);
     const origDateObj = new Date(oy, om - 1, od);
     const origDiamondLeft = parseFloat(target.style.left);
-    // The text label is the diamond's next sibling (see milestone.html).
     const label = target.nextElementSibling;
     const origLabelLeft = (label && label.classList.contains('milestone-label'))
       ? parseFloat(label.style.left) : null;
@@ -444,9 +441,6 @@
     document.addEventListener('mouseup', onUp);
   }
 
-  // Server creates a placeholder milestone and returns the editor (which
-  // opens the right drawer). Optional `date` (YYYY-MM-DD) places the
-  // milestone at that day; default is today.
   function addMilestone(projectId, date) {
     commit(`/projects/${projectId}/milestones/`, date ? { date } : {});
   }

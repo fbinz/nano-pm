@@ -1,9 +1,10 @@
 """Write operations for milestones."""
 
-from datetime import date
+from datetime import date, timedelta
 
 from actions.activity import change_set, created_changes, deleted_changes, log_activity, snapshot
 from data.models import Milestone, Project
+from actions.auto_cascade import cascade_workspace
 
 
 MILESTONE_FIELDS = ["title", "description", "date"]
@@ -12,7 +13,27 @@ MILESTONE_FIELDS = ["title", "description", "date"]
 def _milestone_values(milestone: Milestone) -> dict:
     values = snapshot(milestone, MILESTONE_FIELDS)
     values["project"] = milestone.project.name
+    if milestone.task_id:
+        values["task"] = milestone.task.title
     return values
+
+
+def _sync_linked_milestones(workspace) -> None:
+    milestones = Milestone.objects.filter(
+        task__project__workspace=workspace
+    ).select_related("task", "task__project")
+    for milestone in milestones:
+        task = milestone.task
+        changed = []
+        if milestone.project_id != task.project_id:
+            milestone.project = task.project
+            changed.append("project")
+        if milestone.date != task.end:
+            milestone.date = task.end
+            changed.append("date")
+        if changed:
+            changed.append("updated_at")
+            milestone.save(update_fields=changed)
 
 
 def create_milestone(
@@ -46,26 +67,42 @@ def update_milestone(
     actor=None,
 ) -> Milestone | None:
     try:
-        m = Milestone.objects.select_related("project").get(
+        m = Milestone.objects.select_related("project", "task").get(
             id=milestone_id, project__workspace=workspace
         )
     except Milestone.DoesNotExist:
         return None
     before = _milestone_values(m)
-    if title is not None:
-        m.title = title.strip() or m.title
-    if description is not None:
-        m.description = description
-    if on is not None:
-        m.date = on
-    if project_id is not None:
-        try:
-            new_proj = Project.objects.get(id=project_id, workspace=workspace)
-            m.project = new_proj
-        except Project.DoesNotExist:
-            pass
-    m.save()
-    m = Milestone.objects.select_related("project").get(id=m.id)
+    if m.task_id:
+        task = m.task
+        if title is not None:
+            m.title = title.strip() or m.title
+        if description is not None:
+            m.description = description.strip()
+        if on is not None:
+            task.end = max(on, task.start + timedelta(days=1))
+            task.save(update_fields=["end"])
+        m.project = task.project
+        m.date = task.end
+        m.save(update_fields=["project", "title", "description", "date", "updated_at"])
+        if on is not None:
+            cascade_workspace(workspace)
+            _sync_linked_milestones(workspace)
+    else:
+        if title is not None:
+            m.title = title.strip() or m.title
+        if description is not None:
+            m.description = description
+        if on is not None:
+            m.date = on
+        if project_id is not None:
+            try:
+                new_proj = Project.objects.get(id=project_id, workspace=workspace)
+                m.project = new_proj
+            except Project.DoesNotExist:
+                pass
+        m.save()
+    m = Milestone.objects.select_related("project", "task").get(id=m.id)
     log_activity(
         workspace=workspace,
         actor=actor,

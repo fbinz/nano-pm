@@ -23,7 +23,7 @@ def get_project(workspace, project_id: int) -> Project | None:
 
 def get_milestone(workspace, milestone_id: int) -> Milestone | None:
     try:
-        return Milestone.objects.select_related("project").get(
+        return Milestone.objects.select_related("project", "task").get(
             id=milestone_id, project__workspace=workspace
         )
     except Milestone.DoesNotExist:

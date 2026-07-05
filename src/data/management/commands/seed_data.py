@@ -2,7 +2,7 @@
 
 Creates a 'demo' user (password 'demo') with a workspace containing 3 projects,
 3 people, 3 teams, 8 tasks (with multi-assignee + date-derived statuses),
-6 dependencies (incl. one cross-project), and 2 milestones — all dated relative to today.
+6 dependencies (incl. one cross-project), and 2 task-owned milestones — all dated relative to today.
 
 Also creates a second user 'pm2' (password 'pm2') with an empty workspace,
 for multi-tenancy testing.
@@ -93,48 +93,54 @@ class Command(BaseCommand):
         # Project 1: API Migration
         t1 = Task.objects.create(
             project=p1, title="Spike on auth changes",
-            start=D(-12), end=D(-3),
+            start=D(-12), end=D(-2),
         )
         t1.assignees.set([alex])
         t2 = Task.objects.create(
             project=p1, title="Migrate /users endpoints",
-            start=D(-1), end=D(10),
+            start=D(-1), end=D(11),
         )
         t2.assignees.set([alex, sam])
         t3 = Task.objects.create(
             project=p1, title="Cutover and deprecation",
-            start=D(11), end=D(20),
+            start=D(11), end=D(23),
         )
         t3.assignees.set([sam])
-        Milestone.objects.create(project=p1, title="v2 API beta", date=D(22))
+        Milestone.objects.create(
+            project=p1, task=t3, title="v2 API beta", date=t3.end,
+            description="v2 API beta readiness checkpoint.",
+        )
 
         # Project 2: Onboarding revamp
         t4 = Task.objects.create(
             project=p2, title="User research interviews",
-            start=D(-7), end=D(2),
+            start=D(-7), end=D(3),
         )
         t4.assignees.set([riley])
         t5 = Task.objects.create(
             project=p2, title="Tutorial flow v2",
-            start=D(3), end=D(18),
+            start=D(3), end=D(19),
         )
         t5.assignees.set([riley, sam])
         t6 = Task.objects.create(
             project=p2, title="A/B test setup",
-            start=D(19), end=D(26),
+            start=D(19), end=D(29),
         )
         t6.assignees.set([riley])
-        Milestone.objects.create(project=p2, title="Soft launch", date=D(28))
+        Milestone.objects.create(
+            project=p2, task=t6, title="Soft launch", date=t6.end,
+            description="Soft launch readiness checkpoint.",
+        )
 
         # Project 3: Infra hardening
         t7 = Task.objects.create(
             project=p3, title="Audit IAM policies",
-            start=D(-4), end=D(4),
+            start=D(-4), end=D(5),
         )
         t7.assignees.set([alex])
         t8 = Task.objects.create(
             project=p3, title="Terraform module rewrites",
-            start=D(5), end=D(16),
+            start=D(5), end=D(17),
         )
         t8.assignees.set([alex, riley])
 
@@ -168,7 +174,7 @@ class Command(BaseCommand):
         ideaeditor.user_permissions.set(idea_perms)
 
         self.stdout.write(self.style.SUCCESS(
-            "Seeded 3 projects, 3 people, 3 teams, 8 tasks, 2 milestones, 6 deps for user 'demo'."
+            "Seeded 3 projects, 3 people, 3 teams, 8 tasks, 2 task-owned milestones, 6 deps for user 'demo'."
         ))
 
         # --- pm2 user + empty workspace (for isolation tests) ---

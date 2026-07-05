@@ -82,6 +82,23 @@ def _make_task(project, title, start_offset, duration, assignees, today):
     return t
 
 
+def _make_task_milestone(project, title, date_offset, today, description=""):
+    task = Task.objects.create(
+        project=project,
+        title=title,
+        start=_D(today, date_offset),
+        end=_D(today, date_offset + 1),
+    )
+    Milestone.objects.create(
+        project=project,
+        task=task,
+        title=task.title,
+        date=task.end,
+        description=description or title,
+    )
+    return task
+
+
 # --------------------------------------------------------------------------- #
 # Persona: Alice (startup PM)                                                 #
 # --------------------------------------------------------------------------- #
@@ -110,8 +127,8 @@ def build_alice(ws, today):
     android = _make_task(p1, "Android UI rebuild", 0, 35, [olivia], today)
     beta = _make_task(p1, "Beta build + TestFlight", 36, 7, [maya], today)
     release = _make_task(p1, "Public v2 release", 45, 3, [maya], today)
-    Milestone.objects.create(project=p1, title="Beta open", date=_D(today, 36))
-    Milestone.objects.create(project=p1, title="v2 launch", date=_D(today, 50))
+    _make_task_milestone(p1, "Beta open", 36, today)
+    _make_task_milestone(p1, "v2 launch", 50, today)
     n_tasks += 6
     n_ms += 2
     Dependency.objects.create(predecessor=spike, successor=core)
@@ -132,7 +149,7 @@ def build_alice(ws, today):
     build = _make_task(p2, "Tutorial v2 build", -28, 21, [maya, ravi], today)
     abtest = _make_task(p2, "A/B test setup", -6, 14, [olivia], today)
     rollout = _make_task(p2, "Onboarding rollout", 9, 5, [olivia], today)
-    Milestone.objects.create(project=p2, title="Onboarding GA", date=_D(today, 15))
+    _make_task_milestone(p2, "Onboarding GA", 15, today)
     n_tasks += 5
     n_ms += 1
     Dependency.objects.create(predecessor=research, successor=design)
@@ -159,7 +176,7 @@ def build_alice(ws, today):
     p4 = Project.objects.create(workspace=ws, name="Data Pipeline", color="#8b5cf6", order=4)
     soc2 = _make_task(p4, "SOC2 compliance review", -10, 30, [ravi], today)
     pipeline = _make_task(p4, "Pipeline rewrite", 21, 30, [ravi], today)
-    Milestone.objects.create(project=p4, title="Pipeline cutover", date=_D(today, 55))
+    _make_task_milestone(p4, "Pipeline cutover", 55, today)
     n_tasks += 2
     n_ms += 1
     Dependency.objects.create(predecessor=soc2, successor=pipeline)
@@ -170,7 +187,7 @@ def build_alice(ws, today):
     n_deps += 1
 
     return {
-        "projects": 4, "tasks": n_tasks, "milestones": n_ms, "deps": n_deps, "people": 4,
+        "projects": 4, "tasks": n_tasks + n_ms, "milestones": n_ms, "deps": n_deps, "people": 4,
     }
 
 
@@ -205,8 +222,8 @@ def build_bob(ws, today):
     phase2 = _make_task(p1, "Service migration phase 2", 10, 25, [lin, dev], today)
     perfval = _make_task(p1, "Performance validation", 38, 14, [taylor], today)
     cutover = _make_task(p1, "Cutover", 55, 5, [taylor, lin], today)
-    Milestone.objects.create(project=p1, title="Phase 1 complete", date=_D(today, 10))
-    Milestone.objects.create(project=p1, title="Cutover live", date=_D(today, 62))
+    _make_task_milestone(p1, "Phase 1 complete", 10, today)
+    _make_task_milestone(p1, "Cutover live", 62, today)
     n_tasks += 6
     n_ms += 2
     Dependency.objects.create(predecessor=capacity, successor=schema)
@@ -226,7 +243,7 @@ def build_bob(ws, today):
     audit = _make_task(p2, "SOC2 audit window", -55, 21, [nia, robin], today)
     remed = _make_task(p2, "Remediation", -30, 14, [robin], today)
     finalrep = _make_task(p2, "Final report", -12, 7, [nia], today)
-    Milestone.objects.create(project=p2, title="Audit closed", date=_D(today, 1))
+    _make_task_milestone(p2, "Audit closed", 1, today)
     n_tasks += 4
     n_ms += 1
     Dependency.objects.create(predecessor=prep, successor=audit)
@@ -242,7 +259,7 @@ def build_bob(ws, today):
     regul = _make_task(p3, "Regulatory review", 25, 35, [nia], today)
     locale = _make_task(p3, "Localisation design", 50, 21, [robin], today)
     pilot = _make_task(p3, "Pilot launch", 80, 14, [casey, robin], today)
-    Milestone.objects.create(project=p3, title="Pilot live", date=_D(today, 95))
+    _make_task_milestone(p3, "Pilot live", 95, today)
     n_tasks += 4
     n_ms += 1
     Dependency.objects.create(predecessor=market, successor=regul)
@@ -258,7 +275,7 @@ def build_bob(ws, today):
     refimpl = _make_task(p4, "Reference implementation", 44, 28, [lin, dev], today)
     sdk = _make_task(p4, "SDK rollout", 75, 14, [lin], today)
     pubbeta = _make_task(p4, "Public beta", 95, 7, [lin, dev], today)
-    Milestone.objects.create(project=p4, title="API v3 GA", date=_D(today, 110))
+    _make_task_milestone(p4, "API v3 GA", 110, today)
     n_tasks += 4
     n_ms += 1
     Dependency.objects.create(predecessor=spec, successor=refimpl)
@@ -284,5 +301,5 @@ def build_bob(ws, today):
     n_deps += 1
 
     return {
-        "projects": 5, "tasks": n_tasks, "milestones": n_ms, "deps": n_deps, "people": 6,
+        "projects": 5, "tasks": n_tasks + n_ms, "milestones": n_ms, "deps": n_deps, "people": 6,
     }

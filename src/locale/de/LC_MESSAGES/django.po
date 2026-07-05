@@ -546,8 +546,8 @@ msgid "Regenerate public link"
 msgstr "Öffentlichen Link neu erzeugen"
 
 #: templates/components/layouts/app-shell.html:75
-msgid "Share milestones without exposing tasks or people."
-msgstr "Meilensteine teilen, ohne Aufgaben oder Personen offenzulegen."
+msgid "Share task milestones without exposing people or dependencies."
+msgstr "Aufgaben-Meilensteine teilen, ohne Personen oder Abhängigkeiten offenzulegen."
 
 #: templates/components/layouts/app-shell.html:78
 msgid "Enable public roadmap"
@@ -769,6 +769,18 @@ msgstr "Erledigte ausblenden"
 #: templates/components/screens/gantt/show-completed-toggle.html:7
 msgid "Show completed"
 msgstr "Erledigte anzeigen"
+
+#: templates/components/screens/gantt/task-popover.html:38
+msgid "Milestone"
+msgstr "Meilenstein"
+
+#: templates/components/screens/gantt/task-popover.html:39
+msgid "Leave empty for no milestone"
+msgstr "Leer lassen für keinen Meilenstein"
+
+#: templates/components/screens/gantt/task-popover.html:40
+msgid "A non-empty milestone title creates a milestone using this task's project and end date. Click the milestone to edit its description."
+msgstr "Ein nicht leerer Meilensteintitel erstellt einen Meilenstein mit dem Projekt und Enddatum dieser Aufgabe. Klicken Sie auf den Meilenstein, um seine Beschreibung zu bearbeiten."
 
 #: templates/components/screens/gantt/task-popover.html:50
 msgid "Dependencies"

@@ -1,12 +1,11 @@
 """Auto-cascade: forward-only, slack-preserved.
 
 Whenever a task moves later, every transitive successor that would now overlap
-its predecessor's end+1 is shifted forward by exactly the violation, preserving
-any slack the user already arranged. Pulling a task earlier or shrinking it
-never violates an FS dep, so we don't need to do anything in those cases.
+its predecessor's exclusive end is shifted forward by exactly the violation,
+preserving any slack the user already arranged. Pulling a task earlier or
+shrinking it never violates an FS dep, so we don't need to do anything in those
+cases.
 """
-
-from datetime import timedelta
 
 from data.models import Dependency, Task
 
@@ -39,7 +38,7 @@ def cascade_workspace(workspace) -> set[int]:
                 p = tasks.get(pid)
                 if p is None:
                     continue
-                min_start = p.end + timedelta(days=1)
+                min_start = p.end
                 if min_start > earliest_start:
                     earliest_start = min_start
             if earliest_start > t.start:
