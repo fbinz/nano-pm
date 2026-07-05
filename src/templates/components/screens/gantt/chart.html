@@ -60,6 +60,7 @@
       <div class="left-cell proj{% if rg.completed %} completed{% endif %}"
            id="proj-{{ rg.id }}"
            data-project-id="{{ rg.id }}"
+           style="--project-color: {{ rg.color }};"
            data-signals:_collapsed.{{ rg.id }}__ifmissing="{{ rg.collapsed|yesno:'true,false' }}"
            data-on:click="nano.openProjectPopover({{ rg.id }})">
         <button type="button" class="collapse-toggle"
@@ -74,7 +75,7 @@
       </div>
       <div class="chart-row proj{% if rg.completed %} completed{% endif %}"
            data-project-id="{{ rg.id }}"
-           style="width:{{ vm.chart_width }}px;"
+           style="--project-color: {{ rg.color }}; width:{{ vm.chart_width }}px;"
            data-on:mousedown="nano.projectRowMouseDown(evt, {{ rg.id }})">
         {% for tile in vm.weekend_tiles %}
           <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
@@ -85,13 +86,13 @@
       </div>
       {% for bar in rg.tasks %}
           <div class="left-cell task{% if rg.completed %} completed{% endif %}" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
-               {% if rg.collapsed %}style="display:none"{% endif %}
+               style="--project-color: {{ rg.color }};{% if rg.collapsed %}display:none;{% endif %}"
                data-show="!$_collapsed.{{ rg.id }}">
             <span class="title">{{ bar.title }}</span>
             <span class="assignees">{{ bar.assignees }}</span>
           </div>
           <div class="chart-row{% if rg.completed %} completed{% endif %}" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
-               style="{% if rg.collapsed %}display:none;{% endif %}width:{{ vm.chart_width }}px;"
+               style="--project-color: {{ rg.color }};{% if rg.collapsed %}display:none;{% endif %}width:{{ vm.chart_width }}px;"
                data-show="!$_collapsed.{{ rg.id }}">
             {% for tile in vm.weekend_tiles %}
               <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>

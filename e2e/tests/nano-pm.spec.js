@@ -389,6 +389,39 @@ test.describe('chart structure', () => {
     await expect(page.locator('#arrows .hit')).toHaveCount(6);
   });
 
+  test('project groups use color rails and tinted swimlanes', async ({ appPage: page }) => {
+    const styles = await page.evaluate(() => {
+      const project = document.querySelector('.left-cell.proj');
+      const projectId = project.dataset.projectId;
+      const task = document.querySelector(`.left-cell.task[data-project-id="${projectId}"]`);
+      const projectTimeline = document.querySelector(`.chart-row.proj[data-project-id="${projectId}"]`);
+      const taskTimeline = document.querySelector(`.chart-row[data-task-id][data-project-id="${projectId}"]`);
+      const swatchBg = getComputedStyle(project.querySelector('.swatch')).backgroundColor;
+      return {
+        projectColor: getComputedStyle(project).getPropertyValue('--project-color').trim(),
+        taskProjectColor: getComputedStyle(task).getPropertyValue('--project-color').trim(),
+        timelineProjectColor: getComputedStyle(taskTimeline).getPropertyValue('--project-color').trim(),
+        railWidth: parseFloat(getComputedStyle(project, '::before').width),
+        taskRailWidth: parseFloat(getComputedStyle(task, '::before').width),
+        projectBackground: getComputedStyle(project).backgroundColor,
+        taskBackground: getComputedStyle(task).backgroundColor,
+        projectTimelineBackground: getComputedStyle(projectTimeline).backgroundColor,
+        taskTimelineBackground: getComputedStyle(taskTimeline).backgroundColor,
+        swatchBg,
+      };
+    });
+
+    expect(styles.projectColor).toBe('#3b82f6');
+    expect(styles.taskProjectColor).toBe(styles.projectColor);
+    expect(styles.timelineProjectColor).toBe(styles.projectColor);
+    expect(styles.railWidth).toBeGreaterThanOrEqual(5);
+    expect(styles.taskRailWidth).toBeGreaterThanOrEqual(3);
+    expect(styles.projectBackground).not.toBe(styles.taskBackground);
+    expect(styles.projectTimelineBackground).not.toBe('rgba(0, 0, 0, 0)');
+    expect(styles.taskTimelineBackground).not.toBe('rgba(0, 0, 0, 0)');
+    expect(styles.swatchBg).toBe('rgb(59, 130, 246)');
+  });
+
   test('team filter limits project view to tasks assigned to selected teams', async ({ appPage: page }) => {
     await page.locator('#team-filter summary').click();
     await page.locator('#team-filter .team-filter-option', { hasText: 'Design' }).click();

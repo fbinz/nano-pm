@@ -245,9 +245,19 @@ html, body { height: 100%; }
   .left-cell.proj {
     height: var(--proj-row-h);
     top: var(--axis-h);
-    @apply bg-base-200 z-[4] font-semibold cursor-pointer;
+    background: color-mix(in srgb, var(--project-color, var(--color-base-300)) 18%, var(--color-base-100));
+    border-bottom-color: color-mix(in srgb, var(--project-color, var(--color-base-300)) 34%, var(--color-base-300));
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--project-color, var(--color-base-300)) 28%, transparent);
+    @apply z-[4] font-semibold cursor-pointer;
   }
-  .left-cell.proj:hover { @apply bg-base-300/70; }
+  .left-cell.proj::before {
+    content: '';
+    @apply absolute left-0 top-0 bottom-0 w-[5px];
+    background: var(--project-color, var(--color-base-content));
+  }
+  .left-cell.proj:hover {
+    background: color-mix(in srgb, var(--project-color, var(--color-base-300)) 26%, var(--color-base-100));
+  }
   .left-cell.proj .collapse-toggle {
     /* Bare button — no daisy `.btn` so it sits visually quiet inside the row.
        Sized to fill most of the 36px project-row height so the hit area is
@@ -273,7 +283,13 @@ html, body { height: 100%; }
   }
   .left-cell.task {
     height: var(--row-h);
+    background: color-mix(in srgb, var(--project-color, var(--color-base-300)) 6%, var(--color-base-100));
     @apply pl-7 text-base-content/80;
+  }
+  .left-cell.task::before {
+    content: '';
+    @apply absolute left-0 top-0 bottom-0 w-[3px];
+    background: color-mix(in srgb, var(--project-color, var(--color-base-content)) 72%, transparent);
   }
   .left-cell.add-project-row {
     height: var(--row-h);
@@ -291,13 +307,17 @@ html, body { height: 100%; }
 
   .chart-row {
     height: var(--row-h);
+    background: color-mix(in srgb, var(--project-color, var(--color-base-300)) 4%, var(--color-base-100));
     @apply relative border-b border-base-200;
   }
   .chart-row.proj {
     height: var(--proj-row-h);
     position: sticky;
     top: var(--axis-h);
-    @apply bg-base-200 cursor-crosshair z-[2];
+    background: color-mix(in srgb, var(--project-color, var(--color-base-300)) 12%, var(--color-base-100));
+    border-bottom-color: color-mix(in srgb, var(--project-color, var(--color-base-300)) 28%, var(--color-base-300));
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--project-color, var(--color-base-300)) 22%, transparent);
+    @apply cursor-crosshair z-[2];
   }
   .chart-row .weekend-tile {
     @apply absolute top-0 bottom-0 pointer-events-none;
