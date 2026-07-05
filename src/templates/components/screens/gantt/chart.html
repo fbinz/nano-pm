@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n l10n %}
 {# A complete chart render: time axis, project header rows, task rows, bars, milestones, arrows, today line. #}
 <c-vars vm is_pm="False" />
 <div
@@ -125,7 +125,7 @@
         {% endfor %}
       </svg>
       {% if vm.show_today_line %}
-        <div id="today-line" style="left:{{ vm.today_x }}px;"></div>
+        <div id="today-line" style="left:{{ vm.today_x|unlocalize }}px;"></div>
       {% endif %}
     </div>
   </div>

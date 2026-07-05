@@ -2417,6 +2417,14 @@ test.describe('i18n (German)', () => {
     await expect(page.locator('#time-axis .axis-week').first()).toContainText('KW');
   });
 
+  test('today line position remains valid in German locale', async ({ appPage: page }) => {
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await expect(page.locator('#today-line')).toBeVisible();
+
+    const left = await page.locator('#today-line').evaluate(el => el.style.left);
+    expect(left).toMatch(/^\d+(?:\.\d+)?px$/);
+  });
+
   test('task popover labels are translated', async ({ appPage: page }) => {
     await page.locator('.lang-btn', { hasText: 'DE' }).click();
     await expect(page.locator('.drawer-side .menu a', { hasText: 'Projekte' })).toBeVisible();
