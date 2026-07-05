@@ -711,6 +711,11 @@ msgstr "Diesen Meilenstein löschen?"
 msgid "Delete"
 msgstr "Löschen"
 
+#: templates/components/screens/gantt/milestone-popover.html:37
+#: templates/components/screens/gantt/task-popover.html:87
+msgid "Cancel"
+msgstr "Abbrechen"
+
 #: templates/components/screens/gantt/project-popover.html:33
 msgid "move up"
 msgstr "nach oben"

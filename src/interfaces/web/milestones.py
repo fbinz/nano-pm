@@ -31,7 +31,7 @@ def milestone_popover(request: HttpRequest, milestone_id: int):
     yield SSE.patch_elements(
         render_component(
             request, "screens/gantt/milestone-popover",
-            m=m, projects=state.projects,
+            m=m, projects=state.projects, is_initial=False,
         )
     )
 
@@ -99,6 +99,6 @@ def milestone_create(request: HttpRequest, project_id: int):
     yield SSE.patch_elements(
         render_component(
             request, "screens/gantt/milestone-popover",
-            m=m, projects=state.projects,
+            m=m, projects=state.projects, is_initial=True,
         )
     )

@@ -1,11 +1,13 @@
 {% load i18n %}
 {# Milestone editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars m projects />
+<c-vars m projects is_initial="" />
 <div id="drawer-slot">
   <form
     id="milestone-popover"
     class="popover"
     data-milestone-id="{{ m.id }}"
+    data-initial="{{ is_initial|yesno:'true,false' }}"
+    data-discard-url="/milestones/{{ m.id }}/delete/"
     data-on:submit__prevent="@post('/milestones/{{ m.id }}/update/', { contentType: 'form' })"
   >
     {% csrf_token %}
@@ -32,8 +34,13 @@
       </fieldset>
     </div>
     <div class="actions">
-      <button type="button" class="btn btn-sm btn-ghost text-error danger"
-              data-on:click="confirm('{% trans 'Delete this milestone?' %}') && @post('/milestones/{{ m.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete" %}</button>
+      {% if is_initial %}
+        <button type="button" class="btn btn-sm btn-ghost text-error danger"
+                data-on:click="nano.discardDrawer()">{% trans "Cancel" %}</button>
+      {% else %}
+        <button type="button" class="btn btn-sm btn-ghost text-error danger"
+                data-on:click="confirm('{% trans 'Delete this milestone?' %}') && @post('/milestones/{{ m.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete" %}</button>
+      {% endif %}
       <button type="submit" class="btn btn-sm btn-neutral primary">{% trans "Done" %}</button>
     </div>
   </form>

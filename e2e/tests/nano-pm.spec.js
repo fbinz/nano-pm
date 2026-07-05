@@ -1504,6 +1504,8 @@ test.describe('project & people management', () => {
     await page.waitForSelector('#milestone-popover');
     await expect(page.locator('#milestone-popover input[name=title]')).toHaveValue('v2 API beta');
     await expect(page.locator('#milestone-popover textarea[name=description]')).toBeVisible();
+    await expect(page.locator('#milestone-popover button', { hasText: 'Delete' })).toBeVisible();
+    await expect(page.locator('#milestone-popover button', { hasText: 'Cancel' })).toHaveCount(0);
     await expect(page.locator(`#bar-${taskId}`)).toBeVisible();
   });
 
@@ -1606,6 +1608,57 @@ test.describe('project & people management', () => {
 
     await expect(page.locator('#milestone-popover')).toBeVisible();
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(3);
+  });
+
+  test('Cancel on a newly-created milestone deletes it without confirmation', async ({ appPage: page }) => {
+    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
+    let sawDialog = false;
+    page.on('dialog', async dialog => {
+      sawDialog = true;
+      await dialog.dismiss();
+    });
+
+    const leftCell = page.locator('.left-cell.proj').first();
+    const lcBox = await leftCell.boundingBox();
+    const row = page.locator('.chart-row.proj').first();
+    const rowBox = await row.boundingBox();
+    await page.mouse.click(lcBox.x + lcBox.width + 200, rowBox.y + rowBox.height / 2);
+
+    await expect(page.locator('#milestone-popover')).toBeVisible();
+    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(3);
+    await expect(page.locator('#milestone-popover button', { hasText: 'Delete' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    await expect(page.locator('#milestone-popover')).toHaveCount(0);
+    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
+    expect(sawDialog).toBe(false);
+  });
+
+  test('Escape on a newly-created task deletes it without confirmation', async ({ appPage: page }) => {
+    const barsBefore = await page.locator('.bar').count();
+    let sawDialog = false;
+    page.on('dialog', async dialog => {
+      sawDialog = true;
+      await dialog.dismiss();
+    });
+
+    const row = page.locator('.chart-row.proj').first();
+    const rowBox = await row.boundingBox();
+    const sidebar = await page.locator('.left-cell.proj').first().boundingBox();
+    const chartX = sidebar.x + sidebar.width + 20;
+    await page.mouse.move(chartX, rowBox.y + rowBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(chartX + 120, rowBox.y + rowBox.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    await expect(page.locator('.bar')).toHaveCount(barsBefore + 1);
+    await expect(page.locator('#task-popover')).toBeVisible();
+    await expect(page.locator('#task-popover button', { hasText: 'Delete' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('#task-popover')).toHaveCount(0);
+    await expect(page.locator('.bar')).toHaveCount(barsBefore);
+    expect(sawDialog).toBe(false);
   });
 
   test('dragging (with movement) in a project row still creates a task, not a milestone', async ({ appPage: page }) => {

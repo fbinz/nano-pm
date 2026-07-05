@@ -20,7 +20,7 @@ from readers import get_chart_state, get_task
 from .helpers import is_pm, is_assigned, parse_iso, patch_chart, request_data
 
 
-def render_task_popover(request: HttpRequest, task_id: int) -> str | None:
+def render_task_popover(request: HttpRequest, task_id: int, *, is_initial: bool = False) -> str | None:
     """Render the task-popover fragment for `task_id`, or None if it's gone."""
     task = get_task(request.workspace, task_id)
     if task is None:
@@ -49,6 +49,7 @@ def render_task_popover(request: HttpRequest, task_id: int) -> str | None:
         task=task, projects=state.projects, people=state.people,
         milestone_options=milestone_options,
         preds=preds, succs=succs, can_edit=can_edit,
+        is_initial=is_initial,
     )
 
 
@@ -154,11 +155,16 @@ def task_create(request: HttpRequest):
     title = data.get("title", "").strip() or "New task"
     if not project_id or start is None or end is None:
         return
-    create_task(
+    task, _ = create_task(
         workspace=request.workspace, project_id=project_id, title=title, start=start, end=end,
         actor=request.user,
     )
+    if task is None:
+        return
     yield patch_chart(request)
+    fragment = render_task_popover(request, task.id, is_initial=True)
+    if fragment is not None:
+        yield SSE.patch_elements(fragment)
 
 
 @require_http_methods(["POST"])

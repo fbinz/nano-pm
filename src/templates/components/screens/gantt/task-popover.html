@@ -1,10 +1,12 @@
 {% load i18n %}
 {# Task editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars task projects people milestone_options preds succs can_edit />
+<c-vars task projects people milestone_options preds succs can_edit is_initial="" />
 <div id="drawer-slot">
   <form
     id="task-popover"
     class="popover"
+    data-initial="{{ is_initial|yesno:'true,false' }}"
+    data-discard-url="/tasks/{{ task.id }}/delete/"
     data-on:submit__prevent="@post('/tasks/{{ task.id }}/update/', { contentType: 'form' })"
   >
     {% csrf_token %}
@@ -82,8 +84,13 @@
     </fieldset>
     {% if can_edit %}
     <div class="actions">
-      <button type="button" class="btn btn-sm btn-ghost text-error danger"
-              data-on:click="confirm('{% trans 'Delete this task?' %}') && @post('/tasks/{{ task.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete" %}</button>
+      {% if is_initial %}
+        <button type="button" class="btn btn-sm btn-ghost text-error danger"
+                data-on:click="nano.discardDrawer()">{% trans "Cancel" %}</button>
+      {% else %}
+        <button type="button" class="btn btn-sm btn-ghost text-error danger"
+                data-on:click="confirm('{% trans 'Delete this task?' %}') && @post('/tasks/{{ task.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete" %}</button>
+      {% endif %}
       <button type="submit" class="btn btn-sm btn-neutral primary">{% trans "Done" %}</button>
     </div>
     {% endif %}

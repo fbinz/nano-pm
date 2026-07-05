@@ -461,9 +461,24 @@
     fetchInto(`/milestones/${milestoneId}/popover/`);
   }
 
+  function initialDrawerForm() {
+    return document.querySelector('#drawer-slot form[data-initial="true"][data-discard-url]');
+  }
+
   function closeDrawer() {
     const slot = document.getElementById('drawer-slot');
     if (slot) slot.innerHTML = '';
+  }
+
+  function discardDrawer() {
+    const form = initialDrawerForm();
+    if (!form) {
+      closeDrawer();
+      return;
+    }
+    const url = form.dataset.discardUrl;
+    form.dataset.initial = 'discarding';
+    commit(url, {});
   }
 
   function onCollapseChanged(id, urlBase) {
@@ -614,7 +629,7 @@
     projectRowMouseDown, milestoneMouseDown,
     sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, addMilestone,
-    closeDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
+    closeDrawer, discardDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
     scrollToToday, positionWorkspaceMenu,
   };
 

@@ -135,12 +135,12 @@
   </div>
 
   <aside id="drawer"
-         data-on:keydown__window="evt.key === 'Escape' && nano.closeDrawer()">
+         data-on:keydown__window="evt.key === 'Escape' && nano.discardDrawer()">
     <header class="drawer-header">
       <button class="drawer-close"
               type="button"
               aria-label="{% trans 'Close' %}"
-              data-on:click="nano.closeDrawer()">
+              data-on:click="nano.discardDrawer()">
         <c-lucide name="x" size="14" />
       </button>
     </header>
