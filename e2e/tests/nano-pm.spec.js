@@ -647,6 +647,19 @@ test.describe('chart structure', () => {
     await expect(page.locator('#today-line')).toBeVisible();
   });
 
+  test('today line follows the current time within the day', async ({ appPage: page }) => {
+    await expect(page.locator('#today-line')).toBeVisible();
+
+    const offsetWithinDay = await page.evaluate(() => {
+      const line = document.getElementById('today-line');
+      const ppd = parseFloat(document.getElementById('grid-scroll').dataset.pxPerDay);
+      const x = parseFloat(line.style.left);
+      return x - Math.floor(x / ppd) * ppd;
+    });
+
+    expect(offsetWithinDay).toBeGreaterThan(0.01);
+  });
+
   test('today line height matches chart content (not the 9999px sentinel)', async ({ appPage: page }) => {
     const lineHeight = await page.locator('#today-line').evaluate(
       el => parseFloat(getComputedStyle(el).height)

@@ -1,9 +1,10 @@
 """Full chart state loading for one workspace."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from dataclasses import dataclass, field
 
 from django.db.models import Prefetch
+from django.utils import timezone
 
 from data.models import Project, Person, Task, Milestone, Dependency
 
@@ -16,6 +17,7 @@ class ChartState:
     people: list[Person]
     deps: list[Dependency]
     today: date
+    today_fraction: float
     chart_start: date
     chart_end: date
 
@@ -40,7 +42,13 @@ def _add_months(d: date, n: int) -> date:
 
 def get_chart_state(workspace) -> ChartState:
     """Load everything needed to render the chart for the given workspace."""
-    today = date.today()
+    now = timezone.localtime()
+    today = now.date()
+    current_tz = timezone.get_current_timezone()
+    day_start = datetime.combine(today, time.min, tzinfo=current_tz)
+    next_day_start = datetime.combine(today + timedelta(days=1), time.min, tzinfo=current_tz)
+    day_length = (next_day_start - day_start).total_seconds() or 86400
+    today_fraction = max(0.0, min(1.0, (now - day_start).total_seconds() / day_length))
 
     projects = list(
         Project.objects.filter(workspace=workspace)
@@ -88,6 +96,7 @@ def get_chart_state(workspace) -> ChartState:
         people=people,
         deps=deps,
         today=today,
+        today_fraction=today_fraction,
         chart_start=chart_start,
         chart_end=chart_end,
         tasks_by_id=tasks_by_id,

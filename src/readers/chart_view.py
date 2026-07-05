@@ -227,7 +227,7 @@ def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
         return (d - state.chart_start).days * ppd
 
     chart_width = (state.chart_end - state.chart_start).days * ppd
-    today_x = x_of(state.today)
+    today_x = x_of(state.today) + state.today_fraction * ppd
     show_today = 0 <= today_x <= chart_width
 
     month_names = _axis_month_names()

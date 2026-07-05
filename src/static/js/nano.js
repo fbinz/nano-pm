@@ -613,12 +613,9 @@
 
   function scrollToToday() {
     const sc = chartScroll();
-    if (!sc) return;
-    const ppd = pxPerDay();
-    const cs = chartStartDate();
-    const today = new Date();
-    const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const dx = Math.round((t0 - cs) / ONE_DAY) * ppd;
+    const line = document.getElementById('today-line');
+    if (!sc || !line) return;
+    const dx = parseFloat(line.style.left) || line.offsetLeft;
     const leftW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w')) || 240;
     sc.scrollLeft = Math.max(0, dx - (sc.clientWidth - leftW) / 2);
   }
