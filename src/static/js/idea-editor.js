@@ -1,49 +1,44 @@
 (() => {
   const textarea = document.getElementById('idea-body-editor');
-  const container = document.getElementById('idea-body-editor-ui');
-  const Editor = window.toastui?.Editor;
-  if (!textarea || !container || !Editor) return;
+  const EasyMDE = window.EasyMDE;
+  if (!textarea || !EasyMDE) return;
 
-  const initialValue = textarea.value || '';
   const isReadOnly = textarea.readOnly;
-  const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
-
-  textarea.hidden = true;
-
-  if (isReadOnly) {
-    Editor.factory({
-      el: container,
-      viewer: true,
-      initialValue,
-      usageStatistics: false,
-      theme,
-    });
-    return;
-  }
-
-  const editor = new Editor({
-    el: container,
-    height: '520px',
-    minHeight: '360px',
-    initialValue,
-    initialEditType: 'markdown',
-    previewStyle: 'vertical',
-    placeholder: textarea.getAttribute('placeholder') || '',
-    usageStatistics: false,
+  const editor = new EasyMDE({
+    element: textarea,
     autofocus: false,
-    theme,
-    toolbarItems: [
-      ['heading', 'bold', 'italic', 'strike'],
-      ['quote', 'ul', 'ol'],
-      ['link', 'code', 'codeblock'],
+    forceSync: true,
+    initialValue: textarea.value || '',
+    minHeight: '360px',
+    placeholder: textarea.getAttribute('placeholder') || '',
+    spellChecker: false,
+    status: false,
+    toolbar: isReadOnly ? false : [
+      'heading', 'bold', 'italic', 'strikethrough',
+      '|', 'quote', 'unordered-list', 'ordered-list',
+      '|', 'link', 'code',
+      '|', 'preview', 'side-by-side', 'fullscreen',
     ],
+    toolbarTips: true,
   });
 
+  if (isReadOnly) {
+    editor.codemirror.setOption('readOnly', 'nocursor');
+  }
+
   const syncTextarea = () => {
-    textarea.value = editor.getMarkdown();
+    textarea.value = editor.value();
   };
 
-  editor.on('change', syncTextarea);
+  editor.codemirror.on('change', syncTextarea);
+
+  // Keep the old tiny adapter used by tests and any page-specific hooks while
+  // exposing the EasyMDE instance underneath.
+  editor.setMarkdown = (value) => {
+    editor.value(value);
+    syncTextarea();
+  };
+  editor.getMarkdown = () => editor.value();
   window.nanoIdeaEditor = editor;
 
   const form = textarea.closest('form');

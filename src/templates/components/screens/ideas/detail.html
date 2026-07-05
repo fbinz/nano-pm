@@ -3,8 +3,8 @@
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
     :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
     active_nav="ideas">
-  <link rel="stylesheet" href="{% static 'vendor/toastui-editor/toastui-editor.min.css' %}">
-  <link rel="stylesheet" href="{% static 'vendor/toastui-editor/toastui-editor-dark.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/easymde/easymde.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/idea-editor.css' %}">
   <main id="idea-detail-page">
     <nav class="idea-breadcrumb">
       <a class="btn btn-sm btn-ghost" href="/ideas/" aria-label="{% trans 'Back to Ideas' %}">
@@ -59,7 +59,6 @@
         <span>{% trans "Markdown notes" %}</span>
         <textarea id="idea-body-editor" class="textarea idea-body-editor" name="body" rows="24"
                   placeholder="{% trans 'Brainstorm goals, open questions, links, pros and cons…' %}"{% if not can_edit %} readonly{% endif %}>{{ idea.body }}</textarea>
-        <div id="idea-body-editor-ui" class="idea-body-editor-ui"></div>
       </label>
 
       {% if can_edit %}
@@ -123,6 +122,6 @@
     </section>
     {% endif %}
   </main>
-  <script src="{% static 'vendor/toastui-editor/toastui-editor-all.min.js' %}"></script>
+  <script src="{% static 'vendor/easymde/easymde.min.js' %}"></script>
   <script src="{% static 'js/idea-editor.js' %}"></script>
 </c-layouts.app-shell>

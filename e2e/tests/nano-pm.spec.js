@@ -193,9 +193,9 @@ test.describe('ideas', () => {
     await page.waitForFunction(() => window.nanoIdeaEditor);
     const textarea = page.locator('textarea[name="body"]');
     await expect(textarea).toHaveAttribute('rows', '24');
-    await expect(page.locator('.toastui-editor-defaultUI')).toBeVisible();
-    await expect(page.locator('.toastui-editor-toolbar-icons.image')).toHaveCount(0);
-    await expect(page.locator('.toastui-editor-toolbar-icons.table')).toHaveCount(0);
+    await expect(page.locator('.EasyMDEContainer')).toBeVisible();
+    await expect(page.locator('.editor-toolbar button.image')).toHaveCount(0);
+    await expect(page.locator('.editor-toolbar button.table')).toHaveCount(0);
 
     await page.locator('select[name="status"]').selectOption('exploring');
     await page.locator('input[name="tags"]').fill('client, roadmap');
@@ -215,6 +215,30 @@ test.describe('ideas', () => {
 
     await page.getByRole('link', { name: 'Projects' }).click();
     await expect(page.locator('.left-cell.proj', { hasText: 'Client-facing timeline' })).toBeVisible();
+  });
+
+  test('EasyMDE full-screen modes cover the app sidebar', async ({ appPage: page }) => {
+    await page.goto('/ideas/');
+    await page.getByPlaceholder('Sketch a new idea…').fill('Fullscreen editor idea');
+    await page.getByRole('button', { name: 'Add idea' }).click();
+    await expect(page).toHaveURL(/\/ideas\/\d+\/$/);
+    await page.waitForFunction(() => window.nanoIdeaEditor);
+
+    const coverageAtSidebar = () => page.evaluate(() => ({
+      toolbar: Boolean(document.elementFromPoint(16, 16)?.closest('.editor-toolbar.fullscreen')),
+      editor: Boolean(document.elementFromPoint(16, 80)?.closest('.CodeMirror-fullscreen')),
+    }));
+
+    await page.locator('.editor-toolbar button.fullscreen').click();
+    await expect(page.locator('.editor-toolbar.fullscreen')).toBeVisible();
+    expect(await coverageAtSidebar()).toEqual({ toolbar: true, editor: true });
+
+    await page.locator('.editor-toolbar button.fullscreen').click();
+    await expect(page.locator('.editor-toolbar.fullscreen')).toHaveCount(0);
+
+    await page.locator('.editor-toolbar button.side-by-side').click();
+    await expect(page.locator('.editor-preview-active-side')).toBeVisible();
+    expect(await coverageAtSidebar()).toEqual({ toolbar: true, editor: true });
   });
 
   test('idea cards do not show body previews', async ({ appPage: page }) => {

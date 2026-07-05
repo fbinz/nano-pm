@@ -1,0 +1,111 @@
+.idea-body-field .EasyMDEContainer {
+  color: var(--color-base-content);
+}
+
+.idea-body-field .editor-toolbar {
+  border-color: var(--color-base-300);
+  background: var(--color-base-100);
+  opacity: 1;
+}
+
+.idea-body-field .editor-toolbar button {
+  color: var(--color-base-content);
+}
+
+.idea-body-field .editor-toolbar button:hover,
+.idea-body-field .editor-toolbar button.active {
+  background: var(--color-base-200);
+  border-color: var(--color-base-300);
+}
+
+.idea-body-field .editor-toolbar i.separator {
+  border-left-color: var(--color-base-300);
+  border-right-color: var(--color-base-300);
+}
+
+.idea-body-field .editor-toolbar button > i[class^="fa"],
+.idea-body-field .editor-toolbar button > i[class*=" fa-"] {
+  display: none;
+}
+
+.idea-body-field .editor-toolbar button::before {
+  display: inline-block;
+  min-width: 1em;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.875rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.idea-body-field .editor-toolbar button.heading::before { content: "H"; font-weight: 700; }
+.idea-body-field .editor-toolbar button.bold::before { content: "B"; font-weight: 700; }
+.idea-body-field .editor-toolbar button.italic::before { content: "I"; font-style: italic; }
+.idea-body-field .editor-toolbar button.strikethrough::before { content: "S"; text-decoration: line-through; }
+.idea-body-field .editor-toolbar button.quote::before { content: "❝"; }
+.idea-body-field .editor-toolbar button.unordered-list::before { content: "•"; }
+.idea-body-field .editor-toolbar button.ordered-list::before { content: "1."; }
+.idea-body-field .editor-toolbar button.link::before { content: "🔗"; font-size: 0.8rem; }
+.idea-body-field .editor-toolbar button.code::before { content: "<>"; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.idea-body-field .editor-toolbar button.preview::before { content: "👁"; font-size: 0.8rem; }
+.idea-body-field .editor-toolbar button.side-by-side::before { content: "◫"; }
+.idea-body-field .editor-toolbar button.fullscreen::before { content: "⛶"; }
+
+.idea-body-field .EasyMDEContainer .CodeMirror,
+.idea-body-field .EasyMDEContainer .CodeMirror-scroll {
+  min-height: 32rem;
+}
+
+.idea-body-field .EasyMDEContainer .CodeMirror {
+  border-color: var(--color-base-300);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+}
+
+.idea-body-field .EasyMDEContainer .CodeMirror-cursor {
+  border-left-color: var(--color-base-content);
+}
+
+.idea-body-field .CodeMirror-gutters,
+.idea-body-field .CodeMirror-gutter-filler,
+.idea-body-field .CodeMirror-scrollbar-filler {
+  background: var(--color-base-200);
+  border-color: var(--color-base-300);
+}
+
+.idea-body-field .editor-toolbar.fullscreen {
+  z-index: 200;
+  background: var(--color-base-100);
+}
+
+.idea-body-field .EasyMDEContainer .CodeMirror-fullscreen {
+  z-index: 199;
+  background: var(--color-base-100);
+}
+
+.idea-body-field .editor-preview-side {
+  z-index: 199;
+}
+
+.idea-body-field .editor-preview,
+.idea-body-field .editor-preview-side {
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+.idea-body-field .editor-preview pre,
+.idea-body-field .editor-preview-side pre,
+.idea-body-field .editor-preview code,
+.idea-body-field .editor-preview-side code {
+  background: var(--color-base-200);
+  color: var(--color-base-content);
+}
+
+html[data-theme="dark"] .idea-body-field .CodeMirror-selected,
+html[data-theme="dark"] .idea-body-field .CodeMirror-line::selection,
+html[data-theme="dark"] .idea-body-field .CodeMirror-line > span::selection,
+html[data-theme="dark"] .idea-body-field .CodeMirror-line > span > span::selection {
+  background: oklch(from var(--color-base-content) l c h / 0.18);
+}

@@ -1,9 +1,11 @@
-# TOAST UI Editor 3.2.2
+# EasyMDE 2.21.0
 
-Vendored from https://uicdn.toast.com/editor/3.2.2/
+Vendored from https://registry.npmjs.org/easymde/-/easymde-2.21.0.tgz
 
-Copyright (c) NHN Cloud FE Development Lab.
-Licensed under the MIT License.
+The MIT License (MIT)
+
+Copyright (c) 2015 Sparksuite, Inc.
+Copyright (c) 2017 Jeroen Akkerman.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
