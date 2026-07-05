@@ -22,13 +22,31 @@
       {% endif %}
     </div>
     <div id="time-axis-cell">
-      <div id="time-axis" style="width:{{ vm.chart_width }}px;">
-        {% for tick in vm.axis_majors %}
-          <div class="axis-major" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
-        {% endfor %}
-        {% for tick in vm.axis_minors %}
-          <div class="axis-minor{% if tick.weekend %} weekend{% endif %}" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
-        {% endfor %}
+      <div id="time-axis" class="{% if vm.axis_days %}day-axis{% endif %}" style="width:{{ vm.chart_width }}px;">
+        {% if vm.axis_days %}
+          {% for tick in vm.axis_years %}
+            <div class="axis-year" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
+          {% endfor %}
+          {% for tick in vm.axis_months %}
+            <div class="axis-month{% if tick.month_end %} month-end{% endif %}" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
+          {% endfor %}
+          {% for tick in vm.axis_weeks %}
+            <div class="axis-week" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
+          {% endfor %}
+          {% for tick in vm.axis_days %}
+            <div class="axis-day{% if tick.weekend %} weekend{% endif %}{% if tick.today %} today{% endif %}{% if tick.week_end %} week-end{% endif %}{% if tick.month_end %} month-end{% endif %}" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">
+              <span class="axis-day-name">{{ tick.label }}</span>
+              <span class="axis-day-number">{{ tick.sublabel }}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          {% for tick in vm.axis_majors %}
+            <div class="axis-major" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
+          {% endfor %}
+          {% for tick in vm.axis_minors %}
+            <div class="axis-minor{% if tick.weekend %} weekend{% endif %}" style="left:{{ tick.x }}px;width:{{ tick.w }}px;">{{ tick.label }}</div>
+          {% endfor %}
+        {% endif %}
       </div>
     </div>
 

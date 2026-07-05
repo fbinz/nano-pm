@@ -7,7 +7,7 @@ output absolute-positioned divs).
 from datetime import date, timedelta
 from dataclasses import dataclass, field
 
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, pgettext
 
 from data.models import TaskStatus, status_for_dates
 from readers.chart import ChartState
@@ -32,10 +32,33 @@ ZOOM_PPD_RANGE = {
 # always driven by the underlying px/day.
 ZOOM_DAYS_PER_UNIT = {"day": 1, "week": 7, "month": 30, "quarter": 90}
 
-MONTH_NAMES = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-]
+def _axis_month_names() -> list[str]:
+    return [
+        pgettext("Gantt axis month abbreviation", "Jan"),
+        pgettext("Gantt axis month abbreviation", "Feb"),
+        pgettext("Gantt axis month abbreviation", "Mar"),
+        pgettext("Gantt axis month abbreviation", "Apr"),
+        pgettext("Gantt axis month abbreviation", "May"),
+        pgettext("Gantt axis month abbreviation", "Jun"),
+        pgettext("Gantt axis month abbreviation", "Jul"),
+        pgettext("Gantt axis month abbreviation", "Aug"),
+        pgettext("Gantt axis month abbreviation", "Sep"),
+        pgettext("Gantt axis month abbreviation", "Oct"),
+        pgettext("Gantt axis month abbreviation", "Nov"),
+        pgettext("Gantt axis month abbreviation", "Dec"),
+    ]
+
+
+def _axis_day_names() -> list[str]:
+    return [
+        pgettext("Gantt axis day abbreviation", "Mon"),
+        pgettext("Gantt axis day abbreviation", "Tue"),
+        pgettext("Gantt axis day abbreviation", "Wed"),
+        pgettext("Gantt axis day abbreviation", "Thu"),
+        pgettext("Gantt axis day abbreviation", "Fri"),
+        pgettext("Gantt axis day abbreviation", "Sat"),
+        pgettext("Gantt axis day abbreviation", "Sun"),
+    ]
 
 
 @dataclass
@@ -91,7 +114,11 @@ class AxisTick:
     x: float
     w: float
     label: str
+    sublabel: str = ""
     weekend: bool = False
+    today: bool = False
+    week_end: bool = False
+    month_end: bool = False
 
 
 @dataclass
@@ -111,6 +138,10 @@ class ChartVM:
     chart_end_iso: str
     axis_majors: list[AxisTick]
     axis_minors: list[AxisTick]
+    axis_years: list[AxisTick]
+    axis_months: list[AxisTick]
+    axis_weeks: list[AxisTick]
+    axis_days: list[AxisTick]
     weekend_tiles: list[AxisTick]
     row_groups: list[ProjectRowVM]
     deps: list[DepArrowVM]
@@ -119,7 +150,7 @@ class ChartVM:
     show_completed: bool = False
     # Layout constants (kept here so the template doesn't have to know)
     left_w: int = 240
-    axis_h: int = 48
+    axis_h: int = 72
     row_h: int = 32
     proj_row_h: int = 36
     bar_h: int = 24
@@ -178,6 +209,10 @@ class _GridContext:
     show_today: bool
     axis_majors: list[AxisTick]
     axis_minors: list[AxisTick]
+    axis_years: list[AxisTick]
+    axis_months: list[AxisTick]
+    axis_weeks: list[AxisTick]
+    axis_days: list[AxisTick]
     weekend_tiles: list[AxisTick]
 
     def x_of(self, d: date, chart_start: date) -> float:
@@ -195,8 +230,67 @@ def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
     today_x = x_of(state.today)
     show_today = 0 <= today_x <= chart_width
 
+    month_names = _axis_month_names()
+    day_names = _axis_day_names()
+    week_prefix = pgettext("Gantt axis ISO week prefix", "W")
+
     axis_majors: list[AxisTick] = []
     axis_minors: list[AxisTick] = []
+    axis_years: list[AxisTick] = []
+    axis_months: list[AxisTick] = []
+    axis_weeks: list[AxisTick] = []
+    axis_days: list[AxisTick] = []
+
+    if zoom == "day":
+        d = date(state.chart_start.year, 1, 1)
+        while d <= state.chart_end:
+            nxt = date(d.year + 1, 1, 1)
+            x1 = max(0, x_of(d))
+            x2 = min(chart_width, x_of(nxt))
+            if x2 > x1:
+                axis_years.append(AxisTick(x=x1, w=x2 - x1, label=str(d.year)))
+            d = nxt
+
+        d = state.chart_start.replace(day=1)
+        while d <= state.chart_end:
+            nxt = _add_months(d, 1)
+            x1 = max(0, x_of(d))
+            x2 = min(chart_width, x_of(nxt))
+            if x2 > x1:
+                axis_months.append(AxisTick(
+                    x=x1, w=x2 - x1,
+                    label=month_names[d.month - 1],
+                    month_end=True,
+                ))
+            d = nxt
+
+        d = _start_of_week(state.chart_start)
+        while d < state.chart_end:
+            nxt = d + timedelta(days=7)
+            x1 = max(0, x_of(d))
+            x2 = min(chart_width, x_of(nxt))
+            if x2 > x1:
+                _, week, _ = d.isocalendar()
+                axis_weeks.append(AxisTick(
+                    x=x1,
+                    w=x2 - x1,
+                    label=f"{week_prefix}{week:02d}",
+                ))
+            d = nxt
+
+        d = state.chart_start
+        while d < state.chart_end:
+            axis_days.append(AxisTick(
+                x=x_of(d),
+                w=ppd,
+                label=day_names[d.weekday()],
+                sublabel=str(d.day),
+                weekend=d.weekday() >= 5,
+                today=(d == state.today),
+                week_end=(d.weekday() == 6),
+                month_end=((d + timedelta(days=1)).month != d.month),
+            ))
+            d += timedelta(days=1)
 
     if zoom in ("day", "week"):
         d = state.chart_start.replace(day=1)
@@ -206,7 +300,7 @@ def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
             x2 = min(chart_width, x_of(nxt))
             axis_majors.append(AxisTick(
                 x=x1, w=x2 - x1,
-                label=f"{MONTH_NAMES[d.month - 1]} {d.year}",
+                label=f"{month_names[d.month - 1]} {d.year}",
             ))
             d = nxt
     elif zoom == "month":
@@ -227,7 +321,7 @@ def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
     if zoom == "day":
         d = state.chart_start
         while d < state.chart_end:
-            label = f"{['M','T','W','T','F','S','S'][d.weekday()]} {d.day}"
+            label = f"{day_names[d.weekday()]} {d.day}"
             axis_minors.append(AxisTick(
                 x=x_of(d), w=ppd, label=label,
                 weekend=d.weekday() >= 5,
@@ -239,7 +333,7 @@ def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
             nxt = d + timedelta(days=7)
             axis_minors.append(AxisTick(
                 x=x_of(d), w=ppd * 7,
-                label=f"{MONTH_NAMES[d.month - 1]} {d.day}",
+                label=f"{month_names[d.month - 1]} {d.day}",
             ))
             d = nxt
     elif zoom == "month":
@@ -248,7 +342,7 @@ def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
             nxt = _add_months(d, 1)
             axis_minors.append(AxisTick(
                 x=x_of(d), w=x_of(nxt) - x_of(d),
-                label=MONTH_NAMES[d.month - 1],
+                label=month_names[d.month - 1],
             ))
             d = nxt
     else:  # quarter
@@ -272,6 +366,8 @@ def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
     return _GridContext(
         zoom=zoom, ppd=ppd, chart_width=chart_width, today_x=today_x,
         show_today=show_today, axis_majors=axis_majors, axis_minors=axis_minors,
+        axis_years=axis_years, axis_months=axis_months,
+        axis_weeks=axis_weeks, axis_days=axis_days,
         weekend_tiles=weekend_tiles,
     )
 
@@ -417,6 +513,10 @@ def build_chart_vm(
         chart_end_iso=state.chart_end.isoformat(),
         axis_majors=g.axis_majors,
         axis_minors=g.axis_minors,
+        axis_years=g.axis_years,
+        axis_months=g.axis_months,
+        axis_weeks=g.axis_weeks,
+        axis_days=g.axis_days,
         weekend_tiles=g.weekend_tiles,
         row_groups=row_groups,
         deps=deps,
@@ -505,6 +605,10 @@ def build_resource_vm(
         chart_end_iso=state.chart_end.isoformat(),
         axis_majors=g.axis_majors,
         axis_minors=g.axis_minors,
+        axis_years=g.axis_years,
+        axis_months=g.axis_months,
+        axis_weeks=g.axis_weeks,
+        axis_days=g.axis_days,
         weekend_tiles=g.weekend_tiles,
         row_groups=row_groups,
         deps=[],

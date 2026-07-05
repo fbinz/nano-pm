@@ -19,7 +19,7 @@
   --row-h: 32px;
   --proj-row-h: 36px;
   --topbar-h: 52px;
-  --axis-h: 48px;
+  --axis-h: 72px;
   --left-w: 240px;
   --app-sidebar-w: 0px;
 }
@@ -214,6 +214,29 @@ html, body { height: 100%; }
     border-left-color: oklch(from var(--color-base-300) l c h / 0.5);
   }
   .axis-minor.weekend { @apply bg-base-200/60; }
+
+  .day-axis :is(.axis-year, .axis-month, .axis-week, .axis-day) {
+    @apply absolute overflow-hidden whitespace-nowrap border-l border-b border-base-300 bg-base-100;
+  }
+  .day-axis .axis-year {
+    @apply top-0 h-[18px] px-1.5 text-xs font-bold text-base-content/70 flex items-center justify-center;
+  }
+  .day-axis .axis-month {
+    @apply top-[18px] h-[18px] px-1.5 text-xs font-bold text-base-content/70 flex items-center justify-center;
+  }
+  .day-axis .axis-week {
+    @apply top-[36px] h-[16px] px-1 text-[11px] font-semibold text-base-content/60 flex items-center justify-center;
+  }
+  .day-axis .axis-day {
+    @apply top-[52px] h-[20px] px-0.5 text-[10px] leading-none text-base-content/70 flex flex-col items-center justify-center;
+  }
+  .day-axis .axis-day.weekend { @apply bg-base-200/80 text-error; }
+  .day-axis .axis-day.today { @apply bg-primary/10 text-primary font-black border-t-2 border-t-primary; }
+  .day-axis .axis-day.week-end { @apply border-r-2 border-r-base-300; }
+  .day-axis .axis-day.month-end,
+  .day-axis .axis-month.month-end { @apply border-r-2 border-r-base-content/25; }
+  .axis-day-name { @apply font-bold; }
+  .axis-day-number { @apply font-normal; }
 
   .left-cell {
     position: sticky; left: 0;

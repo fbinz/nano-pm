@@ -647,6 +647,26 @@ test.describe('chart structure', () => {
     expect(svgHeight).toBeGreaterThan(rowsHeight - 8);
   });
 
+  test('day zoom uses year, month, week, and day axis rows with workdays distinct', async ({ appPage: page }) => {
+    await page.goto('/?zoom=day');
+    await expect(page.locator('#time-axis.day-axis')).toBeVisible();
+    await expect(page.locator('#time-axis .axis-year').first()).toBeVisible();
+    await expect(page.locator('#time-axis .axis-month').first()).toBeVisible();
+    await expect(page.locator('#time-axis .axis-week').first()).toBeVisible();
+    await expect(page.locator('#time-axis .axis-day').first()).toBeVisible();
+
+    const classes = await page.locator('#time-axis .axis-day').evaluateAll(days => ({
+      workdays: days.filter(day => !day.classList.contains('weekend')).length,
+      weekends: days.filter(day => day.classList.contains('weekend')).length,
+      twoLineLabels: days.every(day => day.querySelector('.axis-day-name') && day.querySelector('.axis-day-number')),
+      dayNames: days.map(day => day.querySelector('.axis-day-name')?.textContent?.trim()),
+    }));
+    expect(classes.workdays).toBeGreaterThan(0);
+    expect(classes.weekends).toBeGreaterThan(0);
+    expect(classes.twoLineLabels).toBe(true);
+    expect(classes.dayNames).toEqual(expect.arrayContaining(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']));
+  });
+
   test('zoom links are present and toggleable via the URL', async ({ appPage: page }) => {
     // Default is week — its link should carry the active class.
     await expect(page.locator('#zoom-controls a.active')).toHaveText('Week');
@@ -2258,6 +2278,18 @@ test.describe('i18n (German)', () => {
     // Switch back to English.
     await page.locator('.lang-btn', { hasText: 'EN' }).click();
     await expect(page.locator('.drawer-side .menu a', { hasText: 'Projects' })).toBeVisible();
+  });
+
+  test('day zoom axis labels are translated', async ({ appPage: page }) => {
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await expect(page.locator('.drawer-side .menu a', { hasText: 'Projekte' })).toBeVisible();
+    await page.goto('/?zoom=day');
+
+    const labels = await page.locator('#time-axis .axis-day-name').evaluateAll(days =>
+      days.map(day => day.textContent?.trim()),
+    );
+    expect(labels).toEqual(expect.arrayContaining(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']));
+    await expect(page.locator('#time-axis .axis-week').first()).toContainText('KW');
   });
 
   test('task popover labels are translated', async ({ appPage: page }) => {

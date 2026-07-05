@@ -1055,5 +1055,105 @@ msgstr "Noch keine öffentlichen Meilensteine"
 msgid "Check back later for roadmap updates."
 msgstr "Schauen Sie später wieder vorbei, um Roadmap-Updates zu sehen."
 
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Jan"
+msgstr "Jan"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Feb"
+msgstr "Feb"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Mar"
+msgstr "Mär"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Apr"
+msgstr "Apr"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "May"
+msgstr "Mai"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Jun"
+msgstr "Jun"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Jul"
+msgstr "Jul"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Aug"
+msgstr "Aug"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Sep"
+msgstr "Sep"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Oct"
+msgstr "Okt"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Nov"
+msgstr "Nov"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis month abbreviation"
+msgid "Dec"
+msgstr "Dez"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis day abbreviation"
+msgid "Mon"
+msgstr "Mo"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis day abbreviation"
+msgid "Tue"
+msgstr "Di"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis day abbreviation"
+msgid "Wed"
+msgstr "Mi"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis day abbreviation"
+msgid "Thu"
+msgstr "Do"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis day abbreviation"
+msgid "Fri"
+msgstr "Fr"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis day abbreviation"
+msgid "Sat"
+msgstr "Sa"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis day abbreviation"
+msgid "Sun"
+msgstr "So"
+
+#: readers/chart_view.py
+msgctxt "Gantt axis ISO week prefix"
+msgid "W"
+msgstr "KW"
+
 #~ msgid "Only the creator or PMs can edit this idea."
 #~ msgstr "Nur der Ersteller oder PMs können diese Idee bearbeiten."
