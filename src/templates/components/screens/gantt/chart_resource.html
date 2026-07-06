@@ -1,4 +1,4 @@
-{% load l10n %}
+{% load i18n l10n %}
 {# Resource view: person-grouped chart. No dependency arrows, no project popovers. #}
 <c-vars vm />
 <div
@@ -16,9 +16,9 @@
                   const c = {% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %};
                   {% for rg in vm.row_groups %}$_collapsed.{{ rg.id }} = c; {% endfor %}
                   nano.onCollapseAllChanged(c, [{% for rg in vm.row_groups %}{{ rg.id }}{% if not forloop.last %},{% endif %}{% endfor %}], '/resources/people')"
-                data-text="({% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %}) ? 'Collapse all' : 'Expand all'">{% if vm.all_collapsed %}Expand all{% else %}Collapse all{% endif %}</button>
+                data-text="({% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %}) ? '{% trans 'Collapse all' %}' : '{% trans 'Expand all' %}'">{% if vm.all_collapsed %}{% trans "Expand all" %}{% else %}{% trans "Collapse all" %}{% endif %}</button>
       {% else %}
-        timeline
+        {% trans "timeline" %}
       {% endif %}
     </div>
     <div id="time-axis-cell">

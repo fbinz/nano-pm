@@ -2425,6 +2425,16 @@ test.describe('i18n (German)', () => {
     expect(left).toMatch(/^\d+(?:\.\d+)?px$/);
   });
 
+  test('resource view collapse toggle is translated', async ({ appPage: page }) => {
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await page.goto('/resources/');
+
+    const button = page.locator('#collapse-all-btn');
+    await expect(button).toHaveText('Alle einklappen');
+    await button.click();
+    await expect(button).toHaveText('Alle ausklappen');
+  });
+
   test('task popover labels are translated', async ({ appPage: page }) => {
     await page.locator('.lang-btn', { hasText: 'DE' }).click();
     await expect(page.locator('.drawer-side .menu a', { hasText: 'Projekte' })).toBeVisible();
