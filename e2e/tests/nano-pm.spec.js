@@ -42,7 +42,7 @@ test.describe('auth + page render', () => {
     await reset(request);
     await login(page);
     await expect(page.locator('.sidebar-brand')).toHaveText('nano-pm');
-    await expect(page.locator('#zoom-controls')).toBeVisible();
+    await expect(page.locator('#grid-scroll')).toBeVisible();
   });
 
   test('theme toggle switches to dark mode and persists', async ({ appPage: page }) => {
@@ -370,7 +370,7 @@ test.describe('topbar responsiveness', () => {
 
   test('essential topbar controls remain visible at narrow widths', async ({ appPage: page }) => {
     await page.setViewportSize({ width: 500, height: 800 });
-    await expect(page.locator('#zoom-controls')).toBeVisible();
+    await expect(page.locator('#zoom-controls')).toHaveCount(0);
     await expect(page.locator('button:has-text("Today")')).toBeVisible();
   });
 });
@@ -739,25 +739,29 @@ test.describe('chart structure', () => {
     expect(classes.dayNames).toEqual(expect.arrayContaining(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']));
   });
 
-  test('zoom links are present and toggleable via the URL', async ({ appPage: page }) => {
-    // Default is week — its link should carry the active class.
-    await expect(page.locator('#zoom-controls a.active')).toHaveText('Week');
-    await page.click('#zoom-controls a:has-text("Day")');
-    await expect(page).toHaveURL(/zoom=day/);
-    await expect(page.locator('#zoom-controls a.active')).toHaveText('Day');
-  });
-
-  test('the px-per-day slider adjusts the chart density at the active unit', async ({ appPage: page }) => {
-    // Default week zoom = 12 px/day.
+  test('legacy zoom URLs still render at day density without zoom buttons', async ({ appPage: page }) => {
+    await expect(page.locator('#zoom-controls')).toHaveCount(0);
     expect(await page.locator('#grid-scroll').evaluate(
       el => parseFloat(el.dataset.pxPerDay)
-    )).toBe(12);
+    )).toBe(36);
+
+    await page.goto('/?zoom=week');
+    await expect(page.locator('#zoom-controls')).toHaveCount(0);
+    expect(await page.locator('#grid-scroll').evaluate(
+      el => parseFloat(el.dataset.pxPerDay)
+    )).toBe(36);
+  });
+
+  test('the px-per-day slider adjusts the day chart density', async ({ appPage: page }) => {
+    expect(await page.locator('#grid-scroll').evaluate(
+      el => parseFloat(el.dataset.pxPerDay)
+    )).toBe(36);
 
     const slider = page.locator('#zoom-slider');
     await expect(slider).toBeVisible();
-    // Slider is in px/week at week zoom: range [6..24] px/day = [42..168] px/week.
-    expect(await slider.getAttribute('min')).toBe('42');
-    expect(await slider.getAttribute('max')).toBe('168');
+    expect(await slider.getAttribute('min')).toBe('18');
+    expect(await slider.getAttribute('max')).toBe('72');
+    expect(await slider.getAttribute('step')).toBe('1');
 
     // Drag slider to its max and let the SSE patch land.
     await slider.evaluate(el => {
@@ -765,7 +769,7 @@ test.describe('chart structure', () => {
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
     await page.waitForFunction(
-      () => parseFloat(document.getElementById('grid-scroll').dataset.pxPerDay) === 24,
+      () => parseFloat(document.getElementById('grid-scroll').dataset.pxPerDay) === 72,
       null,
       { timeout: 5000 }
     );
@@ -790,31 +794,22 @@ test.describe('chart structure', () => {
       .toBeLessThan(after);
   });
 
-  test('the slider remembers its value per zoom unit', async ({ appPage: page }) => {
-    // Tweak slider to max at week zoom.
+  test('the slider remembers the day density across legacy zoom URLs', async ({ appPage: page }) => {
     await page.locator('#zoom-slider').evaluate(el => {
       el.value = el.max;
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
     await page.waitForFunction(
-      () => parseFloat(document.getElementById('grid-scroll').dataset.pxPerDay) === 24,
+      () => parseFloat(document.getElementById('grid-scroll').dataset.pxPerDay) === 72,
       null, { timeout: 5000 }
     );
 
-    // Switch to day zoom — slider should reflect day's default (36 px/day).
-    await page.click('#zoom-controls a:has-text("Day")');
-    await expect(page.locator('#zoom-controls a.active')).toHaveText('Day');
-    expect(await page.locator('#zoom-slider').inputValue()).toBe('36');
+    await page.goto('/?zoom=week');
+    await expect(page.locator('#zoom-controls')).toHaveCount(0);
+    expect(await page.locator('#zoom-slider').inputValue()).toBe('72');
     expect(await page.locator('#grid-scroll').evaluate(
       el => parseFloat(el.dataset.pxPerDay)
-    )).toBe(36);
-
-    // Switch back to week — the earlier tweak (168 px/week = 24 px/day) survives.
-    await page.click('#zoom-controls a:has-text("Week")');
-    expect(await page.locator('#zoom-slider').inputValue()).toBe('168');
-    expect(await page.locator('#grid-scroll').evaluate(
-      el => parseFloat(el.dataset.pxPerDay)
-    )).toBe(24);
+    )).toBe(72);
   });
 });
 
@@ -1130,7 +1125,7 @@ test.describe('drag interactions', () => {
     };
 
     const box = await target.boundingBox();
-    // 60 px right at week zoom (12 px/day) = 5 days.
+    // Move far enough to snap to a later day at the default day density.
     await page.mouse.move(box.x + 30, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(box.x + 90, box.y + box.height / 2, { steps: 8 });
@@ -1166,11 +1161,13 @@ test.describe('drag interactions', () => {
       width: parseFloat(await target.evaluate(el => el.style.width)),
       end: await target.evaluate(el => el.dataset.end),
     };
+    await target.scrollIntoViewIfNeeded();
     const box = await target.boundingBox();
+    const ppd = parseFloat(await page.locator('#grid-scroll').evaluate(el => el.dataset.pxPerDay));
     // Right-edge handle sits at right:0 width:6 — aim 3px from the right edge.
     await page.mouse.move(box.x + box.width - 3, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width - 3 + 24, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.move(box.x + box.width - 3 + ppd, box.y + box.height / 2, { steps: 5 });
     await page.mouse.up();
     // Wait for the SSE re-render: data-end changes only after server commit.
     await page.waitForFunction(
@@ -1197,11 +1194,13 @@ test.describe('drag interactions', () => {
       width: parseFloat(await target.evaluate(el => el.style.width)),
       start: await target.evaluate(el => el.dataset.start),
     };
+    await target.scrollIntoViewIfNeeded();
     const box = await target.boundingBox();
+    const ppd = parseFloat(await page.locator('#grid-scroll').evaluate(el => el.dataset.pxPerDay));
     // Left-edge handle sits at left:0 width:6 — aim 3px in from the left.
     await page.mouse.move(box.x + 3, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box.x + 3 + 24, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.move(box.x + 3 + ppd, box.y + box.height / 2, { steps: 5 });
     await page.mouse.up();
     await page.waitForFunction(
       ([oldStart]) => {
@@ -1222,6 +1221,7 @@ test.describe('drag interactions', () => {
 
   test('the dep-handle stays interactive while the mouse traverses the bar→handle boundary', async ({ appPage: page }) => {
     const bar = page.locator('.bar', { hasText: 'A/B test setup' });
+    await bar.scrollIntoViewIfNeeded();
     const box = await bar.boundingBox();
     // Start inside the bar to engage :hover, then move out across the boundary
     // toward the dep-handle in many small steps (i.e. real human motion).
@@ -1235,6 +1235,7 @@ test.describe('drag interactions', () => {
 
   test('dragging the dep-handle shows a live drag line and clears on release', async ({ appPage: page }) => {
     const from = page.locator('.bar', { hasText: 'A/B test setup' });
+    await from.scrollIntoViewIfNeeded();
     await from.hover();
     const fromBox = await from.boundingBox();
     await page.mouse.move(fromBox.x + fromBox.width + 6, fromBox.y + fromBox.height / 2);
@@ -1249,6 +1250,7 @@ test.describe('drag interactions', () => {
 
   test('the dep-drag preview is an orthogonal arrow with an arrowhead (matches committed)', async ({ appPage: page }) => {
     const from = page.locator('.bar', { hasText: 'A/B test setup' });
+    await from.scrollIntoViewIfNeeded();
     await from.hover();
     const fromBox = await from.boundingBox();
     await page.mouse.move(fromBox.x + fromBox.width + 6, fromBox.y + fromBox.height / 2);
@@ -1265,6 +1267,7 @@ test.describe('drag interactions', () => {
   test('dropping the dep-handle outside any bar surfaces a hint', async ({ appPage: page }) => {
     const from = page.locator('.bar', { hasText: 'A/B test setup' });
     const before = await page.locator('#arrows .hit').count();
+    await from.scrollIntoViewIfNeeded();
     await from.hover();
     const fromBox = await from.boundingBox();
     await page.mouse.move(fromBox.x + fromBox.width + 6, fromBox.y + fromBox.height / 2);
@@ -1280,7 +1283,9 @@ test.describe('drag interactions', () => {
   });
 
   test('creating a dependency does not reset the chart scroll position', async ({ appPage: page }) => {
-    // Scroll the chart horizontally to a known offset.
+    // Let the initial automatic scroll-to-today settle, then scroll the chart
+    // horizontally to a known offset.
+    await page.waitForTimeout(100);
     await page.evaluate(() => {
       document.getElementById('grid-scroll').scrollLeft = 240;
     });
@@ -1289,11 +1294,15 @@ test.describe('drag interactions', () => {
     );
     expect(before).toBe(240);
 
-    // Create a dep with a source whose dep-handle remains inside the viewport
-    // at this scroll offset; otherwise the test would be exercising an
-    // off-screen mouse coordinate rather than scroll preservation.
+    // Create a dep with endpoints brought into view explicitly. At day density
+    // the chart is much wider, so seeded objects are often off-screen.
     const from = page.locator('.bar', { hasText: 'Tutorial flow v2' });
     const to = page.locator('.bar', { hasText: 'Audit IAM policies' });
+    await from.scrollIntoViewIfNeeded();
+    await to.scrollIntoViewIfNeeded();
+    const committedScroll = await page.evaluate(() =>
+      document.getElementById('grid-scroll').scrollLeft
+    );
     await from.hover();
     const fromBox = await from.boundingBox();
     const toBox = await to.boundingBox();
@@ -1307,7 +1316,7 @@ test.describe('drag interactions', () => {
     const after = await page.evaluate(() =>
       document.getElementById('grid-scroll').scrollLeft
     );
-    expect(after).toBe(240);
+    expect(after).toBe(committedScroll);
   });
 
   test('dragging from a bar dep-handle to another bar creates a dependency', async ({ appPage: page }) => {
@@ -1315,6 +1324,8 @@ test.describe('drag interactions', () => {
     // Use two tasks that aren't already linked.
     const from = page.locator('.bar', { hasText: 'A/B test setup' });
     const to = page.locator('.bar', { hasText: 'Audit IAM policies' });
+    await from.scrollIntoViewIfNeeded();
+    await to.scrollIntoViewIfNeeded();
     await from.hover();
     const fromBox = await from.boundingBox();
     const toBox = await to.boundingBox();
@@ -1330,6 +1341,8 @@ test.describe('drag interactions', () => {
     // Demo has t1 → t2; attempting t2 → t1 would form a cycle.
     const from = page.locator('.bar', { hasText: 'Migrate /users endpoints' });  // t2
     const to = page.locator('.bar', { hasText: 'Spike on auth changes' });        // t1
+    await from.scrollIntoViewIfNeeded();
+    await to.scrollIntoViewIfNeeded();
     await from.hover();
     const fromBox = await from.boundingBox();
     const toBox = await to.boundingBox();
@@ -1400,16 +1413,20 @@ test.describe('multi-select', () => {
     const before6 = parseFloat(await t6.evaluate(el => el.style.left));
     const before8 = parseFloat(await t8.evaluate(el => el.style.left));
     const oldStart6 = await t6.evaluate(el => el.dataset.start);
+    const ppd = parseFloat(await page.locator('#grid-scroll').evaluate(el => el.dataset.pxPerDay));
 
+    await t6.scrollIntoViewIfNeeded();
     await t6.click({ modifiers: ['Shift'] });
+    await t8.scrollIntoViewIfNeeded();
     await t8.click({ modifiers: ['Shift'] });
     await expect(page.locator('.bar.selected')).toHaveCount(2);
 
-    // Drag t6 right by 60px (5 days at week zoom).
+    // Drag t6 right far enough to snap to a later day.
+    await t6.scrollIntoViewIfNeeded();
     const box = await t6.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
     await page.mouse.up();
 
     // Wait for the SSE patch — t6's data-start changes only after commit.
@@ -1434,32 +1451,38 @@ test.describe('multi-select', () => {
   test('dragging a non-selected bar does not move the selected ones', async ({ appPage: page }) => {
     // Selection persists across drags of unrelated bars.
     const t6 = page.locator('.bar', { hasText: 'A/B test setup' });
+    await t6.scrollIntoViewIfNeeded();
     await t6.click({ modifiers: ['Shift'] });
 
-    const t8 = page.locator('.bar', { hasText: 'Terraform module rewrites' });
-    const before8 = parseFloat(await t8.evaluate(el => el.style.left));
+    const other = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    const beforeOther = parseFloat(await other.evaluate(el => el.style.left));
     const before6 = parseFloat(await t6.evaluate(el => el.style.left));
-    const oldStart8 = await t8.evaluate(el => el.dataset.start);
+    const oldStartOther = await other.evaluate(el => el.dataset.start);
+    const ppd = parseFloat(await page.locator('#grid-scroll').evaluate(el => el.dataset.pxPerDay));
 
-    // Drag t8 (not selected) — only t8 should move.
-    const box = await t8.boundingBox();
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    // Drag another, non-selected bar — the selected bar should stay put.
+    await other.evaluate(el => {
+      document.getElementById('grid-scroll').scrollLeft = Math.max(0, parseFloat(el.style.left) - 80);
+    });
+    await other.scrollIntoViewIfNeeded();
+    const box = await other.boundingBox();
+    await page.mouse.move(box.x + 30, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.move(box.x + 30 + ppd * 2, box.y + box.height / 2, { steps: 8 });
     await page.mouse.up();
     await page.waitForFunction(
       ([oldStart]) => {
         const el = [...document.querySelectorAll('.bar')]
-          .find(b => b.textContent.includes('Terraform module rewrites'));
+          .find(b => b.textContent.includes('Migrate /users endpoints'));
         return el && el.dataset.start !== oldStart;
       },
-      [oldStart8],
+      [oldStartOther],
       { timeout: 5000 }
     );
 
-    const after8 = parseFloat(await page.locator('.bar', { hasText: 'Terraform module rewrites' }).evaluate(el => el.style.left));
+    const afterOther = parseFloat(await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).evaluate(el => el.style.left));
     const after6 = parseFloat(await page.locator('.bar', { hasText: 'A/B test setup' }).evaluate(el => el.style.left));
-    expect(after8).toBeGreaterThan(before8);
+    expect(afterOther).toBeGreaterThan(beforeOther);
     expect(after6).toBe(before6);  // t6 did not move
     // Debug: how many times did the mutation observer fire, and is the set still populated?
     // Selection survived the re-render.
@@ -1546,11 +1569,13 @@ test.describe('project & people management', () => {
     const taskId = await milestone.getAttribute('data-task-id');
     const bar = page.locator(`#bar-${taskId}`);
     const beforeEnd = await bar.getAttribute('data-end');
+    await milestone.scrollIntoViewIfNeeded();
     const box = await milestone.boundingBox();
+    const ppd = parseFloat(await page.locator('#grid-scroll').evaluate(el => el.dataset.pxPerDay));
 
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
     await page.mouse.up();
 
     await page.waitForFunction(
@@ -1571,6 +1596,7 @@ test.describe('project & people management', () => {
   test('clicking a task milestone opens the regular milestone editor', async ({ appPage: page }) => {
     const ms = page.locator('.chart-row.proj .milestone').first();
     const taskId = await ms.getAttribute('data-task-id');
+    await ms.scrollIntoViewIfNeeded();
     const box = await ms.boundingBox();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await page.waitForSelector('#milestone-popover');

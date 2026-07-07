@@ -10,12 +10,6 @@
     <c-screens.gantt.show-completed-toggle :show_completed="vm.show_completed" />
     <c-screens.gantt.team-filter :teams="team_choices" :team_filter="team_filter" />
     <div class="spacer"></div>
-    <div id="zoom-controls">
-      <a href="?zoom=day"     class="{% if zoom == 'day' %}active{% endif %}">{% trans "Day" %}</a>
-      <a href="?zoom=week"    class="{% if zoom == 'week' %}active{% endif %}">{% trans "Week" %}</a>
-      <a href="?zoom=month"   class="{% if zoom == 'month' %}active{% endif %}">{% trans "Month" %}</a>
-      <a href="?zoom=quarter" class="{% if zoom == 'quarter' %}active{% endif %}">{% trans "Quarter" %}</a>
-    </div>
     <input class="range range-xs" type="range" id="zoom-slider" aria-label="{% trans 'Zoom' %}" title="{% trans 'Zoom' %}"
            min="{{ ppd_unit_min }}" max="{{ ppd_unit_max }}"
            step="{{ ppd_unit_step }}" value="{{ ppd_unit }}"

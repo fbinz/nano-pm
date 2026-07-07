@@ -18,7 +18,7 @@ from readers.chart_view import (
 )
 
 
-VALID_ZOOMS = {"day", "week", "month", "quarter"}
+VALID_ZOOMS = set(ZOOM_PX_PER_DAY)
 SIDEBAR_WIDTH_SESSION_KEY = "sidebar_width"
 SIDEBAR_WIDTH_DEFAULT = 240
 SIDEBAR_WIDTH_MIN = 140
