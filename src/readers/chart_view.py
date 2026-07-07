@@ -391,9 +391,14 @@ def build_chart_vm(
     def x_of(d: date) -> float:
         return (d - state.chart_start).days * ppd
 
-    # Row groups, with bars and milestones
+    # Row groups, with bars and milestones. When completed projects are revealed,
+    # keep active projects in their manual order and move completed ones below them.
     row_groups: list[ProjectRowVM] = []
-    for proj in state.projects:
+    projects = sorted(
+        state.projects,
+        key=lambda proj: (proj.is_completed if show_completed else False, proj.order, proj.id),
+    )
+    for proj in projects:
         # Completed projects are hidden unless the show-completed filter is on.
         if proj.is_completed and not show_completed:
             continue

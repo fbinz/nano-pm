@@ -2507,7 +2507,7 @@ test.describe('project completion', () => {
     await expect(page.locator('.left-cell.proj')).toHaveCount(2);
   });
 
-  test('the show-completed toggle reveals completed projects, dimmed', async ({ appPage: page }) => {
+  test('the show-completed toggle reveals completed projects at the bottom, dimmed', async ({ appPage: page }) => {
     await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
     await page.waitForSelector('#project-popover');
     await page.click('#pp-toggle-complete');
@@ -2519,6 +2519,11 @@ test.describe('project completion', () => {
     const proj = page.locator('.left-cell.proj', { hasText: 'API Migration' });
     await expect(proj).toHaveCount(1);
     await expect(proj).toHaveClass(/completed/);
+    await expect(page.locator('.left-cell.proj')).toHaveText([
+      /Onboarding revamp/,
+      /Infra hardening/,
+      /API Migration/,
+    ]);
   });
 
   test('completion controls are translated (de)', async ({ appPage: page }) => {
