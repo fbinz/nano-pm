@@ -1607,6 +1607,23 @@ test.describe('project & people management', () => {
     await expect(page.locator(`#bar-${taskId}`)).toBeVisible();
   });
 
+  test('milestone editor requires a description before saving', async ({ appPage: page }) => {
+    const ms = page.locator('.chart-row.proj .milestone').first();
+    await ms.scrollIntoViewIfNeeded();
+    const box = await ms.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page.locator('#milestone-popover')).toBeVisible();
+
+    const description = page.locator('#milestone-popover textarea[name=description]');
+    await expect(description).toHaveAttribute('required', '');
+    await description.fill('');
+    await page.locator('#milestone-popover button[type=submit]').click();
+
+    await expect(page.locator('#milestone-popover')).toBeVisible();
+    await expect(description).toBeFocused();
+    expect(await description.evaluate(el => el.validity.valueMissing)).toBe(true);
+  });
+
   test('editing the task milestone title updates the milestone label', async ({ appPage: page }) => {
     await page.locator('.bar', { hasText: 'Cutover and deprecation' }).click();
     await expect(page.locator('#task-popover')).toBeVisible();
@@ -1630,6 +1647,7 @@ test.describe('project & people management', () => {
     await page.click('#project-popover #pp-add-milestone');
     await expect(page.locator('#milestone-popover')).toBeVisible();
     await page.fill('#milestone-popover input[name=title]', 'Onboarding-only checkpoint');
+    await page.fill('#milestone-popover textarea[name=description]', 'Onboarding-only checkpoint description.');
     await page.click('#milestone-popover button[type=submit]');
     await expect(page.locator('#milestone-popover')).toHaveCount(0);
 
@@ -1646,6 +1664,7 @@ test.describe('project & people management', () => {
     await page.click('#project-popover #pp-add-milestone');
     await expect(page.locator('#milestone-popover')).toBeVisible();
     await page.fill('#milestone-popover input[name=title]', 'Reusable checkpoint');
+    await page.fill('#milestone-popover textarea[name=description]', 'Reusable checkpoint description.');
     await page.click('#milestone-popover button[type=submit]');
     await expect(page.locator('#milestone-popover')).toHaveCount(0);
 
