@@ -1,4 +1,53 @@
+const http = require('http');
+
 const { test, expect, login, reset } = require('./fixtures');
+
+function germanDate(iso, withArticle = false) {
+  const months = [
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+  ];
+  const [year, month, day] = iso.split('-').map(Number);
+  return `${withArticle ? 'den ' : ''}${day}. ${months[month - 1]} ${year}`;
+}
+
+function germanDateShift(beforeIso, afterIso) {
+  const before = new Date(`${beforeIso}T00:00:00Z`);
+  const after = new Date(`${afterIso}T00:00:00Z`);
+  const deltaDays = Math.round((after - before) / (24 * 60 * 60 * 1000));
+  const absDays = Math.abs(deltaDays);
+  let amount;
+  if (absDays % 7 === 0) {
+    const weeks = absDays / 7;
+    amount = weeks === 1 ? 'eine Woche' : `${weeks} Wochen`;
+  } else {
+    amount = absDays === 1 ? 'einen Tag' : `${absDays} Tage`;
+  }
+  return `um ${amount} ${deltaDays > 0 ? 'nach hinten' : 'nach vorne'} auf ${germanDate(afterIso, true)}`;
+}
+
+async function startWebhookServer() {
+  const requests = [];
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      let json = null;
+      try { json = JSON.parse(body || '{}'); } catch (_) {}
+      requests.push({ method: req.method, url: req.url, headers: req.headers, body, json });
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end('{}');
+    });
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  return {
+    url: `http://127.0.0.1:${port}/teams-webhook`,
+    requests,
+    close: () => new Promise(resolve => server.close(resolve)),
+  };
+}
 
 // =============================================================================
 // Auth + first render
@@ -1822,6 +1871,191 @@ test.describe('project & people management', () => {
 
     await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
     await expect(page.locator('#project-popover textarea[name=description]')).toHaveValue('Move all public API traffic to v2 before GA.');
+  });
+
+  test('project Teams notification settings persist', async ({ appPage: page }) => {
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await expect(page.locator('#project-popover')).toBeVisible();
+    await expect(page.locator('#project-popover input[name=teams_webhook_url]')).not.toBeVisible();
+    await page.getByLabel('Toggle Teams notification settings').check();
+    await expect(page.locator('#project-popover input[name=teams_webhook_url]')).toBeVisible();
+
+    await page.locator('#project-popover input[name=teams_webhook_url]').fill('http://127.0.0.1:54321/teams');
+    await page.locator('#teams-event-milestone-created').check();
+    await page.locator('#teams-event-milestone-moved').uncheck();
+    await page.locator('#teams-event-milestone-updated').check();
+    await page.locator('#teams-event-milestone-deleted').uncheck();
+    await page.locator('#project-popover button[type=submit]').click();
+    await expect(page.locator('#project-popover')).toHaveCount(0);
+
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await page.getByLabel('Toggle Teams notification settings').check();
+    await expect(page.locator('#project-popover input[name=teams_webhook_url]')).toHaveValue('http://127.0.0.1:54321/teams');
+    await expect(page.locator('#teams-event-milestone-created')).toBeChecked();
+    await expect(page.locator('#teams-event-milestone-moved')).not.toBeChecked();
+    await expect(page.locator('#teams-event-milestone-updated')).toBeChecked();
+    await expect(page.locator('#teams-event-milestone-deleted')).not.toBeChecked();
+  });
+
+  test('Teams notifications skip placeholder milestone creation', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+      await expect(page.locator('#project-popover')).toBeVisible();
+      await page.getByLabel('Toggle Teams notification settings').check();
+      await page.locator('#project-popover input[name=teams_webhook_url]').fill(webhook.url);
+      await page.locator('#teams-event-milestone-created').check();
+      await page.locator('#project-popover button[type=submit]').click();
+      await expect(page.locator('#project-popover')).toHaveCount(0);
+
+      await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+      await expect(page.locator('#project-popover')).toBeVisible();
+      await page.locator('#project-popover #pp-add-milestone').click();
+      await expect(page.locator('#milestone-popover')).toBeVisible();
+      await expect(page.locator('#milestone-popover input[name=title]')).toHaveValue('New milestone');
+      await expect.poll(() => webhook.requests.length).toBe(0);
+    } finally {
+      await webhook.close();
+    }
+  });
+
+  test('Teams notifications respect selected milestone events', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+      await expect(page.locator('#project-popover')).toBeVisible();
+      await page.getByLabel('Toggle Teams notification settings').check();
+      await page.locator('#project-popover input[name=teams_webhook_url]').fill(webhook.url);
+      await page.locator('#teams-event-milestone-moved').uncheck();
+      await page.locator('#teams-event-milestone-updated').check();
+      await page.locator('#project-popover button[type=submit]').click();
+      await expect(page.locator('#project-popover')).toHaveCount(0);
+
+      const milestone = page.locator('.chart-row.proj .milestone').first();
+      await milestone.scrollIntoViewIfNeeded();
+      const milestoneId = await milestone.getAttribute('data-milestone-id');
+      const oldDate = await milestone.getAttribute('data-date');
+      const box = await milestone.boundingBox();
+      const ppd = parseFloat(await page.locator('#grid-scroll').evaluate(el => el.dataset.pxPerDay));
+
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
+      await page.mouse.up();
+
+      await page.waitForFunction(
+        ([id, before]) => {
+          const el = document.querySelector(`#ms-${id}`);
+          return el && el.dataset.date !== before;
+        },
+        [milestoneId, oldDate],
+        { timeout: 5000 }
+      );
+      expect(webhook.requests).toHaveLength(0);
+
+      const movedMilestone = page.locator(`#ms-${milestoneId}`);
+      await movedMilestone.scrollIntoViewIfNeeded();
+      const movedBox = await movedMilestone.boundingBox();
+      await page.mouse.click(movedBox.x + movedBox.width / 2, movedBox.y + movedBox.height / 2);
+      await expect(page.locator('#milestone-popover')).toBeVisible();
+      await page.locator('#milestone-popover input[name=title]').fill('v2 API beta updated for Teams');
+      await page.locator('#milestone-popover button[type=submit]').click();
+      await expect(page.locator('#milestone-popover')).toHaveCount(0);
+
+      await expect.poll(() => webhook.requests.length).toBe(1);
+      expect(webhook.requests[0].method).toBe('POST');
+      expect(webhook.requests[0].json.type).toBe('message');
+      const card = webhook.requests[0].json.attachments[0].content;
+      expect(webhook.requests[0].json.attachments[0].contentType).toBe('application/vnd.microsoft.card.adaptive');
+      expect(card.type).toBe('AdaptiveCard');
+      expect(card.body[0].text).toBe('Meilenstein v2 API beta updated for Teams aktualisiert');
+      expect(card.body[1].text).toBe('Projekt: API Migration');
+      expect(card.body[2].text)
+        .toContain('demo hat den Titel von „v2 API beta“ in „v2 API beta updated for Teams“ geändert.');
+      expect(card.body[3].facts).toContainEqual({ title: 'Titel', value: 'v2 API beta → v2 API beta updated for Teams' });
+    } finally {
+      await webhook.close();
+    }
+  });
+
+  test('Teams description notifications include the new milestone description', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+      await expect(page.locator('#project-popover')).toBeVisible();
+      await page.getByLabel('Toggle Teams notification settings').check();
+      await page.locator('#project-popover input[name=teams_webhook_url]').fill(webhook.url);
+      await page.locator('#teams-event-milestone-moved').uncheck();
+      await page.locator('#teams-event-milestone-updated').check();
+      await page.locator('#project-popover button[type=submit]').click();
+      await expect(page.locator('#project-popover')).toHaveCount(0);
+
+      const milestone = page.locator('.chart-row.proj .milestone').first();
+      await milestone.scrollIntoViewIfNeeded();
+      const box = await milestone.boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await expect(page.locator('#milestone-popover')).toBeVisible();
+
+      const description = 'Neue Beschreibung für Teams mit mehr Kontext.';
+      await page.locator('#milestone-popover textarea[name=description]').fill(description);
+      await page.locator('#milestone-popover button[type=submit]').click();
+      await expect(page.locator('#milestone-popover')).toHaveCount(0);
+
+      await expect.poll(() => webhook.requests.length).toBe(1);
+      const card = webhook.requests[0].json.attachments[0].content;
+      expect(card.body[0].text).toBe('Meilenstein v2 API beta aktualisiert');
+      expect(card.body[2].text).toContain('demo hat die Beschreibung geändert:');
+      expect(card.body[2].text).toContain(description);
+      expect(card.body[3].facts).not.toContainEqual({ title: 'Beschreibung', value: 'geändert' });
+    } finally {
+      await webhook.close();
+    }
+  });
+
+  test('Teams milestone move notifications use German localized dates', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+      await expect(page.locator('#project-popover')).toBeVisible();
+      await page.getByLabel('Toggle Teams notification settings').check();
+      await page.locator('#project-popover input[name=teams_webhook_url]').fill(webhook.url);
+      await page.locator('#project-popover button[type=submit]').click();
+      await expect(page.locator('#project-popover')).toHaveCount(0);
+
+      const milestone = page.locator('.chart-row.proj .milestone').first();
+      await milestone.scrollIntoViewIfNeeded();
+      const milestoneId = await milestone.getAttribute('data-milestone-id');
+      const oldDate = await milestone.getAttribute('data-date');
+      const box = await milestone.boundingBox();
+      const ppd = parseFloat(await page.locator('#grid-scroll').evaluate(el => el.dataset.pxPerDay));
+
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
+      await page.mouse.up();
+
+      await page.waitForFunction(
+        ([id, before]) => {
+          const el = document.querySelector(`#ms-${id}`);
+          return el && el.dataset.date !== before;
+        },
+        [milestoneId, oldDate],
+        { timeout: 5000 }
+      );
+
+      await expect.poll(() => webhook.requests.length).toBe(1);
+      const newDate = await page.locator(`#ms-${milestoneId}`).getAttribute('data-date');
+      const card = webhook.requests[0].json.attachments[0].content;
+      expect(card.body[0].text).toBe('Meilenstein v2 API beta verschoben');
+      expect(card.body[2].text)
+        .toContain(`demo hat das Datum ${germanDateShift(oldDate, newDate)} verschoben.`);
+      expect(card.body[3].facts).toContainEqual({
+        title: 'Datum',
+        value: `${germanDate(oldDate)} → ${germanDate(newDate)}`,
+      });
+    } finally {
+      await webhook.close();
+    }
   });
 
   test('PM can delete a project from the sidebar', async ({ appPage: page }) => {

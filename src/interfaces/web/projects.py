@@ -18,7 +18,7 @@ from actions.manage_projects import (
     move_project_to_workspace, set_project_completed,
 )
 from data.models import Membership, WorkspaceRole
-from data.models.project import PROJECT_COLORS
+from data.models.project import PROJECT_COLORS, TEAMS_NOTIFY_EVENT_CHOICES
 from readers import get_project
 
 from .helpers import (
@@ -26,6 +26,13 @@ from .helpers import (
     show_completed, set_show_completed, patch_chart,
     is_pm,
 )
+
+
+def teams_notify_events():
+    return [
+        {"key": key, "label": label, "slug": key.replace(".", "-").replace("_", "-")}
+        for key, label in TEAMS_NOTIFY_EVENT_CHOICES
+    ]
 
 
 def pm_required(view_func):
@@ -79,6 +86,7 @@ def project_popover(request: HttpRequest, project_id: int):
             colors=PROJECT_COLORS,
             destination_workspaces=destination_workspaces,
             is_pm=is_pm(request),
+            teams_notify_events=teams_notify_events(),
         )
     )
 
@@ -87,12 +95,15 @@ def project_popover(request: HttpRequest, project_id: int):
 @login_required
 @datastar_response
 def project_update(request: HttpRequest, project_id: int):
+    can_update_teams = is_pm(request)
     update_project(
         workspace=request.workspace,
         project_id=project_id,
         name=request.POST.get("name") or None,
         description=request.POST.get("description") if "description" in request.POST else None,
         color=request.POST.get("color") or None,
+        teams_webhook_url=request.POST.get("teams_webhook_url", "") if can_update_teams else None,
+        teams_notify_events=request.POST.getlist("teams_notify_events") if can_update_teams else None,
         actor=request.user,
     )
     yield patch_chart(request)

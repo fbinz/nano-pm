@@ -13,6 +13,7 @@ from datastar_py.django import (
 from django_cotton import render_component
 
 from actions.manage_milestones import (
+    DEFAULT_MILESTONE_TITLE,
     create_milestone, update_milestone, delete_milestone,
 )
 from readers import get_chart_state, get_project, get_milestone
@@ -88,7 +89,7 @@ def milestone_create(request: HttpRequest, project_id: int):
     on = parse_iso(data.get("date", "")) or date.today()
     m = create_milestone(
         workspace=request.workspace, project_id=project_id,
-        title="New milestone", on=on,
+        title=DEFAULT_MILESTONE_TITLE, on=on,
         actor=request.user,
     )
     if m is None:

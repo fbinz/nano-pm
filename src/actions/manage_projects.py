@@ -5,11 +5,15 @@ from django.db.models import Q
 from django.utils import timezone
 
 from actions.activity import change_set, created_changes, deleted_changes, log_activity, snapshot
+from actions.teams_notifications import normalize_notify_events
 from data.models import Dependency, Membership, Person, Project, WorkspaceRole
 from data.models.project import PROJECT_COLORS
 
 
-PROJECT_FIELDS = ["name", "description", "color", "order", "completed_at"]
+PROJECT_FIELDS = [
+    "name", "description", "color", "order", "completed_at",
+    "teams_webhook_url", "teams_notify_events",
+]
 
 
 def create_project(
@@ -50,26 +54,37 @@ def update_project(
     name: str | None = None,
     description: str | None = None,
     color: str | None = None,
+    teams_webhook_url: str | None = None,
+    teams_notify_events: list[str] | None = None,
     actor=None,
 ) -> Project | None:
     try:
         proj = Project.objects.get(id=project_id, workspace=workspace)
     except Project.DoesNotExist:
         return None
-    before = snapshot(proj, ["name", "description", "color"])
+    update_fields = ["name", "description", "color"]
+    if teams_webhook_url is not None:
+        update_fields.append("teams_webhook_url")
+    if teams_notify_events is not None:
+        update_fields.append("teams_notify_events")
+    before = snapshot(proj, update_fields)
     if name is not None:
         proj.name = name
     if description is not None:
         proj.description = description
     if color is not None:
         proj.color = color
+    if teams_webhook_url is not None:
+        proj.teams_webhook_url = teams_webhook_url.strip()
+    if teams_notify_events is not None:
+        proj.teams_notify_events = normalize_notify_events(teams_notify_events)
     proj.save()
     log_activity(
         workspace=workspace,
         actor=actor,
         action="project.updated",
         entity=proj,
-        changes=change_set(before, snapshot(proj, ["name", "description", "color"])),
+        changes=change_set(before, snapshot(proj, update_fields)),
         skip_empty_changes=True,
     )
     return proj

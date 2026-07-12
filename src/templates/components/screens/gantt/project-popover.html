@@ -1,6 +1,6 @@
 {% load i18n %}
 {# Project editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars project colors destination_workspaces is_pm="False" />
+<c-vars project colors destination_workspaces teams_notify_events is_pm="False" />
 <div id="drawer-slot">
   <form
     id="project-popover"
@@ -16,6 +16,30 @@
       <label class="label" for="project-description">{% trans "Description" %}</label>
       <textarea id="project-description" class="textarea textarea-sm w-full" name="description" rows="3">{{ project.description }}</textarea>
     </fieldset>
+    {% if is_pm %}
+      <div id="project-teams-settings" class="collapse collapse-arrow bg-base-200">
+        <input type="checkbox" aria-label="{% trans 'Toggle Teams notification settings' %}">
+        <div class="collapse-title text-sm font-medium">{% trans "Teams notifications" %}</div>
+        <div class="collapse-content">
+          <fieldset class="fieldset">
+            <label class="label" for="project-teams-webhook">{% trans "Microsoft Teams webhook URL" %}</label>
+            <input id="project-teams-webhook" class="input input-sm w-full" type="url" name="teams_webhook_url" value="{{ project.teams_webhook_url }}" placeholder="https://...">
+            <div class="text-xs opacity-70">{% trans "Send notifications to this Teams channel when selected milestone events happen." %}</div>
+          </fieldset>
+          <fieldset class="fieldset">
+            <legend class="label">{% trans "Notify for" %}</legend>
+            <div class="flex flex-col gap-1 text-sm">
+              {% for event in teams_notify_events %}
+                <label class="label cursor-pointer justify-start gap-2" for="teams-event-{{ event.slug }}">
+                  <input id="teams-event-{{ event.slug }}" class="checkbox checkbox-xs" type="checkbox" name="teams_notify_events" value="{{ event.key }}" {% if event.key in project.teams_notify_events %}checked{% endif %}>
+                  <span>{{ event.label }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </fieldset>
+        </div>
+      </div>
+    {% endif %}
     <fieldset class="fieldset">
       <label class="label" for="proj-color-input">{% trans "Color" %}</label>
       <input type="hidden" name="color" value="{{ project.color }}" id="proj-color-input">

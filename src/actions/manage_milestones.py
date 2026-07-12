@@ -3,11 +3,23 @@
 from datetime import date, timedelta
 
 from actions.activity import change_set, created_changes, deleted_changes, log_activity, snapshot
+from actions.teams_notifications import (
+    MILESTONE_CREATED,
+    MILESTONE_DELETED,
+    milestone_event_names_from_changes,
+    queue_milestone_notification,
+    queue_project_notification,
+)
 from data.models import Milestone, Project
 from actions.auto_cascade import cascade_workspace
 
 
 MILESTONE_FIELDS = ["title", "description", "date"]
+DEFAULT_MILESTONE_TITLE = "New milestone"
+
+
+def _is_default_created_milestone(milestone: Milestone) -> bool:
+    return milestone.title == DEFAULT_MILESTONE_TITLE and not milestone.description.strip()
 
 
 def _milestone_values(milestone: Milestone) -> dict:
@@ -46,13 +58,22 @@ def create_milestone(
     milestone = Milestone.objects.create(
         project=proj, title=title.strip() or "Milestone", date=on
     )
+    changes = created_changes(_milestone_values(milestone))
     log_activity(
         workspace=workspace,
         actor=actor,
         action="milestone.created",
         entity=milestone,
-        changes=created_changes(_milestone_values(milestone)),
+        changes=changes,
     )
+    if not _is_default_created_milestone(milestone):
+        queue_milestone_notification(
+            project=proj,
+            milestone=milestone,
+            event_names={MILESTONE_CREATED},
+            changes=changes,
+            actor=actor,
+        )
     return milestone
 
 
@@ -72,6 +93,7 @@ def update_milestone(
         )
     except Milestone.DoesNotExist:
         return None
+    before_project = m.project
     before = _milestone_values(m)
     if m.task_id:
         task = m.task
@@ -103,14 +125,34 @@ def update_milestone(
                 pass
         m.save()
     m = Milestone.objects.select_related("project", "task").get(id=m.id)
+    after = _milestone_values(m)
+    changes = change_set(before, after)
     log_activity(
         workspace=workspace,
         actor=actor,
         action="milestone.updated" if on is None else "milestone.moved",
         entity=m,
-        changes=change_set(before, _milestone_values(m)),
+        changes=changes,
         skip_empty_changes=True,
     )
+    event_names = milestone_event_names_from_changes(changes)
+    if event_names:
+        if before_project.id != m.project_id:
+            queue_project_notification(
+                project=before_project,
+                milestone_title=m.title,
+                event_names=event_names,
+                changes=changes,
+                actor=actor,
+                milestone_id=m.id,
+            )
+        queue_milestone_notification(
+            project=m.project,
+            milestone=m,
+            event_names=event_names,
+            changes=changes,
+            actor=actor,
+        )
     return m
 
 
@@ -121,8 +163,17 @@ def delete_milestone(*, workspace, milestone_id: int, actor=None) -> bool:
     if milestone is None:
         return False
     values = _milestone_values(milestone)
+    changes = deleted_changes(values)
     label = milestone.title
     entity_id = milestone.id
+    queue_project_notification(
+        project=milestone.project,
+        milestone_title=label,
+        event_names={MILESTONE_DELETED},
+        changes=changes,
+        actor=actor,
+        milestone_id=entity_id,
+    )
     milestone.delete()
     log_activity(
         workspace=workspace,
@@ -131,6 +182,6 @@ def delete_milestone(*, workspace, milestone_id: int, actor=None) -> bool:
         entity_type="milestone",
         entity_id=entity_id,
         entity_label=label,
-        changes=deleted_changes(values),
+        changes=changes,
     )
     return True

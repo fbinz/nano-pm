@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-26 10:23+0000\n"
+"POT-Creation-Date: 2026-07-12 11:39+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -170,7 +170,7 @@ msgid "%(actor)s %(verb)s %(entity)s %(label)s"
 msgstr "%(actor)s hat %(entity)s %(label)s %(verb)s"
 
 #: data/models/activity.py:129
-#: templates/components/screens/gantt/task-popover.html:38
+#: templates/components/screens/gantt/task-popover.html:50
 msgid "Assignees"
 msgstr "Zuständige"
 
@@ -179,7 +179,7 @@ msgid "Body"
 msgstr "Text"
 
 #: data/models/activity.py:131
-#: templates/components/screens/gantt/project-popover.html:20
+#: templates/components/screens/gantt/project-popover.html:44
 msgid "Color"
 msgstr "Farbe"
 
@@ -196,19 +196,19 @@ msgid "Converted task"
 msgstr "Umgewandelte Aufgabe"
 
 #: data/models/activity.py:135
-#: templates/components/screens/gantt/milestone-popover.html:22
+#: templates/components/screens/gantt/milestone-popover.html:24
 msgid "Date"
 msgstr "Datum"
 
 #: data/models/activity.py:136
-#: templates/components/screens/gantt/milestone-popover.html:17
+#: templates/components/screens/gantt/milestone-popover.html:19
 #: templates/components/screens/gantt/project-popover.html:16
-#: templates/components/screens/gantt/task-popover.html:16
+#: templates/components/screens/gantt/task-popover.html:18
 msgid "Description"
 msgstr "Beschreibung"
 
 #: data/models/activity.py:137
-#: templates/components/screens/gantt/task-popover.html:25
+#: templates/components/screens/gantt/task-popover.html:27
 msgid "End"
 msgstr "Ende"
 
@@ -226,9 +226,9 @@ msgid "Predecessor"
 msgstr "Vorgänger"
 
 #: data/models/activity.py:141
-#: templates/components/screens/gantt/milestone-popover.html:26
-#: templates/components/screens/gantt/task-popover.html:30
-#: templates/components/screens/ideas/detail.html:88
+#: templates/components/screens/gantt/milestone-popover.html:28
+#: templates/components/screens/gantt/task-popover.html:32
+#: templates/components/screens/ideas/detail.html:87
 msgid "Project"
 msgstr "Projekt"
 
@@ -249,7 +249,7 @@ msgid "Public roadmap token"
 msgstr "Token der öffentlichen Roadmap"
 
 #: data/models/activity.py:146
-#: templates/components/screens/gantt/task-popover.html:21
+#: templates/components/screens/gantt/task-popover.html:23
 msgid "Start"
 msgstr "Start"
 
@@ -274,8 +274,8 @@ msgid "Teams"
 msgstr "Teams"
 
 #: data/models/activity.py:151
-#: templates/components/screens/gantt/milestone-popover.html:13
-#: templates/components/screens/gantt/task-popover.html:12
+#: templates/components/screens/gantt/milestone-popover.html:15
+#: templates/components/screens/gantt/task-popover.html:14
 msgid "Title"
 msgstr "Titel"
 
@@ -329,6 +329,26 @@ msgstr "PM"
 msgid "Member"
 msgstr "Mitglied"
 
+#: data/models/project.py:11
+msgid "Milestone created"
+msgstr "Meilenstein erstellt"
+
+#: data/models/project.py:12
+msgid "Milestone date changed"
+msgstr "Meilensteindatum geändert"
+
+#: data/models/project.py:13
+msgid "Milestone details changed"
+msgstr "Meilensteindetails geändert"
+
+#: data/models/project.py:14
+msgid "Milestone moved between projects"
+msgstr "Meilenstein zwischen Projekten verschoben"
+
+#: data/models/project.py:15
+msgid "Milestone deleted"
+msgstr "Meilenstein gelöscht"
+
 #: data/models/task.py:8
 msgid "Planned"
 msgstr "Geplant"
@@ -337,10 +357,10 @@ msgstr "Geplant"
 msgid "In progress"
 msgstr "In Bearbeitung"
 
-#: data/models/task.py:10 templates/components/screens/gantt/chart.html:54
-#: templates/components/screens/gantt/milestone-popover.html:37
-#: templates/components/screens/gantt/project-popover.html:68
-#: templates/components/screens/gantt/task-popover.html:77
+#: data/models/task.py:10 templates/components/screens/gantt/chart.html:73
+#: templates/components/screens/gantt/milestone-popover.html:44
+#: templates/components/screens/gantt/project-popover.html:92
+#: templates/components/screens/gantt/task-popover.html:94
 msgid "Done"
 msgstr "Erledigt"
 
@@ -367,7 +387,107 @@ msgstr "Idee gelöscht."
 msgid "Add a team…"
 msgstr "Person hinzufügen…"
 
-#: readers/chart_view.py:487
+#: readers/chart_view.py:26
+msgctxt "Gantt axis month abbreviation"
+msgid "Jan"
+msgstr "Jan"
+
+#: readers/chart_view.py:27
+msgctxt "Gantt axis month abbreviation"
+msgid "Feb"
+msgstr "Feb"
+
+#: readers/chart_view.py:28
+msgctxt "Gantt axis month abbreviation"
+msgid "Mar"
+msgstr "Mär"
+
+#: readers/chart_view.py:29
+msgctxt "Gantt axis month abbreviation"
+msgid "Apr"
+msgstr "Apr"
+
+#: readers/chart_view.py:30
+msgctxt "Gantt axis month abbreviation"
+msgid "May"
+msgstr "Mai"
+
+#: readers/chart_view.py:31
+msgctxt "Gantt axis month abbreviation"
+msgid "Jun"
+msgstr "Jun"
+
+#: readers/chart_view.py:32
+msgctxt "Gantt axis month abbreviation"
+msgid "Jul"
+msgstr "Jul"
+
+#: readers/chart_view.py:33
+msgctxt "Gantt axis month abbreviation"
+msgid "Aug"
+msgstr "Aug"
+
+#: readers/chart_view.py:34
+msgctxt "Gantt axis month abbreviation"
+msgid "Sep"
+msgstr "Sep"
+
+#: readers/chart_view.py:35
+msgctxt "Gantt axis month abbreviation"
+msgid "Oct"
+msgstr "Okt"
+
+#: readers/chart_view.py:36
+msgctxt "Gantt axis month abbreviation"
+msgid "Nov"
+msgstr "Nov"
+
+#: readers/chart_view.py:37
+msgctxt "Gantt axis month abbreviation"
+msgid "Dec"
+msgstr "Dez"
+
+#: readers/chart_view.py:43
+msgctxt "Gantt axis day abbreviation"
+msgid "Mon"
+msgstr "Mo"
+
+#: readers/chart_view.py:44
+msgctxt "Gantt axis day abbreviation"
+msgid "Tue"
+msgstr "Di"
+
+#: readers/chart_view.py:45
+msgctxt "Gantt axis day abbreviation"
+msgid "Wed"
+msgstr "Mi"
+
+#: readers/chart_view.py:46
+msgctxt "Gantt axis day abbreviation"
+msgid "Thu"
+msgstr "Do"
+
+#: readers/chart_view.py:47
+msgctxt "Gantt axis day abbreviation"
+msgid "Fri"
+msgstr "Fr"
+
+#: readers/chart_view.py:48
+msgctxt "Gantt axis day abbreviation"
+msgid "Sat"
+msgstr "Sa"
+
+#: readers/chart_view.py:49
+msgctxt "Gantt axis day abbreviation"
+msgid "Sun"
+msgstr "So"
+
+#: readers/chart_view.py:224
+msgctxt "Gantt axis ISO week prefix"
+msgid "W"
+msgstr "KW"
+
+#: readers/chart_view.py:588
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
 
@@ -547,7 +667,8 @@ msgstr "Öffentlichen Link neu erzeugen"
 
 #: templates/components/layouts/app-shell.html:75
 msgid "Share task milestones without exposing people or dependencies."
-msgstr "Aufgaben-Meilensteine teilen, ohne Personen oder Abhängigkeiten offenzulegen."
+msgstr ""
+"Aufgaben-Meilensteine teilen, ohne Personen oder Abhängigkeiten offenzulegen."
 
 #: templates/components/layouts/app-shell.html:78
 msgid "Enable public roadmap"
@@ -629,31 +750,34 @@ msgid "No activity yet."
 msgstr "Noch keine Aktivität."
 
 #: templates/components/screens/gantt/chart.html:19
+#: templates/components/screens/gantt/chart_resource.html:19
 msgid "Collapse all"
 msgstr "Alle einklappen"
 
 #: templates/components/screens/gantt/chart.html:19
+#: templates/components/screens/gantt/chart_resource.html:19
 msgid "Expand all"
 msgstr "Alle ausklappen"
 
 #: templates/components/screens/gantt/chart.html:21
+#: templates/components/screens/gantt/chart_resource.html:21
 msgid "timeline"
 msgstr "Zeitachse"
 
-#: templates/components/screens/gantt/chart.html:37
-#: templates/components/screens/gantt/chart.html:88
+#: templates/components/screens/gantt/chart.html:55
+#: templates/components/screens/gantt/chart.html:107
 msgid "Add Project"
 msgstr "Projekt hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:103
+#: templates/components/screens/gantt/chart.html:122
 msgid "Click to remove this dependency"
 msgstr "Klicken, um diese Abhängigkeit zu entfernen"
 
-#: templates/components/screens/gantt/chart.html:116
+#: templates/components/screens/gantt/chart.html:135
 msgid "No projects yet."
 msgstr "Noch keine Projekte."
 
-#: templates/components/screens/gantt/chart.html:117
+#: templates/components/screens/gantt/chart.html:136
 msgid "+ Create your first project"
 msgstr "+ Erstellen Sie Ihr erstes Projekt"
 
@@ -662,104 +786,108 @@ msgstr "+ Erstellen Sie Ihr erstes Projekt"
 msgid "Open menu"
 msgstr "Menü öffnen"
 
-#: templates/components/screens/gantt/index.html:14
-#: templates/components/screens/gantt/resource_index.html:14
-msgid "Day"
-msgstr "Tag"
-
-#: templates/components/screens/gantt/index.html:15
-#: templates/components/screens/gantt/resource_index.html:15
-msgid "Week"
-msgstr "Woche"
-
-#: templates/components/screens/gantt/index.html:16
-#: templates/components/screens/gantt/resource_index.html:16
-msgid "Month"
-msgstr "Monat"
-
-#: templates/components/screens/gantt/index.html:17
-#: templates/components/screens/gantt/resource_index.html:17
-msgid "Quarter"
-msgstr "Quartal"
-
-#: templates/components/screens/gantt/index.html:19
-#: templates/components/screens/gantt/resource_index.html:19
+#: templates/components/screens/gantt/index.html:13
+#: templates/components/screens/gantt/resource_index.html:13
 msgid "Zoom"
 msgstr "Zoom"
 
-#: templates/components/screens/gantt/index.html:32
-#: templates/components/screens/gantt/resource_index.html:32
+#: templates/components/screens/gantt/index.html:26
+#: templates/components/screens/gantt/resource_index.html:26
 msgid "Jump to today (T)"
 msgstr "Zu heute springen (T)"
 
-#: templates/components/screens/gantt/index.html:32
-#: templates/components/screens/gantt/resource_index.html:32
+#: templates/components/screens/gantt/index.html:26
+#: templates/components/screens/gantt/resource_index.html:26
 msgid "Today"
 msgstr "Heute"
 
-#: templates/components/screens/gantt/index.html:38
-#: templates/components/screens/gantt/resource_index.html:38
+#: templates/components/screens/gantt/index.html:32
+#: templates/components/screens/gantt/resource_index.html:32
 msgid "Drag to resize sidebar"
 msgstr "Ziehen, um die Größe der Seitenleiste zu ändern"
 
-#: templates/components/screens/gantt/milestone-popover.html:36
-msgid "Delete this milestone?"
-msgstr "Diesen Meilenstein löschen?"
-
-#: templates/components/screens/gantt/milestone-popover.html:36
-#: templates/components/screens/gantt/task-popover.html:76
-msgid "Delete"
-msgstr "Löschen"
-
-#: templates/components/screens/gantt/milestone-popover.html:37
-#: templates/components/screens/gantt/task-popover.html:87
+#: templates/components/screens/gantt/milestone-popover.html:39
+#: templates/components/screens/gantt/task-popover.html:89
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: templates/components/screens/gantt/project-popover.html:33
+#: templates/components/screens/gantt/milestone-popover.html:42
+msgid "Delete this milestone?"
+msgstr "Diesen Meilenstein löschen?"
+
+#: templates/components/screens/gantt/milestone-popover.html:42
+#: templates/components/screens/gantt/task-popover.html:92
+msgid "Delete"
+msgstr "Löschen"
+
+#: templates/components/screens/gantt/project-popover.html:21
+msgid "Toggle Teams notification settings"
+msgstr "Teams-Benachrichtigungseinstellungen ein-/ausklappen"
+
+#: templates/components/screens/gantt/project-popover.html:22
+msgid "Teams notifications"
+msgstr "Teams-Benachrichtigungen"
+
+#: templates/components/screens/gantt/project-popover.html:25
+msgid "Microsoft Teams webhook URL"
+msgstr "Microsoft-Teams-Webhook-URL"
+
+#: templates/components/screens/gantt/project-popover.html:27
+msgid ""
+"Send notifications to this Teams channel when selected milestone events "
+"happen."
+msgstr ""
+"Benachrichtigungen an diesen Teams-Kanal senden, wenn ausgewählte "
+"Meilenstein-Ereignisse eintreten."
+
+#: templates/components/screens/gantt/project-popover.html:30
+msgid "Notify for"
+msgstr "Benachrichtigen bei"
+
+#: templates/components/screens/gantt/project-popover.html:57
 msgid "move up"
 msgstr "nach oben"
 
-#: templates/components/screens/gantt/project-popover.html:35
+#: templates/components/screens/gantt/project-popover.html:59
 msgid "move down"
 msgstr "nach unten"
 
-#: templates/components/screens/gantt/project-popover.html:39
+#: templates/components/screens/gantt/project-popover.html:63
 msgid "+ Add milestone"
 msgstr "+ Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:44
+#: templates/components/screens/gantt/project-popover.html:68
 msgid "Reopen project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:44
+#: templates/components/screens/gantt/project-popover.html:68
 msgid "Mark complete"
 msgstr "Als erledigt markieren"
 
-#: templates/components/screens/gantt/project-popover.html:49
+#: templates/components/screens/gantt/project-popover.html:73
 #, fuzzy
 #| msgid "Create workspace"
 msgid "Move to workspace"
 msgstr "Arbeitsbereich erstellen"
 
-#: templates/components/screens/gantt/project-popover.html:58
+#: templates/components/screens/gantt/project-popover.html:82
 #, fuzzy, python-format
 #| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgid "Move project &quot;%(name)s&quot; to the selected workspace?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:59
+#: templates/components/screens/gantt/project-popover.html:83
 #, fuzzy
 #| msgid "Reopen project"
 msgid "Move project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:66
+#: templates/components/screens/gantt/project-popover.html:90
 #, python-format
 msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:66
+#: templates/components/screens/gantt/project-popover.html:90
 msgid "Delete project"
 msgstr "Projekt löschen"
 
@@ -775,36 +903,41 @@ msgstr "Erledigte ausblenden"
 msgid "Show completed"
 msgstr "Erledigte anzeigen"
 
-#: templates/components/screens/gantt/task-popover.html:38
+#: templates/components/screens/gantt/task-popover.html:40
 msgid "Milestone"
 msgstr "Meilenstein"
 
-#: templates/components/screens/gantt/task-popover.html:39
+#: templates/components/screens/gantt/task-popover.html:41
 msgid "Leave empty for no milestone"
 msgstr "Leer lassen für keinen Meilenstein"
 
-#: templates/components/screens/gantt/task-popover.html:40
-msgid "A non-empty milestone title creates a milestone using this task's project and end date. Click the milestone to edit its description."
-msgstr "Ein nicht leerer Meilensteintitel erstellt einen Meilenstein mit dem Projekt und Enddatum dieser Aufgabe. Klicken Sie auf den Meilenstein, um seine Beschreibung zu bearbeiten."
+#: templates/components/screens/gantt/task-popover.html:47
+msgid ""
+"A non-empty milestone title creates a milestone using this task's project "
+"and end date. Click the milestone to edit its description."
+msgstr ""
+"Ein nicht leerer Meilensteintitel erstellt einen Meilenstein mit dem Projekt "
+"und Enddatum dieser Aufgabe. Klicken Sie auf den Meilenstein, um seine "
+"Beschreibung zu bearbeiten."
 
-#: templates/components/screens/gantt/task-popover.html:50
+#: templates/components/screens/gantt/task-popover.html:62
 msgid "Dependencies"
 msgstr "Abhängigkeiten"
 
-#: templates/components/screens/gantt/task-popover.html:54
+#: templates/components/screens/gantt/task-popover.html:66
 msgid "depends on"
 msgstr "hängt ab von"
 
-#: templates/components/screens/gantt/task-popover.html:56
-#: templates/components/screens/gantt/task-popover.html:64
+#: templates/components/screens/gantt/task-popover.html:68
+#: templates/components/screens/gantt/task-popover.html:76
 msgid "Remove dependency"
 msgstr "Abhängigkeit entfernen"
 
-#: templates/components/screens/gantt/task-popover.html:62
+#: templates/components/screens/gantt/task-popover.html:74
 msgid "blocks"
 msgstr "blockiert"
 
-#: templates/components/screens/gantt/task-popover.html:69
+#: templates/components/screens/gantt/task-popover.html:81
 msgid ""
 "No dependencies. Drag from a bar's right-edge handle onto another bar to "
 "create one."
@@ -812,7 +945,7 @@ msgstr ""
 "Keine Abhängigkeiten. Ziehen Sie vom rechten Rand eines Balkens auf einen "
 "anderen Balken, um eine zu erstellen."
 
-#: templates/components/screens/gantt/task-popover.html:76
+#: templates/components/screens/gantt/task-popover.html:92
 msgid "Delete this task?"
 msgstr "Diese Aufgabe löschen?"
 
@@ -860,77 +993,77 @@ msgstr "Markdown-Notizen"
 msgid "Brainstorm goals, open questions, links, pros and cons…"
 msgstr "Ziele, offene Fragen, Links, Vor- und Nachteile brainstormen…"
 
-#: templates/components/screens/ideas/detail.html:67
+#: templates/components/screens/ideas/detail.html:66
 msgid "Save idea"
 msgstr "Idee speichern"
 
-#: templates/components/screens/ideas/detail.html:73
+#: templates/components/screens/ideas/detail.html:72
 msgid "Idea actions"
 msgstr "Ideenaktionen"
 
-#: templates/components/screens/ideas/detail.html:77
+#: templates/components/screens/ideas/detail.html:76
 msgid "Promote to project"
 msgstr "Zum Projekt machen"
 
-#: templates/components/screens/ideas/detail.html:78
+#: templates/components/screens/ideas/detail.html:77
 msgid "Create a project using this idea title and notes."
 msgstr "Erstellt ein Projekt aus Titel und Notizen dieser Idee."
 
-#: templates/components/screens/ideas/detail.html:79
+#: templates/components/screens/ideas/detail.html:78
 msgid "Convert to project"
 msgstr "In Projekt umwandeln"
 
-#: templates/components/screens/ideas/detail.html:84
+#: templates/components/screens/ideas/detail.html:83
 msgid "Create task"
 msgstr "Aufgabe erstellen"
 
-#: templates/components/screens/ideas/detail.html:85
+#: templates/components/screens/ideas/detail.html:84
 msgid "Turn this idea into a scheduled task in an existing project."
 msgstr ""
 "Diese Idee in eine geplante Aufgabe in einem bestehenden Projekt umwandeln."
 
-#: templates/components/screens/ideas/detail.html:86
+#: templates/components/screens/ideas/detail.html:85
 msgid "Task title"
 msgstr "Aufgabentitel"
 
-#: templates/components/screens/ideas/detail.html:93
+#: templates/components/screens/ideas/detail.html:92
 msgid "Start date"
 msgstr "Startdatum"
 
-#: templates/components/screens/ideas/detail.html:94
+#: templates/components/screens/ideas/detail.html:93
 msgid "End date"
 msgstr "Enddatum"
 
-#: templates/components/screens/ideas/detail.html:96
+#: templates/components/screens/ideas/detail.html:95
 msgid "Create task from idea"
 msgstr "Aufgabe aus Idee erstellen"
 
-#: templates/components/screens/ideas/detail.html:100
+#: templates/components/screens/ideas/detail.html:99
 msgid "Triage"
 msgstr "Einordnen"
 
-#: templates/components/screens/ideas/detail.html:101
+#: templates/components/screens/ideas/detail.html:100
 msgid "Move the idea out of active exploration without deleting it."
 msgstr "Die Idee aus der aktiven Prüfung nehmen, ohne sie zu löschen."
 
-#: templates/components/screens/ideas/detail.html:105
+#: templates/components/screens/ideas/detail.html:104
 msgid "Park"
 msgstr "Parken"
 
-#: templates/components/screens/ideas/detail.html:109
+#: templates/components/screens/ideas/detail.html:108
 msgid "Reject"
 msgstr "Ablehnen"
 
-#: templates/components/screens/ideas/detail.html:116
-#: templates/components/screens/ideas/detail.html:120
+#: templates/components/screens/ideas/detail.html:115
+#: templates/components/screens/ideas/detail.html:119
 msgid "Delete idea"
 msgstr "Idee löschen"
 
-#: templates/components/screens/ideas/detail.html:118
+#: templates/components/screens/ideas/detail.html:117
 msgid "Danger zone"
 msgstr "Gefahrenbereich"
 
-#: templates/components/screens/ideas/detail.html:119
+#: templates/components/screens/ideas/detail.html:118
 msgid "Delete this idea permanently."
 msgstr "Diese Idee dauerhaft löschen."
 
@@ -1060,105 +1193,17 @@ msgstr "Noch keine öffentlichen Meilensteine"
 msgid "Check back later for roadmap updates."
 msgstr "Schauen Sie später wieder vorbei, um Roadmap-Updates zu sehen."
 
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Jan"
-msgstr "Jan"
+#~ msgid "Day"
+#~ msgstr "Tag"
 
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Feb"
-msgstr "Feb"
+#~ msgid "Week"
+#~ msgstr "Woche"
 
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Mar"
-msgstr "Mär"
+#~ msgid "Month"
+#~ msgstr "Monat"
 
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Apr"
-msgstr "Apr"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "May"
-msgstr "Mai"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Jun"
-msgstr "Jun"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Jul"
-msgstr "Jul"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Aug"
-msgstr "Aug"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Sep"
-msgstr "Sep"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Oct"
-msgstr "Okt"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Nov"
-msgstr "Nov"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis month abbreviation"
-msgid "Dec"
-msgstr "Dez"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis day abbreviation"
-msgid "Mon"
-msgstr "Mo"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis day abbreviation"
-msgid "Tue"
-msgstr "Di"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis day abbreviation"
-msgid "Wed"
-msgstr "Mi"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis day abbreviation"
-msgid "Thu"
-msgstr "Do"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis day abbreviation"
-msgid "Fri"
-msgstr "Fr"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis day abbreviation"
-msgid "Sat"
-msgstr "Sa"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis day abbreviation"
-msgid "Sun"
-msgstr "So"
-
-#: readers/chart_view.py
-msgctxt "Gantt axis ISO week prefix"
-msgid "W"
-msgstr "KW"
+#~ msgid "Quarter"
+#~ msgstr "Quartal"
 
 #~ msgid "Only the creator or PMs can edit this idea."
 #~ msgstr "Nur der Ersteller oder PMs können diese Idee bearbeiten."
