@@ -492,6 +492,34 @@ test.describe('chart structure', () => {
     await expect(page.locator('.left-cell.task:visible')).toHaveCount(8);
   });
 
+  test('creating a project under a team filter warns that it is hidden and can clear the filter', async ({ appPage: page }) => {
+    await page.locator('#team-filter summary').click();
+    await page.locator('#team-filter .team-filter-option', { hasText: 'Design' }).click();
+    await expect(page.locator('.left-cell.proj')).toHaveCount(2);
+
+    await page.locator('.add-project-row').last().click();
+
+    const toast = page.locator('#toast-slot .team-filter-project-toast');
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText('Project created, but it’s hidden by the active team filter.');
+    await expect(toast).toHaveCSS('background-color', 'rgb(26, 26, 26)');
+    await expect(toast).toHaveCSS('color', 'rgb(255, 255, 255)');
+    await expect(page.locator('#team-filter summary')).toContainText('Teams (1)');
+    await expect(page.locator('.left-cell.proj')).toHaveCount(2);
+
+    await toast.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(toast).toHaveCount(0);
+    await expect(page.locator('#team-filter summary')).toContainText('Teams (1)');
+
+    await page.locator('.add-project-row').last().click();
+    await expect(toast).toBeVisible();
+    await toast.getByRole('button', { name: 'Clear team filter' }).click();
+    await expect(page.locator('#team-filter summary')).toHaveText('Teams');
+    await expect(page.locator('.left-cell.proj')).toHaveCount(5);
+    await expect(page.locator('.left-cell.proj', { hasText: 'New project' })).toHaveCount(2);
+    await expect(page.locator('#toast-slot .nano-toast')).toHaveCount(0);
+  });
+
   test('every dep arrow terminates on its target bar (y-aligned)', async ({ appPage: page }) => {
     // Each .hit path ends at the LEFT edge of its successor bar. The end-y of
     // the path (last L command) must land inside the target bar's vertical

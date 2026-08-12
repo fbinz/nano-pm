@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-12 11:39+0000\n"
+"POT-Creation-Date: 2026-08-12 12:47+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -819,6 +819,18 @@ msgstr "Diesen Meilenstein löschen?"
 #: templates/components/screens/gantt/task-popover.html:92
 msgid "Delete"
 msgstr "Löschen"
+
+#: templates/components/screens/gantt/project-hidden-toast.html:4
+msgid "Project created, but it’s hidden by the active team filter."
+msgstr "Projekt erstellt, aber durch den aktiven Teamfilter ausgeblendet."
+
+#: templates/components/screens/gantt/project-hidden-toast.html:6
+msgid "Clear team filter"
+msgstr "Teamfilter löschen"
+
+#: templates/components/screens/gantt/project-hidden-toast.html:8
+msgid "Dismiss"
+msgstr "Ausblenden"
 
 #: templates/components/screens/gantt/project-popover.html:21
 msgid "Toggle Teams notification settings"

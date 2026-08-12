@@ -24,7 +24,7 @@ from readers import get_project
 from .helpers import (
     collapsed_projects, set_collapsed_projects,
     show_completed, set_show_completed, patch_chart,
-    is_pm,
+    team_filter, is_pm,
 )
 
 
@@ -63,6 +63,10 @@ def project_create(request: HttpRequest):
         position = "end"
     create_project(workspace=request.workspace, position=position, actor=request.user)
     yield patch_chart(request)
+    if team_filter(request):
+        yield SSE.patch_elements(render_component(
+            request, "screens/gantt/project-hidden-toast",
+        ))
 
 
 @login_required

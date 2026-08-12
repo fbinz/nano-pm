@@ -1,0 +1,10 @@
+{% load i18n %}
+<div id="toast-slot">
+  <div class="nano-toast team-filter-project-toast" role="status">
+    <span>{% trans "Project created, but it’s hidden by the active team filter." %}</span>
+    <button type="button" class="toast-action"
+            data-on:click="@get('/teams/clear-filter/')">{% trans "Clear team filter" %}</button>
+    <button type="button" class="toast-action"
+            data-on:click="el.closest('.nano-toast').remove()">{% trans "Dismiss" %}</button>
+  </div>
+</div>

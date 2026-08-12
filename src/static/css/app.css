@@ -7165,6 +7165,32 @@ html, body {
   .toast.success {
     background-color: var(--color-success);
   }
+  .nano-toast {
+    position: fixed;
+    bottom: calc(var(--spacing) * 5);
+    left: calc(1 / 2 * 100%);
+    z-index: 300;
+    display: flex;
+    --tw-translate-x: calc(calc(1 / 2 * 100%) * -1);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+    align-items: center;
+    gap: calc(var(--spacing) * 3);
+    border-radius: var(--radius-md);
+    padding-inline: calc(var(--spacing) * 3.5);
+    padding-block: calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    color: var(--color-white);
+    background: #1a1a1a;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .nano-toast .toast-action {
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+    text-decoration-line: underline;
+    text-underline-offset: 2px;
+  }
 }
 @layer base {
   :where(:root),:root:has(input.theme-controller[value=light]:checked),[data-theme=light] {

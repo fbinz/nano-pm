@@ -109,6 +109,21 @@ def toggle_status_filter(request: HttpRequest):
 
 @login_required
 @datastar_response
+def clear_team_filter(request: HttpRequest):
+    set_team_filter(request, set())
+    request.session.save()
+
+    yield SSE.patch_elements(render_component(
+        request, "screens/gantt/team-filter",
+        teams=team_choices(request),
+        team_filter=set(),
+    ))
+    yield patch_chart(request)
+    yield SSE.patch_elements('<div id="toast-slot"></div>')
+
+
+@login_required
+@datastar_response
 def toggle_team_filter(request: HttpRequest):
     raw_team_id = request.GET.get("team", "")
     if not raw_team_id.isdigit():

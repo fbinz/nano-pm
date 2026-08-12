@@ -19,7 +19,7 @@ from .projects import (
 )
 from .resources import (
     resource_index, person_toggle_collapse, set_all_people_collapsed,
-    toggle_status_filter, toggle_team_filter,
+    toggle_status_filter, toggle_team_filter, clear_team_filter,
 )
 from .people import (
     people_page, people_invite_link, people_create, people_update, people_delete,
@@ -96,6 +96,7 @@ urlpatterns = [
     path("people/<int:person_id>/delete/",           people_delete,    name="people_delete"),
     # Teams
     path("teams/toggle-filter/",                     toggle_team_filter, name="toggle_team_filter"),
+    path("teams/clear-filter/",                      clear_team_filter, name="clear_team_filter"),
     path("teams/create/",                            team_create,      name="team_create"),
     path("teams/<int:team_id>/update/",              team_update,      name="team_update"),
     path("teams/<int:team_id>/delete/",              team_delete,      name="team_delete"),
