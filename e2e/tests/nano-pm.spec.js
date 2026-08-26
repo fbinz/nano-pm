@@ -2112,6 +2112,19 @@ test.describe('project & people management', () => {
     await expect(page.locator('.person-row')).toHaveCount(4);
   });
 
+  test('People page keeps linked member name fields usable at a narrow viewport', async ({ appPage: page }) => {
+    await page.setViewportSize({ width: 768, height: 800 });
+    await page.goto('/people/');
+
+    const alexRow = page.locator('.person-row').filter({ has: page.locator('input[name=name][value="Alex Chen"]') });
+    const nameBox = await alexRow.locator('input[name=name]').boundingBox();
+    const actionsBox = await alexRow.locator('.person-actions').boundingBox();
+    expect(nameBox).not.toBeNull();
+    expect(actionsBox).not.toBeNull();
+    expect(nameBox.width).toBeGreaterThanOrEqual(200);
+    expect(actionsBox.y).toBeGreaterThan(nameBox.y);
+  });
+
   test('PM can promote and demote a linked workspace member', async ({ appPage: page }) => {
     await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
     await page.waitForURL('**/people/');

@@ -652,7 +652,7 @@ html, body { height: 100%; }
    =================================================================== */
 @layer components {
   #people-page {
-    @apply p-6 max-w-3xl;
+    @apply p-6 max-w-5xl;
   }
   .people-page-header h1 { @apply text-xl font-semibold m-0 mb-1; }
   .people-page-header p { @apply text-base-content/60 m-0 mb-4; }
@@ -688,7 +688,7 @@ html, body { height: 100%; }
   .person-team-add-option { @apply btn btn-sm btn-ghost justify-start w-full; }
   .person-no-teams,
   .teams-empty { @apply text-xs text-base-content/50; }
-  .person-linked { @apply text-sm flex-shrink-0 min-w-16; }
+  .person-linked { @apply flex flex-wrap gap-1 text-sm flex-shrink-0 min-w-16; }
   .add-team-form,
   .add-person-form { @apply flex items-center gap-3 px-3; }
   .add-team-form input,
@@ -697,6 +697,28 @@ html, body { height: 100%; }
     @apply mt-4 p-3 bg-base-200 border border-base-300 rounded flex items-center gap-2 text-sm;
   }
   .invite-reveal input { @apply input input-sm flex-1 font-mono text-xs; }
+
+  @media (max-width: 900px) {
+    .person-row {
+      display: grid;
+      grid-template-columns: minmax(12rem, 1fr) 13rem;
+    }
+    .person-name { grid-column: 1; }
+    .person-teams { grid-column: 2; }
+    .person-linked { grid-column: 1; }
+    .person-actions { @apply justify-self-end; grid-column: 2; }
+  }
+
+  @media (max-width: 550px) {
+    #people-page { @apply p-4; }
+    .person-row { grid-template-columns: minmax(0, 1fr); }
+    .person-name,
+    .person-teams,
+    .person-linked,
+    .person-actions { grid-column: 1; }
+    .person-teams { @apply w-full; }
+    .person-actions { @apply justify-self-start; }
+  }
 }
 
 /* Keep native listbox layout for multi-select controls styled with DaisyUI's
