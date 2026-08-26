@@ -1,8 +1,10 @@
 """Shared helpers for the Gantt chart views."""
 
 from datetime import date
+from functools import wraps
+from inspect import iscoroutinefunction
 
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 
 from datastar_py.django import ServerSentEventGenerator as SSE, read_signals
 from django_cotton import render_component
@@ -146,6 +148,25 @@ def view_mode(request: HttpRequest) -> str:
 def is_pm(request: HttpRequest) -> bool:
     m = getattr(request, "membership", None)
     return m is not None and m.role == WorkspaceRole.PM
+
+
+def pm_required(view_func):
+    if iscoroutinefunction(view_func):
+        @wraps(view_func)
+        async def async_wrapper(request: HttpRequest, *args, **kwargs):
+            if not is_pm(request):
+                return HttpResponse(status=403)
+            return await view_func(request, *args, **kwargs)
+
+        return async_wrapper
+
+    @wraps(view_func)
+    def wrapper(request: HttpRequest, *args, **kwargs):
+        if not is_pm(request):
+            return HttpResponse(status=403)
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
 
 
 def workspace_context(request: HttpRequest) -> dict:

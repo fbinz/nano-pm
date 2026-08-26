@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 12:47+0000\n"
+"POT-Creation-Date: 2026-08-26 12:15+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -326,6 +326,7 @@ msgid "PM"
 msgstr "PM"
 
 #: data/models/membership.py:8
+#: templates/components/screens/people/people-list.html:75
 msgid "Member"
 msgstr "Mitglied"
 
@@ -380,7 +381,7 @@ msgstr "Idee in eine Aufgabe umgewandelt."
 msgid "Idea deleted."
 msgstr "Idee gelöscht."
 
-#: interfaces/web/people.py:36
+#: interfaces/web/people.py:48
 #: templates/components/screens/people/people-content.html:11
 #, fuzzy
 #| msgid "Add a person…"
@@ -1149,16 +1150,28 @@ msgstr ""
 msgid "No teams available."
 msgstr "Noch keine Teams."
 
-#: templates/components/screens/people/people-list.html:79
+#: templates/components/screens/people/people-list.html:73
+msgid "Manager"
+msgstr "Manager"
+
+#: templates/components/screens/people/people-list.html:84
 msgid "Invite"
 msgstr "Einladen"
 
-#: templates/components/screens/people/people-list.html:83
+#: templates/components/screens/people/people-list.html:91
+msgid "Demote to member"
+msgstr "Zum Mitglied herabstufen"
+
+#: templates/components/screens/people/people-list.html:94
+msgid "Promote to manager"
+msgstr "Zum Manager ernennen"
+
+#: templates/components/screens/people/people-list.html:99
 #, python-format
 msgid "Remove &quot;%(name)s&quot;?"
 msgstr "&quot;%(name)s&quot; entfernen?"
 
-#: templates/components/screens/people/people-list.html:84
+#: templates/components/screens/people/people-list.html:100
 #: templates/components/screens/people/teams-list.html:21
 msgid "Remove"
 msgstr "Entfernen"

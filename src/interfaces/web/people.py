@@ -1,6 +1,7 @@
 """People and teams endpoints — page + CRUD."""
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import OuterRef, Subquery
 from django.http import HttpRequest
 from django.shortcuts import render
 from django.utils.translation import gettext as _
@@ -14,16 +15,26 @@ from datastar_py.django import (
 from django_cotton import render_component
 
 from actions.manage_people import (
-    create_person, update_person, delete_person, get_or_create_person_invite,
+    LastManagerError, create_person, update_person, delete_person,
+    get_or_create_person_invite, set_person_role,
 )
 from actions.manage_teams import create_team, update_team, delete_team, set_person_teams
-from data.models import Person, Team
+from data.models import Membership, Person, Team
 
-from .helpers import is_pm, patch_chart, workspace_context
+from .helpers import is_pm, patch_chart, pm_required, workspace_context
 
 
 def _people_queryset(request: HttpRequest):
-    return Person.objects.filter(workspace=request.workspace).select_related("user").prefetch_related("teams")
+    workspace_role = Membership.objects.filter(
+        workspace=request.workspace,
+        user_id=OuterRef("user_id"),
+    ).values("role")[:1]
+    return (
+        Person.objects.filter(workspace=request.workspace)
+        .select_related("user")
+        .prefetch_related("teams")
+        .annotate(workspace_role=Subquery(workspace_role))
+    )
 
 
 def _teams_queryset(request: HttpRequest):
@@ -105,6 +116,25 @@ def people_delete(request: HttpRequest, person_id: int):
     delete_person(workspace=request.workspace, person_id=person_id, actor=request.user)
     yield patch_people_content(request)
     yield patch_chart(request)
+
+
+@require_http_methods(["POST"])
+@login_required
+@pm_required
+@datastar_response
+def person_role_update(request: HttpRequest, person_id: int):
+    try:
+        membership = set_person_role(
+            workspace=request.workspace,
+            person_id=person_id,
+            role=request.POST.get("role", ""),
+            actor=request.user,
+        )
+    except LastManagerError:
+        membership = None
+    if membership is not None and membership.user_id == request.user.id:
+        request.membership.role = membership.role
+    yield patch_people_content(request)
 
 
 @require_http_methods(["POST"])

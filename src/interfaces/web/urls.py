@@ -23,7 +23,7 @@ from .resources import (
 )
 from .people import (
     people_page, people_invite_link, people_create, people_update, people_delete,
-    person_teams_update, team_create, team_update, team_delete,
+    person_role_update, person_teams_update, team_create, team_update, team_delete,
 )
 from .ideas import (
     ideas_page, idea_create, idea_detail, idea_update, idea_status,
@@ -92,6 +92,7 @@ urlpatterns = [
     path("people/create/",                           people_create,    name="people_create"),
     path("people/<int:person_id>/invite-link/",      people_invite_link, name="people_invite_link"),
     path("people/<int:person_id>/update/",           people_update,    name="people_update"),
+    path("people/<int:person_id>/role/",             person_role_update, name="person_role_update"),
     path("people/<int:person_id>/teams/",            person_teams_update, name="person_teams_update"),
     path("people/<int:person_id>/delete/",           people_delete,    name="people_delete"),
     # Teams

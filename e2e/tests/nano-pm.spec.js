@@ -2112,6 +2112,22 @@ test.describe('project & people management', () => {
     await expect(page.locator('.person-row')).toHaveCount(4);
   });
 
+  test('PM can promote and demote a linked workspace member', async ({ appPage: page }) => {
+    await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
+    await page.waitForURL('**/people/');
+
+    const alexRow = page.locator('.person-row').filter({ has: page.locator('input[name=name][value="Alex Chen"]') });
+    await expect(alexRow.locator('.person-role')).toHaveText('Member');
+
+    await alexRow.getByRole('button', { name: 'Promote to manager' }).click();
+    await expect(alexRow.locator('.person-role')).toHaveText('Manager');
+    await expect(alexRow.getByRole('button', { name: 'Demote to member' })).toBeVisible();
+
+    await alexRow.getByRole('button', { name: 'Demote to member' }).click();
+    await expect(alexRow.locator('.person-role')).toHaveText('Member');
+    await expect(alexRow.getByRole('button', { name: 'Promote to manager' })).toBeVisible();
+  });
+
   test('People page aligns the add-team form with editable team rows', async ({ appPage: page }) => {
     await page.locator('.drawer-side .menu a', { hasText: 'People' }).click();
     await page.waitForURL('**/people/');
@@ -2470,6 +2486,33 @@ test.describe('member role', () => {
     await expect(page.locator('.left-cell.proj', { hasText: 'New project' })).toBeVisible();
   });
 
+  test('member cannot promote a workspace member', async ({ page, request }) => {
+    await reset(request);
+    await loginAsMember(page);
+    await page.goto('/people/');
+
+    const alexRow = page.locator('.person-row', { hasText: 'Alex Chen' });
+    await expect(alexRow.locator('.person-role')).toHaveText('Member');
+    await expect(alexRow.getByRole('button', { name: 'Promote to manager' })).toHaveCount(0);
+
+    const personId = (await alexRow.getAttribute('id')).replace('person-row-', '');
+    const status = await page.evaluate(async (id) => {
+      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
+      const body = new URLSearchParams({ role: 'pm' });
+      const response = await fetch(`/people/${id}/role/`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': decodeURIComponent(token),
+        },
+        body,
+      });
+      return response.status;
+    }, personId);
+    expect(status).toBe(403);
+  });
+
   test('member cannot delete a project', async ({ page, request }) => {
     await reset(request);
     await loginAsMember(page);
@@ -2661,7 +2704,7 @@ test.describe('per-person invitation', () => {
     await newPage.locator('.drawer-side .menu a', { hasText: 'People' }).click();
     await newPage.waitForURL('**/people/');
     const samLinked = newPage.locator('.person-row', { hasText: 'Sam Patel' });
-    await expect(samLinked.locator('.person-linked .badge')).toContainText('sampatel');
+    await expect(samLinked.locator('.person-username')).toContainText('sampatel');
 
     await newCtx.close();
   });

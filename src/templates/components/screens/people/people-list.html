@@ -68,7 +68,12 @@
       </div>
       <div class="person-linked">
         {% if p.user %}
-          <span class="badge badge-sm badge-ghost">{{ p.user.username }}</span>
+          <span class="person-username badge badge-sm badge-ghost">{{ p.user.username }}</span>
+          {% if p.workspace_role == "pm" %}
+            <span class="person-role badge badge-sm badge-ghost">{% trans "Manager" %}</span>
+          {% elif p.workspace_role == "member" %}
+            <span class="person-role badge badge-sm badge-ghost">{% trans "Member" %}</span>
+          {% endif %}
         {% endif %}
       </div>
       {% if is_pm %}
@@ -78,6 +83,17 @@
                 data-on:click="@get('/people/{{ p.id }}/invite-link/')">
           {% trans "Invite" %}
         </button>
+        {% elif p.workspace_role %}
+        <form data-on:submit__prevent="@post('/people/{{ p.id }}/role/', { contentType: 'form' })">
+          {% csrf_token %}
+          {% if p.workspace_role == "pm" %}
+            <input type="hidden" name="role" value="member">
+            <button type="submit" class="btn btn-sm btn-ghost">{% trans "Demote to member" %}</button>
+          {% else %}
+            <input type="hidden" name="role" value="pm">
+            <button type="submit" class="btn btn-sm btn-ghost">{% trans "Promote to manager" %}</button>
+          {% endif %}
+        </form>
         {% endif %}
         <button type="button" class="btn btn-sm btn-ghost text-error"
                 data-on:click="confirm('{% blocktrans with name=p.name|escapejs %}Remove &quot;{{ name }}&quot;?{% endblocktrans %}') && @post('/people/{{ p.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })"

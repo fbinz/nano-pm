@@ -1,8 +1,5 @@
 """Project endpoints — CRUD, popover, collapse."""
 
-from functools import wraps
-from inspect import iscoroutinefunction
-
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.views.decorators.http import require_http_methods
@@ -24,7 +21,7 @@ from readers import get_project
 from .helpers import (
     collapsed_projects, set_collapsed_projects,
     show_completed, set_show_completed, patch_chart,
-    team_filter, is_pm,
+    team_filter, is_pm, pm_required,
 )
 
 
@@ -33,25 +30,6 @@ def teams_notify_events():
         {"key": key, "label": label, "slug": key.replace(".", "-").replace("_", "-")}
         for key, label in TEAMS_NOTIFY_EVENT_CHOICES
     ]
-
-
-def pm_required(view_func):
-    if iscoroutinefunction(view_func):
-        @wraps(view_func)
-        async def async_wrapper(request: HttpRequest, *args, **kwargs):
-            if not is_pm(request):
-                return HttpResponse(status=403)
-            return await view_func(request, *args, **kwargs)
-
-        return async_wrapper
-
-    @wraps(view_func)
-    def wrapper(request: HttpRequest, *args, **kwargs):
-        if not is_pm(request):
-            return HttpResponse(status=403)
-        return view_func(request, *args, **kwargs)
-
-    return wrapper
 
 
 @require_http_methods(["POST"])
