@@ -1062,6 +1062,31 @@ test.describe('task popover', () => {
     });
   }
 
+  test('clicking a task in the left list centers its timeframe and opens the editor', async ({ appPage: page }) => {
+    await page.goto('/?zoom=day');
+
+    const task = page.locator('.left-cell.task', { hasText: 'Migrate /users endpoints' });
+    const taskId = await task.getAttribute('data-task-id');
+    const expectedScrollLeft = await page.evaluate((id) => {
+      const sc = document.getElementById('grid-scroll');
+      const bar = document.getElementById(`bar-${id}`);
+      const leftW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w')) || 240;
+      const x = parseFloat(bar.style.left);
+      const width = parseFloat(bar.style.width);
+      const target = x + width / 2 - (sc.clientWidth - leftW) / 2;
+      const expected = Math.max(0, Math.min(sc.scrollWidth - sc.clientWidth, target));
+      sc.scrollLeft = expected < (sc.scrollWidth - sc.clientWidth) / 2
+        ? sc.scrollWidth - sc.clientWidth
+        : 0;
+      return Math.round(expected);
+    }, taskId);
+
+    await task.click();
+
+    await expect(page.locator('#task-popover input[name=title]')).toHaveValue('Migrate /users endpoints');
+    await expect.poll(() => page.locator('#grid-scroll').evaluate(el => el.scrollLeft)).toBeCloseTo(expectedScrollLeft, 0);
+  });
+
   test('clicking a bar slides the drawer in flush against the right edge', async ({ appPage: page }) => {
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
     await bar.click();

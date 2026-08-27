@@ -283,7 +283,7 @@ html, body { height: 100%; }
   }
   .left-cell.task {
     height: var(--row-h);
-    @apply bg-base-100 pl-7 text-base-content/80;
+    @apply bg-base-100 pl-7 text-base-content/80 cursor-pointer hover:bg-base-200;
   }
   .left-cell.task::before {
     content: '';

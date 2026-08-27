@@ -62,7 +62,8 @@
       {% for bar in rg.tasks %}
           <div class="left-cell task" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
                {% if rg.collapsed %}style="display:none"{% endif %}
-               data-show="!$_collapsed.{{ rg.id }}">
+               data-show="!$_collapsed.{{ rg.id }}"
+               data-on:click="nano.focusTask({{ bar.id }})">
             <span class="title">{{ bar.title }}</span>
             <span class="assignees">{{ bar.assignees }}</span>
           </div>

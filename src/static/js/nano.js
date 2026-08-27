@@ -454,6 +454,16 @@
   function openTaskPopover(taskId) {
     fetchInto(`/tasks/${taskId}/popover/`);
   }
+  function focusTask(taskId) {
+    const sc = chartScroll();
+    const bar = document.getElementById(`bar-${taskId}`);
+    if (sc && bar) {
+      const leftW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w')) || 240;
+      const timelineWidth = sc.clientWidth - leftW;
+      sc.scrollLeft = bar.offsetLeft + bar.offsetWidth / 2 - timelineWidth / 2;
+    }
+    openTaskPopover(taskId);
+  }
   function openProjectPopover(projectId) {
     fetchInto(`/projects/${projectId}/popover/`);
   }
@@ -625,7 +635,7 @@
     barMouseDown, resizeStart, resizeEnd, depHandle,
     projectRowMouseDown, milestoneMouseDown,
     sidebarResizeStart,
-    openTaskPopover, openProjectPopover, openMilestonePopover, addMilestone,
+    openTaskPopover, openProjectPopover, openMilestonePopover, focusTask, addMilestone,
     closeDrawer, discardDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
     scrollToToday, positionWorkspaceMenu,
   };
