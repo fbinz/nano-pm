@@ -467,6 +467,91 @@
   function openProjectPopover(projectId) {
     fetchInto(`/projects/${projectId}/popover/`);
   }
+
+  // Project ordering is deliberately gated behind a dedicated mode so normal
+  // clicks keep opening the editor and cannot accidentally move a project.
+  // SortableJS owns only whole project groups; every drop is forwarded through
+  // nano-commit so Datastar posts it and applies the server-rendered chart.
+  let projectSortMode = false;
+  let projectSortable = null;
+  function projectSortModeActive() {
+    return projectSortMode;
+  }
+  function syncProjectSortable() {
+    const grid = document.getElementById('grid');
+    if (projectSortable && projectSortable.el !== grid) {
+      projectSortable.destroy();
+      projectSortable = null;
+    }
+    if (!projectSortMode || !grid || !window.Sortable) {
+      if (projectSortable) {
+        projectSortable.destroy();
+        projectSortable = null;
+      }
+      return;
+    }
+    if (projectSortable) return;
+
+    const sc = chartScroll();
+    let lockedScrollLeft = null;
+    function lockHorizontalScroll() {
+      if (lockedScrollLeft !== null && sc.scrollLeft !== lockedScrollLeft) {
+        sc.scrollLeft = lockedScrollLeft;
+      }
+    }
+    function unlockHorizontalScroll() {
+      lockHorizontalScroll();
+      sc.removeEventListener('scroll', lockHorizontalScroll);
+      lockedScrollLeft = null;
+    }
+
+    projectSortable = window.Sortable.create(grid, {
+      animation: 150,
+      draggable: '.project-group',
+      handle: '.project-drag-handle',
+      dataIdAttr: 'data-project-id',
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      dragClass: 'sortable-drag',
+      scroll: sc,
+      bubbleScroll: false,
+      scrollFn(_offsetX, offsetY, _originalEvent, _touchEvent, scrollEl) {
+        // Keep useful vertical edge scrolling, but never let a project sort
+        // shift the timeline away from the date range the user was viewing.
+        lockHorizontalScroll();
+        scrollEl.scrollTop += offsetY;
+      },
+      onStart() {
+        lockedScrollLeft = sc.scrollLeft;
+        sc.addEventListener('scroll', lockHorizontalScroll);
+      },
+      onMove(evt) {
+        lockHorizontalScroll();
+        // Completed projects are displayed as a separate group below active
+        // projects, so they can only be reordered within that group.
+        return evt.dragged.classList.contains('completed') === evt.related.classList.contains('completed');
+      },
+      onEnd() {
+        const ids = Array.from(grid.querySelectorAll(':scope > .project-group'))
+          .map(group => group.dataset.projectId);
+        unlockHorizontalScroll();
+        commit('/projects/reorder/', { project_ids: ids.join(',') });
+      },
+    });
+  }
+  function applyProjectSortMode() {
+    const sc = chartScroll();
+    if (sc) sc.classList.toggle('project-sort-mode', projectSortMode);
+    const button = document.getElementById('project-sort-toggle');
+    if (button) button.setAttribute('aria-pressed', projectSortMode ? 'true' : 'false');
+    syncProjectSortable();
+  }
+  function toggleProjectSortMode() {
+    projectSortMode = !projectSortMode;
+    applyProjectSortMode();
+    closeDrawer();
+    return projectSortMode;
+  }
   function openMilestonePopover(milestoneId) {
     fetchInto(`/milestones/${milestoneId}/popover/`);
   }
@@ -522,7 +607,7 @@
     const barYCenters = {};
     const barPos = {};
     let y = 0;
-    for (const el of grid.children) {
+    for (const el of grid.querySelectorAll('.chart-row')) {
       if (el.matches('.chart-row.proj')) {
         y += 36;
       } else if (el.matches('.chart-row.add-project-spacer')) {
@@ -636,6 +721,7 @@
     projectRowMouseDown, milestoneMouseDown,
     sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, focusTask, addMilestone,
+    toggleProjectSortMode, projectSortModeActive,
     closeDrawer, discardDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
     scrollToToday, positionWorkspaceMenu,
   };
@@ -658,11 +744,13 @@
   document.addEventListener('datastar-fetch', evt => {
     if (evt.detail && evt.detail.type === 'finished') {
       applySelection();
+      applyProjectSortMode();
       recalcArrows();
     }
   });
 
   document.addEventListener('DOMContentLoaded', () => {
+    applyProjectSortMode();
     setTimeout(scrollToToday, 0);
   });
 })();

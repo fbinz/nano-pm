@@ -192,12 +192,40 @@ html, body { height: 100%; }
     width: max-content;
     @apply relative bg-base-100;
   }
+  .project-group { display: contents; }
+  .project-sort-mode .project-group {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+  }
 
   .corner {
     position: sticky; top: 0; left: 0;
     height: var(--axis-h);
-    @apply z-[4] bg-base-100 border-r border-b border-base-300 flex items-center px-3 text-base-content/60;
+    gap: 4px;
+    padding-inline: 4px;
+    @apply z-[4] bg-base-100 border-r border-b border-base-300 flex items-center text-base-content/60;
   }
+  .corner .topbar-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 28px;
+    height: 28px;
+    padding-inline: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .corner .topbar-btn > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sort-label-active { display: none; }
+  .project-sort-mode .sort-label-inactive { display: none; }
+  .project-sort-mode .sort-label-active { display: inline; }
+  .project-sort-mode #project-sort-toggle { @apply bg-base-content text-base-100 border-base-content; }
 
   #time-axis-cell {
     position: sticky; top: 0;
@@ -258,6 +286,22 @@ html, body { height: 100%; }
   .left-cell.proj:hover {
     background: color-mix(in srgb, var(--project-color, var(--color-base-300)) 11%, var(--color-base-100));
   }
+  .project-drag-handle {
+    display: none;
+    @apply flex-shrink-0 items-center justify-center w-7 h-7 -ml-2
+           bg-transparent border-0 cursor-grab text-base-content/60 rounded;
+    padding: 0;
+    touch-action: none;
+  }
+  .project-drag-handle:hover { @apply bg-base-content/10 text-base-content; }
+  .project-sort-mode .project-drag-handle { display: inline-flex; }
+  .project-sort-mode .left-cell.proj { cursor: default; }
+  .project-group.sortable-ghost { opacity: 0.25; }
+  .project-group.sortable-chosen > .left-cell.proj {
+    box-shadow: inset 0 0 0 2px var(--color-primary);
+  }
+  .project-group.sortable-drag { @apply shadow-lg; }
+
   .left-cell.proj .collapse-toggle {
     /* Bare button — no daisy `.btn` so it sits visually quiet inside the row.
        Sized to fill most of the 36px project-row height so the hit area is
@@ -269,6 +313,8 @@ html, body { height: 100%; }
     padding: 0;
   }
   .left-cell.proj .collapse-toggle:hover { @apply bg-base-content/10 text-base-content; }
+  .project-sort-mode #collapse-all-btn,
+  .project-sort-mode .left-cell.proj .collapse-toggle { display: none; }
   .left-cell.proj .swatch { @apply w-2.5 h-2.5 rounded-[2px] flex-shrink-0; }
   .left-cell.proj .name { @apply flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
   .left-cell.proj .actions { @apply text-base-content/60; }

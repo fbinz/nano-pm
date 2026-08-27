@@ -15,8 +15,18 @@
                 data-on:click="
                   const c = {% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %};
                   {% for rg in vm.row_groups %}$_collapsed.{{ rg.id }} = c; {% endfor %}
-                  nano.onCollapseAllChanged(c, [{% for rg in vm.row_groups %}{{ rg.id }}{% if not forloop.last %},{% endif %}{% endfor %}])"
-                data-text="({% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %}) ? '{% trans 'Collapse all' %}' : '{% trans 'Expand all' %}'">{% if vm.all_collapsed %}{% trans "Expand all" %}{% else %}{% trans "Collapse all" %}{% endif %}</button>
+                  nano.onCollapseAllChanged(c, [{% for rg in vm.row_groups %}{{ rg.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">
+          <span data-text="({% for rg in vm.row_groups %}{% if not forloop.first %} || {% endif %}!$_collapsed.{{ rg.id }}{% endfor %}) ? '{% trans 'Collapse all' %}' : '{% trans 'Expand all' %}'">{% if vm.all_collapsed %}{% trans "Expand all" %}{% else %}{% trans "Collapse all" %}{% endif %}</span>
+        </button>
+        <button id="project-sort-toggle" class="topbar-btn" type="button" aria-pressed="false"
+                data-on:click="
+                  if (nano.toggleProjectSortMode()) {
+                    {% for rg in vm.row_groups %}$_collapsed.{{ rg.id }} = true; {% endfor %}
+                    nano.onCollapseAllChanged(true, [{% for rg in vm.row_groups %}{{ rg.id }}{% if not forloop.last %},{% endif %}{% endfor %}]);
+                  }">
+          <span class="sort-label-inactive">{% trans "Adjust order" %}</span>
+          <span class="sort-label-active">{% trans "Finish sorting" %}</span>
+        </button>
       {% else %}
         {% trans "timeline" %}
       {% endif %}
@@ -57,12 +67,18 @@
     <div class="chart-row add-project-spacer" style="width:{{ vm.chart_width }}px;"></div>
 
     {% for rg in vm.row_groups %}
+      <div class="project-group{% if rg.completed %} completed{% endif %}" data-project-id="{{ rg.id }}">
       <div class="left-cell proj{% if rg.completed %} completed{% endif %}"
            id="proj-{{ rg.id }}"
            data-project-id="{{ rg.id }}"
            style="--project-color: {{ rg.color }};"
            data-signals:_collapsed.{{ rg.id }}__ifmissing="{{ rg.collapsed|yesno:'true,false' }}"
-           data-on:click="nano.openProjectPopover({{ rg.id }})">
+           data-on:click="!nano.projectSortModeActive() && nano.openProjectPopover({{ rg.id }})">
+        <button type="button" class="project-drag-handle"
+                aria-label="{% trans 'Drag to reorder project' %}"
+                data-on:click__stop="evt.preventDefault()">
+          <c-lucide name="grip-vertical" size="16" />
+        </button>
         <button type="button" class="collapse-toggle"
                 data-on:click__stop="$_collapsed.{{ rg.id }} = !$_collapsed.{{ rg.id }}; nano.onCollapseChanged({{ rg.id }})">
           <span data-show="$_collapsed.{{ rg.id }}" {% if not rg.collapsed %}style="display:none"{% endif %}><c-lucide name="chevron-right" size="16" /></span>
@@ -101,6 +117,7 @@
             <c-screens.gantt.bar :bar="bar" />
           </div>
         {% endfor %}
+      </div>
     {% endfor %}
 
     <div class="left-cell add-project-row"

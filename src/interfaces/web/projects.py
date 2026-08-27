@@ -11,7 +11,7 @@ from datastar_py.django import (
 from django_cotton import render_component
 
 from actions.manage_projects import (
-    create_project, update_project, delete_project, move_project,
+    create_project, update_project, delete_project, move_project, reorder_projects,
     move_project_to_workspace, set_project_completed,
 )
 from data.models import Membership, WorkspaceRole
@@ -21,7 +21,7 @@ from readers import get_project
 from .helpers import (
     collapsed_projects, set_collapsed_projects,
     show_completed, set_show_completed, patch_chart,
-    team_filter, is_pm, pm_required,
+    team_filter, is_pm, pm_required, request_data,
 )
 
 
@@ -100,6 +100,21 @@ def project_move(request: HttpRequest, project_id: int):
     move_project(workspace=request.workspace, project_id=project_id, direction=direction, actor=request.user)
     yield patch_chart(request)
     yield SSE.patch_elements('<div id="drawer-slot"></div>')
+
+
+@require_http_methods(["POST"])
+@login_required
+@datastar_response
+def project_reorder(request: HttpRequest):
+    raw_ids = str(request_data(request).get("project_ids", ""))
+    project_ids = [int(value) for value in raw_ids.split(",") if value.strip().isdigit()]
+    reorder_projects(workspace=request.workspace, project_ids=project_ids, actor=request.user)
+    set_collapsed_projects(
+        request,
+        set(request.workspace.projects.values_list("id", flat=True)),
+    )
+    request.session.save()
+    yield patch_chart(request)
 
 
 @require_http_methods(["POST"])

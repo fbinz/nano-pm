@@ -13,7 +13,7 @@ from .milestones import (
 )
 from .dependencies import dep_add, dep_delete
 from .projects import (
-    project_create, project_popover, project_update, project_move,
+    project_create, project_popover, project_update, project_move, project_reorder,
     project_move_workspace, project_delete, project_toggle_collapse, set_all_collapsed,
     project_toggle_completed, toggle_show_completed,
 )
@@ -64,6 +64,7 @@ urlpatterns = [
     path("projects/<int:project_id>/popover/",       project_popover,  name="project_popover"),
     path("projects/<int:project_id>/update/",        project_update,   name="project_update"),
     path("projects/<int:project_id>/move/",          project_move,     name="project_move"),
+    path("projects/reorder/",                        project_reorder,  name="project_reorder"),
     path("projects/<int:project_id>/move-workspace/", project_move_workspace, name="project_move_workspace"),
     path("projects/<int:project_id>/delete/",        project_delete,   name="project_delete"),
     path("projects/<int:project_id>/set-completed/",  project_toggle_completed, name="project_set_completed"),

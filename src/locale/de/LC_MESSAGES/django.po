@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-26 12:15+0000\n"
+"POT-Creation-Date: 2026-08-27 19:32+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -358,7 +358,7 @@ msgstr "Geplant"
 msgid "In progress"
 msgstr "In Bearbeitung"
 
-#: data/models/task.py:10 templates/components/screens/gantt/chart.html:73
+#: data/models/task.py:10 templates/components/screens/gantt/chart.html:88
 #: templates/components/screens/gantt/milestone-popover.html:44
 #: templates/components/screens/gantt/project-popover.html:92
 #: templates/components/screens/gantt/task-popover.html:94
@@ -381,7 +381,7 @@ msgstr "Idee in eine Aufgabe umgewandelt."
 msgid "Idea deleted."
 msgstr "Idee gelöscht."
 
-#: interfaces/web/people.py:48
+#: interfaces/web/people.py:47
 #: templates/components/screens/people/people-content.html:11
 #, fuzzy
 #| msgid "Add a person…"
@@ -760,25 +760,37 @@ msgstr "Alle einklappen"
 msgid "Expand all"
 msgstr "Alle ausklappen"
 
-#: templates/components/screens/gantt/chart.html:21
+#: templates/components/screens/gantt/chart.html:26
+msgid "Adjust order"
+msgstr "Reihenfolge anpassen"
+
+#: templates/components/screens/gantt/chart.html:27
+msgid "Finish sorting"
+msgstr "Sortieren beenden"
+
+#: templates/components/screens/gantt/chart.html:30
 #: templates/components/screens/gantt/chart_resource.html:21
 msgid "timeline"
 msgstr "Zeitachse"
 
-#: templates/components/screens/gantt/chart.html:55
-#: templates/components/screens/gantt/chart.html:107
+#: templates/components/screens/gantt/chart.html:64
+#: templates/components/screens/gantt/chart.html:124
 msgid "Add Project"
 msgstr "Projekt hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:122
+#: templates/components/screens/gantt/chart.html:77
+msgid "Drag to reorder project"
+msgstr "Ziehen, um das Projekt neu anzuordnen"
+
+#: templates/components/screens/gantt/chart.html:139
 msgid "Click to remove this dependency"
 msgstr "Klicken, um diese Abhängigkeit zu entfernen"
 
-#: templates/components/screens/gantt/chart.html:135
+#: templates/components/screens/gantt/chart.html:152
 msgid "No projects yet."
 msgstr "Noch keine Projekte."
 
-#: templates/components/screens/gantt/chart.html:136
+#: templates/components/screens/gantt/chart.html:153
 msgid "+ Create your first project"
 msgstr "+ Erstellen Sie Ihr erstes Projekt"
 

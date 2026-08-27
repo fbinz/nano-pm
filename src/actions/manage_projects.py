@@ -117,6 +117,54 @@ def move_project(*, workspace, project_id: int, direction: int, actor=None) -> P
     return proj
 
 
+@transaction.atomic
+def reorder_projects(*, workspace, project_ids: list[int], actor=None) -> list[Project]:
+    """Reorder the supplied projects within their existing workspace order slots.
+
+    Keeping unmentioned projects in place makes reordering safe when the chart is
+    filtered or completed projects are hidden.
+    """
+    projects = list(
+        Project.objects.select_for_update()
+        .filter(workspace=workspace)
+        .order_by("order", "id")
+    )
+    by_id = {project.id: project for project in projects}
+    requested = []
+    seen = set()
+    for project_id in project_ids:
+        if project_id in by_id and project_id not in seen:
+            requested.append(project_id)
+            seen.add(project_id)
+    if len(requested) < 2:
+        return projects
+
+    slots = [project.order for project in projects if project.id in seen]
+    before = {project_id: snapshot(by_id[project_id], ["order"]) for project_id in requested}
+    changed = []
+    for project_id, order in zip(requested, slots):
+        project = by_id[project_id]
+        if project.order != order:
+            project.order = order
+            changed.append(project)
+    if not changed:
+        return projects
+
+    Project.objects.bulk_update(changed, fields=["order"])
+    log_activity(
+        workspace=workspace,
+        actor=actor,
+        action="project.moved",
+        entity=by_id[requested[0]],
+        changes={
+            str(project.id): change_set(before[project.id], snapshot(project, ["order"]))
+            for project in changed
+        },
+        metadata={"project_ids": requested},
+    )
+    return sorted(projects, key=lambda project: (project.order, project.id))
+
+
 def set_project_completed(
     *, workspace, project_id: int, completed: bool, actor=None
 ) -> Project | None:

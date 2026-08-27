@@ -962,6 +962,102 @@ test.describe('project collapse', () => {
 
 
 // =============================================================================
+// Project sorting
+// =============================================================================
+test.describe('project sorting', () => {
+  test('sorting controls stay inside the project sidebar at its minimum width', async ({ appPage: page }) => {
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await expect(page.locator('#collapse-all-btn > span')).toHaveText('Alle einklappen');
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty('--left-w', '140px');
+    });
+
+    const bounds = await page.evaluate(() => {
+      const corner = document.querySelector('.corner').getBoundingClientRect();
+      const sort = document.getElementById('project-sort-toggle').getBoundingClientRect();
+      const collapseLabel = document.querySelector('#collapse-all-btn > span');
+      return {
+        cornerRight: corner.right,
+        sortRight: sort.right,
+        collapseLabelOverflow: getComputedStyle(collapseLabel).textOverflow,
+        collapseLabelIsClipped: collapseLabel.scrollWidth > collapseLabel.clientWidth,
+      };
+    });
+    expect(bounds.sortRight).toBeLessThanOrEqual(bounds.cornerRight);
+    expect(bounds.collapseLabelOverflow).toBe('ellipsis');
+    expect(bounds.collapseLabelIsClipped).toBe(true);
+  });
+
+  test('SortableJS project dragging does not change the horizontal timeline position', async ({ appPage: page }) => {
+    await page.locator('#project-sort-toggle').click();
+    const scroll = page.locator('#grid-scroll');
+    await scroll.evaluate(el => { el.scrollLeft = 200; });
+    const before = await scroll.evaluate(el => el.scrollLeft);
+
+    const source = page.locator('.left-cell.proj').first().locator('.project-drag-handle');
+    const target = page.locator('.left-cell.proj').nth(1);
+    const sourceBox = await source.boundingBox();
+    const targetBox = await target.boundingBox();
+    const scrollBox = await scroll.boundingBox();
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(scrollBox.x + scrollBox.width - 2, targetBox.y + targetBox.height / 2, { steps: 10 });
+    await page.waitForTimeout(400);
+    const duringDrag = await scroll.evaluate(el => el.scrollLeft);
+    await page.mouse.up();
+
+    expect(duringDrag).toBe(before);
+    await expect.poll(() => scroll.evaluate(el => el.scrollLeft)).toBe(before);
+  });
+
+  test('dedicated sort mode reorders projects by drag and drop and persists the order', async ({ appPage: page }) => {
+    const names = page.locator('.left-cell.proj .name');
+    const initialOrder = await names.allTextContents();
+    const expectedOrder = [initialOrder.at(-1), ...initialOrder.slice(0, -1)];
+
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(8);
+    await expect(page.locator('.project-drag-handle:visible')).toHaveCount(0);
+    await page.locator('#project-sort-toggle').click();
+    await expect(page.locator('#project-sort-toggle')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(0);
+    await expect(page.locator('.project-drag-handle:visible')).toHaveCount(initialOrder.length);
+    await expect(page.locator('.collapse-toggle:visible')).toHaveCount(0);
+    await expect(page.locator('#collapse-all-btn')).toBeHidden();
+    expect(await page.evaluate(() => typeof window.Sortable)).toBe('function');
+    expect(await page.evaluate(() => Boolean(window.Sortable.get(document.getElementById('grid'))))).toBe(true);
+
+    await names.first().click();
+    await expect(page.locator('#project-popover')).toHaveCount(0);
+
+    const source = page.locator('.left-cell.proj').last().locator('.project-drag-handle');
+    const target = page.locator('.left-cell.proj').first();
+    const reorderResponse = page.waitForResponse(response =>
+      response.url().includes('/projects/reorder/') && response.request().method() === 'POST'
+    );
+    const sourceBox = await source.boundingBox();
+    const targetBox = await target.boundingBox();
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + 2, { steps: 10 });
+    await page.waitForTimeout(200);
+    await page.mouse.up();
+    expect((await reorderResponse).status()).toBe(200);
+
+    await expect.poll(() => names.allTextContents()).toEqual(expectedOrder);
+    await expect(page.locator('#project-sort-toggle')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.project-drag-handle:visible')).toHaveCount(initialOrder.length);
+    await page.locator('#project-sort-toggle').click();
+    await expect(page.locator('.project-drag-handle:visible')).toHaveCount(0);
+    await expect(page.locator('.collapse-toggle:visible')).toHaveCount(initialOrder.length);
+    await expect(page.locator('#collapse-all-btn')).toBeVisible();
+
+    await page.reload();
+    await expect(names).toHaveText(expectedOrder);
+  });
+});
+
+
+// =============================================================================
 // Resource view
 // =============================================================================
 test.describe('resource view', () => {
@@ -2783,6 +2879,12 @@ test.describe('i18n (German)', () => {
     await expect(nav.locator('a', { hasText: 'Personen' })).toBeVisible();
     await expect(page.locator('.sign-out-btn')).toHaveText('Abmelden');
     await expect(page.locator('.lang-btn', { hasText: 'DE' })).toHaveClass(/active/);
+    const sortButton = page.locator('#project-sort-toggle');
+    await expect(sortButton.locator('.sort-label-inactive')).toHaveText('Reihenfolge anpassen');
+    await expect(sortButton.locator('.sort-label-inactive')).toBeVisible();
+    await sortButton.click();
+    await expect(sortButton.locator('.sort-label-active')).toHaveText('Sortieren beenden');
+    await expect(sortButton.locator('.sort-label-active')).toBeVisible();
 
     // The choice persists across navigation (language cookie / session).
     await page.goto('/people/');
