@@ -338,59 +338,375 @@
   }
 
   // ---------------------------------------------------------------------- //
-  // Rubber-band on a project header row → create a new task                //
+  // Explicit task-row creation and milestone placement                    //
   // ---------------------------------------------------------------------- //
+  const DEFAULT_TASK_DAYS = 7;
+  let creationMode = null;
+  let creationGestureCleanup = null;
+
+  function creationMessage(type) {
+    const _ = window.gettext || (s => s);
+    return type === 'task'
+      ? _('A new task row is highlighted. Click for a 7-day task, or drag to set its dates. Press Escape to cancel.')
+      : _('Milestone placement: Move over the timeline to preview a date, then click to place it. Press Escape to cancel.');
+  }
+
+  function updateCreationHint() {
+    document.getElementById('creation-hint')?.remove();
+    if (!creationMode) return;
+    const slot = document.getElementById('toast-slot');
+    if (!slot) return;
+    const hint = document.createElement('div');
+    hint.id = 'creation-hint';
+    hint.className = 'nano-toast';
+    const text = document.createElement('span');
+    text.textContent = creationMessage(creationMode.type);
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'toast-action';
+    cancel.textContent = (window.gettext || (s => s))('Cancel');
+    cancel.addEventListener('click', cancelCreationMode);
+    hint.append(text, cancel);
+    slot.appendChild(hint);
+  }
+
+  function applyCreationMode() {
+    const sc = chartScroll();
+    if (!sc) return;
+    document.querySelectorAll(
+      '.task-creation-left, .task-creation-timeline, .creation-milestone-preview',
+    ).forEach(row => row.remove());
+    sc.classList.toggle('creation-mode', Boolean(creationMode));
+    sc.classList.toggle('creation-mode-task', creationMode?.type === 'task');
+    sc.classList.toggle('creation-mode-milestone', creationMode?.type === 'milestone');
+    document.querySelectorAll('.project-create-btn').forEach(button => {
+      const active = creationMode
+        && Number(button.dataset.projectId) === creationMode.projectId
+        && button.dataset.creationType === creationMode.type;
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('.chart-row.proj').forEach(row => {
+      row.classList.toggle(
+        'creation-target',
+        creationMode?.type === 'milestone'
+          && Number(row.dataset.projectId) === creationMode.projectId,
+      );
+    });
+    if (creationMode?.type === 'task') insertTaskCreationRow();
+    if (creationMode?.type === 'milestone') insertMilestoneCreationGhost();
+    updateCreationHint();
+    requestAnimationFrame(recalcArrows);
+  }
+
+  function cancelCreationMode() {
+    const cleanup = creationGestureCleanup;
+    creationGestureCleanup = null;
+    if (cleanup) cleanup();
+    creationMode = null;
+    applyCreationMode();
+  }
+
+  function finishCreationMode() {
+    creationGestureCleanup = null;
+    creationMode = null;
+    applyCreationMode();
+  }
+
+  function setCreationMode(type, projectId) {
+    if (type !== 'task' && type !== 'milestone') return;
+    const next = { type, projectId: Number(projectId) };
+    if (creationMode?.type === next.type && creationMode.projectId === next.projectId) {
+      cancelCreationMode();
+      return;
+    }
+    cancelCreationMode();
+    creationMode = next;
+    discardDrawer();
+    applyCreationMode();
+  }
+
+  function dateAtX(x, ppd, chartStart) {
+    return addDays(chartStart, Math.round(x / ppd));
+  }
+
+  function addDateTooltip(parent, text) {
+    const tooltip = document.createElement('span');
+    tooltip.className = 'creation-date-tooltip';
+    tooltip.textContent = text;
+    parent.appendChild(tooltip);
+    return tooltip;
+  }
+
+  function daysBetween(start, end) {
+    return Math.round((
+      Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())
+      - Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())
+    ) / ONE_DAY);
+  }
+
+  function positionTaskCreationGhost(row, startDay, endDay = startDay + DEFAULT_TASK_DAYS) {
+    const ppd = pxPerDay();
+    const cs = chartStartDate();
+    const maxDay = Math.max(0, Math.round(row.offsetWidth / ppd));
+    const loDay = Math.max(0, Math.min(maxDay - 1, startDay));
+    const hiDay = Math.max(loDay + 1, Math.min(maxDay, endDay));
+    const ghost = row.querySelector('.task-creation-ghost');
+    if (!ghost) return;
+    ghost.style.left = `${loDay * ppd}px`;
+    ghost.style.width = `${(hiDay - loDay) * ppd}px`;
+    ghost.querySelector('.creation-date-tooltip').textContent =
+      `${fmt(addDays(cs, loDay))} – ${fmt(addDays(cs, hiDay))}`;
+    if (creationMode?.type === 'task') creationMode.previewStartDay = loDay;
+  }
+
+  function positionMilestoneCreationGhost(row, day) {
+    const ppd = pxPerDay();
+    const maxDay = Math.max(0, Math.round(row.offsetWidth / ppd));
+    const clampedDay = Math.max(0, Math.min(maxDay, day));
+    const preview = row.querySelector('.creation-milestone-preview');
+    if (!preview) return;
+    preview.style.left = `${clampedDay * ppd}px`;
+    preview.querySelector('.creation-date-tooltip').textContent =
+      fmt(addDays(chartStartDate(), clampedDay));
+    if (creationMode?.type === 'milestone') creationMode.previewDay = clampedDay;
+  }
+
+  function milestoneCreationHover(evt) {
+    if (creationGestureCleanup || creationMode?.type !== 'milestone') return;
+    const row = evt.currentTarget;
+    if (Number(row.dataset.projectId) !== creationMode.projectId) return;
+    const rect = row.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, evt.clientX - rect.left));
+    positionMilestoneCreationGhost(row, Math.round(x / pxPerDay()));
+  }
+
+  function insertMilestoneCreationGhost() {
+    const row = document.querySelector(
+      `.chart-row.proj[data-project-id="${creationMode.projectId}"]`,
+    );
+    if (!row) return;
+    const preview = document.createElement('div');
+    preview.className = 'creation-milestone-preview';
+    addDateTooltip(preview, '');
+    row.appendChild(preview);
+    const initialDay = creationMode.previewDay
+      ?? daysBetween(chartStartDate(), new Date());
+    positionMilestoneCreationGhost(row, initialDay);
+    row.addEventListener('pointermove', milestoneCreationHover);
+  }
+
+  function commitTaskRange(projectId, startDay, endDay) {
+    const cs = chartStartDate();
+    finishCreationMode();
+    commit('/tasks/create/', {
+      project_id: projectId,
+      title: 'New task',
+      start: fmt(addDays(cs, startDay)),
+      end: fmt(addDays(cs, endDay)),
+    });
+  }
+
+  function insertTaskCreationRow() {
+    const projectId = creationMode.projectId;
+    const group = document.querySelector(`.project-group[data-project-id="${projectId}"]`);
+    const projectRow = group?.querySelector(':scope > .chart-row.proj');
+    if (!group || !projectRow) return;
+    const _ = window.gettext || (s => s);
+    const color = projectRow.style.getPropertyValue('--project-color');
+
+    const left = document.createElement('div');
+    left.className = 'left-cell task-creation-left creation-target';
+    left.dataset.projectId = String(projectId);
+    left.style.setProperty('--project-color', color);
+    const copy = document.createElement('span');
+    copy.className = 'task-creation-copy';
+    const title = document.createElement('strong');
+    title.textContent = _('New task');
+    const instruction = document.createElement('span');
+    instruction.textContent = _('Click or drag the timeline to schedule it');
+    copy.append(title, instruction);
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'task-creation-cancel';
+    cancel.setAttribute('aria-label', _('Cancel new task'));
+    cancel.textContent = '×';
+    cancel.addEventListener('click', cancelCreationMode);
+    left.append(copy, cancel);
+
+    const row = document.createElement('div');
+    row.className = 'chart-row task-creation-timeline creation-target';
+    row.dataset.projectId = String(projectId);
+    row.style.setProperty('--project-color', color);
+    row.style.width = projectRow.style.width;
+    row.tabIndex = 0;
+    row.setAttribute('aria-label', _('Schedule new task'));
+    const ghost = document.createElement('div');
+    ghost.className = 'task-creation-ghost';
+    const label = document.createElement('span');
+    label.className = 'task-creation-ghost-label';
+    label.textContent = _('New task');
+    ghost.append(label);
+    addDateTooltip(ghost, '');
+    row.appendChild(ghost);
+    projectRow.after(left, row);
+
+    const initialDay = creationMode.previewStartDay
+      ?? daysBetween(chartStartDate(), new Date());
+    positionTaskCreationGhost(row, initialDay);
+    row.addEventListener('pointermove', evt => {
+      if (creationGestureCleanup || creationMode?.type !== 'task') return;
+      const rect = row.getBoundingClientRect();
+      const day = Math.round(Math.max(0, Math.min(rect.width, evt.clientX - rect.left)) / pxPerDay());
+      positionTaskCreationGhost(row, day);
+    });
+    row.addEventListener('pointerdown', evt => projectRowMouseDown(evt, projectId));
+    row.addEventListener('keydown', evt => {
+      if ((evt.key === 'Enter' || evt.key === ' ') && creationMode?.type === 'task') {
+        evt.preventDefault();
+        const startDay = creationMode.previewStartDay ?? initialDay;
+        commitTaskRange(projectId, startDay, startDay + DEFAULT_TASK_DAYS);
+      }
+    });
+  }
+
   function projectRowMouseDown(evt, projectId) {
     if (evt.button !== 0) return;
     if (evt.target.classList.contains('milestone')
      || evt.target.classList.contains('milestone-label')) return;
+
+    const isTaskCreationRow = evt.currentTarget.classList.contains('task-creation-timeline');
+    const isProjectRow = evt.currentTarget.classList.contains('proj');
+    const explicitType = creationMode?.projectId === Number(projectId)
+      && ((creationMode.type === 'task' && isTaskCreationRow)
+        || (creationMode.type === 'milestone' && isProjectRow))
+      ? creationMode.type : null;
+    const isShortcut = !explicitType && isProjectRow && evt.shiftKey;
+    if (!explicitType && !isShortcut) return;
+
     evt.preventDefault();
     const row = evt.currentTarget;
     const rect = row.getBoundingClientRect();
-    const startXLocal = evt.clientX - rect.left;
+    const clampX = clientX => Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const startXLocal = clampX(evt.clientX);
     const ppd = pxPerDay();
     const cs = chartStartDate();
-    const rb = document.createElement('div');
-    rb.id = 'rubber-band';
-    rb.style.left = startXLocal + 'px';
-    rb.style.top = '4px';
-    rb.style.height = (row.offsetHeight - 8) + 'px';
-    rb.style.width = '0px';
-    row.appendChild(rb);
-    let moved = false;
-    function onMove(ev) {
-      const x = ev.clientX - rect.left;
-      const lo = Math.min(startXLocal, x);
-      const hi = Math.max(startXLocal, x);
-      rb.style.left = lo + 'px';
-      rb.style.width = (hi - lo) + 'px';
-      if (Math.abs(x - startXLocal) > 4) moved = true;
+    let cleaned = false;
+
+    if (explicitType === 'milestone') {
+      const preview = row.querySelector('.creation-milestone-preview');
+      const tooltip = preview.querySelector('.creation-date-tooltip');
+
+      function position(clientX) {
+        const x = clampX(clientX);
+        const day = Math.round(x / ppd);
+        const date = dateAtX(x, ppd, cs);
+        preview.style.left = `${day * ppd}px`;
+        tooltip.textContent = fmt(date);
+        creationMode.previewDay = day;
+        return date;
+      }
+      position(evt.clientX);
+
+      function cleanup() {
+        if (cleaned) return;
+        cleaned = true;
+        if (creationGestureCleanup === cleanup) creationGestureCleanup = null;
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onCancel);
+        preview.remove();
+      }
+      function onMove(ev) { position(ev.clientX); }
+      function onUp(ev) {
+        const date = position(ev.clientX);
+        cleanup();
+        finishCreationMode();
+        addMilestone(projectId, fmt(date));
+      }
+      function onCancel() {
+        cleanup();
+        cancelCreationMode();
+      }
+      creationGestureCleanup = cleanup;
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onCancel);
+      return;
     }
+
+    const isDraftRow = explicitType === 'task' && isTaskCreationRow;
+    const rb = isDraftRow
+      ? row.querySelector('.task-creation-ghost')
+      : document.createElement('div');
+    rb.id = 'rubber-band';
+    rb.classList.add('placing');
+    if (!isDraftRow) {
+      rb.style.left = `${startXLocal}px`;
+      rb.style.top = '4px';
+      rb.style.height = `${row.offsetHeight - 8}px`;
+      rb.style.width = '0px';
+      addDateTooltip(rb, '');
+      row.appendChild(rb);
+    }
+    const tooltip = rb.querySelector('.creation-date-tooltip');
+    let moved = false;
+
+    function rangeAt(clientX) {
+      const x = clampX(clientX);
+      if (Math.abs(x - startXLocal) > 4) moved = true;
+      const startDay = Math.round(startXLocal / ppd);
+      const currentDay = Math.round(x / ppd);
+      const loDay = Math.min(startDay, currentDay);
+      const hiDay = Math.max(startDay, currentDay);
+      const shownEndDay = moved ? Math.max(loDay + 1, hiDay) : loDay + DEFAULT_TASK_DAYS;
+      rb.style.left = `${loDay * ppd}px`;
+      rb.style.width = `${(shownEndDay - loDay) * ppd}px`;
+      tooltip.textContent = `${fmt(addDays(cs, loDay))} – ${fmt(addDays(cs, shownEndDay))}`;
+      return { loDay, hiDay: shownEndDay };
+    }
+    rangeAt(evt.clientX);
+
+    function cleanup() {
+      if (cleaned) return;
+      cleaned = true;
+      if (creationGestureCleanup === cleanup) creationGestureCleanup = null;
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onCancel);
+      if (isDraftRow) {
+        rb.removeAttribute('id');
+        rb.classList.remove('placing');
+      } else {
+        rb.remove();
+      }
+    }
+    function onMove(ev) { rangeAt(ev.clientX); }
     function onUp(ev) {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      rb.remove();
-      if (!moved) {
-        // Click without a drag → create a free milestone at the click date.
-        const days = Math.round((ev.clientX - rect.left) / ppd);
-        addMilestone(projectId, fmt(addDays(cs, days)));
+      const range = rangeAt(ev.clientX);
+      cleanup();
+      if (isShortcut && !moved) {
+        addMilestone(projectId, fmt(addDays(cs, Math.round(clampX(ev.clientX) / ppd))));
         return;
       }
-      const x = ev.clientX - rect.left;
-      const lo = Math.min(startXLocal, x);
-      const hi = Math.max(startXLocal, x);
-      const startDays = Math.round(lo / ppd);
-      const endDays = Math.round(hi / ppd);
-      if (endDays - startDays < 1) return;
-      commit(`/tasks/create/`, {
-        project_id: projectId,
-        title: 'New task',
-        start: fmt(addDays(cs, startDays)),
-        end: fmt(addDays(cs, endDays)),
-      });
+      if (explicitType) {
+        commitTaskRange(projectId, range.loDay, range.hiDay);
+      } else {
+        commit('/tasks/create/', {
+          project_id: projectId,
+          title: 'New task',
+          start: fmt(addDays(cs, range.loDay)),
+          end: fmt(addDays(cs, range.hiDay)),
+        });
+      }
     }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    function onCancel() {
+      cleanup();
+      if (explicitType) cancelCreationMode();
+    }
+    creationGestureCleanup = cleanup;
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onCancel);
   }
 
   // ---------------------------------------------------------------------- //
@@ -548,6 +864,7 @@
   }
   function toggleProjectSortMode() {
     projectSortMode = !projectSortMode;
+    if (projectSortMode) cancelCreationMode();
     applyProjectSortMode();
     closeDrawer();
     return projectSortMode;
@@ -614,6 +931,8 @@
         // PMs see "Add Project" spacer rows before and after the project list
         // (chart.html). They take a full row_h of vertical space — counting
         // them keeps arrow y-coords aligned with bar y-coords.
+        y += 32;
+      } else if (el.matches('.chart-row.task-creation-timeline')) {
         y += 32;
       } else if (el.matches('.chart-row[data-task-id]')) {
         if (getComputedStyle(el).display === 'none') continue;
@@ -721,6 +1040,7 @@
     projectRowMouseDown, milestoneMouseDown,
     sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, focusTask, addMilestone,
+    setCreationMode, cancelCreationMode,
     toggleProjectSortMode, projectSortModeActive,
     closeDrawer, discardDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
     scrollToToday, positionWorkspaceMenu,
@@ -733,7 +1053,10 @@
   // element would be orphaned. childList only (no attributes) keeps this
   // quiet during drags, which mutate style but never insert nodes.
   document.addEventListener('keydown', evt => {
-    if (evt.key === 'Escape') clearSelection();
+    if (evt.key === 'Escape') {
+      clearSelection();
+      cancelCreationMode();
+    }
   });
 
   // Datastar fires `datastar-fetch` with detail.type = "finished" after the
@@ -745,6 +1068,7 @@
     if (evt.detail && evt.detail.type === 'finished') {
       applySelection();
       applyProjectSortMode();
+      applyCreationMode();
       recalcArrows();
     }
   });

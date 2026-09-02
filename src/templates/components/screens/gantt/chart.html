@@ -87,12 +87,28 @@
         <span class="swatch" style="background:{{ rg.color }}"></span>
         <span class="name">{{ rg.name }}</span>
         {% if rg.completed %}<span class="done-badge">{% trans "Done" %}</span>{% endif %}
-        <span class="actions">edit</span>
+        <span class="project-create-actions">
+          <button type="button" class="project-create-btn"
+                  data-project-id="{{ rg.id }}" data-creation-type="task"
+                  aria-label="{% trans 'Add task' %}" aria-pressed="false"
+                  title="{% trans 'Add a highlighted row for a new task' %}"
+                  data-on:click__stop="evt.preventDefault(); nano.setCreationMode('task', {{ rg.id }})">
+            <c-lucide name="list-plus" size="14" />
+          </button>
+          <button type="button" class="project-create-btn"
+                  data-project-id="{{ rg.id }}" data-creation-type="milestone"
+                  aria-label="{% trans 'Add milestone' %}" aria-pressed="false"
+                  title="{% trans 'Add milestone, then place it on the timeline' %}"
+                  data-on:click__stop="evt.preventDefault(); nano.setCreationMode('milestone', {{ rg.id }})">
+            <c-lucide name="diamond-plus" size="14" />
+          </button>
+        </span>
       </div>
       <div class="chart-row proj{% if rg.completed %} completed{% endif %}"
            data-project-id="{{ rg.id }}"
            style="--project-color: {{ rg.color }}; width:{{ vm.chart_width }}px;"
-           data-on:mousedown="nano.projectRowMouseDown(evt, {{ rg.id }})">
+           title="{% trans 'Choose Milestone beside the project, then place it here. Shift-click and Shift-drag are shortcuts.' %}"
+           data-on:pointerdown="nano.projectRowMouseDown(evt, {{ rg.id }})">
         {% for tile in vm.weekend_tiles %}
           <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
         {% endfor %}

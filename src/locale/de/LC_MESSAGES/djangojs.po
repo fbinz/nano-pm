@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-25 08:34+0000\n"
+"POT-Creation-Date: 2026-09-02 11:57+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -18,3 +18,36 @@ msgstr ""
 #: static/js/nano.js:314
 msgid "Drop on another task to create a dependency."
 msgstr "Auf eine andere Aufgabe ziehen, um eine Abhängigkeit zu erstellen."
+
+#: static/js/nano.js:350
+msgid ""
+"A new task row is highlighted. Click for a 7-day task, or drag to set its "
+"dates. Press Escape to cancel."
+msgstr ""
+"Eine neue Aufgabenzeile ist hervorgehoben. Für eine 7-tägige Aufgabe klicken "
+"oder ziehen, um ihren Zeitraum festzulegen. Zum Abbrechen Escape drücken."
+
+#: static/js/nano.js:351
+msgid ""
+"Milestone placement: Move over the timeline to preview a date, then click to "
+"place it. Press Escape to cancel."
+msgstr ""
+"Meilenstein platzieren: Den Mauszeiger über die Zeitachse bewegen, um ein "
+"Datum als Vorschau anzuzeigen, und zum Platzieren klicken. Zum Abbrechen "
+"Escape drücken."
+
+#: static/js/nano.js:524 static/js/nano.js:547
+msgid "New task"
+msgstr "Neue Aufgabe"
+
+#: static/js/nano.js:526
+msgid "Click or drag the timeline to schedule it"
+msgstr "Zeitachse anklicken oder ziehen, um sie einzuplanen"
+
+#: static/js/nano.js:531
+msgid "Cancel new task"
+msgstr "Neue Aufgabe abbrechen"
+
+#: static/js/nano.js:542
+msgid "Schedule new task"
+msgstr "Neue Aufgabe einplanen"

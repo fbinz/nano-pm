@@ -316,8 +316,17 @@ html, body { height: 100%; }
   .project-sort-mode #collapse-all-btn,
   .project-sort-mode .left-cell.proj .collapse-toggle { display: none; }
   .left-cell.proj .swatch { @apply w-2.5 h-2.5 rounded-[2px] flex-shrink-0; }
-  .left-cell.proj .name { @apply flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
-  .left-cell.proj .actions { @apply text-base-content/60; }
+  .left-cell.proj .name { @apply min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
+  .project-create-actions {
+    @apply flex flex-shrink-0 items-center gap-0.5;
+  }
+  .project-create-btn {
+    @apply inline-flex size-6 items-center justify-center rounded border-0 bg-transparent
+           p-0 text-base-content/60 cursor-pointer;
+  }
+  .project-create-btn:hover { @apply bg-base-content/10 text-base-content; }
+  .project-create-btn[aria-pressed="true"] { @apply bg-primary text-primary-content; }
+  .project-sort-mode .project-create-actions { display: none; }
   /* Completed projects (only shown when the show-completed filter is on):
      dim the whole group and strike the name; a small badge marks the header. */
   .left-cell.proj.completed { @apply opacity-60; }
@@ -348,6 +357,23 @@ html, body { height: 100%; }
   }
   .left-cell.task .title { @apply flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
   .left-cell.task .assignees { @apply text-base-content/60 flex-shrink-0; }
+  .left-cell.task-creation-left {
+    height: var(--row-h);
+    background: color-mix(in srgb, var(--project-color) 14%, var(--color-base-100));
+    border-block: 1px dashed color-mix(in srgb, var(--project-color) 65%, var(--color-base-content));
+    @apply z-[4] pl-7 pr-2;
+  }
+  .task-creation-copy {
+    @apply min-w-0 flex flex-1 flex-col leading-tight;
+  }
+  .task-creation-copy strong { @apply text-xs text-base-content; }
+  .task-creation-copy span {
+    @apply overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-normal text-base-content/60;
+  }
+  .task-creation-cancel {
+    @apply flex size-6 flex-shrink-0 items-center justify-center rounded border-0
+           bg-transparent text-base-content/60 cursor-pointer hover:bg-base-content/10 hover:text-base-content;
+  }
 
   .chart-row {
     height: var(--row-h);
@@ -360,7 +386,19 @@ html, body { height: 100%; }
     background: color-mix(in srgb, var(--project-color, var(--color-base-300)) 5%, var(--color-base-100));
     border-bottom-color: color-mix(in srgb, var(--project-color, var(--color-base-300)) 16%, var(--color-base-300));
     box-shadow: inset 0 1px 0 color-mix(in srgb, var(--project-color, var(--color-base-300)) 10%, transparent);
-    @apply cursor-crosshair z-[2];
+    @apply cursor-default z-[2];
+  }
+  .creation-mode .chart-row.proj.creation-target {
+    cursor: crosshair;
+    touch-action: none;
+    box-shadow: inset 0 0 0 2px oklch(from var(--color-primary) l c h / 0.55);
+  }
+  .creation-mode .chart-row.proj:not(.creation-target) { @apply cursor-not-allowed; }
+  .chart-row.task-creation-timeline {
+    background: color-mix(in srgb, var(--project-color) 10%, var(--color-base-100));
+    border-block: 1px dashed color-mix(in srgb, var(--project-color) 65%, var(--color-base-content));
+    cursor: crosshair;
+    touch-action: none;
   }
   .chart-row .weekend-tile {
     @apply absolute top-0 bottom-0 pointer-events-none;
@@ -494,10 +532,43 @@ html, body { height: 100%; }
   #sidebar-resizer:hover,
   #sidebar-resizer.dragging { @apply bg-primary/25; }
 
+  .task-creation-ghost {
+    position: absolute;
+    height: var(--bar-h);
+    top: calc((var(--row-h) - var(--bar-h)) / 2);
+    background: color-mix(in srgb, var(--project-color) 35%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--project-color) 80%, var(--color-base-content));
+    @apply pointer-events-none z-30 flex items-center rounded-[3px] text-xs font-medium text-base-content/70;
+  }
+  .task-creation-ghost.placing {
+    background: color-mix(in srgb, var(--project-color) 48%, transparent);
+  }
+  .task-creation-ghost-label {
+    @apply overflow-hidden text-ellipsis whitespace-nowrap px-2;
+  }
   #rubber-band {
     @apply absolute pointer-events-none rounded-[3px] z-30;
     background: oklch(from var(--color-primary) l c h / 0.18);
     border: 1px dashed var(--color-primary);
+  }
+  .creation-milestone-preview {
+    @apply absolute top-0 bottom-0 w-px pointer-events-none z-30;
+  }
+  .creation-milestone-preview::before {
+    content: '';
+    @apply absolute w-3.5 h-3.5;
+    left: -7px;
+    top: 50%;
+    margin-top: -7px;
+    transform: rotate(45deg);
+    background: oklch(from var(--color-primary) l c h / 0.3);
+    border: 1px dashed var(--color-primary);
+    box-shadow: 0 0 0 1px white, 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .creation-date-tooltip {
+    @apply absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded
+           bg-base-content px-1.5 py-0.5 text-[10px] font-medium text-base-100 z-40;
+    bottom: calc(100% + 4px);
   }
 }
 

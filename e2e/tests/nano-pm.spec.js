@@ -26,6 +26,15 @@ function germanDateShift(beforeIso, afterIso) {
   return `um ${amount} ${deltaDays > 0 ? 'nach hinten' : 'nach vorne'} auf ${germanDate(afterIso, true)}`;
 }
 
+async function placeMilestoneGhost(page, project, offset = 140) {
+  const row = project.locator('.chart-row.proj');
+  await expect(row.locator('.creation-milestone-preview')).toBeVisible();
+  const rowBox = await row.boundingBox();
+  const sidebar = await project.locator('.left-cell.proj').boundingBox();
+  await page.mouse.click(sidebar.x + sidebar.width + offset, rowBox.y + rowBox.height / 2);
+  await expect(page.locator('#milestone-popover')).toBeVisible();
+}
+
 async function startWebhookServer() {
   const requests = [];
   const server = http.createServer((req, res) => {
@@ -1840,10 +1849,11 @@ test.describe('project & people management', () => {
   });
 
   test('task milestone input autocomplete only lists free milestones from the same project', async ({ appPage: page }) => {
-    await page.locator('.left-cell.proj', { hasText: 'Onboarding revamp' }).click();
+    const project = page.locator('.project-group').filter({ hasText: 'Onboarding revamp' });
+    await project.locator('.left-cell.proj').click();
     await expect(page.locator('#project-popover')).toBeVisible();
     await page.click('#project-popover #pp-add-milestone');
-    await expect(page.locator('#milestone-popover')).toBeVisible();
+    await placeMilestoneGhost(page, project);
     await page.fill('#milestone-popover input[name=title]', 'Onboarding-only checkpoint');
     await page.fill('#milestone-popover textarea[name=description]', 'Onboarding-only checkpoint description.');
     await page.click('#milestone-popover button[type=submit]');
@@ -1857,10 +1867,11 @@ test.describe('project & people management', () => {
   });
 
   test('task milestone input can autocomplete and link an existing free milestone', async ({ appPage: page }) => {
-    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    const project = page.locator('.project-group').filter({ hasText: 'API Migration' });
+    await project.locator('.left-cell.proj').click();
     await expect(page.locator('#project-popover')).toBeVisible();
     await page.click('#project-popover #pp-add-milestone');
-    await expect(page.locator('#milestone-popover')).toBeVisible();
+    await placeMilestoneGhost(page, project);
     await page.fill('#milestone-popover input[name=title]', 'Reusable checkpoint');
     await page.fill('#milestone-popover textarea[name=description]', 'Reusable checkpoint description.');
     await page.click('#milestone-popover button[type=submit]');
@@ -1909,8 +1920,91 @@ test.describe('project & people management', () => {
     await expect(firstProj).toContainText('New project');
   });
 
-  test('clicking (no drag) in a project row creates a free milestone', async ({ appPage: page }) => {
+  test('explicit creation controls distinguish a new task row from milestone placement', async ({ appPage: page }) => {
+    const project = page.locator('.project-group').first();
+    const projectRow = project.locator('.chart-row.proj');
+    const projectRowBox = await projectRow.boundingBox();
+    const sidebar = await project.locator('.left-cell.proj').boundingBox();
+    const barsBefore = await page.locator('.bar').count();
+    const milestonesBefore = await page.locator('.chart-row.proj .milestone').count();
+
+    const addTask = project.getByRole('button', { name: 'Add task' });
+    const addMilestone = project.getByRole('button', { name: 'Add milestone' });
+    await expect(addTask).toBeVisible();
+    await expect(addMilestone).toBeVisible();
+
+    await addTask.click();
+    await expect(addTask).toHaveAttribute('aria-pressed', 'true');
+    const draftLabel = project.locator('.task-creation-left');
+    const draftRow = project.locator('.task-creation-timeline');
+    await expect(draftLabel).toContainText('New task');
+    await expect(draftRow).toHaveClass(/creation-target/);
+    await expect(draftRow.locator('.task-creation-ghost')).toContainText('New task');
+    await expect(page.locator('#creation-hint')).toContainText('new task row');
+
+    const draftBox = await draftRow.boundingBox();
+    const chartX = sidebar.x + sidebar.width + 80;
+    const draftY = draftBox.y + draftBox.height / 2;
+    await page.mouse.click(chartX, draftY);
+
+    await expect(page.locator('.bar')).toHaveCount(barsBefore + 1);
+    await expect(page.locator('#task-popover')).toBeVisible();
+    const newTask = page.locator('.bar', { hasText: 'New task' });
+    const taskDates = await newTask.evaluate(el => ({ start: el.dataset.start, end: el.dataset.end }));
+    const duration = (Date.parse(taskDates.end) - Date.parse(taskDates.start)) / 86400000;
+    expect(duration).toBe(7);
+    await expect(addTask).toHaveAttribute('aria-pressed', 'false');
+    await expect(project.locator('.task-creation-timeline')).toHaveCount(0);
+    await expect(page.locator('#creation-hint')).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await addMilestone.click();
+    await expect(addMilestone).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#creation-hint')).toContainText('preview a date');
+    const milestoneGhost = projectRow.locator('.creation-milestone-preview');
+    await expect(milestoneGhost).toBeVisible();
+    await expect(milestoneGhost.locator('.creation-date-tooltip')).toHaveText(/\d{4}-\d{2}-\d{2}/);
+    const initialGhostLeft = await milestoneGhost.evaluate(el => el.style.left);
+
+    const chartXForMilestone = sidebar.x + sidebar.width + 180;
+    const chartYForMilestone = projectRowBox.y + projectRowBox.height / 2;
+    await page.mouse.move(chartXForMilestone, chartYForMilestone);
+    await expect.poll(() => milestoneGhost.evaluate(el => el.style.left)).not.toBe(initialGhostLeft);
+    await page.mouse.down();
+    await expect(page.locator('.creation-milestone-preview')).toBeVisible();
+    await expect(page.locator('.creation-milestone-preview .creation-date-tooltip')).toHaveText(/\d{4}-\d{2}-\d{2}/);
+    await page.mouse.up();
+
+    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(milestonesBefore + 1);
+    await expect(page.locator('#milestone-popover')).toBeVisible();
+    await expect(addMilestone).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('Escape cancels the highlighted task row without creating anything', async ({ appPage: page }) => {
+    const barsBefore = await page.locator('.bar').count();
+    const project = page.locator('.project-group').first();
+    const addTask = project.getByRole('button', { name: 'Add task' });
+    const sidebar = await project.locator('.left-cell.proj').boundingBox();
+    const chartX = sidebar.x + sidebar.width + 30;
+
+    await addTask.click();
+    const draftRow = project.locator('.task-creation-timeline');
+    const rowBox = await draftRow.boundingBox();
+    await page.mouse.move(chartX, rowBox.y + rowBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(chartX + 60, rowBox.y + rowBox.height / 2);
+    await expect(draftRow.locator('.task-creation-ghost.placing')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(project.locator('.task-creation-timeline')).toHaveCount(0);
+    await expect(page.locator('#creation-hint')).toHaveCount(0);
+    await expect(addTask).toHaveAttribute('aria-pressed', 'false');
+    await page.mouse.up();
+    await expect(page.locator('.bar')).toHaveCount(barsBefore);
+  });
+
+  test('an unarmed project row does not create, while Shift-click remains a milestone shortcut', async ({ appPage: page }) => {
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
+    const barsBefore = await page.locator('.bar').count();
 
     const leftCell = page.locator('.left-cell.proj').first();
     const lcBox = await leftCell.boundingBox();
@@ -1920,9 +2014,38 @@ test.describe('project & people management', () => {
     const clickY = rowBox.y + rowBox.height / 2;
 
     await page.mouse.click(clickX, clickY);
+    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
+    await expect(page.locator('.bar')).toHaveCount(barsBefore);
 
+    await page.keyboard.down('Shift');
+    await page.mouse.click(clickX, clickY);
+    await page.keyboard.up('Shift');
     await expect(page.locator('#milestone-popover')).toBeVisible();
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(3);
+  });
+
+  test('an unarmed drag does not create, while Shift-drag remains a task shortcut', async ({ appPage: page }) => {
+    const barsBefore = await page.locator('.bar').count();
+    const project = page.locator('.project-group').first();
+    const rowBox = await project.locator('.chart-row.proj').boundingBox();
+    const sidebar = await project.locator('.left-cell.proj').boundingBox();
+    const startX = sidebar.x + sidebar.width + 30;
+    const y = rowBox.y + rowBox.height / 2;
+
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.mouse.move(startX + 100, y);
+    await page.mouse.up();
+    await expect(page.locator('.bar')).toHaveCount(barsBefore);
+
+    await page.keyboard.down('Shift');
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.mouse.move(startX + 100, y, { steps: 6 });
+    await page.mouse.up();
+    await page.keyboard.up('Shift');
+    await expect(page.locator('.bar')).toHaveCount(barsBefore + 1);
+    await expect(page.locator('#task-popover')).toBeVisible();
   });
 
   test('Cancel on a newly-created milestone deletes it without confirmation', async ({ appPage: page }) => {
@@ -1933,10 +2056,12 @@ test.describe('project & people management', () => {
       await dialog.dismiss();
     });
 
-    const leftCell = page.locator('.left-cell.proj').first();
+    const project = page.locator('.project-group').first();
+    const leftCell = project.locator('.left-cell.proj');
     const lcBox = await leftCell.boundingBox();
-    const row = page.locator('.chart-row.proj').first();
+    const row = project.locator('.chart-row.proj');
     const rowBox = await row.boundingBox();
+    await project.getByRole('button', { name: 'Add milestone' }).click();
     await page.mouse.click(lcBox.x + lcBox.width + 200, rowBox.y + rowBox.height / 2);
 
     await expect(page.locator('#milestone-popover')).toBeVisible();
@@ -1957,10 +2082,12 @@ test.describe('project & people management', () => {
       await dialog.dismiss();
     });
 
-    const row = page.locator('.chart-row.proj').first();
-    const rowBox = await row.boundingBox();
-    const sidebar = await page.locator('.left-cell.proj').first().boundingBox();
+    const project = page.locator('.project-group').first();
+    const sidebar = await project.locator('.left-cell.proj').boundingBox();
     const chartX = sidebar.x + sidebar.width + 20;
+    await project.getByRole('button', { name: 'Add task' }).click();
+    const row = project.locator('.task-creation-timeline');
+    const rowBox = await row.boundingBox();
     await page.mouse.move(chartX, rowBox.y + rowBox.height / 2);
     await page.mouse.down();
     await page.mouse.move(chartX + 120, rowBox.y + rowBox.height / 2, { steps: 8 });
@@ -1976,33 +2103,62 @@ test.describe('project & people management', () => {
     expect(sawDialog).toBe(false);
   });
 
-  test('dragging (with movement) in a project row still creates a task, not a milestone', async ({ appPage: page }) => {
+  test('the highlighted task row previews and creates a custom date range', async ({ appPage: page }) => {
     const milestonesBefore = await page.locator('.chart-row.proj .milestone').count();
     const barsBefore = await page.locator('.bar').count();
 
-    const row = page.locator('.chart-row.proj').first();
-    const rowBox = await row.boundingBox();
-    // Start past the sticky sidebar so the click lands on the chart area.
-    const sidebar = await page.locator('.left-cell.proj').first().boundingBox();
+    const project = page.locator('.project-group').first();
+    const sidebar = await project.locator('.left-cell.proj').boundingBox();
     const chartX = sidebar.x + sidebar.width + 20;
+    await project.getByRole('button', { name: 'Add task' }).click();
+    const row = project.locator('.task-creation-timeline');
+    const rowBox = await row.boundingBox();
     await page.mouse.move(chartX, rowBox.y + rowBox.height / 2);
     await page.mouse.down();
     await page.mouse.move(chartX + 120, rowBox.y + rowBox.height / 2, { steps: 8 });
+    const ghost = row.locator('.task-creation-ghost');
+    await expect(ghost).toHaveClass(/placing/);
+    await expect(ghost.locator('.creation-date-tooltip')).toContainText('–');
     await page.mouse.up();
 
-    // Bar count goes up; milestone count does not.
     await expect(page.locator('.bar')).toHaveCount(barsBefore + 1);
     expect(await page.locator('.chart-row.proj .milestone').count()).toBe(milestonesBefore);
   });
 
-  test('+ Add milestone in the project popover creates a free milestone and opens its editor', async ({ appPage: page }) => {
+  test('+ Add task in the project popover opens the highlighted scheduling row', async ({ appPage: page }) => {
+    const barsBefore = await page.locator('.bar').count();
+    const project = page.locator('.project-group').filter({ hasText: 'API Migration' });
+    await project.locator('.left-cell.proj').click();
+    await expect(page.locator('#project-popover')).toBeVisible();
+    await page.click('#project-popover #pp-add-task');
+
+    await expect(page.locator('#project-popover')).toHaveCount(0);
+    await expect(page.locator('.bar')).toHaveCount(barsBefore);
+    await expect(project.locator('.task-creation-left')).toContainText('New task');
+    const row = project.locator('.task-creation-timeline');
+    const rowBox = await row.boundingBox();
+    const sidebar = await project.locator('.left-cell.proj').boundingBox();
+    await page.mouse.click(sidebar.x + sidebar.width + 40, rowBox.y + rowBox.height / 2);
+    await expect(page.locator('.bar')).toHaveCount(barsBefore + 1);
+    await expect(page.locator('#task-popover')).toBeVisible();
+  });
+
+  test('+ Add milestone in the project popover opens a ghost milestone for placement', async ({ appPage: page }) => {
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
-    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    const project = page.locator('.project-group').filter({ hasText: 'API Migration' });
+    await project.locator('.left-cell.proj').click();
     await expect(page.locator('#project-popover')).toBeVisible();
     await page.click('#project-popover #pp-add-milestone');
+
+    await expect(page.locator('#project-popover')).toHaveCount(0);
+    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
+    const row = project.locator('.chart-row.proj');
+    await expect(row.locator('.creation-milestone-preview')).toBeVisible();
+    const rowBox = await row.boundingBox();
+    const sidebar = await project.locator('.left-cell.proj').boundingBox();
+    await page.mouse.click(sidebar.x + sidebar.width + 140, rowBox.y + rowBox.height / 2);
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(3);
     await expect(page.locator('#milestone-popover')).toBeVisible();
-    await expect(page.locator('#milestone-popover input[name=title]')).toHaveValue(/milestone/i);
   });
 
   test('clicking a project header opens the project popover', async ({ appPage: page }) => {
@@ -2057,10 +2213,11 @@ test.describe('project & people management', () => {
       await page.locator('#project-popover button[type=submit]').click();
       await expect(page.locator('#project-popover')).toHaveCount(0);
 
-      await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+      const project = page.locator('.project-group').filter({ hasText: 'API Migration' });
+      await project.locator('.left-cell.proj').click();
       await expect(page.locator('#project-popover')).toBeVisible();
       await page.locator('#project-popover #pp-add-milestone').click();
-      await expect(page.locator('#milestone-popover')).toBeVisible();
+      await placeMilestoneGhost(page, project);
       await expect(page.locator('#milestone-popover input[name=title]')).toHaveValue('New milestone');
       await expect.poll(() => webhook.requests.length).toBe(0);
     } finally {
@@ -2692,10 +2849,12 @@ test.describe('member role', () => {
     await loginAsMember(page);
 
     const barsBefore = await page.locator('.bar').count();
-    const row = page.locator('.chart-row.proj').first();
-    const rowBox = await row.boundingBox();
-    const sidebar = await page.locator('.left-cell.proj').first().boundingBox();
+    const project = page.locator('.project-group').first();
+    const sidebar = await project.locator('.left-cell.proj').boundingBox();
     const chartX = sidebar.x + sidebar.width + 20;
+    await project.getByRole('button', { name: 'Add task' }).click();
+    const row = project.locator('.task-creation-timeline');
+    const rowBox = await row.boundingBox();
     await page.mouse.move(chartX, rowBox.y + rowBox.height / 2);
     await page.mouse.down();
     await page.mouse.move(chartX + 120, rowBox.y + rowBox.height / 2, { steps: 8 });
