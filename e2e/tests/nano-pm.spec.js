@@ -596,6 +596,43 @@ test.describe('chart structure', () => {
     expect(lum).toBeGreaterThan(0.5);  // light text
   });
 
+  test('dragging empty timeline space pans the chart with grab cursors', async ({ appPage: page }) => {
+    await page.setViewportSize({ width: 1280, height: 360 });
+    const blankRow = page.locator('.chart-row.add-project-spacer').last();
+    await blankRow.scrollIntoViewIfNeeded();
+    await expect(blankRow).toHaveCSS('cursor', 'grab');
+
+    const start = await page.evaluate(() => {
+      const sc = document.getElementById('grid-scroll');
+      const maxLeft = sc.scrollWidth - sc.clientWidth;
+      sc.scrollLeft = Math.min(maxLeft - 150, Math.max(150, maxLeft / 2));
+      sc.scrollTop = sc.scrollHeight - sc.clientHeight;
+      return { left: sc.scrollLeft, top: sc.scrollTop };
+    });
+    expect(start.left).toBeGreaterThan(100);
+    expect(start.top).toBeGreaterThan(50);
+
+    const scBox = await page.locator('#grid-scroll').boundingBox();
+    const rowBox = await blankRow.boundingBox();
+    const x = scBox.x + scBox.width - 80;
+    const y = rowBox.y + rowBox.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await expect(blankRow).toHaveCSS('cursor', 'grabbing');
+    await page.mouse.move(x - 100, y + 50, { steps: 8 });
+
+    const moved = await page.evaluate(() => {
+      const sc = document.getElementById('grid-scroll');
+      return { left: sc.scrollLeft, top: sc.scrollTop };
+    });
+    expect(moved.left).toBeGreaterThan(start.left + 90);
+    expect(moved.top).toBeLessThan(start.top - 40);
+
+    await page.mouse.up();
+    await expect(blankRow).toHaveCSS('cursor', 'grab');
+  });
+
   test('the sidebar (sticky-left column) stays visible at any horizontal scroll position', async ({ appPage: page }) => {
     // Scroll all the way to the right edge of the chart.
     await page.evaluate(() => {

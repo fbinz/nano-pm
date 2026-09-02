@@ -965,6 +965,70 @@
   }
 
   // ---------------------------------------------------------------------- //
+  // Empty timeline drag → pan                                              //
+  // ---------------------------------------------------------------------- //
+  // The timeline is much larger than its viewport at denser zoom levels.
+  // Treat its non-interactive surface like a canvas: dragging moves the
+  // viewport, while bars, milestones, controls, and creation gestures retain
+  // their own pointer interactions.
+  const PAN_INTERACTIVE_SELECTOR = [
+    'a', 'button', 'input', 'select', 'textarea', 'summary', '[contenteditable="true"]',
+    '.bar', '.milestone', '#arrows .hit', '.task-creation-timeline', '.creation-target',
+  ].join(',');
+
+  function chartPanStart(evt) {
+    if (evt.button !== 0 || evt.isPrimary === false) return;
+    // Touch already gets native momentum scrolling; this gesture is the
+    // desktop click-and-drag affordance and must not disable that behaviour.
+    if (evt.pointerType && evt.pointerType !== 'mouse') return;
+    const sc = evt.target.closest?.('#grid-scroll');
+    if (!sc || evt.shiftKey || sc.classList.contains('creation-mode')) return;
+    if (evt.target.closest(PAN_INTERACTIVE_SELECTOR)) return;
+
+    const rect = sc.getBoundingClientRect();
+    const leftW = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--left-w'),
+    ) || 240;
+    // Only the timeline side is pannable. Also leave native scrollbar drags
+    // alone when the platform renders scrollbars inside the element's box.
+    if (evt.clientX < rect.left + leftW
+      || evt.clientX >= rect.left + sc.clientWidth
+      || evt.clientY >= rect.top + sc.clientHeight) return;
+
+    evt.preventDefault();
+    const pointerId = evt.pointerId;
+    const startX = evt.clientX;
+    const startY = evt.clientY;
+    const startLeft = sc.scrollLeft;
+    const startTop = sc.scrollTop;
+    sc.classList.add('chart-panning');
+    document.body.classList.add('chart-panning');
+
+    function cleanup() {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      window.removeEventListener('blur', cleanup);
+      sc.classList.remove('chart-panning');
+      document.body.classList.remove('chart-panning');
+    }
+    function onMove(ev) {
+      if (ev.pointerId !== pointerId) return;
+      ev.preventDefault();
+      sc.scrollLeft = startLeft - (ev.clientX - startX);
+      sc.scrollTop = startTop - (ev.clientY - startY);
+    }
+    function onUp(ev) {
+      if (ev.pointerId !== pointerId) return;
+      cleanup();
+    }
+    document.addEventListener('pointermove', onMove, { passive: false });
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+    window.addEventListener('blur', cleanup);
+  }
+
+  // ---------------------------------------------------------------------- //
   // Sidebar width resize                                                   //
   // ---------------------------------------------------------------------- //
   // The sidebar is the sticky-left column controlled by the --left-w CSS
@@ -1052,6 +1116,8 @@
   // replaces the #grid-scroll element itself — an observer bound to the old
   // element would be orphaned. childList only (no attributes) keeps this
   // quiet during drags, which mutate style but never insert nodes.
+  document.addEventListener('pointerdown', chartPanStart);
+
   document.addEventListener('keydown', evt => {
     if (evt.key === 'Escape') {
       clearSelection();
