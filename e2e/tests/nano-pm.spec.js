@@ -195,6 +195,44 @@ test.describe('activity log', () => {
     await expect(event).not.toContainText("['Alex Chen', 'Sam Patel']");
   });
 
+  test('activity events are paginated with newest events first', async ({ appPage: page }) => {
+    const taskId = await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).getAttribute('data-task-id');
+
+    const statuses = await page.evaluate(async ({ taskId }) => {
+      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
+      const results = [];
+      for (let number = 1; number <= 26; number += 1) {
+        const response = await fetch(`/tasks/${taskId}/update/`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'X-CSRFToken': decodeURIComponent(token), 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ title: `Pagination event ${String(number).padStart(2, '0')}` }),
+        });
+        results.push(response.status);
+        await response.text();
+      }
+      return results;
+    }, { taskId });
+    expect(statuses).toEqual(Array(26).fill(200));
+
+    await page.goto('/activity/');
+    await expect(page.locator('.activity-event')).toHaveCount(25);
+    await expect(page.locator('.activity-event').first()).toContainText('Pagination event 26');
+
+    const pagination = page.getByRole('navigation', { name: 'Activity pagination' });
+    await expect(pagination.locator('.join')).toBeVisible();
+    await expect(pagination.locator('[aria-current=page]')).toHaveText('1');
+    await expect(pagination.locator('[aria-current=page]')).toHaveClass(/\bbtn-active\b/);
+    await expect(pagination.getByRole('link', { name: '2', exact: true })).toHaveAttribute('href', '/activity/?page=2');
+
+    await pagination.getByRole('link', { name: 'Next' }).click();
+    await expect(page).toHaveURL('/activity/?page=2');
+    await expect(page.locator('.activity-event')).toHaveCount(1);
+    await expect(page.locator('.activity-event').first()).toContainText('Pagination event 01');
+    await expect(pagination.locator('[aria-current=page]')).toHaveText('2');
+    await expect(pagination.getByRole('link', { name: 'Previous' })).toHaveAttribute('href', '/activity/?page=1');
+  });
+
   test('activity event text is translated to German', async ({ appPage: page }) => {
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
     const taskId = await bar.getAttribute('data-task-id');

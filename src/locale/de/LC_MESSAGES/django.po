@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-02 11:18+0000\n"
+"POT-Creation-Date: 2026-09-04 14:39+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -750,6 +750,20 @@ msgstr "Details"
 msgid "No activity yet."
 msgstr "Noch keine Aktivität."
 
+#: templates/components/screens/activity/index.html:61
+msgid "Activity pagination"
+msgstr "Seitennavigation für Aktivitäten"
+
+#: templates/components/screens/activity/index.html:64
+#: templates/components/screens/activity/index.html:66
+msgid "Previous"
+msgstr "Zurück"
+
+#: templates/components/screens/activity/index.html:80
+#: templates/components/screens/activity/index.html:82
+msgid "Next"
+msgstr "Weiter"
+
 #: templates/components/screens/gantt/chart.html:19
 #: templates/components/screens/gantt/chart_resource.html:19
 msgid "Collapse all"
@@ -1257,6 +1271,10 @@ msgstr "Noch keine öffentlichen Meilensteine"
 #: templates/public/roadmap.html:158 templates/public/roadmap.html:166
 msgid "Check back later for roadmap updates."
 msgstr "Schauen Sie später wieder vorbei, um Roadmap-Updates zu sehen."
+
+#, python-format
+#~ msgid "Page %(current)s of %(total)s"
+#~ msgstr "Seite %(current)s von %(total)s"
 
 #~ msgid "Add task, then place it on the timeline"
 #~ msgstr "Aufgabe hinzufügen und dann auf der Zeitachse platzieren"

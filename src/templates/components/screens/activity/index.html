@@ -1,5 +1,5 @@
 {% load i18n %}
-<c-vars events user is_pm workspace workspaces has_multiple_workspaces />
+<c-vars events page_obj page_range pagination_ellipsis user is_pm workspace workspaces has_multiple_workspaces />
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
     :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
     active_nav="activity">
@@ -56,6 +56,34 @@
           </tbody>
         </table>
       </div>
+
+      {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="flex items-center justify-center" aria-label="{% trans 'Activity pagination' %}">
+          <div class="join">
+            {% if page_obj.has_previous %}
+              <a class="btn btn-sm join-item" href="{% url 'activity_page' %}?page={{ page_obj.previous_page_number }}">{% trans "Previous" %}</a>
+            {% else %}
+              <button class="btn btn-sm join-item" type="button" disabled>{% trans "Previous" %}</button>
+            {% endif %}
+
+            {% for page_number in page_range %}
+              {% if page_number == pagination_ellipsis %}
+                <button class="btn btn-sm join-item" type="button" disabled>{{ pagination_ellipsis }}</button>
+              {% elif page_number == page_obj.number %}
+                <button class="btn btn-sm btn-active join-item" type="button" aria-current="page">{{ page_number }}</button>
+              {% else %}
+                <a class="btn btn-sm join-item" href="{% url 'activity_page' %}?page={{ page_number }}">{{ page_number }}</a>
+              {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+              <a class="btn btn-sm join-item" href="{% url 'activity_page' %}?page={{ page_obj.next_page_number }}">{% trans "Next" %}</a>
+            {% else %}
+              <button class="btn btn-sm join-item" type="button" disabled>{% trans "Next" %}</button>
+            {% endif %}
+          </div>
+        </nav>
+      {% endif %}
     </div>
   </main>
 </c-layouts.app-shell>
