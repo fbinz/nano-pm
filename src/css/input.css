@@ -318,6 +318,9 @@ html, body { height: 100%; }
   .project-sort-mode .left-cell.proj .collapse-toggle { display: none; }
   .left-cell.proj .swatch { @apply w-2.5 h-2.5 rounded-[2px] flex-shrink-0; }
   .left-cell.proj .name { @apply min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
+  .future-milestone-warning {
+    @apply inline-flex flex-shrink-0 items-center justify-center text-warning;
+  }
   .project-create-actions {
     @apply flex flex-shrink-0 items-center gap-0.5;
   }

@@ -485,6 +485,20 @@ test.describe('chart structure', () => {
     await expect(page.locator('#arrows .hit')).toHaveCount(6);
   });
 
+  test('warns unfinished projects without a future milestone', async ({ appPage: page }) => {
+    const warnings = page.locator('.future-milestone-warning');
+    await expect(warnings).toHaveCount(1);
+    await expect(page.locator('.left-cell.proj', { hasText: 'Infra hardening' }).locator('.future-milestone-warning')).toBeVisible();
+    await expect(warnings).toHaveAttribute('aria-label', 'No future milestone');
+
+    // Finished projects do not need a future milestone and must not be warned.
+    await page.locator('.left-cell.proj', { hasText: 'Infra hardening' }).click();
+    await page.waitForSelector('#project-popover');
+    await page.click('#pp-toggle-complete');
+    await page.click('#show-completed-toggle');
+    await expect(page.locator('.left-cell.proj.completed', { hasText: 'Infra hardening' }).locator('.future-milestone-warning')).toHaveCount(0);
+  });
+
   test('project groups use subtle header accents without tinting task rows', async ({ appPage: page }) => {
     const styles = await page.evaluate(() => {
       const project = document.querySelector('.left-cell.proj');

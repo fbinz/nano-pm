@@ -92,6 +92,9 @@ class ProjectRowVM:
     # project's header row keep rendering — they live on the header line, not
     # the per-task rows.
     collapsed: bool = False
+    # True for an active project with no milestone after today. Task-linked
+    # milestones use their task's end date, matching their rendered position.
+    missing_future_milestone: bool = False
     # True when the project is marked complete (only ever present in row_groups
     # when the show-completed filter is on; rendered dimmed with a badge).
     completed: bool = False
@@ -403,6 +406,10 @@ def build_chart_vm(
         if proj.is_completed and not show_completed:
             continue
         bars: list[BarVM] = []
+        missing_future_milestone = not proj.is_completed and not any(
+            (m.task.end if m.task is not None else m.date) > state.today
+            for m in proj.milestones.all()
+        )
         text_color, text_dark = _text_color_for(proj.color)
         for t in proj.tasks.all():
             if team_ids and not _task_matches_team_filter(t, team_ids):
@@ -449,6 +456,7 @@ def build_chart_vm(
             id=proj.id, name=proj.name, color=proj.color, order=proj.order,
             tasks=bars, milestones=miles,
             collapsed=(proj.id in collapsed_ids),
+            missing_future_milestone=missing_future_milestone,
             completed=proj.is_completed,
         ))
 

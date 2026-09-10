@@ -86,6 +86,13 @@
         </button>
         <span class="swatch" style="background:{{ rg.color }}"></span>
         <span class="name">{{ rg.name }}</span>
+        {% if rg.missing_future_milestone %}
+          <span class="future-milestone-warning" role="img"
+                aria-label="{% trans 'No future milestone' %}"
+                title="{% trans 'No future milestone' %}">
+            <c-lucide name="triangle-alert" size="14" />
+          </span>
+        {% endif %}
         {% if rg.completed %}<span class="done-badge">{% trans "Done" %}</span>{% endif %}
         <span class="project-create-actions">
           <button type="button" class="project-create-btn"

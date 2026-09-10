@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-04 14:39+0000\n"
+"POT-Creation-Date: 2026-09-07 19:17+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -358,7 +358,7 @@ msgstr "Geplant"
 msgid "In progress"
 msgstr "In Bearbeitung"
 
-#: data/models/task.py:10 templates/components/screens/gantt/chart.html:89
+#: data/models/task.py:10 templates/components/screens/gantt/chart.html:96
 #: templates/components/screens/gantt/milestone-popover.html:44
 #: templates/components/screens/gantt/project-popover.html:94
 #: templates/components/screens/gantt/task-popover.html:94
@@ -483,12 +483,12 @@ msgctxt "Gantt axis day abbreviation"
 msgid "Sun"
 msgstr "So"
 
-#: readers/chart_view.py:224
+#: readers/chart_view.py:227
 msgctxt "Gantt axis ISO week prefix"
 msgid "W"
 msgstr "KW"
 
-#: readers/chart_view.py:588
+#: readers/chart_view.py:596
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
 
@@ -788,7 +788,7 @@ msgid "timeline"
 msgstr "Zeitachse"
 
 #: templates/components/screens/gantt/chart.html:65
-#: templates/components/screens/gantt/chart.html:141
+#: templates/components/screens/gantt/chart.html:148
 msgid "Add Project"
 msgstr "Projekt hinzufügen"
 
@@ -796,23 +796,28 @@ msgstr "Projekt hinzufügen"
 msgid "Drag to reorder project"
 msgstr "Ziehen, um das Projekt neu anzuordnen"
 
-#: templates/components/screens/gantt/chart.html:93
+#: templates/components/screens/gantt/chart.html:91
+#: templates/components/screens/gantt/chart.html:92
+msgid "No future milestone"
+msgstr "Kein zukünftiger Meilenstein"
+
+#: templates/components/screens/gantt/chart.html:100
 msgid "Add task"
 msgstr "Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:94
+#: templates/components/screens/gantt/chart.html:101
 msgid "Add a highlighted row for a new task"
 msgstr "Hervorgehobene Zeile für eine neue Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:100
+#: templates/components/screens/gantt/chart.html:107
 msgid "Add milestone"
 msgstr "Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:101
+#: templates/components/screens/gantt/chart.html:108
 msgid "Add milestone, then place it on the timeline"
 msgstr "Meilenstein hinzufügen und dann auf der Zeitachse platzieren"
 
-#: templates/components/screens/gantt/chart.html:110
+#: templates/components/screens/gantt/chart.html:117
 msgid ""
 "Choose Milestone beside the project, then place it here. Shift-click and "
 "Shift-drag are shortcuts."
@@ -820,15 +825,15 @@ msgstr ""
 "Meilenstein neben dem Projekt auswählen und dann hier platzieren. Umschalt-"
 "Klick und Umschalt-Ziehen sind Kurzbefehle."
 
-#: templates/components/screens/gantt/chart.html:156
+#: templates/components/screens/gantt/chart.html:163
 msgid "Click to remove this dependency"
 msgstr "Klicken, um diese Abhängigkeit zu entfernen"
 
-#: templates/components/screens/gantt/chart.html:169
+#: templates/components/screens/gantt/chart.html:176
 msgid "No projects yet."
 msgstr "Noch keine Projekte."
 
-#: templates/components/screens/gantt/chart.html:170
+#: templates/components/screens/gantt/chart.html:177
 msgid "+ Create your first project"
 msgstr "+ Erstellen Sie Ihr erstes Projekt"
 
