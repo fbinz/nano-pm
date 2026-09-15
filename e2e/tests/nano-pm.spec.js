@@ -1873,11 +1873,9 @@ test.describe('project & people management', () => {
     expect(Math.abs(visual.milestoneCenter - visual.taskRight)).toBeLessThan(1);
   });
 
-  test('dragging a task-linked milestone updates the owning task end date', async ({ appPage: page }) => {
+  test('milestones do not require a move explanation by default', async ({ appPage: page }) => {
     const milestone = page.locator('.milestone[data-task-id]').first();
-    const taskId = await milestone.getAttribute('data-task-id');
-    const bar = page.locator(`#bar-${taskId}`);
-    const beforeEnd = await bar.getAttribute('data-end');
+    const oldDate = await milestone.getAttribute('data-date');
     await milestone.scrollIntoViewIfNeeded();
     const box = await milestone.boundingBox();
     const ppd = parseFloat(await page.locator('#grid-scroll').evaluate(el => el.dataset.pxPerDay));
@@ -1887,19 +1885,91 @@ test.describe('project & people management', () => {
     await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
     await page.mouse.up();
 
-    await page.waitForFunction(
-      ([id, oldEnd]) => {
-        const el = document.querySelector(`#bar-${id}`);
-        return el && el.dataset.end !== oldEnd;
-      },
-      [taskId, beforeEnd],
-      { timeout: 5000 }
-    );
+    await expect(page.locator('#milestone-move-dialog')).not.toBeVisible();
+    await expect(milestone).not.toHaveAttribute('data-date', oldDate);
+  });
 
-    const afterEnd = await page.locator(`#bar-${taskId}`).getAttribute('data-end');
-    const afterMilestoneDate = await page.locator(`.milestone[data-task-id="${taskId}"]`).getAttribute('data-date');
-    expect(afterEnd).toBe(afterMilestoneDate);
-    expect(afterEnd > beforeEnd).toBe(true);
+  test('a milestone configured to require explanations prompts before a move is saved', async ({ appPage: page }) => {
+    const milestone = page.locator('.milestone[data-task-id]').first();
+    await milestone.scrollIntoViewIfNeeded();
+    let box = await milestone.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    const requireReason = page.locator('#milestone-popover input[name=require_move_reason]');
+    await expect(requireReason).not.toBeChecked();
+    await requireReason.check();
+    await page.locator('#milestone-popover button[type=submit]').click();
+    await expect(page.locator('#milestone-popover')).toHaveCount(0);
+
+    const taskId = await milestone.getAttribute('data-task-id');
+    const title = await milestone.getAttribute('data-title');
+    const bar = page.locator(`#bar-${taskId}`);
+    const beforeEnd = await bar.getAttribute('data-end');
+    const expectedDate = new Date(`${beforeEnd}T00:00:00Z`);
+    expectedDate.setUTCDate(expectedDate.getUTCDate() + 2);
+    const afterDate = expectedDate.toISOString().slice(0, 10);
+    await milestone.scrollIntoViewIfNeeded();
+    box = await milestone.boundingBox();
+    const ppd = parseFloat(await page.locator('#grid-scroll').evaluate(el => el.dataset.pxPerDay));
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    const dialog = page.locator('#milestone-move-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(title);
+    await expect(dialog.locator('[data-original-date]')).toHaveText(beforeEnd);
+    await expect(dialog.locator('[data-new-date]')).toHaveText(afterDate);
+    await expect(dialog.getByRole('button', { name: 'Waiting for feedback' })).toBeVisible();
+    await expect(bar).toHaveAttribute('data-end', beforeEnd);
+
+    const submit = dialog.getByRole('button', { name: 'Move milestone' });
+    await expect(submit).toBeDisabled();
+    await dialog.locator('textarea[name=reason]').fill('A customer dependency needs two more days.');
+    await expect(submit).toBeEnabled();
+    await submit.click();
+
+    await expect(dialog).not.toBeVisible();
+    await expect(bar).toHaveAttribute('data-end', afterDate);
+    await expect(page.locator(`.milestone[data-task-id="${taskId}"]`)).toHaveAttribute('data-date', afterDate);
+    await expect(page.locator('#toast-slot')).toContainText(`moved to ${afterDate}`);
+
+    await page.goto('/activity/');
+    const event = page.locator('.activity-event[data-action="milestone.moved"]').first();
+    await expect(event).toContainText('A customer dependency needs two more days.');
+  });
+
+  test('changing a milestone date in the editor also prompts and Escape keeps the original date', async ({ appPage: page }) => {
+    const milestone = page.locator('.chart-row.proj .milestone').first();
+    const originalDate = await milestone.getAttribute('data-date');
+    const proposed = new Date(`${originalDate}T00:00:00Z`);
+    proposed.setUTCDate(proposed.getUTCDate() + 1);
+    const proposedDate = proposed.toISOString().slice(0, 10);
+
+    await milestone.scrollIntoViewIfNeeded();
+    const box = await milestone.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    const editor = page.locator('#milestone-popover');
+    await expect(editor).toBeVisible();
+    await editor.locator('input[name=require_move_reason]').check();
+    await editor.locator('button[type=submit]').click();
+    await expect(editor).toHaveCount(0);
+
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(editor).toBeVisible();
+    await editor.locator('input[name=date]').fill(proposedDate);
+    await editor.locator('button[type=submit]').click();
+
+    const dialog = page.locator('#milestone-move-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(milestone).toHaveAttribute('data-date', originalDate);
+    await page.keyboard.press('Escape');
+
+    await expect(dialog).not.toBeVisible();
+    await expect(editor).toBeVisible();
+    await expect(editor.locator('input[name=date]')).toHaveValue(originalDate);
+    await expect(milestone).toHaveAttribute('data-date', originalDate);
   });
 
   test('clicking a task milestone opens the regular milestone editor', async ({ appPage: page }) => {
@@ -1914,6 +1984,18 @@ test.describe('project & people management', () => {
     await expect(page.locator('#milestone-popover button', { hasText: 'Delete' })).toBeVisible();
     await expect(page.locator('#milestone-popover button', { hasText: 'Cancel' })).toHaveCount(0);
     await expect(page.locator(`#bar-${taskId}`)).toBeVisible();
+  });
+
+  test('the milestone move-reason setting wraps inside the drawer', async ({ appPage: page }) => {
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    const milestone = page.locator('.chart-row.proj .milestone').first();
+    await milestone.scrollIntoViewIfNeeded();
+    const box = await milestone.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+
+    const setting = page.locator('#milestone-require-move-reason');
+    await expect(setting).toBeVisible();
+    expect(await setting.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   });
 
   test('milestone editor requires a description before saving', async ({ appPage: page }) => {
@@ -2979,6 +3061,36 @@ test.describe('member role', () => {
     await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
     await expect(page.locator('#project-responsible-pills .project-responsible-pill:visible')).toContainText('Alex Chen');
     await expect(page.locator('#project-popover button', { hasText: 'Delete project' })).toBeVisible();
+  });
+
+  test('member cannot configure milestone move explanations', async ({ page, request }) => {
+    await reset(request);
+    await loginAsMember(page);
+
+    const milestone = page.locator('.milestone').first();
+    const milestoneId = await milestone.getAttribute('data-milestone-id');
+    const milestoneDate = await milestone.getAttribute('data-date');
+    await milestone.scrollIntoViewIfNeeded();
+    const box = await milestone.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page.locator('#milestone-popover')).toBeVisible();
+    await expect(page.locator('input[name=require_move_reason]')).toHaveCount(0);
+
+    await page.evaluate(async ({ id, date }) => {
+      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
+      await fetch(`/milestones/${id}/update/`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': decodeURIComponent(token),
+        },
+        body: new URLSearchParams({ date, require_move_reason: 'true' }),
+      });
+    }, { id: milestoneId, date: milestoneDate });
+
+    await page.reload();
+    await expect(page.locator(`#ms-${milestoneId}`)).toHaveAttribute('data-requires-move-reason', 'false');
   });
 
   test('member cannot delete a project', async ({ page, request }) => {

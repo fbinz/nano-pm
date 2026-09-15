@@ -712,6 +712,96 @@
   // ---------------------------------------------------------------------- //
   // Milestone — drag to reschedule, click to edit (task-linked or free)    //
   // ---------------------------------------------------------------------- //
+  let pendingMilestoneMove = null;
+
+  function milestoneMoveDialog() {
+    return document.getElementById('milestone-move-dialog');
+  }
+
+  function syncMilestoneMoveReason(textarea) {
+    const submit = document.getElementById('milestone-move-submit');
+    if (submit) submit.disabled = textarea.value.trim().length < 3;
+  }
+
+  function chooseMilestoneMoveReason(reason) {
+    const textarea = document.getElementById('milestone-move-reason');
+    if (!textarea) return;
+    textarea.value = reason;
+    syncMilestoneMoveReason(textarea);
+    textarea.focus();
+  }
+
+  function showMilestoneMovePrompt({ milestoneId, title, originalDate, newDate, data, restore }) {
+    const dialog = milestoneMoveDialog();
+    if (!dialog) return;
+    const [oy, om, od] = originalDate.split('-').map(Number);
+    const [ny, nm, nd] = newDate.split('-').map(Number);
+    const days = Math.round((new Date(ny, nm - 1, nd) - new Date(oy, om - 1, od)) / ONE_DAY);
+    const absDays = Math.abs(days);
+    const _ = window.gettext || (s => s);
+    const unit = absDays === 1 ? _('day') : _('days');
+    const direction = days > 0 ? _('later') : _('earlier');
+
+    pendingMilestoneMove = { milestoneId, data, restore };
+    dialog.querySelector('[data-milestone-title]').textContent = title;
+    dialog.querySelector('[data-original-date]').textContent = originalDate;
+    dialog.querySelector('[data-new-date]').textContent = newDate;
+    dialog.querySelector('[data-date-delta]').textContent = `(${absDays} ${unit} ${direction})`;
+    const textarea = dialog.querySelector('textarea[name="reason"]');
+    textarea.value = '';
+    syncMilestoneMoveReason(textarea);
+    dialog.showModal();
+    requestAnimationFrame(() => textarea.focus());
+  }
+
+  function cancelMilestoneMove() {
+    const pending = pendingMilestoneMove;
+    pendingMilestoneMove = null;
+    if (pending?.restore) pending.restore();
+    const dialog = milestoneMoveDialog();
+    if (dialog?.open) dialog.close();
+  }
+
+  function confirmMilestoneMove() {
+    const textarea = document.getElementById('milestone-move-reason');
+    const reason = textarea?.value.trim() || '';
+    if (!pendingMilestoneMove || reason.length < 3) return;
+    const pending = pendingMilestoneMove;
+    pendingMilestoneMove = null;
+    const dialog = milestoneMoveDialog();
+    if (dialog?.open) dialog.close();
+    const { _update: isUpdate, ...data } = pending.data;
+    commit(`/milestones/${pending.milestoneId}/${isUpdate ? 'update' : 'move'}/`, {
+      ...data,
+      reason,
+    });
+  }
+
+  function submitMilestoneForm(form) {
+    const values = Object.fromEntries(new FormData(form).entries());
+    delete values.csrfmiddlewaretoken;
+    const originalDate = form.dataset.originalDate;
+    const newDate = values.date;
+    const requireReasonCheckbox = form.elements.require_move_reason;
+    const requireReason = form.dataset.requiresMoveReason === 'true'
+      || Boolean(requireReasonCheckbox?.checked);
+    if (requireReasonCheckbox) {
+      values.require_move_reason = requireReasonCheckbox.checked;
+    }
+    if (requireReason && newDate && originalDate && newDate !== originalDate) {
+      showMilestoneMovePrompt({
+        milestoneId: form.dataset.milestoneId,
+        title: values.title || '',
+        originalDate,
+        newDate,
+        data: { ...values, _update: true },
+        restore: () => { form.elements.date.value = originalDate; },
+      });
+      return;
+    }
+    commit(`/milestones/${form.dataset.milestoneId}/update/`, values);
+  }
+
   function milestoneMouseDown(evt, milestoneId, taskId) {
     if (evt.button !== 0) return;
     evt.preventDefault();
@@ -751,7 +841,21 @@
       const dxDays = Math.round((ev.clientX - startX) / ppd);
       if (dxDays === 0) return;
       const newDate = fmt(addDays(origDateObj, dxDays));
-      commit(`/milestones/${milestoneId}/move/`, { date: newDate });
+      if (target.dataset.requiresMoveReason !== 'true') {
+        commit(`/milestones/${milestoneId}/move/`, { date: newDate });
+        return;
+      }
+      showMilestoneMovePrompt({
+        milestoneId,
+        title: target.dataset.title || '',
+        originalDate: origDate,
+        newDate,
+        data: { date: newDate },
+        restore: () => {
+          target.style.left = origDiamondLeft + 'px';
+          if (origLabelLeft !== null) label.style.left = origLabelLeft + 'px';
+        },
+      });
     }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -1173,6 +1277,8 @@
   window.nano = {
     barMouseDown, resizeStart, resizeEnd, depHandle,
     projectRowMouseDown, milestoneMouseDown,
+    syncMilestoneMoveReason, chooseMilestoneMoveReason,
+    cancelMilestoneMove, confirmMilestoneMove, submitMilestoneForm,
     sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, focusTask, addMilestone,
     setCreationMode, cancelCreationMode,

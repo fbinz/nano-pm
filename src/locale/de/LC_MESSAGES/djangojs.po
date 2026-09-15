@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-02 11:57+0000\n"
+"POT-Creation-Date: 2026-09-15 18:12+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -51,3 +51,19 @@ msgstr "Neue Aufgabe abbrechen"
 #: static/js/nano.js:542
 msgid "Schedule new task"
 msgstr "Neue Aufgabe einplanen"
+
+#: static/js/nano.js:742
+msgid "day"
+msgstr "Tag"
+
+#: static/js/nano.js:742
+msgid "days"
+msgstr "Tage"
+
+#: static/js/nano.js:743
+msgid "later"
+msgstr "später"
+
+#: static/js/nano.js:743
+msgid "earlier"
+msgstr "früher"

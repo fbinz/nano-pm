@@ -5502,6 +5502,24 @@ html, body {
       color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
     }
   }
+  .popover .milestone-move-reason-setting {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: flex-start;
+    gap: calc(var(--spacing) * 3);
+    white-space: normal;
+  }
+  .milestone-move-reason-setting .checkbox {
+    margin-top: calc(var(--spacing) * 0.5);
+    flex-shrink: 0;
+  }
+  .milestone-move-reason-setting span {
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.375;
+    overflow-wrap: anywhere;
+  }
   .popover input[type=text], .popover input[type=date] {
     @layer daisyui.l1.l2.l3 {
       cursor: text;
@@ -7720,6 +7738,29 @@ html, body {
     white-space: nowrap;
     text-decoration-line: underline;
     text-underline-offset: 2px;
+  }
+  .nano-toast.success {
+    background-color: var(--color-success);
+    color: var(--color-success-content);
+  }
+  .milestone-move-dialog {
+    width: min(32rem, calc(100vw - 2rem));
+    margin: auto;
+    border: 1px solid var(--color-base-300);
+    border-radius: var(--radius-box);
+    background-color: var(--color-base-100);
+    padding: calc(var(--spacing) * 6);
+    color: var(--color-base-content);
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  }
+  .milestone-move-dialog::backdrop {
+    background: rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(1px);
+  }
+  .milestone-move-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--spacing) * 2);
   }
 }
 @layer base {

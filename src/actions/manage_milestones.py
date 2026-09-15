@@ -14,7 +14,7 @@ from data.models import Milestone, Project
 from actions.auto_cascade import cascade_workspace
 
 
-MILESTONE_FIELDS = ["title", "description", "date"]
+MILESTONE_FIELDS = ["title", "description", "date", "require_move_reason"]
 DEFAULT_MILESTONE_TITLE = "New milestone"
 
 
@@ -85,6 +85,8 @@ def update_milestone(
     description: str | None = None,
     on: date | None = None,
     project_id: int | None = None,
+    require_move_reason: bool | None = None,
+    move_reason: str | None = None,
     actor=None,
 ) -> Milestone | None:
     try:
@@ -95,6 +97,8 @@ def update_milestone(
         return None
     before_project = m.project
     before = _milestone_values(m)
+    if require_move_reason is not None:
+        m.require_move_reason = require_move_reason
     if m.task_id:
         task = m.task
         if title is not None:
@@ -106,7 +110,9 @@ def update_milestone(
             task.save(update_fields=["end"])
         m.project = task.project
         m.date = task.end
-        m.save(update_fields=["project", "title", "description", "date", "updated_at"])
+        m.save(update_fields=[
+            "project", "title", "description", "date", "require_move_reason", "updated_at",
+        ])
         if on is not None:
             cascade_workspace(workspace)
             _sync_linked_milestones(workspace)
@@ -127,12 +133,15 @@ def update_milestone(
     m = Milestone.objects.select_related("project", "task").get(id=m.id)
     after = _milestone_values(m)
     changes = change_set(before, after)
+    moved = "date" in changes
+    reason = (move_reason or "").strip()
     log_activity(
         workspace=workspace,
         actor=actor,
-        action="milestone.updated" if on is None else "milestone.moved",
+        action="milestone.moved" if moved else "milestone.updated",
         entity=m,
         changes=changes,
+        metadata={"reason": reason[:500]} if moved and reason else None,
         skip_empty_changes=True,
     )
     event_names = milestone_event_names_from_changes(changes)

@@ -144,6 +144,7 @@ class ActivityEvent(models.Model):
             "public_roadmap_enabled": _("Public roadmap enabled"),
             "public_roadmap_title": _("Public roadmap title"),
             "public_roadmap_token": _("Public roadmap token"),
+            "require_move_reason": _("Require move reason"),
             "start": _("Start"),
             "status": _("Status"),
             "successor": _("Successor"),
@@ -160,6 +161,10 @@ class ActivityEvent(models.Model):
             "description",
             "public_roadmap_description",
         }
+
+    @property
+    def move_reason(self) -> str:
+        return str((self.metadata or {}).get("reason", "")).strip()
 
     @property
     def change_items(self) -> list[dict[str, str]]:

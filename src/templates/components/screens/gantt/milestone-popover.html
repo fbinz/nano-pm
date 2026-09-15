@@ -1,14 +1,16 @@
 {% load i18n %}
 {# Milestone editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars m projects is_initial="" />
+<c-vars m projects is_initial="" is_pm="" />
 <div id="drawer-slot">
   <form
     id="milestone-popover"
     class="popover"
     data-milestone-id="{{ m.id }}"
+    data-original-date="{{ m.date|date:'Y-m-d' }}"
+    data-requires-move-reason="{{ m.require_move_reason|yesno:'true,false' }}"
     data-initial="{{ is_initial|yesno:'true,false' }}"
     data-discard-url="/milestones/{{ m.id }}/delete/"
-    data-on:submit__prevent="@post('/milestones/{{ m.id }}/update/', { contentType: 'form' })"
+    data-on:submit__prevent="nano.submitMilestoneForm(el)"
   >
     {% csrf_token %}
     <fieldset class="fieldset">
@@ -19,6 +21,13 @@
       <label class="label" for="milestone-description">{% trans "Description" %}</label>
       <textarea id="milestone-description" class="textarea textarea-sm w-full" name="description" rows="3" required>{{ m.description }}</textarea>
     </fieldset>
+    {% if is_pm %}
+      <label id="milestone-require-move-reason" class="milestone-move-reason-setting label cursor-pointer py-2">
+        <input class="checkbox checkbox-sm" type="checkbox" name="require_move_reason"
+               {% if m.require_move_reason %}checked{% endif %}>
+        <span>{% trans "Require a reason when moving this milestone" %}</span>
+      </label>
+    {% endif %}
     <div class="row">
       <fieldset class="fieldset">
         <label class="label" for="milestone-date">{% trans "Date" %}</label>

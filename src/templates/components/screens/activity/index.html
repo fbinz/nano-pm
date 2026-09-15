@@ -31,9 +31,9 @@
                 <td class="max-w-0 truncate font-medium">{{ event.actor_name }}</td>
                 <td class="activity-summary max-w-0 truncate font-medium">
                   {{ event.summary_without_actor }}
-                  {% if event.change_items %}
+                  {% if event.change_items or event.move_reason %}
                     <span class="activity-changes opacity-70 lg:hidden">
-                      <span class="mx-1 opacity-50">—</span>{% for item in event.change_items %}<span><strong class="font-semibold">{{ item.label }}</strong><br>{{ item.detail }}</span>{% if not forloop.last %}<span class="mx-1 opacity-50">•</span>{% endif %}{% endfor %}
+                      <span class="mx-1 opacity-50">—</span>{% for item in event.change_items %}<span><strong class="font-semibold">{{ item.label }}</strong><br>{{ item.detail }}</span>{% if not forloop.last or event.move_reason %}<span class="mx-1 opacity-50">•</span>{% endif %}{% endfor %}{% if event.move_reason %}<span><strong class="font-semibold">{% trans "Reason" %}</strong><br>{{ event.move_reason }}</span>{% endif %}
                     </span>
                   {% endif %}
                 </td>
@@ -44,6 +44,12 @@
                       <span>{{ item.detail }}</span>
                     </span>
                   {% endfor %}
+                  {% if event.move_reason %}
+                    <span class="mr-4 inline-block align-top">
+                      <strong class="font-semibold">{% trans "Reason" %}</strong><br>
+                      <span>{{ event.move_reason }}</span>
+                    </span>
+                  {% endif %}
                 </td>
               </tr>
             {% empty %}

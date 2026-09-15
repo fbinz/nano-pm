@@ -135,7 +135,7 @@
   </div>
 
   <aside id="drawer"
-         data-on:keydown__window="evt.key === 'Escape' && nano.discardDrawer()">
+         data-on:keydown__window="evt.key === 'Escape' && !document.getElementById('milestone-move-dialog').open && nano.discardDrawer()">
     <header class="drawer-header">
       <button class="drawer-close"
               type="button"
@@ -147,6 +147,48 @@
     <div id="drawer-slot"></div>
   </aside>
   <div id="toast-slot"></div>
+
+  <dialog id="milestone-move-dialog"
+          class="milestone-move-dialog"
+          aria-labelledby="milestone-move-title"
+          data-on:cancel__prevent="nano.cancelMilestoneMove()">
+    <form data-on:submit__prevent="nano.confirmMilestoneMove()">
+      <h2 id="milestone-move-title" class="text-lg font-semibold">{% trans "Why is this milestone moving?" %}</h2>
+      <p class="mt-1 text-sm text-base-content/70">
+        <strong data-milestone-title class="font-medium text-base-content"></strong>
+        <span class="mx-1">·</span>
+        <span data-original-date></span>
+        <span aria-hidden="true">→</span>
+        <span data-new-date></span>
+        <span data-date-delta class="mx-1"></span>
+      </p>
+
+      <fieldset class="fieldset mt-4">
+        <label class="label" for="milestone-move-reason">{% trans "Reason" %}</label>
+        <textarea id="milestone-move-reason"
+                  class="textarea w-full"
+                  name="reason"
+                  rows="3"
+                  maxlength="500"
+                  placeholder="{% trans 'Briefly explain what changed…' %}"
+                  required
+                  data-on:input="nano.syncMilestoneMoveReason(el)"></textarea>
+      </fieldset>
+
+      <div class="milestone-move-choices mt-4" aria-label="{% trans 'Common reasons' %}">
+        <button type="button" class="btn btn-xs btn-outline font-normal" data-on:click="nano.chooseMilestoneMoveReason(el.textContent)">{% trans "Dependency delayed" %}</button>
+        <button type="button" class="btn btn-xs btn-outline font-normal" data-on:click="nano.chooseMilestoneMoveReason(el.textContent)">{% trans "Scope changed" %}</button>
+        <button type="button" class="btn btn-xs btn-outline font-normal" data-on:click="nano.chooseMilestoneMoveReason(el.textContent)">{% trans "Resource availability" %}</button>
+        <button type="button" class="btn btn-xs btn-outline font-normal" data-on:click="nano.chooseMilestoneMoveReason(el.textContent)">{% trans "External commitment" %}</button>
+        <button type="button" class="btn btn-xs btn-outline font-normal" data-on:click="nano.chooseMilestoneMoveReason(el.textContent)">{% trans "Waiting for feedback" %}</button>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" class="btn btn-sm btn-ghost" data-on:click="nano.cancelMilestoneMove()">{% trans "Keep original date" %}</button>
+        <button id="milestone-move-submit" type="submit" class="btn btn-sm btn-neutral" disabled>{% trans "Move milestone" %}</button>
+      </div>
+    </form>
+  </dialog>
 
   <div data-on:nano-commit__window="
     @post(evt.detail.url, {

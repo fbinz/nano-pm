@@ -632,6 +632,14 @@ html, body { height: 100%; }
   .popover label {
     @apply block text-base-content/60 mb-0.5;
   }
+  .popover .milestone-move-reason-setting {
+    @apply flex w-full min-w-0 items-start gap-3 whitespace-normal;
+  }
+  .milestone-move-reason-setting .checkbox { @apply mt-0.5 flex-shrink-0; }
+  .milestone-move-reason-setting span {
+    @apply min-w-0 whitespace-normal leading-snug;
+    overflow-wrap: anywhere;
+  }
   .popover input[type=text],
   .popover input[type=date] {
     @apply input input-sm w-full font-[inherit];
@@ -917,5 +925,16 @@ html, body { height: 100%; }
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
   .nano-toast .toast-action { @apply font-semibold underline underline-offset-2 whitespace-nowrap; }
+  .nano-toast.success { @apply bg-success text-success-content; }
+
+  .milestone-move-dialog {
+    @apply m-auto w-[min(32rem,calc(100vw-2rem))] rounded-box border border-base-300
+           bg-base-100 p-6 text-base-content shadow-2xl;
+  }
+  .milestone-move-dialog::backdrop {
+    background: rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(1px);
+  }
+  .milestone-move-choices { @apply flex flex-wrap gap-2; }
 }
 

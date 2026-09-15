@@ -78,6 +78,7 @@ class MilestoneVM:
     x: float
     color: str
     overdue: bool
+    require_move_reason: bool
 
 
 @dataclass
@@ -469,6 +470,7 @@ def build_chart_vm(
                 x=milestone_x,
                 color=proj.color,
                 overdue=(milestone_date < state.today),
+                require_move_reason=m.require_move_reason,
             ))
         if team_ids and not project_matches_team and not bars:
             continue

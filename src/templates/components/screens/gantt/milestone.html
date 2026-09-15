@@ -4,6 +4,8 @@
   class="milestone{% if m.overdue %} overdue{% endif %}"
   style="left:{{ m.x|add:'-7' }}px;background:{{ m.color }};"
   data-milestone-id="{{ m.id }}"
+  data-title="{{ m.title }}"
+  data-requires-move-reason="{{ m.require_move_reason|yesno:'true,false' }}"
   {% if m.task_id %}data-task-id="{{ m.task_id }}"{% endif %}
   data-project-id="{{ m.project_id }}"
   data-date="{{ m.date_iso }}"

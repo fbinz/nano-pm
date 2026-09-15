@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-15 12:08+0000\n"
+"POT-Creation-Date: 2026-09-15 18:51+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -196,12 +196,12 @@ msgid "Converted task"
 msgstr "Umgewandelte Aufgabe"
 
 #: data/models/activity.py:135
-#: templates/components/screens/gantt/milestone-popover.html:24
+#: templates/components/screens/gantt/milestone-popover.html:31
 msgid "Date"
 msgstr "Datum"
 
 #: data/models/activity.py:136
-#: templates/components/screens/gantt/milestone-popover.html:19
+#: templates/components/screens/gantt/milestone-popover.html:21
 #: templates/components/screens/gantt/project-popover.html:16
 #: templates/components/screens/gantt/task-popover.html:18
 msgid "Description"
@@ -226,7 +226,7 @@ msgid "Predecessor"
 msgstr "Vorgänger"
 
 #: data/models/activity.py:141
-#: templates/components/screens/gantt/milestone-popover.html:28
+#: templates/components/screens/gantt/milestone-popover.html:35
 #: templates/components/screens/gantt/task-popover.html:32
 #: templates/components/screens/ideas/detail.html:87
 msgid "Project"
@@ -254,50 +254,54 @@ msgid "Public roadmap token"
 msgstr "Token der öffentlichen Roadmap"
 
 #: data/models/activity.py:147
+msgid "Require move reason"
+msgstr "Begründung beim Verschieben erforderlich"
+
+#: data/models/activity.py:148
 #: templates/components/screens/gantt/task-popover.html:23
 msgid "Start"
 msgstr "Start"
 
-#: data/models/activity.py:148
+#: data/models/activity.py:149
 msgid "Status"
 msgstr "Status"
 
-#: data/models/activity.py:149
+#: data/models/activity.py:150
 msgid "Successor"
 msgstr "Nachfolger"
 
-#: data/models/activity.py:150
+#: data/models/activity.py:151
 #: templates/components/screens/ideas/detail.html:53
 msgid "Tags"
 msgstr "Tags"
 
-#: data/models/activity.py:151
+#: data/models/activity.py:152
 #: templates/components/screens/gantt/team-filter.html:6
 #: templates/components/screens/people/people-content.html:5
 #: templates/components/screens/people/people-list.html:18
 msgid "Teams"
 msgstr "Teams"
 
-#: data/models/activity.py:152
-#: templates/components/screens/gantt/milestone-popover.html:15
+#: data/models/activity.py:153
+#: templates/components/screens/gantt/milestone-popover.html:17
 #: templates/components/screens/gantt/task-popover.html:14
 msgid "Title"
 msgstr "Titel"
 
-#: data/models/activity.py:153
+#: data/models/activity.py:154
 msgid "Workspace"
 msgstr "Arbeitsbereich"
 
-#: data/models/activity.py:170
+#: data/models/activity.py:175
 msgid "changed"
 msgstr "geändert"
 
-#: data/models/activity.py:174
+#: data/models/activity.py:179
 #, python-format
 msgid "%(before)s → %(after)s"
 msgstr "%(before)s → %(after)s"
 
-#: data/models/activity.py:190
+#: data/models/activity.py:195
 #, python-format
 msgid "%(label)s: %(value)s"
 msgstr "%(label)s: %(value)s"
@@ -363,8 +367,8 @@ msgstr "Geplant"
 msgid "In progress"
 msgstr "In Bearbeitung"
 
-#: data/models/task.py:10 templates/components/screens/gantt/chart.html:96
-#: templates/components/screens/gantt/milestone-popover.html:44
+#: data/models/task.py:10 templates/components/screens/gantt/chart.html:97
+#: templates/components/screens/gantt/milestone-popover.html:51
 #: templates/components/screens/gantt/project-popover.html:127
 #: templates/components/screens/gantt/task-popover.html:115
 msgid "Done"
@@ -488,12 +492,12 @@ msgctxt "Gantt axis day abbreviation"
 msgid "Sun"
 msgstr "So"
 
-#: readers/chart_view.py:227
+#: readers/chart_view.py:229
 msgctxt "Gantt axis ISO week prefix"
 msgid "W"
 msgstr "KW"
 
-#: readers/chart_view.py:615
+#: readers/chart_view.py:621
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
 
@@ -727,6 +731,52 @@ msgstr "Abmelden"
 msgid "Close"
 msgstr "Schließen"
 
+#: templates/components/layouts/app-shell.html:156
+msgid "Why is this milestone moving?"
+msgstr "Warum wird dieser Meilenstein verschoben?"
+
+#: templates/components/layouts/app-shell.html:167
+#: templates/components/screens/activity/index.html:36
+#: templates/components/screens/activity/index.html:49
+msgid "Reason"
+msgstr "Begründung"
+
+#: templates/components/layouts/app-shell.html:173
+msgid "Briefly explain what changed…"
+msgstr "Kurz erklären, was sich geändert hat…"
+
+#: templates/components/layouts/app-shell.html:178
+msgid "Common reasons"
+msgstr "Häufige Gründe"
+
+#: templates/components/layouts/app-shell.html:179
+msgid "Dependency delayed"
+msgstr "Abhängigkeit verzögert"
+
+#: templates/components/layouts/app-shell.html:180
+msgid "Scope changed"
+msgstr "Umfang geändert"
+
+#: templates/components/layouts/app-shell.html:181
+msgid "Resource availability"
+msgstr "Ressourcenverfügbarkeit"
+
+#: templates/components/layouts/app-shell.html:182
+msgid "External commitment"
+msgstr "Externe Verpflichtung"
+
+#: templates/components/layouts/app-shell.html:183
+msgid "Waiting for feedback"
+msgstr "Rückmeldung ausstehend"
+
+#: templates/components/layouts/app-shell.html:187
+msgid "Keep original date"
+msgstr "Ursprüngliches Datum behalten"
+
+#: templates/components/layouts/app-shell.html:188
+msgid "Move milestone"
+msgstr "Meilenstein verschieben"
+
 #: templates/components/screens/activity/index.html:10
 msgid "Everything recently done in this workspace."
 msgstr "Alles, was kürzlich in diesem Arbeitsbereich getan wurde."
@@ -751,21 +801,21 @@ msgstr "Ereignis"
 msgid "Details"
 msgstr "Details"
 
-#: templates/components/screens/activity/index.html:52
+#: templates/components/screens/activity/index.html:58
 msgid "No activity yet."
 msgstr "Noch keine Aktivität."
 
-#: templates/components/screens/activity/index.html:61
+#: templates/components/screens/activity/index.html:67
 msgid "Activity pagination"
 msgstr "Seitennavigation für Aktivitäten"
 
-#: templates/components/screens/activity/index.html:64
-#: templates/components/screens/activity/index.html:66
+#: templates/components/screens/activity/index.html:70
+#: templates/components/screens/activity/index.html:72
 msgid "Previous"
 msgstr "Zurück"
 
-#: templates/components/screens/activity/index.html:80
-#: templates/components/screens/activity/index.html:82
+#: templates/components/screens/activity/index.html:86
+#: templates/components/screens/activity/index.html:88
 msgid "Next"
 msgstr "Weiter"
 
@@ -793,7 +843,7 @@ msgid "timeline"
 msgstr "Zeitachse"
 
 #: templates/components/screens/gantt/chart.html:65
-#: templates/components/screens/gantt/chart.html:148
+#: templates/components/screens/gantt/chart.html:149
 msgid "Add Project"
 msgstr "Projekt hinzufügen"
 
@@ -801,28 +851,28 @@ msgstr "Projekt hinzufügen"
 msgid "Drag to reorder project"
 msgstr "Ziehen, um das Projekt neu anzuordnen"
 
-#: templates/components/screens/gantt/chart.html:91
 #: templates/components/screens/gantt/chart.html:92
+#: templates/components/screens/gantt/chart.html:93
 msgid "No future milestone"
 msgstr "Kein zukünftiger Meilenstein"
 
-#: templates/components/screens/gantt/chart.html:100
+#: templates/components/screens/gantt/chart.html:101
 msgid "Add task"
 msgstr "Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:101
+#: templates/components/screens/gantt/chart.html:102
 msgid "Add a highlighted row for a new task"
 msgstr "Hervorgehobene Zeile für eine neue Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:107
+#: templates/components/screens/gantt/chart.html:108
 msgid "Add milestone"
 msgstr "Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:108
+#: templates/components/screens/gantt/chart.html:109
 msgid "Add milestone, then place it on the timeline"
 msgstr "Meilenstein hinzufügen und dann auf der Zeitachse platzieren"
 
-#: templates/components/screens/gantt/chart.html:117
+#: templates/components/screens/gantt/chart.html:118
 msgid ""
 "Choose Milestone beside the project, then place it here. Shift-click and "
 "Shift-drag are shortcuts."
@@ -830,15 +880,15 @@ msgstr ""
 "Meilenstein neben dem Projekt auswählen und dann hier platzieren. Umschalt-"
 "Klick und Umschalt-Ziehen sind Kurzbefehle."
 
-#: templates/components/screens/gantt/chart.html:163
+#: templates/components/screens/gantt/chart.html:164
 msgid "Click to remove this dependency"
 msgstr "Klicken, um diese Abhängigkeit zu entfernen"
 
-#: templates/components/screens/gantt/chart.html:176
+#: templates/components/screens/gantt/chart.html:177
 msgid "No projects yet."
 msgstr "Noch keine Projekte."
 
-#: templates/components/screens/gantt/chart.html:177
+#: templates/components/screens/gantt/chart.html:178
 msgid "+ Create your first project"
 msgstr "+ Erstellen Sie Ihr erstes Projekt"
 
@@ -867,16 +917,29 @@ msgstr "Heute"
 msgid "Drag to resize sidebar"
 msgstr "Ziehen, um die Größe der Seitenleiste zu ändern"
 
-#: templates/components/screens/gantt/milestone-popover.html:39
+#: templates/components/screens/gantt/milestone-moved-toast.html:4
+msgid "moved to"
+msgstr "verschoben auf"
+
+#: templates/components/screens/gantt/milestone-moved-toast.html:6
+#: templates/components/screens/gantt/project-hidden-toast.html:8
+msgid "Dismiss"
+msgstr "Ausblenden"
+
+#: templates/components/screens/gantt/milestone-popover.html:27
+msgid "Require a reason when moving this milestone"
+msgstr "Beim Verschieben dieses Meilensteins eine Begründung verlangen"
+
+#: templates/components/screens/gantt/milestone-popover.html:46
 #: templates/components/screens/gantt/task-popover.html:110
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: templates/components/screens/gantt/milestone-popover.html:42
+#: templates/components/screens/gantt/milestone-popover.html:49
 msgid "Delete this milestone?"
 msgstr "Diesen Meilenstein löschen?"
 
-#: templates/components/screens/gantt/milestone-popover.html:42
+#: templates/components/screens/gantt/milestone-popover.html:49
 #: templates/components/screens/gantt/task-popover.html:113
 msgid "Delete"
 msgstr "Löschen"
@@ -888,10 +951,6 @@ msgstr "Projekt erstellt, aber durch den aktiven Teamfilter ausgeblendet."
 #: templates/components/screens/gantt/project-hidden-toast.html:6
 msgid "Clear team filter"
 msgstr "Teamfilter löschen"
-
-#: templates/components/screens/gantt/project-hidden-toast.html:8
-msgid "Dismiss"
-msgstr "Ausblenden"
 
 #: templates/components/screens/gantt/project-popover.html:22
 #: templates/components/screens/gantt/task-popover.html:52

@@ -18,6 +18,7 @@ class Milestone(models.Model):
     )
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
+    require_move_reason = models.BooleanField(default=False)
     date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
