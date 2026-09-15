@@ -22,6 +22,7 @@ from .helpers import (
     collapsed_projects, set_collapsed_projects,
     show_completed, set_show_completed, patch_chart,
     team_filter, can_manage_project, project_manager_required, request_data,
+    request_person,
 )
 
 
@@ -64,6 +65,8 @@ def project_popover(request: HttpRequest, project_id: int):
     proj.responsible_person_ids = list(
         proj.responsible_people.values_list("id", flat=True)
     )
+    current_person = request_person(request)
+    can_manage = can_manage_project(request, proj)
     yield SSE.patch_elements(
         render_component(
             request, "screens/gantt/project-popover",
@@ -72,7 +75,13 @@ def project_popover(request: HttpRequest, project_id: int):
                 .prefetch_related("teams").order_by("name", "id"),
             colors=PROJECT_COLORS,
             destination_workspaces=destination_workspaces,
-            can_manage=can_manage_project(request, proj),
+            can_manage=can_manage,
+            current_person=current_person,
+            can_assign_self=(
+                current_person is not None
+                and not proj.responsible_person_ids
+                and not can_manage
+            ),
             teams_notify_events=teams_notify_events(),
         )
     )
@@ -91,6 +100,12 @@ def project_update(request: HttpRequest, project_id: int):
         for value in request.POST.getlist("responsible_person_ids")
         if value.isdigit()
     ]
+    current_person = request_person(request)
+    can_update_responsible_people = can_update_teams or (
+        current_person is not None
+        and not proj.responsible_people.exists()
+        and set(responsible_person_ids) == {current_person.id}
+    )
     update_project(
         workspace=request.workspace,
         project_id=project_id,
@@ -99,7 +114,9 @@ def project_update(request: HttpRequest, project_id: int):
         color=request.POST.get("color") or None,
         teams_webhook_url=request.POST.get("teams_webhook_url", "") if can_update_teams else None,
         teams_notify_events=request.POST.getlist("teams_notify_events") if can_update_teams else None,
-        responsible_person_ids=responsible_person_ids if can_update_teams else None,
+        responsible_person_ids=(
+            responsible_person_ids if can_update_responsible_people else None
+        ),
         actor=request.user,
     )
     yield patch_chart(request)

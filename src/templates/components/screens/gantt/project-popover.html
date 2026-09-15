@@ -1,6 +1,6 @@
 {% load i18n %}
 {# Project editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars project people colors destination_workspaces teams_notify_events can_manage="False" />
+<c-vars project people colors destination_workspaces teams_notify_events can_manage="False" current_person="" can_assign_self="False" />
 <div id="drawer-slot">
   <form
     id="project-popover"
@@ -16,13 +16,38 @@
       <label class="label" for="project-description">{% trans "Description" %}</label>
       <textarea id="project-description" class="textarea textarea-sm w-full" name="description" rows="3">{{ project.description }}</textarea>
     </fieldset>
-    <fieldset class="fieldset">
+    <fieldset id="project-responsible-editor" class="fieldset" data-can-edit="{{ can_manage|yesno:'true,false' }}">
       <label class="label" for="project-responsible-people">{% trans "Responsible people" %}</label>
-      <select id="project-responsible-people" class="select select-sm w-full" name="responsible_person_ids" multiple size="6"{% if not can_manage %} disabled{% endif %}>
+      <div id="project-responsible-pills" class="assignees-area">
+        <span id="project-responsible-empty" class="responsible-empty"{% if project.responsible_person_ids %} hidden{% endif %}>{% trans "Nobody assigned" %}</span>
         {% for person in people %}
-          <option value="{{ person.id }}"{% if person.id in project.responsible_person_ids %} selected{% endif %}>{{ person.name }}{% if person.teams.all %} — {% for team in person.teams.all %}{{ team.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</option>
+          <span class="project-responsible-pill chip" data-person-id="{{ person.id }}"{% if person.id not in project.responsible_person_ids %} hidden{% endif %}>
+            <input type="hidden" name="responsible_person_ids" value="{{ person.id }}"{% if person.id not in project.responsible_person_ids %} disabled{% endif %}>
+            <span>{{ person.name }}</span>
+            <button type="button"{% if not can_manage %} hidden{% endif %}
+                    aria-label="{% blocktrans with name=person.name %}Remove {{ name }}{% endblocktrans %}"
+                    data-on:click="nano.removeProjectResponsible({{ person.id }})">
+              <c-lucide name="x" size="12" />
+            </button>
+          </span>
         {% endfor %}
-      </select>
+      </div>
+      {% if can_manage %}
+        <select id="project-responsible-people" class="select select-sm w-full"
+                aria-label="{% trans 'Add responsible person' %}"
+                data-on:change="nano.addProjectResponsible(el)">
+          <option value="">{% trans "Add responsible person…" %}</option>
+          {% for person in people %}
+            <option value="{{ person.id }}"{% if person.id in project.responsible_person_ids %} disabled{% endif %}>{{ person.name }}{% if person.teams.all %} — {% for team in person.teams.all %}{{ team.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</option>
+          {% endfor %}
+        </select>
+      {% else %}
+        <select id="project-responsible-people" hidden disabled aria-hidden="true"></select>
+      {% endif %}
+      {% if can_assign_self %}
+        <button id="project-assign-me" type="button" class="btn btn-sm btn-outline self-start"
+                data-on:click="nano.assignProjectToMe({{ current_person.id }})">{% trans "Assign to me" %}</button>
+      {% endif %}
     </fieldset>
     {% if can_manage %}
       <div id="project-teams-settings" class="collapse collapse-arrow bg-base-200">

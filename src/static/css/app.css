@@ -2710,6 +2710,9 @@
   .gap-y-1 {
     row-gap: calc(var(--spacing) * 1);
   }
+  .self-start {
+    align-self: flex-start;
+  }
   .truncate {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -6301,6 +6304,39 @@ html, body {
     color: var(--color-base-content);
     @supports (color: color-mix(in lab, red, red)) {
       color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    }
+  }
+  #project-responsible-pills, #task-assignee-pills {
+    min-height: calc(var(--spacing) * 10);
+    gap: calc(var(--spacing) * 1.5);
+    padding: calc(var(--spacing) * 1.5);
+  }
+  .project-responsible-pill, .task-assignee-pill {
+    gap: calc(var(--spacing) * 1.5);
+    padding-block: calc(var(--spacing) * 1);
+    padding-right: calc(var(--spacing) * 1);
+    padding-left: calc(var(--spacing) * 2.5);
+  }
+  .project-responsible-pill button, .task-assignee-pill button {
+    display: inline-flex;
+    height: calc(var(--spacing) * 5);
+    width: calc(var(--spacing) * 5);
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(infinity * 1px);
+  }
+  .project-responsible-pill button:hover, .task-assignee-pill button:hover {
+    background-color: var(--color-base-300);
+    color: var(--color-error);
+  }
+  .project-responsible-pill button svg, .task-assignee-pill button svg {
+    pointer-events: none;
+  }
+  .responsible-empty {
+    padding-inline: calc(var(--spacing) * 1);
+    color: var(--color-base-content);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
     }
   }
   .colors {

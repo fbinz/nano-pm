@@ -1,6 +1,6 @@
 {% load i18n %}
 {# Task editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars task projects people milestone_options preds succs can_edit is_initial="" />
+<c-vars task projects people milestone_options preds succs can_edit current_person="" can_assign_self="False" is_initial="" />
 <div id="drawer-slot">
   <form
     id="task-popover"
@@ -46,17 +46,38 @@
       </datalist>
       <p class="text-xs opacity-70">{% trans "A non-empty milestone title creates a milestone using this task's project and end date. Click the milestone to edit its description." %}</p>
     </fieldset>
-    <fieldset class="fieldset">
+    <fieldset id="task-assignee-editor" class="fieldset" data-can-edit="{{ can_edit|yesno:'true,false' }}">
       <label class="label" for="task-assignees">{% trans "Assignees" %}</label>
-      <select id="task-assignees" class="select select-sm w-full" name="assignee_ids" multiple size="6">
-        {% for p in people %}
-          {% if p.id in task.assignee_ids %}
-            <option value="{{ p.id }}" selected>{{ p.name }}{% if p.teams.all %} — {% for team in p.teams.all %}{{ team.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</option>
-          {% else %}
-            <option value="{{ p.id }}">{{ p.name }}{% if p.teams.all %} — {% for team in p.teams.all %}{{ team.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</option>
-          {% endif %}
+      <div id="task-assignee-pills" class="assignees-area">
+        <span id="task-assignee-empty" class="responsible-empty"{% if task.assignee_ids %} hidden{% endif %}>{% trans "Nobody assigned" %}</span>
+        {% for person in people %}
+          <span class="task-assignee-pill chip" data-person-id="{{ person.id }}"{% if person.id not in task.assignee_ids %} hidden{% endif %}>
+            <input type="hidden" name="assignee_ids" value="{{ person.id }}"{% if person.id not in task.assignee_ids %} disabled{% endif %}>
+            <span>{{ person.name }}</span>
+            <button type="button"{% if not can_edit %} hidden{% endif %}
+                    aria-label="{% blocktrans with name=person.name %}Remove {{ name }}{% endblocktrans %}"
+                    data-on:click="nano.removeTaskAssignee({{ person.id }})">
+              <c-lucide name="x" size="12" />
+            </button>
+          </span>
         {% endfor %}
-      </select>
+      </div>
+      {% if can_edit %}
+        <select id="task-assignees" class="select select-sm w-full"
+                aria-label="{% trans 'Add assignee' %}"
+                data-on:change="nano.addTaskAssignee(el)">
+          <option value="">{% trans "Add assignee…" %}</option>
+          {% for person in people %}
+            <option value="{{ person.id }}"{% if person.id in task.assignee_ids %} disabled{% endif %}>{{ person.name }}{% if person.teams.all %} — {% for team in person.teams.all %}{{ team.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</option>
+          {% endfor %}
+        </select>
+      {% else %}
+        <select id="task-assignees" hidden disabled aria-hidden="true"></select>
+      {% endif %}
+      {% if can_assign_self %}
+        <button id="task-assign-me" type="button" class="btn btn-sm btn-outline self-start"
+                data-on:click="nano.assignTaskToMe({{ current_person.id }})">{% trans "Assign to me" %}</button>
+      {% endif %}
     </fieldset>
     <fieldset class="fieldset">
       <label class="label">{% trans "Dependencies" %}</label>

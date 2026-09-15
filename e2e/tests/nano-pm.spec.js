@@ -183,8 +183,7 @@ test.describe('activity log', () => {
     await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).click();
     await expect(page.locator('#task-popover')).toBeVisible();
 
-    const alexValue = await page.locator('#task-assignees option', { hasText: 'Alex Chen' }).first().getAttribute('value');
-    await page.locator('#task-assignees').selectOption([alexValue]);
+    await page.getByRole('button', { name: 'Remove Sam Patel' }).click();
     await page.click('#task-popover button[type=submit]');
     await expect(page.locator('#task-popover')).toHaveCount(0);
 
@@ -558,7 +557,7 @@ test.describe('chart structure', () => {
     await apiProject.locator('.left-cell.proj').click();
     const responsible = page.locator('#project-responsible-people');
     const rileyValue = await responsible.locator('option', { hasText: 'Riley Wong' }).getAttribute('value');
-    await responsible.selectOption([rileyValue]);
+    await responsible.selectOption(rileyValue);
     await page.click('#project-popover button[type=submit]');
     await expect(page.locator('#project-popover')).toHaveCount(0);
 
@@ -1343,28 +1342,23 @@ test.describe('task popover', () => {
     await expect(page.locator('#task-popover select[name=project_id]')).toHaveClass(/\bselect\b/);
   });
 
-  test('assignee multi-select options are shown as a vertical list', async ({ appPage: page }) => {
+  test('task assignees are shown as removable pills', async ({ appPage: page }) => {
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
     await bar.click();
     const assignees = page.locator('#task-assignees');
+    const pills = page.locator('#task-assignee-pills .task-assignee-pill:visible');
     await expect(assignees).toBeVisible();
-    await expect(assignees.locator('option', { hasText: 'Alex Chen — Backend, Infrastructure' })).toHaveCount(1);
+    await expect(pills).toHaveCount(2);
+    await expect(pills).toContainText(['Alex Chen', 'Sam Patel']);
 
-    const layout = await assignees.evaluate(el => {
-      const rects = Array.from(el.options).map(option => {
-        const rect = option.getBoundingClientRect();
-        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-      });
-      const style = getComputedStyle(el);
-      return { display: style.display, appearance: style.appearance, rects };
-    });
+    const removeSam = page.getByRole('button', { name: 'Remove Sam Patel' });
+    await expect(removeSam.locator('svg')).toHaveCount(1);
+    await removeSam.click();
+    await expect(pills).toHaveCount(1);
 
-    expect(layout.display).toBe('block');
-    expect(layout.appearance).not.toBe('base-select');
-    for (let i = 1; i < layout.rects.length; i++) {
-      expect(Math.abs(layout.rects[i].x - layout.rects[0].x)).toBeLessThan(2);
-      expect(layout.rects[i].y).toBeGreaterThan(layout.rects[i - 1].y + 1);
-    }
+    const samValue = await assignees.locator('option', { hasText: 'Sam Patel' }).getAttribute('value');
+    await assignees.selectOption(samValue);
+    await expect(pills).toHaveCount(2);
   });
 
   test('the popover surfaces predecessors and successors', async ({ appPage: page }) => {
@@ -2476,17 +2470,30 @@ test.describe('project & people management', () => {
     const project = page.locator('.left-cell.proj', { hasText: 'API Migration' });
     await project.click();
     const responsible = page.locator('#project-responsible-people');
+    const pills = page.locator('#project-responsible-pills .project-responsible-pill:visible');
     await expect(responsible).toBeVisible();
-    await expect(responsible.locator('option')).toHaveCount(3);
+    await expect(responsible.locator('option:not([value=""])')).toHaveCount(3);
 
     const alexValue = await responsible.locator('option', { hasText: 'Alex Chen' }).getAttribute('value');
     const rileyValue = await responsible.locator('option', { hasText: 'Riley Wong' }).getAttribute('value');
-    await responsible.selectOption([alexValue, rileyValue]);
+    await responsible.selectOption(alexValue);
+    await responsible.selectOption(rileyValue);
+    await expect(pills).toHaveCount(2);
+    await expect(pills).toContainText(['Alex Chen', 'Riley Wong']);
+
+    const removeRiley = page.getByRole('button', { name: 'Remove Riley Wong' });
+    await expect(removeRiley.locator('svg')).toHaveCount(1);
+    await removeRiley.click();
+    await expect(pills).toHaveCount(1);
+    await responsible.selectOption(rileyValue);
+
     await page.click('#project-popover button[type=submit]');
     await expect(page.locator('#project-popover')).toHaveCount(0);
 
     await project.click();
-    await expect(page.locator('#project-responsible-people')).toHaveValues([alexValue, rileyValue]);
+    await expect(page.locator('#project-responsible-pills .project-responsible-pill:visible')).toHaveCount(2);
+    await expect(page.locator('#project-responsible-pills')).toContainText('Alex Chen');
+    await expect(page.locator('#project-responsible-pills')).toContainText('Riley Wong');
 
     await page.locator('.sign-out-btn').click();
     await page.waitForURL('**/accounts/login/');
@@ -2952,6 +2959,27 @@ test.describe('member role', () => {
     expect(status).toBe(403);
   });
 
+  test('member can assign an unowned project to themselves', async ({ page, request }) => {
+    await reset(request);
+    await loginAsMember(page);
+
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    const assignMe = page.getByRole('button', { name: 'Assign to me' });
+    await expect(assignMe).toBeVisible();
+    await assignMe.click();
+    await expect(assignMe).toBeHidden();
+    const pill = page.locator('#project-responsible-pills .project-responsible-pill:visible');
+    await expect(pill).toHaveCount(1);
+    await expect(pill).toContainText('Alex Chen');
+    await expect(pill.getByRole('button', { name: 'Remove Alex Chen' }).locator('svg')).toHaveCount(1);
+
+    await page.click('#project-popover button[type=submit]');
+    await expect(page.locator('#project-popover')).toHaveCount(0);
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await expect(page.locator('#project-responsible-pills .project-responsible-pill:visible')).toContainText('Alex Chen');
+    await expect(page.locator('#project-popover button', { hasText: 'Delete project' })).toBeVisible();
+  });
+
   test('member cannot delete a project', async ({ page, request }) => {
     await reset(request);
     await loginAsMember(page);
@@ -2992,7 +3020,7 @@ test.describe('member role', () => {
     await expect(page.locator('.bar', { hasText: 'Migrate users (updated by member)' })).toBeVisible();
   });
 
-  test('member can update an unassigned task', async ({ page, request }) => {
+  test('member can assign an unowned task to themselves', async ({ page, request }) => {
     await reset(request);
     await loginAsMember(page);
 
@@ -3015,10 +3043,21 @@ test.describe('member role', () => {
     await expect(page.locator('#task-popover button[type=submit]')).toBeVisible();
     await expect(page.locator('#task-popover button', { hasText: 'Delete' })).toBeVisible();
 
+    const assignMe = page.getByRole('button', { name: 'Assign to me' });
+    await expect(assignMe).toBeVisible();
+    await assignMe.click();
+    await expect(assignMe).toBeHidden();
+    const pill = page.locator('#task-assignee-pills .task-assignee-pill:visible');
+    await expect(pill).toContainText('Alex Chen');
+    await expect(pill.getByRole('button', { name: 'Remove Alex Chen' }).locator('svg')).toHaveCount(1);
+
     await page.fill('#task-popover input[name=title]', 'Unassigned task updated by member');
     await page.click('#task-popover button[type=submit]');
     await expect(page.locator('#task-popover')).toHaveCount(0);
-    await expect(page.locator('.bar', { hasText: 'Unassigned task updated by member' })).toBeVisible();
+    const updatedTask = page.locator('.bar', { hasText: 'Unassigned task updated by member' });
+    await expect(updatedTask).toBeVisible();
+    await updatedTask.click();
+    await expect(page.locator('#task-assignee-pills .task-assignee-pill:visible')).toContainText('Alex Chen');
   });
 
   test('member cannot update a task not assigned to them', async ({ page, request }) => {

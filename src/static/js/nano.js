@@ -1075,6 +1075,77 @@
   }
 
   // ---------------------------------------------------------------------- //
+  // Person assignment pill editors                                        //
+  // ---------------------------------------------------------------------- //
+  const personEditorConfig = {
+    project: {
+      editorId: 'project-responsible-editor',
+      pillClass: 'project-responsible-pill',
+      emptyId: 'project-responsible-empty',
+      assignMeId: 'project-assign-me',
+      pickerId: 'project-responsible-people',
+      inputName: 'responsible_person_ids',
+    },
+    task: {
+      editorId: 'task-assignee-editor',
+      pillClass: 'task-assignee-pill',
+      emptyId: 'task-assignee-empty',
+      assignMeId: 'task-assign-me',
+      pickerId: 'task-assignees',
+      inputName: 'assignee_ids',
+    },
+  };
+
+  function syncPersonEditor(kind) {
+    const config = personEditorConfig[kind];
+    const editor = document.getElementById(config.editorId);
+    if (!editor) return;
+    const selectedIds = new Set(
+      [...editor.querySelectorAll(`.${config.pillClass}:not([hidden])`)]
+        .map(pill => pill.dataset.personId)
+    );
+    const empty = document.getElementById(config.emptyId);
+    if (empty) empty.hidden = selectedIds.size > 0;
+    const assignMe = document.getElementById(config.assignMeId);
+    if (assignMe) assignMe.hidden = selectedIds.size > 0;
+    const picker = document.getElementById(config.pickerId);
+    if (picker) {
+      for (const option of picker.options) {
+        if (option.value) option.disabled = selectedIds.has(option.value);
+      }
+      picker.value = '';
+    }
+  }
+
+  function setPersonSelection(kind, personId, selected, allowRemove = false) {
+    const config = personEditorConfig[kind];
+    const editor = document.getElementById(config.editorId);
+    if (!editor) return;
+    const pill = editor.querySelector(`.${config.pillClass}[data-person-id="${personId}"]`);
+    if (!pill) return;
+    pill.hidden = !selected;
+    const input = pill.querySelector(`input[name="${config.inputName}"]`);
+    if (input) input.disabled = !selected;
+    const remove = pill.querySelector('button');
+    if (remove && selected && (editor.dataset.canEdit === 'true' || allowRemove)) {
+      remove.hidden = false;
+    }
+    syncPersonEditor(kind);
+  }
+
+  function addPersonFromPicker(kind, picker) {
+    const personId = picker && picker.value;
+    if (personId) setPersonSelection(kind, personId, true);
+  }
+
+  function addProjectResponsible(picker) { addPersonFromPicker('project', picker); }
+  function removeProjectResponsible(personId) { setPersonSelection('project', String(personId), false); }
+  function assignProjectToMe(personId) { setPersonSelection('project', String(personId), true, true); }
+  function addTaskAssignee(picker) { addPersonFromPicker('task', picker); }
+  function removeTaskAssignee(personId) { setPersonSelection('task', String(personId), false); }
+  function assignTaskToMe(personId) { setPersonSelection('task', String(personId), true, true); }
+
+  // ---------------------------------------------------------------------- //
   // Misc                                                                   //
   // ---------------------------------------------------------------------- //
   // Position the workspace popover below the chevron trigger. Called from
@@ -1108,6 +1179,8 @@
     toggleProjectSortMode, projectSortModeActive,
     closeDrawer, discardDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
     scrollToToday, positionWorkspaceMenu,
+    addProjectResponsible, removeProjectResponsible, assignProjectToMe,
+    addTaskAssignee, removeTaskAssignee, assignTaskToMe,
   };
 
   // Re-apply .bar.selected whenever the chart fragment is patched in (SSE

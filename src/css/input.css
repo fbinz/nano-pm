@@ -676,6 +676,23 @@ html, body { height: 100%; }
   .chip button {
     @apply border-0 bg-transparent p-0 leading-none text-base-content/60 cursor-pointer;
   }
+  #project-responsible-pills,
+  #task-assignee-pills {
+    @apply min-h-10 gap-1.5 p-1.5;
+  }
+  .project-responsible-pill,
+  .task-assignee-pill {
+    @apply gap-1.5 pl-2.5 pr-1 py-1;
+  }
+  .project-responsible-pill button,
+  .task-assignee-pill button {
+    @apply inline-flex items-center justify-center rounded-full w-5 h-5;
+  }
+  .project-responsible-pill button:hover,
+  .task-assignee-pill button:hover { @apply bg-base-300 text-error; }
+  .project-responsible-pill button svg,
+  .task-assignee-pill button svg { @apply pointer-events-none; }
+  .responsible-empty { @apply px-1 text-base-content/50; }
 
   .colors { @apply flex gap-1 flex-wrap; }
   .colors button {
