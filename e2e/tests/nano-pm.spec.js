@@ -2489,6 +2489,7 @@ test.describe('project & people management', () => {
 
     await page.click('#project-popover button[type=submit]');
     await expect(page.locator('#project-popover')).toHaveCount(0);
+    await expect(project.locator('.project-assignees')).toHaveText('Alex, Riley');
 
     await project.click();
     await expect(page.locator('#project-responsible-pills .project-responsible-pill:visible')).toHaveCount(2);

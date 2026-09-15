@@ -4723,6 +4723,21 @@ html, body {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .left-cell.proj .project-assignees {
+    max-width: 40%;
+    flex-shrink: 0;
+    overflow: hidden;
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+    --tw-font-weight: var(--font-weight-normal);
+    font-weight: var(--font-weight-normal);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-base-content);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    }
+  }
   .future-milestone-warning {
     display: inline-flex;
     flex-shrink: 0;

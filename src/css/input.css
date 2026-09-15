@@ -318,6 +318,10 @@ html, body { height: 100%; }
   .project-sort-mode .left-cell.proj .collapse-toggle { display: none; }
   .left-cell.proj .swatch { @apply w-2.5 h-2.5 rounded-[2px] flex-shrink-0; }
   .left-cell.proj .name { @apply min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap; }
+  .left-cell.proj .project-assignees {
+    @apply max-w-[40%] flex-shrink-0 overflow-hidden text-ellipsis whitespace-nowrap
+           text-xs font-normal text-base-content/60;
+  }
   .future-milestone-warning {
     @apply inline-flex flex-shrink-0 items-center justify-center text-warning;
   }

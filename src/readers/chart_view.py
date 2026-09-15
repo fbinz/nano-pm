@@ -88,6 +88,7 @@ class ProjectRowVM:
     order: float
     tasks: list[BarVM]
     milestones: list[MilestoneVM]
+    assignees: str = ""
     # When True the template skips this project's task rows. Milestones on the
     # project's header row keep rendering — they live on the header line, not
     # the per-task rows.
@@ -471,9 +472,12 @@ def build_chart_vm(
             ))
         if team_ids and not project_matches_team and not bars:
             continue
+        project_assignees = ", ".join(
+            person.name.split(" ")[0] for person in proj.responsible_people.all()
+        )
         row_groups.append(ProjectRowVM(
             id=proj.id, name=proj.name, color=proj.color, order=proj.order,
-            tasks=bars, milestones=miles,
+            tasks=bars, milestones=miles, assignees=project_assignees,
             collapsed=(proj.id in collapsed_ids),
             missing_future_milestone=missing_future_milestone,
             completed=proj.is_completed,

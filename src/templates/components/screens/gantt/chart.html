@@ -86,6 +86,7 @@
         </button>
         <span class="swatch" style="background:{{ rg.color }}"></span>
         <span class="name">{{ rg.name }}</span>
+        {% if rg.assignees %}<span class="project-assignees">{{ rg.assignees }}</span>{% endif %}
         {% if rg.missing_future_milestone %}
           <span class="future-milestone-warning" role="img"
                 aria-label="{% trans 'No future milestone' %}"
