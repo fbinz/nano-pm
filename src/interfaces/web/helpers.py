@@ -4,13 +4,14 @@ from datetime import date
 from functools import wraps
 from inspect import iscoroutinefunction
 
+from asgiref.sync import sync_to_async
 from django.http import HttpRequest, HttpResponse
 
 from datastar_py.django import ServerSentEventGenerator as SSE, read_signals
 from django_cotton import render_component
 
 from data.models import Membership, Person, TaskStatus, Team, WorkspaceRole
-from readers import get_chart_state
+from readers import get_chart_state, get_project
 from readers.chart_view import (
     build_chart_vm,
     build_resource_vm,
@@ -183,13 +184,61 @@ def workspace_context(request: HttpRequest) -> dict:
     }
 
 
-def is_assigned(request: HttpRequest, task) -> bool:
-    person = Person.objects.filter(
-        workspace=request.workspace, user=request.user
+def request_person(request: HttpRequest) -> Person | None:
+    return Person.objects.filter(
+        workspace=request.workspace,
+        user=request.user,
     ).first()
-    if person is None:
-        return False
-    return task.assignees.filter(id=person.id).exists()
+
+
+def is_assigned(request: HttpRequest, task) -> bool:
+    person = request_person(request)
+    return person is not None and task.assignees.filter(id=person.id).exists()
+
+
+def is_project_responsible(request: HttpRequest, project) -> bool:
+    person = request_person(request)
+    return person is not None and project.responsible_people.filter(id=person.id).exists()
+
+
+def can_manage_project(request: HttpRequest, project) -> bool:
+    return is_pm(request) or is_project_responsible(request, project)
+
+
+def can_manage_task(request: HttpRequest, task) -> bool:
+    return (
+        can_manage_project(request, task.project)
+        or not task.assignees.exists()
+        or is_assigned(request, task)
+    )
+
+
+def project_manager_required(view_func):
+    """Allow workspace PMs and a project's explicitly responsible people."""
+    def access_status(request: HttpRequest, project_id: int) -> int:
+        project = get_project(request.workspace, project_id)
+        if project is None:
+            return 404
+        return 200 if can_manage_project(request, project) else 403
+
+    if iscoroutinefunction(view_func):
+        @wraps(view_func)
+        async def async_wrapper(request: HttpRequest, project_id: int, *args, **kwargs):
+            status = await sync_to_async(access_status, thread_sensitive=True)(request, project_id)
+            if status != 200:
+                return HttpResponse(status=status)
+            return await view_func(request, project_id, *args, **kwargs)
+
+        return async_wrapper
+
+    @wraps(view_func)
+    def wrapper(request: HttpRequest, project_id: int, *args, **kwargs):
+        status = access_status(request, project_id)
+        if status != 200:
+            return HttpResponse(status=status)
+        return view_func(request, project_id, *args, **kwargs)
+
+    return wrapper
 
 
 def patch_chart(request: HttpRequest, active_zoom: str | None = None):

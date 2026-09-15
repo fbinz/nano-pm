@@ -17,7 +17,7 @@ from actions.manage_tasks import (
 from data.models import Dependency, Milestone
 from readers import get_chart_state, get_task
 
-from .helpers import is_pm, is_assigned, parse_iso, patch_chart, request_data
+from .helpers import can_manage_task, parse_iso, patch_chart, request_data
 
 
 def render_task_popover(request: HttpRequest, task_id: int, *, is_initial: bool = False) -> str | None:
@@ -43,7 +43,7 @@ def render_task_popover(request: HttpRequest, task_id: int, *, is_initial: bool 
             task__isnull=True,
         ).select_related("project").order_by("date", "id")
     )
-    can_edit = is_pm(request) or not task.assignee_ids or is_assigned(request, task)
+    can_edit = can_manage_task(request, task)
     return render_component(
         request, "screens/gantt/task-popover",
         task=task, projects=state.projects, people=state.people,

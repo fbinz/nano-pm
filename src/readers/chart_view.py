@@ -375,6 +375,13 @@ def _task_matches_team_filter(task, team_ids: set[int]) -> bool:
     )
 
 
+def _project_matches_team_filter(project, team_ids: set[int]) -> bool:
+    return any(
+        _person_matches_team_filter(person, team_ids)
+        for person in project.responsible_people.all()
+    )
+
+
 def build_chart_vm(
     state: ChartState,
     zoom: str = DEFAULT_ZOOM,
@@ -406,13 +413,20 @@ def build_chart_vm(
         if proj.is_completed and not show_completed:
             continue
         bars: list[BarVM] = []
+        project_matches_team = bool(
+            team_ids and _project_matches_team_filter(proj, team_ids)
+        )
         missing_future_milestone = not proj.is_completed and not any(
             (m.task.end if m.task is not None else m.date) > state.today
             for m in proj.milestones.all()
         )
         text_color, text_dark = _text_color_for(proj.color)
         for t in proj.tasks.all():
-            if team_ids and not _task_matches_team_filter(t, team_ids):
+            if (
+                team_ids
+                and not project_matches_team
+                and not _task_matches_team_filter(t, team_ids)
+            ):
                 continue
             x = x_of(t.start)
             xe = x_of(t.end)
@@ -436,7 +450,12 @@ def build_chart_vm(
         miles: list[MilestoneVM] = []
         for m in proj.milestones.all():
             task = m.task
-            if task is not None and team_ids and not _task_matches_team_filter(task, team_ids):
+            if (
+                task is not None
+                and team_ids
+                and not project_matches_team
+                and not _task_matches_team_filter(task, team_ids)
+            ):
                 continue
             milestone_date = task.end if task is not None else m.date
             milestone_x = x_of(milestone_date)
@@ -450,7 +469,7 @@ def build_chart_vm(
                 color=proj.color,
                 overdue=(milestone_date < state.today),
             ))
-        if team_ids and not bars:
+        if team_ids and not project_matches_team and not bars:
             continue
         row_groups.append(ProjectRowVM(
             id=proj.id, name=proj.name, color=proj.color, order=proj.order,

@@ -54,6 +54,7 @@ def get_chart_state(workspace) -> ChartState:
         Project.objects.filter(workspace=workspace)
         .order_by("order", "id")
         .prefetch_related(
+            "responsible_people__teams",
             Prefetch(
                 "tasks",
                 queryset=Task.objects.order_by("start", "id").prefetch_related("assignees__teams"),

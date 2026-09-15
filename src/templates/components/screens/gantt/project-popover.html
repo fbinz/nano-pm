@@ -1,6 +1,6 @@
 {% load i18n %}
 {# Project editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars project colors destination_workspaces teams_notify_events is_pm="False" />
+<c-vars project people colors destination_workspaces teams_notify_events can_manage="False" />
 <div id="drawer-slot">
   <form
     id="project-popover"
@@ -16,7 +16,15 @@
       <label class="label" for="project-description">{% trans "Description" %}</label>
       <textarea id="project-description" class="textarea textarea-sm w-full" name="description" rows="3">{{ project.description }}</textarea>
     </fieldset>
-    {% if is_pm %}
+    <fieldset class="fieldset">
+      <label class="label" for="project-responsible-people">{% trans "Responsible people" %}</label>
+      <select id="project-responsible-people" class="select select-sm w-full" name="responsible_person_ids" multiple size="6"{% if not can_manage %} disabled{% endif %}>
+        {% for person in people %}
+          <option value="{{ person.id }}"{% if person.id in project.responsible_person_ids %} selected{% endif %}>{{ person.name }}{% if person.teams.all %} — {% for team in person.teams.all %}{{ team.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </fieldset>
+    {% if can_manage %}
       <div id="project-teams-settings" class="collapse collapse-arrow bg-base-200">
         <input type="checkbox" aria-label="{% trans 'Toggle Teams notification settings' %}">
         <div class="collapse-title text-sm font-medium">{% trans "Teams notifications" %}</div>
@@ -87,7 +95,7 @@
       </div>
     {% endif %}
     <div class="actions">
-      {% if is_pm %}
+      {% if can_manage %}
         <button type="button" class="btn btn-sm btn-ghost text-error danger"
                 data-on:click="confirm('{% blocktrans with name=project.name|escapejs %}Delete project &quot;{{ name }}&quot; and all its tasks?{% endblocktrans %}') && @post('/projects/{{ project.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete project" %}</button>
       {% endif %}

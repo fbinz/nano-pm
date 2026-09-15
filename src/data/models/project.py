@@ -32,6 +32,11 @@ class Project(models.Model):
     )
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
+    responsible_people = models.ManyToManyField(
+        "data.Person",
+        related_name="responsible_projects",
+        blank=True,
+    )
     color = models.CharField(max_length=9, default=PROJECT_COLORS[0])
     teams_webhook_url = models.URLField(blank=True, default="")
     teams_notify_events = models.JSONField(default=default_teams_notify_events, blank=True)

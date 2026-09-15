@@ -553,6 +553,25 @@ test.describe('chart structure', () => {
     await expect(page.locator('.left-cell.task:visible')).toHaveCount(8);
   });
 
+  test('team filter includes entire projects owned by people on the selected team', async ({ appPage: page }) => {
+    const apiProject = page.locator('.project-group').filter({ hasText: 'API Migration' });
+    await apiProject.locator('.left-cell.proj').click();
+    const responsible = page.locator('#project-responsible-people');
+    const rileyValue = await responsible.locator('option', { hasText: 'Riley Wong' }).getAttribute('value');
+    await responsible.selectOption([rileyValue]);
+    await page.click('#project-popover button[type=submit]');
+    await expect(page.locator('#project-popover')).toHaveCount(0);
+
+    await page.locator('#team-filter summary').click();
+    await page.locator('#team-filter .team-filter-option', { hasText: 'Design' }).click();
+
+    // The task count only changes after the server-rendered chart patch lands.
+    await expect(page.locator('.left-cell.task:visible')).toHaveCount(7);
+    await expect(page.locator('.left-cell.proj')).toHaveCount(3);
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toBeVisible();
+    await expect(apiProject.locator('.left-cell.task:visible')).toHaveCount(3);
+  });
+
   test('creating a project under a team filter warns that it is hidden and can clear the filter', async ({ appPage: page }) => {
     await page.locator('#team-filter summary').click();
     await page.locator('#team-filter .team-filter-option', { hasText: 'Design' }).click();
@@ -2453,6 +2472,46 @@ test.describe('project & people management', () => {
     }
   });
 
+  test('projects support multiple responsible people who can manage related tasks', async ({ appPage: page }) => {
+    const project = page.locator('.left-cell.proj', { hasText: 'API Migration' });
+    await project.click();
+    const responsible = page.locator('#project-responsible-people');
+    await expect(responsible).toBeVisible();
+    await expect(responsible.locator('option')).toHaveCount(3);
+
+    const alexValue = await responsible.locator('option', { hasText: 'Alex Chen' }).getAttribute('value');
+    const rileyValue = await responsible.locator('option', { hasText: 'Riley Wong' }).getAttribute('value');
+    await responsible.selectOption([alexValue, rileyValue]);
+    await page.click('#project-popover button[type=submit]');
+    await expect(page.locator('#project-popover')).toHaveCount(0);
+
+    await project.click();
+    await expect(page.locator('#project-responsible-people')).toHaveValues([alexValue, rileyValue]);
+
+    await page.locator('.sign-out-btn').click();
+    await page.waitForURL('**/accounts/login/');
+    await page.fill('input[name=username]', 'member1');
+    await page.fill('input[name=password]', 'member1');
+    await page.click('button[type=submit]');
+    await page.waitForURL('/');
+
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    await expect(page.locator('#project-popover button', { hasText: 'Delete project' })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // Alex is not assigned to this task, but is responsible for its project.
+    await page.locator('.bar', { hasText: 'Cutover and deprecation' }).click({ force: true });
+    await expect(page.locator('#task-popover button[type=submit]')).toBeVisible();
+    await page.fill('#task-popover input[name=title]', 'Cutover managed by project lead');
+    await page.click('#task-popover button[type=submit]');
+    await expect(page.locator('.bar', { hasText: 'Cutover managed by project lead' })).toBeVisible();
+
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#project-popover button', { hasText: 'Delete project' }).click();
+    await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toHaveCount(0);
+  });
+
   test('PM can delete a project from the sidebar', async ({ appPage: page }) => {
     await page.locator('.left-cell.proj', { hasText: 'Infra hardening' }).click();
     await expect(page.locator('#project-popover')).toBeVisible();
@@ -3244,6 +3303,7 @@ test.describe('project completion', () => {
 
     await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
     await page.waitForSelector('#project-popover');
+    await expect(page.locator('label[for="project-responsible-people"]')).toHaveText('Verantwortliche');
     await expect(page.locator('#pp-toggle-complete')).toHaveText(/Als erledigt markieren/);
   });
 

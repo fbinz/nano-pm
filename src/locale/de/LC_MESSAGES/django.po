@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-07 19:17+0000\n"
+"POT-Creation-Date: 2026-09-15 10:56+0000\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -179,7 +179,7 @@ msgid "Body"
 msgstr "Text"
 
 #: data/models/activity.py:131
-#: templates/components/screens/gantt/project-popover.html:44
+#: templates/components/screens/gantt/project-popover.html:52
 msgid "Color"
 msgstr "Farbe"
 
@@ -233,66 +233,71 @@ msgid "Project"
 msgstr "Projekt"
 
 #: data/models/activity.py:142
+#: templates/components/screens/gantt/project-popover.html:20
+msgid "Responsible people"
+msgstr "Verantwortliche"
+
+#: data/models/activity.py:143
 msgid "Public roadmap description"
 msgstr "Beschreibung der öffentlichen Roadmap"
 
-#: data/models/activity.py:143
+#: data/models/activity.py:144
 msgid "Public roadmap enabled"
 msgstr "Öffentliche Roadmap aktiviert"
 
-#: data/models/activity.py:144
+#: data/models/activity.py:145
 msgid "Public roadmap title"
 msgstr "Titel der öffentlichen Roadmap"
 
-#: data/models/activity.py:145
+#: data/models/activity.py:146
 msgid "Public roadmap token"
 msgstr "Token der öffentlichen Roadmap"
 
-#: data/models/activity.py:146
+#: data/models/activity.py:147
 #: templates/components/screens/gantt/task-popover.html:23
 msgid "Start"
 msgstr "Start"
 
-#: data/models/activity.py:147
+#: data/models/activity.py:148
 msgid "Status"
 msgstr "Status"
 
-#: data/models/activity.py:148
+#: data/models/activity.py:149
 msgid "Successor"
 msgstr "Nachfolger"
 
-#: data/models/activity.py:149
+#: data/models/activity.py:150
 #: templates/components/screens/ideas/detail.html:53
 msgid "Tags"
 msgstr "Tags"
 
-#: data/models/activity.py:150
+#: data/models/activity.py:151
 #: templates/components/screens/gantt/team-filter.html:6
 #: templates/components/screens/people/people-content.html:5
 #: templates/components/screens/people/people-list.html:18
 msgid "Teams"
 msgstr "Teams"
 
-#: data/models/activity.py:151
+#: data/models/activity.py:152
 #: templates/components/screens/gantt/milestone-popover.html:15
 #: templates/components/screens/gantt/task-popover.html:14
 msgid "Title"
 msgstr "Titel"
 
-#: data/models/activity.py:152
+#: data/models/activity.py:153
 msgid "Workspace"
 msgstr "Arbeitsbereich"
 
-#: data/models/activity.py:169
+#: data/models/activity.py:170
 msgid "changed"
 msgstr "geändert"
 
-#: data/models/activity.py:173
+#: data/models/activity.py:174
 #, python-format
 msgid "%(before)s → %(after)s"
 msgstr "%(before)s → %(after)s"
 
-#: data/models/activity.py:189
+#: data/models/activity.py:190
 #, python-format
 msgid "%(label)s: %(value)s"
 msgstr "%(label)s: %(value)s"
@@ -360,7 +365,7 @@ msgstr "In Bearbeitung"
 
 #: data/models/task.py:10 templates/components/screens/gantt/chart.html:96
 #: templates/components/screens/gantt/milestone-popover.html:44
-#: templates/components/screens/gantt/project-popover.html:94
+#: templates/components/screens/gantt/project-popover.html:102
 #: templates/components/screens/gantt/task-popover.html:94
 msgid "Done"
 msgstr "Erledigt"
@@ -888,19 +893,19 @@ msgstr "Teamfilter löschen"
 msgid "Dismiss"
 msgstr "Ausblenden"
 
-#: templates/components/screens/gantt/project-popover.html:21
+#: templates/components/screens/gantt/project-popover.html:29
 msgid "Toggle Teams notification settings"
 msgstr "Teams-Benachrichtigungseinstellungen ein-/ausklappen"
 
-#: templates/components/screens/gantt/project-popover.html:22
+#: templates/components/screens/gantt/project-popover.html:30
 msgid "Teams notifications"
 msgstr "Teams-Benachrichtigungen"
 
-#: templates/components/screens/gantt/project-popover.html:25
+#: templates/components/screens/gantt/project-popover.html:33
 msgid "Microsoft Teams webhook URL"
 msgstr "Microsoft-Teams-Webhook-URL"
 
-#: templates/components/screens/gantt/project-popover.html:27
+#: templates/components/screens/gantt/project-popover.html:35
 msgid ""
 "Send notifications to this Teams channel when selected milestone events "
 "happen."
@@ -908,58 +913,58 @@ msgstr ""
 "Benachrichtigungen an diesen Teams-Kanal senden, wenn ausgewählte "
 "Meilenstein-Ereignisse eintreten."
 
-#: templates/components/screens/gantt/project-popover.html:30
+#: templates/components/screens/gantt/project-popover.html:38
 msgid "Notify for"
 msgstr "Benachrichtigen bei"
 
-#: templates/components/screens/gantt/project-popover.html:57
+#: templates/components/screens/gantt/project-popover.html:65
 msgid "move up"
 msgstr "nach oben"
 
-#: templates/components/screens/gantt/project-popover.html:59
+#: templates/components/screens/gantt/project-popover.html:67
 msgid "move down"
 msgstr "nach unten"
 
-#: templates/components/screens/gantt/project-popover.html:63
+#: templates/components/screens/gantt/project-popover.html:71
 msgid "+ Add task"
 msgstr "+ Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:65
+#: templates/components/screens/gantt/project-popover.html:73
 msgid "+ Add milestone"
 msgstr "+ Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:70
+#: templates/components/screens/gantt/project-popover.html:78
 msgid "Reopen project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:70
+#: templates/components/screens/gantt/project-popover.html:78
 msgid "Mark complete"
 msgstr "Als erledigt markieren"
 
-#: templates/components/screens/gantt/project-popover.html:75
+#: templates/components/screens/gantt/project-popover.html:83
 #, fuzzy
 #| msgid "Create workspace"
 msgid "Move to workspace"
 msgstr "Arbeitsbereich erstellen"
 
-#: templates/components/screens/gantt/project-popover.html:84
+#: templates/components/screens/gantt/project-popover.html:92
 #, fuzzy, python-format
 #| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgid "Move project &quot;%(name)s&quot; to the selected workspace?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:85
+#: templates/components/screens/gantt/project-popover.html:93
 #, fuzzy
 #| msgid "Reopen project"
 msgid "Move project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:92
+#: templates/components/screens/gantt/project-popover.html:100
 #, python-format
 msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:92
+#: templates/components/screens/gantt/project-popover.html:100
 msgid "Delete project"
 msgstr "Projekt löschen"
 

@@ -139,6 +139,7 @@ class ActivityEvent(models.Model):
             "order": _("Order"),
             "predecessor": _("Predecessor"),
             "project": _("Project"),
+            "responsible_people": _("Responsible people"),
             "public_roadmap_description": _("Public roadmap description"),
             "public_roadmap_enabled": _("Public roadmap enabled"),
             "public_roadmap_title": _("Public roadmap title"),

@@ -16,6 +16,14 @@ PROJECT_FIELDS = [
 ]
 
 
+def _project_values(project: Project, fields: list[str] | None = None) -> dict:
+    values = snapshot(project, fields or PROJECT_FIELDS)
+    values["responsible_people"] = list(
+        project.responsible_people.order_by("name", "id").values_list("name", flat=True)
+    )
+    return values
+
+
 def create_project(
     *,
     workspace,
@@ -42,7 +50,7 @@ def create_project(
         actor=actor,
         action="project.created",
         entity=project,
-        changes=created_changes(snapshot(project, PROJECT_FIELDS)),
+        changes=created_changes(_project_values(project)),
     )
     return project
 
@@ -56,10 +64,13 @@ def update_project(
     color: str | None = None,
     teams_webhook_url: str | None = None,
     teams_notify_events: list[str] | None = None,
+    responsible_person_ids: list[int] | None = None,
     actor=None,
 ) -> Project | None:
     try:
-        proj = Project.objects.get(id=project_id, workspace=workspace)
+        proj = Project.objects.prefetch_related("responsible_people").get(
+            id=project_id, workspace=workspace
+        )
     except Project.DoesNotExist:
         return None
     update_fields = ["name", "description", "color"]
@@ -67,7 +78,7 @@ def update_project(
         update_fields.append("teams_webhook_url")
     if teams_notify_events is not None:
         update_fields.append("teams_notify_events")
-    before = snapshot(proj, update_fields)
+    before = _project_values(proj, update_fields)
     if name is not None:
         proj.name = name
     if description is not None:
@@ -79,12 +90,18 @@ def update_project(
     if teams_notify_events is not None:
         proj.teams_notify_events = normalize_notify_events(teams_notify_events)
     proj.save()
+    if responsible_person_ids is not None:
+        valid_ids = Person.objects.filter(
+            id__in=responsible_person_ids,
+            workspace=workspace,
+        ).values_list("id", flat=True)
+        proj.responsible_people.set(valid_ids)
     log_activity(
         workspace=workspace,
         actor=actor,
         action="project.updated",
         entity=proj,
-        changes=change_set(before, snapshot(proj, update_fields)),
+        changes=change_set(before, _project_values(proj, update_fields)),
         skip_empty_changes=True,
     )
     return proj
@@ -228,11 +245,17 @@ def move_project_to_workspace(
             task.id: list(task.assignees.filter(user__isnull=False).values_list("user_id", flat=True))
             for task in proj.tasks.prefetch_related("assignees")
         }
+        responsible_user_ids = list(
+            proj.responsible_people.filter(user__isnull=False).values_list("user_id", flat=True)
+        )
+        linked_user_ids = {
+            uid for uids in assignees_by_task.values() for uid in uids
+        } | set(responsible_user_ids)
         target_people_by_user = {
             p.user_id: p
             for p in Person.objects.filter(
                 workspace_id=target_workspace_id,
-                user_id__in={uid for uids in assignees_by_task.values() for uid in uids},
+                user_id__in=linked_user_ids,
             )
         }
 
@@ -261,6 +284,11 @@ def move_project_to_workspace(
                 if uid in target_people_by_user
             ]
             task.assignees.set(remapped)
+        proj.responsible_people.set(
+            target_people_by_user[uid]
+            for uid in responsible_user_ids
+            if uid in target_people_by_user
+        )
 
         changes = {
             "workspace": {"from": source_workspace_name, "to": target_workspace.name},
@@ -293,7 +321,7 @@ def delete_project(*, workspace, project_id: int, actor=None) -> bool:
     project = Project.objects.filter(id=project_id, workspace=workspace).first()
     if project is None:
         return False
-    values = snapshot(project, PROJECT_FIELDS)
+    values = _project_values(project)
     label = project.name
     entity_id = project.id
     project.delete()

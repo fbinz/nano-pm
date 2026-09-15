@@ -14,14 +14,14 @@ from actions.manage_projects import (
     create_project, update_project, delete_project, move_project, reorder_projects,
     move_project_to_workspace, set_project_completed,
 )
-from data.models import Membership, WorkspaceRole
+from data.models import Membership, Person, WorkspaceRole
 from data.models.project import PROJECT_COLORS, TEAMS_NOTIFY_EVENT_CHOICES
 from readers import get_project
 
 from .helpers import (
     collapsed_projects, set_collapsed_projects,
     show_completed, set_show_completed, patch_chart,
-    team_filter, is_pm, pm_required, request_data,
+    team_filter, can_manage_project, project_manager_required, request_data,
 )
 
 
@@ -61,13 +61,18 @@ def project_popover(request: HttpRequest, project_id: int):
             workspace=request.workspace,
         ).select_related("workspace").order_by("workspace__name")
     ]
+    proj.responsible_person_ids = list(
+        proj.responsible_people.values_list("id", flat=True)
+    )
     yield SSE.patch_elements(
         render_component(
             request, "screens/gantt/project-popover",
             project=proj,
+            people=Person.objects.filter(workspace=request.workspace)
+                .prefetch_related("teams").order_by("name", "id"),
             colors=PROJECT_COLORS,
             destination_workspaces=destination_workspaces,
-            is_pm=is_pm(request),
+            can_manage=can_manage_project(request, proj),
             teams_notify_events=teams_notify_events(),
         )
     )
@@ -77,7 +82,15 @@ def project_popover(request: HttpRequest, project_id: int):
 @login_required
 @datastar_response
 def project_update(request: HttpRequest, project_id: int):
-    can_update_teams = is_pm(request)
+    proj = get_project(request.workspace, project_id)
+    if proj is None:
+        return
+    can_update_teams = can_manage_project(request, proj)
+    responsible_person_ids = [
+        int(value)
+        for value in request.POST.getlist("responsible_person_ids")
+        if value.isdigit()
+    ]
     update_project(
         workspace=request.workspace,
         project_id=project_id,
@@ -86,6 +99,7 @@ def project_update(request: HttpRequest, project_id: int):
         color=request.POST.get("color") or None,
         teams_webhook_url=request.POST.get("teams_webhook_url", "") if can_update_teams else None,
         teams_notify_events=request.POST.getlist("teams_notify_events") if can_update_teams else None,
+        responsible_person_ids=responsible_person_ids if can_update_teams else None,
         actor=request.user,
     )
     yield patch_chart(request)
@@ -169,7 +183,7 @@ def toggle_show_completed(request: HttpRequest):
 
 @require_http_methods(["POST"])
 @login_required
-@pm_required
+@project_manager_required
 @datastar_response
 def project_delete(request: HttpRequest, project_id: int):
     delete_project(workspace=request.workspace, project_id=project_id, actor=request.user)
