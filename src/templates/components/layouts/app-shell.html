@@ -3,9 +3,6 @@
 <c-layouts.base title="nano-pm" :sidebar_width="sidebar_width">
   <div class="drawer lg:drawer-open">
     <input id="app-drawer" type="checkbox" class="drawer-toggle" />
-    <div class="drawer-content flex flex-col min-h-screen">
-      {{ slot }}
-    </div>
     <div class="drawer-side z-[60]">
       <label for="app-drawer" class="drawer-overlay" aria-label="{% trans 'Close sidebar' %}"></label>
       <aside class="bg-base-200 h-full w-[220px] flex flex-col border-r border-base-300">
@@ -131,6 +128,9 @@
           </form>
         </div>
       </aside>
+    </div>
+    <div class="drawer-content flex flex-col min-h-screen">
+      {{ slot }}
     </div>
   </div>
 

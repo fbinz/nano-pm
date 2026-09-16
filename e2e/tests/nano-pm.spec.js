@@ -3195,6 +3195,16 @@ test.describe('member role', () => {
 // App sidebar
 // =============================================================================
 test.describe('app sidebar', () => {
+  test('sidebar shell precedes the page content in document order', async ({ appPage: page }) => {
+    const sidebarBeforeContent = await page.locator('.drawer').evaluate((drawer) => {
+      const sidebar = drawer.querySelector(':scope > .drawer-side');
+      const content = drawer.querySelector(':scope > .drawer-content');
+      return Boolean(sidebar.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    expect(sidebarBeforeContent).toBe(true);
+  });
+
   test('sidebar shows brand, nav links, workspace name, and user area', async ({ appPage: page }) => {
     const sidebar = page.locator('.drawer-side');
     await expect(sidebar).toBeVisible();
