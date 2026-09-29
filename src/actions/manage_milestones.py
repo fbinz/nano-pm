@@ -10,7 +10,7 @@ from actions.teams_notifications import (
     queue_milestone_notification,
     queue_project_notification,
 )
-from data.models import Milestone, Project
+from data.models import Milestone, Project, Task
 from actions.auto_cascade import cascade_workspace
 
 
@@ -49,7 +49,7 @@ def _sync_linked_milestones(workspace) -> None:
 
 
 def create_milestone(
-    *, workspace, project_id: int, title: str, on: date, actor=None
+    *, workspace, project_id: int, title: str, on: date, actor=None,
 ) -> Milestone | None:
     try:
         proj = Project.objects.get(id=project_id, workspace=workspace)
@@ -85,6 +85,7 @@ def update_milestone(
     description: str | None = None,
     on: date | None = None,
     project_id: int | None = None,
+    task_id: int | None = None,
     require_move_reason: bool | None = None,
     move_reason: str | None = None,
     actor=None,
@@ -130,6 +131,21 @@ def update_milestone(
             except Project.DoesNotExist:
                 pass
         m.save()
+    if task_id is not None:
+        if task_id == 0:
+            if m.task_id is not None:
+                m.task = None
+                m.save(update_fields=["task", "updated_at"])
+        else:
+            task = Task.objects.filter(
+                id=task_id,
+                project=m.project,
+                end=m.date,
+                milestone__isnull=True,
+            ).first()
+            if task is not None:
+                m.task = task
+                m.save(update_fields=["task", "updated_at"])
     m = Milestone.objects.select_related("project", "task").get(id=m.id)
     after = _milestone_values(m)
     changes = change_set(before, after)

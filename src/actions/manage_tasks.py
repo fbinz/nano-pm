@@ -49,51 +49,40 @@ def _sync_linked_milestones(workspace) -> None:
             milestone.save(update_fields=changed)
 
 
-def _find_free_milestone_for_title(task: Task, title: str) -> Milestone | None:
-    return (
+def _set_task_milestone(task: Task, milestone_id: int | None) -> None:
+    """Connect a task to an existing milestone; never create or delete one."""
+    if milestone_id is None:
+        return
+
+    current = Milestone.objects.filter(task=task).first()
+    if milestone_id == 0:
+        if current is not None:
+            current.task = None
+            current.save(update_fields=["task", "updated_at"])
+        return
+
+    selected = (
         Milestone.objects.filter(
-            task__isnull=True,
-            project_id=task.project_id,
-            title=title,
+            id=milestone_id,
+            project__workspace=task.project.workspace,
         )
-        .order_by("date", "id")
+        .select_related("project")
         .first()
     )
-
-
-def _set_task_milestone(task: Task, title: str | None) -> None:
-    if title is None:
+    if selected is None:
         return
-    title = title.strip()
-    milestone = getattr(task, "milestone", None)
-    if title:
-        if milestone is not None and milestone.title == title:
-            milestone.project = task.project
-            milestone.date = task.end
-            milestone.save(update_fields=["project", "date", "updated_at"])
-            return
-        existing = _find_free_milestone_for_title(task, title)
-        if existing is not None:
-            if milestone is not None:
-                milestone.delete()
-            existing.project = task.project
-            existing.task = task
-            existing.date = task.end
-            existing.save(update_fields=["project", "task", "date", "updated_at"])
-        elif milestone is None:
-            Milestone.objects.create(
-                project=task.project,
-                task=task,
-                title=title,
-                date=task.end,
-            )
-        else:
-            milestone.project = task.project
-            milestone.title = title
-            milestone.date = task.end
-            milestone.save(update_fields=["project", "title", "date", "updated_at"])
-    elif milestone is not None:
-        milestone.delete()
+    if selected.task_id not in (None, task.id):
+        return
+    if selected.task_id is None and selected.project_id != task.project_id:
+        return
+
+    if current is not None and current.id != selected.id:
+        current.task = None
+        current.save(update_fields=["task", "updated_at"])
+    selected.project = task.project
+    selected.task = task
+    selected.date = task.end
+    selected.save(update_fields=["project", "task", "date", "updated_at"])
 
 
 def create_task(
@@ -138,7 +127,7 @@ def update_task(
     end: date | None = None,
     project_id: int | None = None,
     assignee_ids: list[int] | None = None,
-    milestone_title: str | None = None,
+    milestone_id: int | None = None,
     actor=None,
 ) -> tuple[Task | None, set[int]]:
     try:
@@ -163,7 +152,7 @@ def update_task(
         if new_proj is not None:
             t.project = new_proj
     t.save()
-    _set_task_milestone(t, milestone_title)
+    _set_task_milestone(t, milestone_id)
     if assignee_ids is not None:
         valid_ids = list(
             Person.objects.filter(id__in=assignee_ids, workspace=workspace).values_list(

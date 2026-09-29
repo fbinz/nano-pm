@@ -36,7 +36,6 @@ def render_task_popover(request: HttpRequest, task_id: int, *, is_initial: bool 
     )
     task.assignee_ids = list(task.assignees.values_list("id", flat=True))
     task.project_id = task.project.id
-    task.milestone_title = task.milestone.title if hasattr(task, "milestone") else ""
     milestone_options = list(
         Milestone.objects.filter(
             project=task.project,
@@ -76,7 +75,10 @@ def task_update(request: HttpRequest, task_id: int):
     project_id_raw = request.POST.get("project_id")
     project_id = int(project_id_raw) if project_id_raw and project_id_raw.isdigit() else None
     assignee_ids = [int(x) for x in request.POST.getlist("assignee_ids") if x.isdigit()]
-    milestone_title = request.POST.get("milestone_title") if "milestone_title" in request.POST else None
+    milestone_id = None
+    if "milestone_id" in request.POST:
+        raw_milestone_id = request.POST.get("milestone_id", "")
+        milestone_id = int(raw_milestone_id) if raw_milestone_id.isdigit() else 0
     update_task(
         workspace=request.workspace,
         task_id=task_id,
@@ -86,7 +88,7 @@ def task_update(request: HttpRequest, task_id: int):
         end=end,
         project_id=project_id,
         assignee_ids=assignee_ids,
-        milestone_title=milestone_title,
+        milestone_id=milestone_id,
         actor=request.user,
     )
     yield patch_chart(request)

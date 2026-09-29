@@ -777,6 +777,24 @@
     });
   }
 
+  function selectMilestoneTaskProposal(button, taskId, saveImmediately = false) {
+    const proposals = button.closest('#milestone-task-proposals');
+    const input = proposals?.querySelector('input[name="task_id"]');
+    if (!input) return;
+    const selectedId = String(taskId);
+    input.value = input.value === selectedId ? '' : selectedId;
+    proposals.querySelectorAll('button[aria-pressed]').forEach(candidate => {
+      const selected = candidate === button && input.value === selectedId;
+      candidate.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      candidate.classList.toggle('btn-neutral', selected);
+      candidate.classList.toggle('btn-outline', !selected);
+      candidate.textContent = selected
+        ? candidate.dataset.connectedLabel
+        : candidate.dataset.connectLabel;
+    });
+    if (saveImmediately) submitMilestoneForm(button.form);
+  }
+
   function submitMilestoneForm(form) {
     const values = Object.fromEntries(new FormData(form).entries());
     delete values.csrfmiddlewaretoken;
@@ -1278,8 +1296,8 @@
     barMouseDown, resizeStart, resizeEnd, depHandle,
     projectRowMouseDown, milestoneMouseDown,
     syncMilestoneMoveReason, chooseMilestoneMoveReason,
-    cancelMilestoneMove, confirmMilestoneMove, submitMilestoneForm,
-    sidebarResizeStart,
+    cancelMilestoneMove, confirmMilestoneMove, selectMilestoneTaskProposal,
+    submitMilestoneForm, sidebarResizeStart,
     openTaskPopover, openProjectPopover, openMilestonePopover, focusTask, addMilestone,
     setCreationMode, cancelCreationMode,
     toggleProjectSortMode, projectSortModeActive,

@@ -3,6 +3,7 @@
 from datetime import date
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import HttpRequest
 from django.views.decorators.http import require_http_methods
 
@@ -16,9 +17,23 @@ from actions.manage_milestones import (
     DEFAULT_MILESTONE_TITLE,
     create_milestone, update_milestone, delete_milestone,
 )
+from data.models import Task
 from readers import get_chart_state, get_project, get_milestone
 
 from .helpers import is_pm, parse_iso, patch_chart, request_data
+
+
+def _task_options(milestone):
+    if milestone.task_id is not None:
+        return []
+    return list(
+        Task.objects.filter(
+            project=milestone.project,
+            end=milestone.date,
+        )
+        .filter(Q(milestone__isnull=True) | Q(milestone=milestone))
+        .order_by("title", "id")
+    )
 
 
 @login_required
@@ -32,7 +47,8 @@ def milestone_popover(request: HttpRequest, milestone_id: int):
     yield SSE.patch_elements(
         render_component(
             request, "screens/gantt/milestone-popover",
-            m=m, projects=state.projects, is_initial=False, is_pm=is_pm(request),
+            m=m, projects=state.projects, task_options=_task_options(m),
+            is_initial=False, is_pm=is_pm(request),
         )
     )
 
@@ -46,6 +62,10 @@ def milestone_update_view(request: HttpRequest, milestone_id: int):
     if milestone is None:
         return
     project_id_raw = str(data.get("project_id", ""))
+    task_id = None
+    if "task_id" in data:
+        task_id_raw = str(data.get("task_id", ""))
+        task_id = int(task_id_raw) if task_id_raw.isdigit() else 0
     description = data.get("description") if "description" in data else None
     new_date = parse_iso(data.get("date", ""))
     moving = new_date is not None and new_date != milestone.date
@@ -65,6 +85,7 @@ def milestone_update_view(request: HttpRequest, milestone_id: int):
         description=description,
         on=new_date,
         project_id=int(project_id_raw) if project_id_raw.isdigit() else None,
+        task_id=task_id,
         require_move_reason=require_move_reason,
         move_reason=reason if moving else None,
         actor=request.user,
@@ -132,11 +153,13 @@ def milestone_create(request: HttpRequest, project_id: int):
     if m is None:
         return
     state = get_chart_state(request.workspace)
+    task_options = _task_options(m)
     yield patch_chart(request)
     m.project_id = m.project.id
     yield SSE.patch_elements(
         render_component(
             request, "screens/gantt/milestone-popover",
-            m=m, projects=state.projects, is_initial=True, is_pm=is_pm(request),
+            m=m, projects=state.projects, task_options=task_options,
+            is_initial=True, is_pm=is_pm(request),
         )
     )

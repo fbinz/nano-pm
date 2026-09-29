@@ -1,6 +1,6 @@
 {% load i18n %}
 {# Milestone editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars m projects is_initial="" is_pm="" />
+<c-vars m projects task_options is_initial="" is_pm="" />
 <div id="drawer-slot">
   <form
     id="milestone-popover"
@@ -21,6 +21,25 @@
       <label class="label" for="milestone-description">{% trans "Description" %}</label>
       <textarea id="milestone-description" class="textarea textarea-sm w-full" name="description" rows="3" required>{{ m.description }}</textarea>
     </fieldset>
+    {% if task_options %}
+      <fieldset id="milestone-task-proposals" class="fieldset">
+        <legend class="label">{% trans "Proposed milestones" %}</legend>
+        <input type="hidden" name="task_id" value="{{ m.task_id|default:'' }}">
+        <div class="deps-list">
+          {% for task in task_options %}
+            <div class="dep-row" data-task-id="{{ task.id }}">
+              <span class="dep-name">{{ task.title }}</span>
+              <button type="button" class="btn btn-xs {% if m.task_id == task.id %}btn-neutral{% else %}btn-outline{% endif %}"
+                      aria-pressed="{% if m.task_id == task.id %}true{% else %}false{% endif %}"
+                      data-connect-label="{% trans 'Connect' %}"
+                      data-connected-label="{% trans 'Connected' %}"
+                      data-on:click="nano.selectMilestoneTaskProposal(el, {{ task.id }}{% if not is_initial %}, true{% endif %})">{% if m.task_id == task.id %}{% trans "Connected" %}{% else %}{% trans "Connect" %}{% endif %}</button>
+            </div>
+          {% endfor %}
+        </div>
+        <p class="text-xs opacity-70">{% trans "These tasks end on this date. A connected milestone automatically follows the task's end date." %}</p>
+      </fieldset>
+    {% endif %}
     {% if is_pm %}
       <label id="milestone-require-move-reason" class="milestone-move-reason-setting label cursor-pointer py-2">
         <input class="checkbox checkbox-sm" type="checkbox" name="require_move_reason"

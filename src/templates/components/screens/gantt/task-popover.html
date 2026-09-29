@@ -37,14 +37,17 @@
       </select>
     </fieldset>
     <fieldset class="fieldset">
-      <label class="label" for="task-milestone-title">{% trans "Milestone" %}</label>
-      <input id="task-milestone-title" class="input input-sm w-full" type="text" name="milestone_title" value="{{ task.milestone_title }}" placeholder="{% trans 'Leave empty for no milestone' %}" list="task-milestone-options">
-      <datalist id="task-milestone-options">
+      <label class="label" for="task-milestone-select">{% trans "Milestone" %}</label>
+      <select id="task-milestone-select" class="select select-sm w-full" name="milestone_id">
+        <option value="">{% trans "No milestone" %}</option>
+        {% if task.milestone %}
+          <option value="{{ task.milestone.id }}" selected>{{ task.milestone.title }}</option>
+        {% endif %}
         {% for milestone in milestone_options %}
-          <option value="{{ milestone.title }}" label="{{ milestone.project.name }} · {{ milestone.date|date:'Y-m-d' }}"></option>
+          <option value="{{ milestone.id }}">{{ milestone.title }}</option>
         {% endfor %}
-      </datalist>
-      <p class="text-xs opacity-70">{% trans "A non-empty milestone title creates a milestone using this task's project and end date. Click the milestone to edit its description." %}</p>
+      </select>
+      <p class="text-xs opacity-70">{% trans "Choose an existing unconnected milestone from this project. Create milestones from the project timeline." %}</p>
     </fieldset>
     <fieldset id="task-assignee-editor" class="fieldset" data-can-edit="{{ can_edit|yesno:'true,false' }}">
       <label class="label" for="task-assignees">{% trans "Assignees" %}</label>

@@ -1338,7 +1338,8 @@ test.describe('task popover', () => {
     await expect(page.locator('#task-popover input[name=title]')).toHaveClass(/\binput\b/);
     await expect(page.locator('#task-popover textarea[name=description]')).toHaveClass(/\btextarea\b/);
     await expect(page.locator('#task-popover input[name=has_milestone]')).toHaveCount(0);
-    await expect(page.locator('#task-popover input[name=milestone_title]')).toHaveClass(/\binput\b/);
+    await expect(page.locator('#task-popover input[name=milestone_title]')).toHaveCount(0);
+    await expect(page.locator('#task-popover select[name=milestone_id]')).toHaveClass(/\bselect\b/);
     await expect(page.locator('#task-popover select[name=project_id]')).toHaveClass(/\bselect\b/);
   });
 
@@ -1804,40 +1805,78 @@ test.describe('multi-select', () => {
 // Project / people management
 // =============================================================================
 test.describe('project & people management', () => {
-  test('task milestones are edited on the task and follow task movement', async ({ appPage: page }) => {
-    const bar = page.locator('.bar', { hasText: 'Cutover and deprecation' });
-    await bar.click();
-    await expect(page.locator('#task-popover')).toBeVisible();
-    await page.fill('#task-popover input[name=milestone_title]', 'Beta customer announcement');
-    await page.click('#task-popover button[type=submit]');
-    await expect(page.locator('#task-popover')).toHaveCount(0);
-
-    await expect(page.locator('.milestone-label', { hasText: 'Beta customer announcement' })).toBeVisible();
-
+  test('milestone creation sidebar lists proposed task connections', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
     const taskId = await bar.getAttribute('data-task-id');
-    const beforeEnd = await bar.getAttribute('data-end');
-    const beforeMilestoneDate = await page.locator(`.milestone[data-task-id="${taskId}"]`).getAttribute('data-date');
-    expect(beforeMilestoneDate).toBe(beforeEnd);
+    const taskEnd = await bar.getAttribute('data-end');
+    const project = page.locator('.project-group').filter({ has: bar });
+    const projectRow = project.locator('.chart-row.proj');
+    const projectRowBox = await projectRow.boundingBox();
+    const barBox = await bar.boundingBox();
 
+    await project.getByRole('button', { name: 'Add milestone' }).click();
+    await page.mouse.click(barBox.x + barBox.width, projectRowBox.y + projectRowBox.height / 2);
+
+    await expect(page.locator('#milestone-task-link-dialog')).toHaveCount(0);
+    const editor = page.locator('#milestone-popover');
+    await expect(editor).toBeVisible();
+    const proposals = editor.locator('#milestone-task-proposals');
+    const proposal = proposals.locator(`[data-task-id="${taskId}"]`);
+    await expect(proposal).toContainText('Migrate /users endpoints');
+    const connect = proposal.locator('button');
+    await expect(connect).toHaveText('Connect');
+    await expect(connect).toHaveAttribute('aria-pressed', 'false');
+    await connect.click();
+    await expect(connect).toHaveAttribute('aria-pressed', 'true');
+    await expect(connect).toHaveText('Connected');
+    await expect(editor.locator('input[name=task_id]')).toHaveValue(taskId);
+    await editor.locator('input[name=title]').fill('Users migration complete');
+    await editor.locator('textarea[name=description]').fill('All user endpoints have moved to the new API.');
+    await editor.locator('button[type=submit]').click();
+
+    await expect(page.locator(`.milestone[data-task-id="${taskId}"]`)).toHaveAttribute('data-date', taskEnd);
+
+    const beforeEnd = await bar.getAttribute('data-end');
     const box = await bar.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 8 });
     await page.mouse.up();
 
-    await page.waitForFunction(
-      ([oldEnd]) => {
-        const el = [...document.querySelectorAll('.bar')]
-          .find(b => b.textContent.includes('Cutover and deprecation'));
-        return el && el.dataset.end !== oldEnd;
-      },
-      [beforeEnd],
-      { timeout: 5000 }
-    );
+    await expect(bar).not.toHaveAttribute('data-end', beforeEnd);
+    await expect(page.locator(`.milestone[data-task-id="${taskId}"]`))
+      .toHaveAttribute('data-date', await bar.getAttribute('data-end'));
+  });
 
-    const afterEnd = await page.locator('.bar', { hasText: 'Cutover and deprecation' }).getAttribute('data-end');
-    const afterMilestoneDate = await page.locator(`.milestone[data-task-id="${taskId}"]`).getAttribute('data-date');
-    expect(afterMilestoneDate).toBe(afterEnd);
+  test('connecting a proposed task from an existing milestone saves immediately', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    const taskId = await bar.getAttribute('data-task-id');
+    const project = page.locator('.project-group').filter({ has: bar });
+    const projectRowBox = await project.locator('.chart-row.proj').boundingBox();
+    const barBox = await bar.boundingBox();
+
+    await project.getByRole('button', { name: 'Add milestone' }).click();
+    await page.mouse.click(barBox.x + barBox.width, projectRowBox.y + projectRowBox.height / 2);
+
+    const editor = page.locator('#milestone-popover');
+    await expect(editor).toBeVisible();
+    await editor.locator('input[name=title]').fill('Users migration checkpoint');
+    await editor.locator('textarea[name=description]').fill('An independent checkpoint to connect later.');
+    await editor.locator('button[type=submit]').click();
+
+    const milestone = page.locator('.milestone[data-title="Users migration checkpoint"]');
+    await expect(milestone).toBeVisible();
+    await expect(milestone).not.toHaveAttribute('data-task-id', taskId);
+    const milestoneBox = await milestone.boundingBox();
+    await page.mouse.click(milestoneBox.x + milestoneBox.width / 2, milestoneBox.y + milestoneBox.height / 2);
+
+    await expect(editor).toBeVisible();
+    const proposal = editor.locator(`#milestone-task-proposals [data-task-id="${taskId}"]`);
+    await expect(proposal).toBeVisible();
+    await proposal.getByRole('button', { name: 'Connect' }).click();
+
+    await expect(editor).toHaveCount(0);
+    await expect(milestone).toHaveAttribute('data-task-id', taskId);
   });
 
   test('task bars visually end at the start of their end date', async ({ appPage: page }) => {
@@ -1980,9 +2019,11 @@ test.describe('project & people management', () => {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await page.waitForSelector('#milestone-popover');
     await expect(page.locator('#milestone-popover input[name=title]')).toHaveValue('v2 API beta');
-    await expect(page.locator('#milestone-popover textarea[name=description]')).toBeVisible();
-    await expect(page.locator('#milestone-popover button', { hasText: 'Delete' })).toBeVisible();
-    await expect(page.locator('#milestone-popover button', { hasText: 'Cancel' })).toHaveCount(0);
+    const editor = page.locator('#milestone-popover');
+    await expect(editor.locator('textarea[name=description]')).toBeVisible();
+    await expect(editor.locator('#milestone-task-proposals')).toHaveCount(0);
+    await expect(editor.locator('button', { hasText: 'Delete' })).toBeVisible();
+    await expect(editor.locator('button', { hasText: 'Cancel' })).toHaveCount(0);
     await expect(page.locator(`#bar-${taskId}`)).toBeVisible();
   });
 
@@ -2015,24 +2056,30 @@ test.describe('project & people management', () => {
     expect(await description.evaluate(el => el.validity.valueMissing)).toBe(true);
   });
 
-  test('editing the task milestone title updates the milestone label', async ({ appPage: page }) => {
-    await page.locator('.bar', { hasText: 'Cutover and deprecation' }).click();
-    await expect(page.locator('#task-popover')).toBeVisible();
-    await page.fill('#task-popover input[name=milestone_title]', 'Beta release cutover');
-    await page.click('#task-popover button[type=submit]');
-    await expect(page.locator('.milestone-label', { hasText: 'Beta release cutover' })).toBeVisible();
+  test('the task milestone control only selects existing milestones', async ({ appPage: page }) => {
+    await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).click();
+    const select = page.locator('#task-popover select[name=milestone_id]');
+    await expect(select).toBeVisible();
+    await expect(page.locator('#task-popover input[name=milestone_title]')).toHaveCount(0);
+    await expect(select.locator('option')).toHaveCount(1);
+    await expect(select.locator('option').first()).toHaveAttribute('value', '');
   });
 
-  test('clearing a task milestone title removes its diamond from the chart', async ({ appPage: page }) => {
+  test('clearing a task milestone selection disconnects without deleting the milestone', async ({ appPage: page }) => {
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
-    await page.locator('.bar', { hasText: 'Cutover and deprecation' }).click();
+    const bar = page.locator('.bar', { hasText: 'Cutover and deprecation' });
+    const taskId = await bar.getAttribute('data-task-id');
+    const milestone = page.locator(`.milestone[data-task-id="${taskId}"]`);
+    const milestoneId = await milestone.getAttribute('data-milestone-id');
+    await bar.click();
     await expect(page.locator('#task-popover')).toBeVisible();
-    await page.locator('#task-milestone-title').fill('');
+    await page.locator('#task-milestone-select').selectOption('');
     await page.click('#task-popover button[type=submit]');
-    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(1);
+    await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(2);
+    await expect(page.locator(`#ms-${milestoneId}`)).not.toHaveAttribute('data-task-id', taskId);
   });
 
-  test('task milestone input autocomplete only lists free milestones from the same project', async ({ appPage: page }) => {
+  test('task milestone selection only lists free milestones from the same project', async ({ appPage: page }) => {
     const project = page.locator('.project-group').filter({ hasText: 'Onboarding revamp' });
     await project.locator('.left-cell.proj').click();
     await expect(page.locator('#project-popover')).toBeVisible();
@@ -2045,12 +2092,11 @@ test.describe('project & people management', () => {
 
     await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).click();
     await expect(page.locator('#task-popover')).toBeVisible();
-    const listId = await page.locator('#task-milestone-title').getAttribute('list');
-    expect(listId).toBeTruthy();
-    await expect(page.locator(`#${listId} option[value="Onboarding-only checkpoint"]`)).toHaveCount(0);
+    const select = page.locator('#task-milestone-select');
+    await expect(select.locator('option', { hasText: 'Onboarding-only checkpoint' })).toHaveCount(0);
   });
 
-  test('task milestone input can autocomplete and link an existing free milestone', async ({ appPage: page }) => {
+  test('task milestone selection can link an existing free milestone', async ({ appPage: page }) => {
     const project = page.locator('.project-group').filter({ hasText: 'API Migration' });
     await project.locator('.left-cell.proj').click();
     await expect(page.locator('#project-popover')).toBeVisible();
@@ -2070,12 +2116,10 @@ test.describe('project & people management', () => {
     await bar.click();
     await expect(page.locator('#task-popover')).toBeVisible();
 
-    const input = page.locator('#task-milestone-title');
-    const listId = await input.getAttribute('list');
-    expect(listId).toBeTruthy();
-    await expect(page.locator(`#${listId} option[value="Reusable checkpoint"]`)).toHaveCount(1);
+    const select = page.locator('#task-milestone-select');
+    await expect(select.locator(`option[value="${milestoneId}"]`)).toHaveText('Reusable checkpoint');
 
-    await input.fill('Reusable checkpoint');
+    await select.selectOption(milestoneId);
     await page.click('#task-popover button[type=submit]');
     await expect(page.locator('#task-popover')).toHaveCount(0);
 
