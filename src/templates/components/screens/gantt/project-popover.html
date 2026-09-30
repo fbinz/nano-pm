@@ -124,7 +124,7 @@
         <button type="button" class="btn btn-sm btn-ghost text-error danger"
                 data-on:click="confirm('{% blocktrans with name=project.name|escapejs %}Delete project &quot;{{ name }}&quot; and all its tasks?{% endblocktrans %}') && @post('/projects/{{ project.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete project" %}</button>
       {% endif %}
-      <button type="submit" class="btn btn-sm btn-neutral primary">{% trans "Done" %}</button>
+      <button type="submit" class="btn btn-sm btn-neutral primary">{% trans "Save" %}</button>
     </div>
   </form>
 </div>

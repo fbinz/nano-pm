@@ -3441,6 +3441,7 @@ test.describe('i18n (German)', () => {
   for (const [kind, selector] of [
     ['task', '.bar:has-text("Migrate /users endpoints")'],
     ['milestone', '.chart-row.proj .milestone'],
+    ['project', '.left-cell.proj:has-text("API Migration")'],
   ]) {
     test(`${kind} save button says Speichern in German`, async ({ appPage: page }) => {
       await page.locator('.lang-btn', { hasText: 'DE' }).click();
