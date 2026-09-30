@@ -69,7 +69,7 @@
         <button type="button" class="btn btn-sm btn-ghost text-error danger"
                 data-on:click="confirm('{% trans 'Delete this milestone?' %}') && @post('/milestones/{{ m.id }}/delete/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">{% trans "Delete" %}</button>
       {% endif %}
-      <button type="submit" class="btn btn-sm btn-neutral primary">{% trans "Done" %}</button>
+      <button type="submit" class="btn btn-sm btn-neutral primary">{% trans "Save" %}</button>
     </div>
   </form>
 </div>

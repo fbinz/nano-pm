@@ -3438,6 +3438,18 @@ test.describe('i18n (German)', () => {
     await expect(button).toHaveText('Alle ausklappen');
   });
 
+  for (const [kind, selector] of [
+    ['task', '.bar:has-text("Migrate /users endpoints")'],
+    ['milestone', '.chart-row.proj .milestone'],
+  ]) {
+    test(`${kind} save button says Speichern in German`, async ({ appPage: page }) => {
+      await page.locator('.lang-btn', { hasText: 'DE' }).click();
+      await expect(page.locator('.lang-btn', { hasText: 'DE' })).toHaveClass(/active/);
+      await page.locator(selector).first().click();
+      await expect(page.locator(`#${kind}-popover button[type=submit]`)).toHaveText('Speichern');
+    });
+  }
+
   test('task popover labels are translated', async ({ appPage: page }) => {
     await page.locator('.lang-btn', { hasText: 'DE' }).click();
     await expect(page.locator('.drawer-side .menu a', { hasText: 'Projekte' })).toBeVisible();
