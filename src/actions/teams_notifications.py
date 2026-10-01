@@ -1,18 +1,13 @@
 """Microsoft Teams milestone notifications."""
 
 import json
-import logging
 from datetime import date
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from html import escape
 
-from django.conf import settings
-from django.db import transaction
-
-from data.models import Milestone, Project
+from actions.teams_delivery import destination_hash
+from actions.public_subscriptions import public_email_allowed
+from data.models import Membership, Milestone, Project, PublicProjectSubscription, TeamsDelivery
 from data.models.project import TEAMS_NOTIFY_EVENT_KEYS
-
-logger = logging.getLogger(__name__)
 
 MILESTONE_CREATED = "milestone.created"
 MILESTONE_MOVED = "milestone.moved"
@@ -20,19 +15,10 @@ MILESTONE_UPDATED = "milestone.updated"
 MILESTONE_PROJECT_CHANGED = "milestone.project_changed"
 MILESTONE_DELETED = "milestone.deleted"
 
-DEFAULT_TIMEOUT_SECONDS = 3.0
 GERMAN_MONTHS = [
     "Januar", "Februar", "März", "April", "Mai", "Juni",
     "Juli", "August", "September", "Oktober", "November", "Dezember",
 ]
-
-
-def _timeout() -> float:
-    value = getattr(settings, "TEAMS_WEBHOOK_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS)
-    try:
-        return max(0.1, float(value))
-    except (TypeError, ValueError):
-        return DEFAULT_TIMEOUT_SECONDS
 
 
 def normalize_notify_events(events: object) -> list[str]:
@@ -51,9 +37,9 @@ def event_slug(event: str) -> str:
 
 
 def project_wants_event(project: Project, event_names: set[str]) -> bool:
-    if not project.teams_webhook_url:
+    if not project.workspace.teams_webhook_url:
         return False
-    enabled = set(normalize_notify_events(project.teams_notify_events))
+    enabled = set(normalize_notify_events(project.workspace.teams_notify_events))
     return bool(enabled & event_names)
 
 
@@ -87,7 +73,8 @@ def _format_value(value: object) -> str:
         return _format_german_date(value) or value.isoformat()
     if value is None or value == "":
         return "—"
-    return str(value)
+    text = str(value)
+    return text if len(text) <= 250 else text[:249] + "…"
 
 
 def _format_field_value(field: str, value: object) -> str:
@@ -105,7 +92,7 @@ def _card_title(milestone_title: str, event_names: set[str]) -> str:
         action = "verschoben"
     else:
         action = "aktualisiert"
-    return f"Meilenstein {milestone_title} {action}"
+    return f"Meilenstein {milestone_title[:200]} {action}"
 
 
 def _actor_subject(actor) -> str:
@@ -264,14 +251,14 @@ def _teams_payload(
         },
         {
             "type": "TextBlock",
-            "text": f"Projekt: {project.name}",
+            "text": f"Projekt: {project.name[:200]}",
             "isSubtle": True,
             "spacing": "None",
             "wrap": True,
         },
         {
             "type": "TextBlock",
-            "text": body,
+            "text": body if len(body) <= 2000 else body[:1999] + "…",
             "spacing": "Medium",
             "wrap": True,
         },
@@ -297,17 +284,51 @@ def _teams_payload(
     }
 
 
-def _post_teams_message(webhook_url: str, payload: dict) -> tuple[int, str]:
-    body = json.dumps(payload).encode("utf-8")
-    request = Request(
-        webhook_url,
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urlopen(request, timeout=_timeout()) as response:  # noqa: S310 - user-configured webhook URL
-        response_body = response.read().decode("utf-8", errors="replace")
-        return response.status, response_body
+def _subscribers(project: Project, related_project_ids: tuple[int, ...]) -> list[str]:
+    upns = Membership.objects.filter(
+        workspace_id=project.workspace_id,
+        user__is_active=True,
+        subscriptions__project_id__in={project.id, *related_project_ids},
+        subscriptions__project__workspace_id=project.workspace_id,
+    ).exclude(teams_upn="").values_list("teams_upn", flat=True)
+    recipients = {upn.lower() for upn in upns}
+    workspace = project.workspace
+    if workspace.public_roadmap_enabled:
+        public_addresses = PublicProjectSubscription.objects.filter(
+            project_id__in={project.id, *related_project_ids}, project__workspace_id=workspace.id,
+        ).values_list("teams_email", flat=True)
+        recipients.update(
+            address.lower() for address in public_addresses
+            if public_email_allowed(address, workspace.teams_public_subscriber_domains)
+        )
+    return sorted(recipients)
+
+
+def _with_mentions(payload: dict, upns: list[str]):
+    """Split large recipient lists to stay below Teams' 28 KB card limit."""
+    # Clone before attaching mentions; no mutable payload is shared by jobs.
+    card_payload = json.loads(json.dumps(payload))
+    card = card_payload["attachments"][0]["content"]
+    entities = []
+    text = {"type": "TextBlock", "text": "", "wrap": True}
+    if not upns:
+        yield card_payload
+        return
+    card["body"].append(text)
+    card["msteams"] = {"entities": entities}
+    for upn in upns:
+        mention = f"<at>{escape(upn)}</at>"
+        entity = {"type": "mention", "text": mention, "mentioned": {"id": upn, "name": upn}}
+        entities.append(entity)
+        previous = text["text"]
+        text["text"] = f"{previous} {mention}".strip()
+        if len(json.dumps(card_payload, ensure_ascii=False).encode()) > 27000 and len(entities) > 1:
+            entities.pop()
+            text["text"] = previous
+            yield json.loads(json.dumps(card_payload))
+            entities[:] = [entity]
+            text["text"] = mention
+    yield card_payload
 
 
 def queue_project_notification(
@@ -319,31 +340,14 @@ def queue_project_notification(
     actor=None,
     milestone_id: int | None = None,
     milestone_description: str = "",
+    related_project_ids: tuple[int, ...] = (),
 ) -> None:
-    """Send a Teams notification after the current transaction commits.
-
-    Notification failures are logged and never abort the user action.
-    """
+    """Persist an outbox entry in the same transaction as the milestone mutation."""
     event_names = set(normalize_notify_events(event_names))
-    event_list = sorted(event_names)
-    log_context = {
-        "project_id": project.id,
-        "milestone_id": milestone_id,
-        "milestone_title": milestone_title,
-        "events": event_list,
-        "actor": _actor_label(actor),
-    }
-    if not event_names:
-        logger.debug("Skipping Teams milestone notification with no supported events: %s", log_context)
-        return
-    if not project.teams_webhook_url:
-        logger.debug("Skipping Teams milestone notification with no webhook: %s", log_context)
-        return
-    if not project_wants_event(project, event_names):
-        logger.debug("Skipping Teams milestone notification for disabled events: %s", log_context)
+    if not event_names or not project_wants_event(project, event_names):
         return
 
-    webhook_url = project.teams_webhook_url
+    webhook_url = project.workspace.teams_webhook_url
     payload = _teams_payload(
         project=project,
         milestone_title=milestone_title,
@@ -352,27 +356,13 @@ def queue_project_notification(
         actor=actor,
         milestone_description=milestone_description,
     )
-    logger.info("Queueing Teams milestone notification: %s", log_context)
-    logger.debug("Teams milestone notification payload: %s", payload)
-
-    def send() -> None:
-        try:
-            status, response_body = _post_teams_message(webhook_url, payload)
-        except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
-            logger.warning(
-                "Failed to send Teams milestone notification: %s error=%s",
-                log_context,
-                exc,
-            )
-            return
-        logger.info(
-            "Sent Teams milestone notification: %s status=%s response=%r",
-            log_context,
-            status,
-            response_body[:500],
+    upns = _subscribers(project, related_project_ids)
+    for card_payload in _with_mentions(payload, upns):
+        TeamsDelivery.objects.create(
+            workspace_id=project.workspace_id,
+            destination_hash=destination_hash(webhook_url),
+            payload=card_payload,
         )
-
-    transaction.on_commit(send)
 
 
 def milestone_event_names_from_changes(changes: dict) -> set[str]:
@@ -393,6 +383,7 @@ def queue_milestone_notification(
     event_names: set[str],
     changes: dict | None = None,
     actor=None,
+    related_project_ids: tuple[int, ...] = (),
 ) -> None:
     queue_project_notification(
         project=project,
@@ -402,4 +393,5 @@ def queue_milestone_notification(
         actor=actor,
         milestone_id=milestone.id,
         milestone_description=milestone.description,
+        related_project_ids=related_project_ids,
     )

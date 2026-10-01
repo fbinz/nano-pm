@@ -18,6 +18,7 @@ LONG_TEXT_FIELDS = {
     "body",
     "description",
     "public_roadmap_description",
+    "teams_webhook_url",
 }
 
 LONG_TEXT_CHANGE = {"changed": True}

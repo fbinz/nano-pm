@@ -150,6 +150,9 @@ class ActivityEvent(models.Model):
             "successor": _("Successor"),
             "tags": _("Tags"),
             "teams": _("Teams"),
+            "teams_webhook_url": _("Microsoft Teams webhook URL"),
+            "teams_notify_events": _("Notify for"),
+            "teams_public_subscriber_domains": _("Allowed domains for public followers"),
             "title": _("Title"),
             "workspace": _("Workspace"),
         }
@@ -160,6 +163,7 @@ class ActivityEvent(models.Model):
             "body",
             "description",
             "public_roadmap_description",
+            "teams_webhook_url",
         }
 
     @property

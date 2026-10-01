@@ -9,6 +9,7 @@ from data.models.dependency import Dependency
 from data.models.milestone import Milestone
 from data.models.invitation import Invitation
 from data.models.activity import ActivityEvent
+from data.models.teams import ProjectSubscription, PublicProjectSubscription, TeamsDelivery
 
 __all__ = [
     "Workspace",
@@ -26,4 +27,7 @@ __all__ = [
     "Milestone",
     "Invitation",
     "ActivityEvent",
+    "ProjectSubscription",
+    "PublicProjectSubscription",
+    "TeamsDelivery",
 ]

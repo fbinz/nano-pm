@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-29 10:15+0200\n"
+"POT-Creation-Date: 2026-10-02 00:53+0200\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -15,21 +15,45 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: actions/manage_dependencies.py:50
+#: actions/manage_dependencies.py:52
 msgid "A task cannot depend on itself."
 msgstr "Eine Aufgabe kann nicht von sich selbst abhängen."
 
-#: actions/manage_dependencies.py:54
+#: actions/manage_dependencies.py:56
 msgid "Task not found."
 msgstr "Aufgabe nicht gefunden."
 
-#: actions/manage_dependencies.py:58
+#: actions/manage_dependencies.py:60
 msgid "That dependency already exists."
 msgstr "Diese Abhängigkeit existiert bereits."
 
-#: actions/manage_dependencies.py:60
+#: actions/manage_dependencies.py:62
 msgid "That dependency would create a cycle."
 msgstr "Diese Abhängigkeit würde einen Zyklus erzeugen."
+
+#: actions/public_subscriptions.py:14
+msgid ""
+"Enter domain names such as mycompany.com, without URLs, @ signs or wildcards."
+msgstr ""
+"Geben Sie Domainnamen wie mycompany.com ein, ohne URLs, @-Zeichen oder "
+"Platzhalter."
+
+#: actions/public_subscriptions.py:22
+msgid "Enter no more than 20 domains."
+msgstr "Geben Sie höchstens 20 Domains ein."
+
+#: actions/public_subscriptions.py:35 interfaces/web/profile.py:58
+msgid "Enter a valid Microsoft sign-in address."
+msgstr "Geben Sie eine gültige Microsoft-Anmeldeadresse ein."
+
+#: actions/public_subscriptions.py:39
+msgid "Use a Teams email address from an allowed domain."
+msgstr "Verwenden Sie eine Teams-E-Mail-Adresse mit einer erlaubten Domain."
+
+#: actions/teams_delivery.py:102
+msgid "Use an HTTPS Microsoft Teams or Power Automate webhook URL."
+msgstr ""
+"Verwenden Sie eine HTTPS-Webhook-URL von Microsoft Teams oder Power Automate."
 
 #: config/settings.py:230
 msgid "English"
@@ -179,7 +203,7 @@ msgid "Body"
 msgstr "Text"
 
 #: data/models/activity.py:131
-#: templates/components/screens/gantt/project-popover.html:77
+#: templates/components/screens/gantt/project-popover.html:54
 msgid "Color"
 msgstr "Farbe"
 
@@ -282,26 +306,38 @@ msgstr "Tags"
 msgid "Teams"
 msgstr "Teams"
 
-#: data/models/activity.py:153
+#: data/models/activity.py:153 interfaces/web/teams_notifications.py:30
+msgid "Microsoft Teams webhook URL"
+msgstr "Microsoft-Teams-Webhook-URL"
+
+#: data/models/activity.py:154 interfaces/web/teams_notifications.py:23
+msgid "Notify for"
+msgstr "Benachrichtigen bei"
+
+#: data/models/activity.py:155 interfaces/web/public_subscriptions.py:23
+msgid "Allowed domains for public followers"
+msgstr "Erlaubte Domains für öffentliche Abonnements"
+
+#: data/models/activity.py:156
 #: templates/components/screens/gantt/milestone-popover.html:17
 #: templates/components/screens/gantt/task-popover.html:14
 msgid "Title"
 msgstr "Titel"
 
-#: data/models/activity.py:154
+#: data/models/activity.py:157
 msgid "Workspace"
 msgstr "Arbeitsbereich"
 
-#: data/models/activity.py:175
+#: data/models/activity.py:179
 msgid "changed"
 msgstr "geändert"
 
-#: data/models/activity.py:179
+#: data/models/activity.py:183
 #, python-format
 msgid "%(before)s → %(after)s"
 msgstr "%(before)s → %(after)s"
 
-#: data/models/activity.py:195
+#: data/models/activity.py:199
 #, python-format
 msgid "%(label)s: %(value)s"
 msgstr "%(label)s: %(value)s"
@@ -368,11 +404,28 @@ msgid "In progress"
 msgstr "In Bearbeitung"
 
 #: data/models/task.py:10 templates/components/screens/gantt/chart.html:97
-#: templates/components/screens/gantt/milestone-popover.html:72
-#: templates/components/screens/gantt/project-popover.html:127
-#: templates/components/screens/gantt/task-popover.html:118
 msgid "Done"
 msgstr "Erledigt"
+
+#: data/models/teams.py:35
+msgid "Pending"
+msgstr "Ausstehend"
+
+#: data/models/teams.py:36
+msgid "Sending"
+msgstr "Wird gesendet"
+
+#: data/models/teams.py:37
+msgid "Sent"
+msgstr "Gesendet"
+
+#: data/models/teams.py:38
+msgid "Failed"
+msgstr "Fehlgeschlagen"
+
+#: data/models/teams.py:39
+msgid "Cancelled"
+msgstr "Abgebrochen"
 
 #: interfaces/web/ideas.py:122
 msgid "Idea saved."
@@ -396,6 +449,73 @@ msgstr "Idee gelöscht."
 #| msgid "Add a person…"
 msgid "Add a team…"
 msgstr "Person hinzufügen…"
+
+#: interfaces/web/profile.py:23 interfaces/web/public_subscriptions.py:34
+msgid "Teams email address"
+msgstr "Teams-E-Mail-Adresse"
+
+#: interfaces/web/profile.py:25
+msgid ""
+"Use the email address you sign in to Microsoft Teams with for this "
+"workspace. It may differ from your contact email. Leave blank to turn off "
+"your mentions."
+msgstr ""
+"Verwenden Sie die E-Mail-Adresse, mit der Sie sich für diesen Arbeitsbereich "
+"bei Microsoft Teams anmelden. Sie kann von Ihrer Kontakt-E-Mail abweichen. "
+"Leer lassen, um Ihre Erwähnungen auszuschalten."
+
+#: interfaces/web/profile.py:33
+msgid "First name"
+msgstr "Vorname"
+
+#: interfaces/web/profile.py:34
+msgid "Last name"
+msgstr "Nachname"
+
+#: interfaces/web/profile.py:35
+msgid "Email address"
+msgstr "E-Mail-Adresse"
+
+#: interfaces/web/profile.py:65
+msgid "The active workspace changed. Reload your profile and try again."
+msgstr ""
+"Der aktive Arbeitsbereich hat sich geändert. Laden Sie Ihr Profil neu und "
+"versuchen Sie es erneut."
+
+#: interfaces/web/profile.py:87
+msgid "Profile saved."
+msgstr "Profil gespeichert."
+
+#: interfaces/web/profile.py:117
+msgid "Password changed."
+msgstr "Passwort geändert."
+
+#: interfaces/web/public_subscriptions.py:25
+msgid ""
+"Comma-separated domains. Only exact matches are allowed; list subdomains "
+"separately. Leave blank to allow any email domain. Email addresses are not "
+"verified."
+msgstr ""
+"Domains durch Kommas trennen. Nur genaue Übereinstimmungen sind erlaubt; "
+"Subdomains separat aufführen. Leer lassen, um alle E-Mail-Domains zu "
+"erlauben. E-Mail-Adressen werden nicht überprüft."
+
+#: interfaces/web/public_subscriptions.py:36
+msgid ""
+"Use your own Microsoft Teams sign-in address. You need access to this "
+"workspace's Teams channel. No confirmation email will be sent."
+msgstr ""
+"Verwenden Sie Ihre eigene Microsoft-Teams-Anmeldeadresse. Sie benötigen "
+"Zugriff auf den Teams-Kanal dieses Arbeitsbereichs. Es wird keine "
+"Bestätigungs-E-Mail versendet."
+
+#: interfaces/web/teams_notifications.py:32
+msgid ""
+"Paste the URL from your Teams Workflow. Treat it like a password; saved URLs "
+"are never displayed."
+msgstr ""
+"Fügen Sie die URL aus Ihrem Teams-Workflow ein. Behandeln Sie sie wie ein "
+"Passwort; gespeicherte URLs werden nicht angezeigt."
 
 #: readers/chart_view.py:26
 msgctxt "Gantt axis month abbreviation"
@@ -501,68 +621,68 @@ msgstr "KW"
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
 
-#: readers/public_roadmap.py:57
+#: readers/public_roadmap.py:63
 msgid "today"
 msgstr "heute"
 
-#: readers/public_roadmap.py:59
+#: readers/public_roadmap.py:65
 msgid "tomorrow"
 msgstr "morgen"
 
-#: readers/public_roadmap.py:61
+#: readers/public_roadmap.py:67
 msgid "yesterday"
 msgstr "gestern"
 
-#: readers/public_roadmap.py:66
+#: readers/public_roadmap.py:72
 #, python-format
 msgid "in %(count)d day"
 msgid_plural "in %(count)d days"
 msgstr[0] "in %(count)d Tag"
 msgstr[1] "in %(count)d Tagen"
 
-#: readers/public_roadmap.py:67
+#: readers/public_roadmap.py:73
 #, python-format
 msgid "%(count)d day ago"
 msgid_plural "%(count)d days ago"
 msgstr[0] "vor %(count)d Tag"
 msgstr[1] "vor %(count)d Tagen"
 
-#: readers/public_roadmap.py:70
+#: readers/public_roadmap.py:76
 #, python-format
 msgid "in %(count)d week"
 msgid_plural "in %(count)d weeks"
 msgstr[0] "in %(count)d Woche"
 msgstr[1] "in %(count)d Wochen"
 
-#: readers/public_roadmap.py:71
+#: readers/public_roadmap.py:77
 #, python-format
 msgid "%(count)d week ago"
 msgid_plural "%(count)d weeks ago"
 msgstr[0] "vor %(count)d Woche"
 msgstr[1] "vor %(count)d Wochen"
 
-#: readers/public_roadmap.py:74
+#: readers/public_roadmap.py:80
 #, python-format
 msgid "in %(count)d month"
 msgid_plural "in %(count)d months"
 msgstr[0] "in %(count)d Monat"
 msgstr[1] "in %(count)d Monaten"
 
-#: readers/public_roadmap.py:75
+#: readers/public_roadmap.py:81
 #, python-format
 msgid "%(count)d month ago"
 msgid_plural "%(count)d months ago"
 msgstr[0] "vor %(count)d Monat"
 msgstr[1] "vor %(count)d Monaten"
 
-#: readers/public_roadmap.py:78
+#: readers/public_roadmap.py:84
 #, python-format
 msgid "in %(count)d year"
 msgid_plural "in %(count)d years"
 msgstr[0] "in %(count)d Jahr"
 msgstr[1] "in %(count)d Jahren"
 
-#: readers/public_roadmap.py:79
+#: readers/public_roadmap.py:85
 #, python-format
 msgid "%(count)d year ago"
 msgid_plural "%(count)d years ago"
@@ -580,6 +700,7 @@ msgstr "<strong>%(workspace_name)s</strong> beitreten"
 
 #: templates/accounts/invite.html:13 templates/accounts/invite.html:14
 #: templates/accounts/login.html:13 templates/accounts/login.html:14
+#: templates/components/screens/profile/index.html:15
 msgid "Username"
 msgstr "Benutzername"
 
@@ -652,6 +773,7 @@ msgid "Public roadmap"
 msgstr "Öffentliche Roadmap"
 
 #: templates/components/layouts/app-shell.html:54
+#: templates/components/screens/profile/index.html:35
 msgid "Open public roadmap"
 msgstr "Öffentliche Roadmap öffnen"
 
@@ -664,6 +786,9 @@ msgid "Optional public description"
 msgstr "Optionale öffentliche Beschreibung"
 
 #: templates/components/layouts/app-shell.html:63
+#: templates/components/screens/gantt/milestone-popover.html:72
+#: templates/components/screens/gantt/project-popover.html:104
+#: templates/components/screens/gantt/task-popover.html:118
 msgid "Save"
 msgstr "Speichern"
 
@@ -685,7 +810,8 @@ msgid "Enable public roadmap"
 msgstr "Öffentliche Roadmap aktivieren"
 
 #: templates/components/layouts/app-shell.html:84
-#: templates/public/roadmap.html:37
+#: templates/components/screens/profile/index.html:4
+#: templates/public/roadmap.html:48
 msgid "Projects"
 msgstr "Projekte"
 
@@ -704,76 +830,91 @@ msgstr "Ideen"
 msgid "People"
 msgstr "Personen"
 
-#: templates/components/layouts/app-shell.html:98
+#: templates/components/layouts/app-shell.html:99
+#: templates/components/screens/teams/settings.html:4
+msgid "Teams notifications"
+msgstr "Teams-Benachrichtigungen"
+
+#: templates/components/layouts/app-shell.html:103
 #: templates/components/screens/activity/index.html:9
 msgid "Activity"
 msgstr "Aktivität"
 
 #: templates/components/layouts/app-shell.html:106
-#: templates/components/layouts/app-shell.html:108
-#: templates/components/layouts/app-shell.html:109
+msgid "My Profile"
+msgstr "Mein Profil"
+
+#: templates/components/layouts/app-shell.html:114
+#: templates/components/layouts/app-shell.html:116
+#: templates/components/layouts/app-shell.html:117
 msgid "Switch to dark mode"
 msgstr "In den Dunkelmodus wechseln"
 
-#: templates/components/layouts/app-shell.html:107
+#: templates/components/layouts/app-shell.html:115
 msgid "Switch to light mode"
 msgstr "In den Hellmodus wechseln"
 
-#: templates/components/layouts/app-shell.html:112
+#: templates/components/layouts/app-shell.html:120
 msgid "Theme"
 msgstr "Design"
 
-#: templates/components/layouts/app-shell.html:127
+#: templates/components/layouts/app-shell.html:132
+#: templates/components/screens/profile/index.html:5
+#: templates/components/screens/profile/password.html:4
+msgid "My profile"
+msgstr "Mein Profil"
+
+#: templates/components/layouts/app-shell.html:135
 msgid "Sign out"
 msgstr "Abmelden"
 
-#: templates/components/layouts/app-shell.html:142
+#: templates/components/layouts/app-shell.html:150
 msgid "Close"
 msgstr "Schließen"
 
-#: templates/components/layouts/app-shell.html:156
+#: templates/components/layouts/app-shell.html:164
 msgid "Why is this milestone moving?"
 msgstr "Warum wird dieser Meilenstein verschoben?"
 
-#: templates/components/layouts/app-shell.html:167
+#: templates/components/layouts/app-shell.html:175
 #: templates/components/screens/activity/index.html:36
 #: templates/components/screens/activity/index.html:49
 msgid "Reason"
 msgstr "Begründung"
 
-#: templates/components/layouts/app-shell.html:173
+#: templates/components/layouts/app-shell.html:181
 msgid "Briefly explain what changed…"
 msgstr "Kurz erklären, was sich geändert hat…"
 
-#: templates/components/layouts/app-shell.html:178
+#: templates/components/layouts/app-shell.html:186
 msgid "Common reasons"
 msgstr "Häufige Gründe"
 
-#: templates/components/layouts/app-shell.html:179
+#: templates/components/layouts/app-shell.html:187
 msgid "Dependency delayed"
 msgstr "Abhängigkeit verzögert"
 
-#: templates/components/layouts/app-shell.html:180
+#: templates/components/layouts/app-shell.html:188
 msgid "Scope changed"
 msgstr "Umfang geändert"
 
-#: templates/components/layouts/app-shell.html:181
+#: templates/components/layouts/app-shell.html:189
 msgid "Resource availability"
 msgstr "Ressourcenverfügbarkeit"
 
-#: templates/components/layouts/app-shell.html:182
+#: templates/components/layouts/app-shell.html:190
 msgid "External commitment"
 msgstr "Externe Verpflichtung"
 
-#: templates/components/layouts/app-shell.html:183
+#: templates/components/layouts/app-shell.html:191
 msgid "Waiting for feedback"
 msgstr "Rückmeldung ausstehend"
 
-#: templates/components/layouts/app-shell.html:187
+#: templates/components/layouts/app-shell.html:195
 msgid "Keep original date"
 msgstr "Ursprüngliches Datum behalten"
 
-#: templates/components/layouts/app-shell.html:188
+#: templates/components/layouts/app-shell.html:196
 msgid "Move milestone"
 msgstr "Meilenstein verschieben"
 
@@ -954,6 +1095,8 @@ msgstr "Beim Verschieben dieses Meilensteins eine Begründung verlangen"
 
 #: templates/components/screens/gantt/milestone-popover.html:67
 #: templates/components/screens/gantt/task-popover.html:113
+#: templates/components/screens/teams/settings.html:88
+#: templates/public/roadmap.html:237
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -998,78 +1141,54 @@ msgstr "Verantwortliche Person hinzufügen…"
 msgid "Assign to me"
 msgstr "Mir zuweisen"
 
-#: templates/components/screens/gantt/project-popover.html:54
-msgid "Toggle Teams notification settings"
-msgstr "Teams-Benachrichtigungseinstellungen ein-/ausklappen"
-
-#: templates/components/screens/gantt/project-popover.html:55
-msgid "Teams notifications"
-msgstr "Teams-Benachrichtigungen"
-
-#: templates/components/screens/gantt/project-popover.html:58
-msgid "Microsoft Teams webhook URL"
-msgstr "Microsoft-Teams-Webhook-URL"
-
-#: templates/components/screens/gantt/project-popover.html:60
-msgid ""
-"Send notifications to this Teams channel when selected milestone events "
-"happen."
-msgstr ""
-"Benachrichtigungen an diesen Teams-Kanal senden, wenn ausgewählte "
-"Meilenstein-Ereignisse eintreten."
-
-#: templates/components/screens/gantt/project-popover.html:63
-msgid "Notify for"
-msgstr "Benachrichtigen bei"
-
-#: templates/components/screens/gantt/project-popover.html:90
+#: templates/components/screens/gantt/project-popover.html:67
 msgid "move up"
 msgstr "nach oben"
 
-#: templates/components/screens/gantt/project-popover.html:92
+#: templates/components/screens/gantt/project-popover.html:69
 msgid "move down"
 msgstr "nach unten"
 
-#: templates/components/screens/gantt/project-popover.html:96
+#: templates/components/screens/gantt/project-popover.html:73
 msgid "+ Add task"
 msgstr "+ Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:98
+#: templates/components/screens/gantt/project-popover.html:75
 msgid "+ Add milestone"
 msgstr "+ Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:103
+#: templates/components/screens/gantt/project-popover.html:80
 msgid "Reopen project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:103
+#: templates/components/screens/gantt/project-popover.html:80
 msgid "Mark complete"
 msgstr "Als erledigt markieren"
 
-#: templates/components/screens/gantt/project-popover.html:108
+#: templates/components/screens/gantt/project-popover.html:85
 #, fuzzy
 #| msgid "Create workspace"
 msgid "Move to workspace"
 msgstr "Arbeitsbereich erstellen"
 
-#: templates/components/screens/gantt/project-popover.html:117
+#: templates/components/screens/gantt/project-popover.html:94
 #, fuzzy, python-format
 #| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgid "Move project &quot;%(name)s&quot; to the selected workspace?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:118
+#: templates/components/screens/gantt/project-popover.html:95
 #, fuzzy
 #| msgid "Reopen project"
 msgid "Move project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:125
+#: templates/components/screens/gantt/project-popover.html:102
 #, python-format
 msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:125
+#: templates/components/screens/gantt/project-popover.html:102
 msgid "Delete project"
 msgstr "Projekt löschen"
 
@@ -1358,41 +1477,237 @@ msgstr "Entfernen"
 msgid "Remove team &quot;%(name)s&quot;?"
 msgstr "&quot;%(name)s&quot; entfernen?"
 
-#: templates/public/roadmap.html:42
+#: templates/components/screens/profile/index.html:6
+msgid ""
+"Your name and contact email apply to your account across all workspaces."
+msgstr ""
+"Ihr Name und Ihre Kontakt-E-Mail gelten für Ihr Konto in allen "
+"Arbeitsbereichen."
+
+#: templates/components/screens/profile/index.html:17
+msgid "Your sign-in username cannot be changed here."
+msgstr "Ihr Benutzername für die Anmeldung kann hier nicht geändert werden."
+
+#: templates/components/screens/profile/index.html:21
+#, python-format
+msgid "Teams mentions in %(name)s"
+msgstr "Teams-Erwähnungen in %(name)s"
+
+#: templates/components/screens/profile/index.html:30
+msgid "Save profile"
+msgstr "Profil speichern"
+
+#: templates/components/screens/profile/index.html:33
+#: templates/components/screens/profile/password.html:5
+#: templates/components/screens/profile/password.html:17
+msgid "Change password"
+msgstr "Passwort ändern"
+
+#: templates/components/screens/teams/settings.html:7
+msgid "Workspace channel"
+msgstr "Kanal des Arbeitsbereichs"
+
+#: templates/components/screens/teams/settings.html:11
+msgid "Webhook configured"
+msgstr "Webhook eingerichtet"
+
+#: templates/components/screens/teams/settings.html:13
+msgid "No webhook configured"
+msgstr "Kein Webhook eingerichtet"
+
+#: templates/components/screens/teams/settings.html:17
+#: templates/components/screens/teams/settings.html:65
+msgid "Set up new webhook"
+msgstr "Neuen Webhook einrichten"
+
+#: templates/components/screens/teams/settings.html:22
+msgid "Disconnect webhook"
+msgstr "Webhook trennen"
+
+#: templates/components/screens/teams/settings.html:39
+msgid "Save public follower settings"
+msgstr "Öffentliche Abonnements speichern"
+
+#: templates/components/screens/teams/settings.html:43
+msgid "Notification events"
+msgstr "Benachrichtigungsereignisse"
+
+#: templates/components/screens/teams/settings.html:48
+msgid "Save workspace notifications"
+msgstr "Arbeitsbereich-Benachrichtigungen speichern"
+
+#: templates/components/screens/teams/settings.html:52
+msgid "Recent deliveries"
+msgstr "Letzte Zustellungen"
+
+#: templates/components/screens/teams/settings.html:53
+msgid ""
+"Sent means the webhook accepted the message; it does not confirm delivery in "
+"Teams. Transient failures retry automatically."
+msgstr ""
+"Gesendet bedeutet, dass der Webhook die Nachricht angenommen hat; die "
+"Zustellung in Teams wird damit nicht bestätigt. Vorübergehende Fehler werden "
+"automatisch erneut versucht."
+
+#: templates/components/screens/teams/settings.html:58
+msgid "No deliveries yet."
+msgstr "Noch keine Zustellungen."
+
+#: templates/components/screens/teams/settings.html:67
+msgid "Saving a new webhook replaces the current connection."
+msgstr ""
+"Wenn Sie einen neuen Webhook speichern, wird die bisherige Verbindung "
+"ersetzt."
+
+#: templates/components/screens/teams/settings.html:89
+msgid "Save webhook"
+msgstr "Webhook speichern"
+
+#: templates/public/roadmap.html:32
+msgid ""
+"Follow projects to receive Teams mentions. You must have access to the "
+"workspace's Teams channel."
+msgstr ""
+"Folgen Sie Projekten, um in Teams erwähnt zu werden. Sie benötigen Zugriff "
+"auf den Teams-Kanal des Arbeitsbereichs."
+
+#: templates/public/roadmap.html:34
+msgid ""
+"Set your Teams email address in your profile for this workspace to receive "
+"mentions."
+msgstr ""
+"Tragen Sie Ihre Teams-E-Mail-Adresse im Profil für diesen Arbeitsbereich "
+"ein, um Erwähnungen zu erhalten."
+
+#: templates/public/roadmap.html:40
+msgid "Email for new follows:"
+msgstr "E-Mail für neue Abonnements:"
+
+#: templates/public/roadmap.html:41
+msgid "Use another email address"
+msgstr "Andere E-Mail-Adresse verwenden"
+
+#: templates/public/roadmap.html:53
 msgid "Select all"
 msgstr "Alle auswählen"
 
-#: templates/public/roadmap.html:43
+#: templates/public/roadmap.html:54
 msgid "Deselect all"
 msgstr "Alle abwählen"
 
-#: templates/public/roadmap.html:63
+#: templates/public/roadmap.html:77
+msgid "Subscribed"
+msgstr "Abonniert"
+
+#: templates/public/roadmap.html:83
+msgid "Unfollow"
+msgstr "Nicht mehr folgen"
+
+#: templates/public/roadmap.html:90 templates/public/roadmap.html:95
+#: templates/public/roadmap.html:238
+msgid "Follow"
+msgstr "Folgen"
+
+#: templates/public/roadmap.html:106
 msgid "Roadmap views"
 msgstr "Roadmap-Ansichten"
 
-#: templates/public/roadmap.html:70 templates/public/roadmap.html:83
+#: templates/public/roadmap.html:113 templates/public/roadmap.html:126
 msgid "Grouped"
 msgstr "Gruppiert"
 
-#: templates/public/roadmap.html:77 templates/public/roadmap.html:121
+#: templates/public/roadmap.html:120 templates/public/roadmap.html:164
 msgid "Timeline"
 msgstr "Zeitachse"
 
-#: templates/public/roadmap.html:152
+#: templates/public/roadmap.html:195
 msgid "No milestones match these projects"
 msgstr "Keine Meilensteine passen zu diesen Projekten"
 
-#: templates/public/roadmap.html:153
+#: templates/public/roadmap.html:196
 msgid "Toggle a project on to see its roadmap milestones."
 msgstr "Aktivieren Sie ein Projekt, um seine Roadmap-Meilensteine zu sehen."
 
-#: templates/public/roadmap.html:157 templates/public/roadmap.html:165
+#: templates/public/roadmap.html:200 templates/public/roadmap.html:208
 msgid "No public milestones yet"
 msgstr "Noch keine öffentlichen Meilensteine"
 
-#: templates/public/roadmap.html:158 templates/public/roadmap.html:166
+#: templates/public/roadmap.html:201 templates/public/roadmap.html:209
 msgid "Check back later for roadmap updates."
 msgstr "Schauen Sie später wieder vorbei, um Roadmap-Updates zu sehen."
+
+#: templates/public/roadmap.html:218
+msgid "Follow project"
+msgstr "Projekt folgen"
+
+#: templates/public/roadmap.html:221
+msgid "Allowed domains:"
+msgstr "Erlaubte Domains:"
+
+#: templates/public/roadmap.html:234
+msgid ""
+"Your follows are managed in this browser. Keep its cookies to unfollow later."
+msgstr ""
+"Ihre Abonnements werden in diesem Browser verwaltet. Behalten Sie dessen "
+"Cookies, um später nicht mehr zu folgen."
+
+#: templates/public/roadmap.html:235
+msgid ""
+"Your email will be remembered in this browser for future follows on this "
+"roadmap."
+msgstr "Ihre E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser Roadmap gespeichert."
+
+#~ msgid "Sign in to follow projects"
+#~ msgstr "Anmelden, um Projekten zu folgen"
+
+#~ msgid "Leave blank to keep the current webhook. The URL is a secret."
+#~ msgstr ""
+#~ "Leer lassen, um den aktuellen Webhook beizubehalten. Die URL ist geheim."
+
+#~ msgid "Import a legacy project webhook"
+#~ msgstr "Bisherigen Projekt-Webhook übernehmen"
+
+#~ msgid ""
+#~ "One channel per workspace. Follow projects on the roadmap to be mentioned "
+#~ "when milestones change."
+#~ msgstr ""
+#~ "Ein Kanal pro Arbeitsbereich. Folgen Sie Projekten auf der Roadmap, um "
+#~ "bei Meilensteinänderungen erwähnt zu werden."
+
+#~ msgid "Edit your Teams email address in your profile"
+#~ msgstr "Teams-E-Mail-Adresse im Profil bearbeiten"
+
+#~ msgid ""
+#~ "Legacy project webhooks are no longer used. If projects had different "
+#~ "channels, select the one this workspace should use."
+#~ msgstr ""
+#~ "Bisherige Projekt-Webhooks werden nicht mehr verwendet. Falls Projekte "
+#~ "unterschiedliche Kanäle hatten, wählen Sie den Kanal für diesen "
+#~ "Arbeitsbereich aus."
+
+#~ msgid "Your Teams UPN"
+#~ msgstr "Ihr Teams-UPN"
+
+#~ msgid ""
+#~ "Your Microsoft sign-in address for this workspace, which may differ from "
+#~ "your email. Use your own account. Clearing it disables your mentions."
+#~ msgstr ""
+#~ "Ihre Microsoft-Anmeldeadresse für diesen Arbeitsbereich. Sie kann von "
+#~ "Ihrer E-Mail-Adresse abweichen. Verwenden Sie Ihr eigenes Konto. Ein "
+#~ "leeres Feld deaktiviert Ihre Erwähnungen."
+
+#~ msgid "Save my Teams identity"
+#~ msgstr "Meine Teams-Identität speichern"
+
+#~ msgid "Toggle Teams notification settings"
+#~ msgstr "Teams-Benachrichtigungseinstellungen ein-/ausklappen"
+
+#~ msgid ""
+#~ "Send notifications to this Teams channel when selected milestone events "
+#~ "happen."
+#~ msgstr ""
+#~ "Benachrichtigungen an diesen Teams-Kanal senden, wenn ausgewählte "
+#~ "Meilenstein-Ereignisse eintreten."
 
 #~ msgid "No connected task"
 #~ msgstr "Keine verknüpfte Aufgabe"

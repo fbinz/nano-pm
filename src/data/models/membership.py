@@ -24,6 +24,8 @@ class Membership(models.Model):
         choices=WorkspaceRole.choices,
         default=WorkspaceRole.MEMBER,
     )
+    # Self-declared Microsoft sign-in address, scoped to this workspace/tenant.
+    teams_upn = models.EmailField(max_length=254, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

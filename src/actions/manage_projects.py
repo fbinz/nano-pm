@@ -5,14 +5,13 @@ from django.db.models import Q
 from django.utils import timezone
 
 from actions.activity import change_set, created_changes, deleted_changes, log_activity, snapshot
-from actions.teams_notifications import normalize_notify_events
+from actions.manage_milestones import delete_milestone
 from data.models import Dependency, Membership, Person, Project, WorkspaceRole
 from data.models.project import PROJECT_COLORS
 
 
 PROJECT_FIELDS = [
     "name", "description", "color", "order", "completed_at",
-    "teams_webhook_url", "teams_notify_events",
 ]
 
 
@@ -62,8 +61,6 @@ def update_project(
     name: str | None = None,
     description: str | None = None,
     color: str | None = None,
-    teams_webhook_url: str | None = None,
-    teams_notify_events: list[str] | None = None,
     responsible_person_ids: list[int] | None = None,
     actor=None,
 ) -> Project | None:
@@ -74,10 +71,6 @@ def update_project(
     except Project.DoesNotExist:
         return None
     update_fields = ["name", "description", "color"]
-    if teams_webhook_url is not None:
-        update_fields.append("teams_webhook_url")
-    if teams_notify_events is not None:
-        update_fields.append("teams_notify_events")
     before = _project_values(proj, update_fields)
     if name is not None:
         proj.name = name
@@ -85,10 +78,6 @@ def update_project(
         proj.description = description
     if color is not None:
         proj.color = color
-    if teams_webhook_url is not None:
-        proj.teams_webhook_url = teams_webhook_url.strip()
-    if teams_notify_events is not None:
-        proj.teams_notify_events = normalize_notify_events(teams_notify_events)
     proj.save()
     if responsible_person_ids is not None:
         valid_ids = Person.objects.filter(
@@ -273,6 +262,9 @@ def move_project_to_workspace(
             .values_list("order", flat=True)
             .first()
         )
+        # Subscriptions are workspace membership scoped; never move them across tenants.
+        proj.subscriptions.all().delete()
+        proj.public_subscriptions.all().delete()
         proj.workspace = target_workspace
         proj.order = (last_order or 0) + 1.0
         proj.save(update_fields=["workspace", "order", "updated_at"])
@@ -317,6 +309,7 @@ def move_project_to_workspace(
         return proj
 
 
+@transaction.atomic
 def delete_project(*, workspace, project_id: int, actor=None) -> bool:
     project = Project.objects.filter(id=project_id, workspace=workspace).first()
     if project is None:
@@ -324,6 +317,8 @@ def delete_project(*, workspace, project_id: int, actor=None) -> bool:
     values = _project_values(project)
     label = project.name
     entity_id = project.id
+    for milestone_id in list(project.milestones.values_list("id", flat=True)):
+        delete_milestone(workspace=workspace, milestone_id=milestone_id, actor=actor)
     project.delete()
     log_activity(
         workspace=workspace,

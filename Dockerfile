@@ -85,7 +85,7 @@ VOLUME /data
 
 EXPOSE 80
 
-# Migrate every start (idempotent; fast when up-to-date), then exec gunicorn.
-# 2 workers × 4 threads is sized for a small SQLite app — bump only when the
-# DB stops being the bottleneck (i.e. after switching off SQLite).
-CMD ["sh", "-c", "python src/manage.py migrate --noinput && exec gunicorn config.wsgi:application --chdir src --bind 0.0.0.0:${PORT} --workers 2 --threads 4 --access-logfile - --error-logfile -"]
+# Migrate, then supervise Gunicorn (2 workers × 4 threads) and the Teams outbox
+# worker. Both use the same persistent SQLite volume. A failed service causes
+# the container to exit, allowing the platform's restart policy to recover it.
+CMD ["sh", "-c", "python src/manage.py migrate --noinput && exec python src/run_services.py"]

@@ -38,6 +38,8 @@ class Project(models.Model):
         blank=True,
     )
     color = models.CharField(max_length=9, default=PROJECT_COLORS[0])
+    # Historical configuration retained for migration compatibility only.
+    # Delivery and settings use Workspace configuration exclusively.
     teams_webhook_url = models.URLField(blank=True, default="")
     teams_notify_events = models.JSONField(default=default_teams_notify_events, blank=True)
     # Float ordering keeps re-order cheap (insert between any two by averaging).

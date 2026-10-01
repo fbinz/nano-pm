@@ -2,6 +2,8 @@
 
 from datetime import date, timedelta
 
+from django.db import transaction
+
 from actions.activity import change_set, created_changes, deleted_changes, log_activity, snapshot
 from actions.teams_notifications import (
     MILESTONE_CREATED,
@@ -30,24 +32,7 @@ def _milestone_values(milestone: Milestone) -> dict:
     return values
 
 
-def _sync_linked_milestones(workspace) -> None:
-    milestones = Milestone.objects.filter(
-        task__project__workspace=workspace
-    ).select_related("task", "task__project")
-    for milestone in milestones:
-        task = milestone.task
-        changed = []
-        if milestone.project_id != task.project_id:
-            milestone.project = task.project
-            changed.append("project")
-        if milestone.date != task.end:
-            milestone.date = task.end
-            changed.append("date")
-        if changed:
-            changed.append("updated_at")
-            milestone.save(update_fields=changed)
-
-
+@transaction.atomic
 def create_milestone(
     *, workspace, project_id: int, title: str, on: date, actor=None,
 ) -> Milestone | None:
@@ -56,7 +41,8 @@ def create_milestone(
     except Project.DoesNotExist:
         return None
     milestone = Milestone.objects.create(
-        project=proj, title=title.strip() or "Milestone", date=on
+        project=proj, title=title.strip() or "Milestone", date=on,
+        is_placeholder=title.strip() == DEFAULT_MILESTONE_TITLE,
     )
     changes = created_changes(_milestone_values(milestone))
     log_activity(
@@ -66,7 +52,7 @@ def create_milestone(
         entity=milestone,
         changes=changes,
     )
-    if not _is_default_created_milestone(milestone):
+    if not milestone.is_placeholder:
         queue_milestone_notification(
             project=proj,
             milestone=milestone,
@@ -77,6 +63,7 @@ def create_milestone(
     return milestone
 
 
+@transaction.atomic
 def update_milestone(
     *,
     workspace,
@@ -115,8 +102,7 @@ def update_milestone(
             "project", "title", "description", "date", "require_move_reason", "updated_at",
         ])
         if on is not None:
-            cascade_workspace(workspace)
-            _sync_linked_milestones(workspace)
+            cascade_workspace(workspace, actor=actor, exclude_notifications=(m.id,))
     else:
         if title is not None:
             m.title = title.strip() or m.title
@@ -149,6 +135,8 @@ def update_milestone(
     m = Milestone.objects.select_related("project", "task").get(id=m.id)
     after = _milestone_values(m)
     changes = change_set(before, after)
+    if before_project.id != m.project_id:
+        changes["project"] = {"from": before_project.name, "to": m.project.name}
     moved = "date" in changes
     reason = (move_reason or "").strip()
     log_activity(
@@ -161,26 +149,26 @@ def update_milestone(
         skip_empty_changes=True,
     )
     event_names = milestone_event_names_from_changes(changes)
+    if m.is_placeholder:
+        if _is_default_created_milestone(m):
+            event_names = set()
+        else:
+            m.is_placeholder = False
+            m.save(update_fields=["is_placeholder"])
+            event_names = {MILESTONE_CREATED}
     if event_names:
-        if before_project.id != m.project_id:
-            queue_project_notification(
-                project=before_project,
-                milestone_title=m.title,
-                event_names=event_names,
-                changes=changes,
-                actor=actor,
-                milestone_id=m.id,
-            )
         queue_milestone_notification(
             project=m.project,
             milestone=m,
             event_names=event_names,
             changes=changes,
             actor=actor,
+            related_project_ids=(before_project.id,),
         )
     return m
 
 
+@transaction.atomic
 def delete_milestone(*, workspace, milestone_id: int, actor=None) -> bool:
     milestone = Milestone.objects.filter(
         id=milestone_id, project__workspace=workspace
@@ -191,14 +179,15 @@ def delete_milestone(*, workspace, milestone_id: int, actor=None) -> bool:
     changes = deleted_changes(values)
     label = milestone.title
     entity_id = milestone.id
-    queue_project_notification(
-        project=milestone.project,
-        milestone_title=label,
-        event_names={MILESTONE_DELETED},
-        changes=changes,
-        actor=actor,
-        milestone_id=entity_id,
-    )
+    if not milestone.is_placeholder:
+        queue_project_notification(
+            project=milestone.project,
+            milestone_title=label,
+            event_names={MILESTONE_DELETED},
+            changes=changes,
+            actor=actor,
+            milestone_id=entity_id,
+        )
     milestone.delete()
     log_activity(
         workspace=workspace,

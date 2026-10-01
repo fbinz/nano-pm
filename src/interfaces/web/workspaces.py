@@ -4,12 +4,13 @@ import secrets
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.cache import never_cache
 
 from actions.activity import change_set, created_changes, log_activity, snapshot
 from data.models import Membership, Workspace, WorkspaceRole
-from readers.public_roadmap import get_public_roadmap
+from .public_subscriptions import render_public_roadmap
 
 from .helpers import is_pm
 
@@ -157,8 +158,6 @@ def public_roadmap_regenerate(request: HttpRequest):
     return redirect("/")
 
 
+@never_cache
 def public_roadmap(request: HttpRequest, token: str):
-    vm = get_public_roadmap(token)
-    if vm is None:
-        return HttpResponse(status=404)
-    return render(request, "public/roadmap.html", {"vm": vm})
+    return render_public_roadmap(request, token)

@@ -1,0 +1,39 @@
+{% load i18n %}
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" :can_view_ideas="can_view_ideas" active_nav="profile">
+  <main class="p-6 w-full max-w-3xl">
+    <a class="link lg:hidden" href="/">{% trans "Projects" %}</a>
+    <h1 class="text-2xl font-bold">{% trans "My profile" %}</h1>
+    <p class="mt-2 text-base-content/70">{% trans "Your name and contact email apply to your account across all workspaces." %}</p>
+    {% for message in messages %}
+      <p class="mt-4 text-success" role="status">{{ message }}</p>
+    {% endfor %}
+    <form method="post" id="profile-form" class="mt-6 space-y-4">
+      {% csrf_token %}
+      {{ form.workspace_id }}
+      {{ form.non_field_errors }}
+      <div class="fieldset">
+        <label class="label" for="profile-username">{% trans "Username" %}</label>
+        <input id="profile-username" class="input text-base w-full" name="username" value="{{ user.username }}" readonly autocomplete="username">
+        <p class="text-sm text-base-content/70">{% trans "Your sign-in username cannot be changed here." %}</p>
+      </div>
+      {% for field in form.visible_fields %}
+        {% if field.name == 'teams_upn' %}
+          <h2 class="text-lg font-semibold">{% blocktrans with name=workspace.name %}Teams mentions in {{ name }}{% endblocktrans %}</h2>
+        {% endif %}
+        <div class="fieldset">
+          <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {{ field.errors }}
+          {% if field.help_text %}<p class="text-sm text-base-content/70" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</p>{% endif %}
+        </div>
+      {% endfor %}
+      <button class="btn btn-neutral" type="submit">{% trans "Save profile" %}</button>
+    </form>
+    <div class="mt-6 flex flex-wrap gap-4">
+      <a class="link" href="{% url 'password_change' %}">{% trans "Change password" %}</a>
+      {% if workspace.public_roadmap_enabled %}
+        <a class="link" href="{% url 'public_roadmap' token=workspace.public_roadmap_token %}">{% trans "Open public roadmap" %}</a>
+      {% endif %}
+    </div>
+  </main>
+</c-layouts.app-shell>

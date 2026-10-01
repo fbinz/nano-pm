@@ -1,6 +1,7 @@
 """Dependency creation (with cycle prevention) and deletion."""
 
 from django.utils.translation import gettext as _
+from django.db import transaction
 
 from actions.activity import created_changes, deleted_changes, log_activity
 from data.models import Dependency, Task
@@ -42,6 +43,7 @@ def _dependency_label(dep: Dependency) -> str:
     return f"{dep.predecessor.title} → {dep.successor.title}"
 
 
+@transaction.atomic
 def add_dependency(
     *, workspace, predecessor_id: int, successor_id: int, actor=None
 ) -> tuple[Dependency | None, set[int], str | None]:
@@ -71,7 +73,7 @@ def add_dependency(
         entity_label=_dependency_label(dep),
         changes=created_changes(_dependency_values(dep)),
     )
-    cascaded = cascade_workspace(workspace)
+    cascaded = cascade_workspace(workspace, actor=actor)
     return dep, cascaded, None
 
 

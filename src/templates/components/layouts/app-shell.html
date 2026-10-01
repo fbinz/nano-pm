@@ -94,8 +94,16 @@
           <li><a href="/people/"{% if active_nav == "people" %} class="menu-active"{% endif %}>
             <c-lucide name="user-cog" size="18" /> {% trans "People" %}
           </a></li>
+          {% if is_pm %}
+            <li><a href="/workspaces/teams/"{% if active_nav == "teams-notifications" %} class="menu-active"{% endif %}>
+              <c-lucide name="bell" size="18" /> {% trans "Teams notifications" %}
+            </a></li>
+          {% endif %}
           <li><a href="/activity/"{% if active_nav == "activity" %} class="menu-active"{% endif %}>
             <c-lucide name="history" size="18" /> {% trans "Activity" %}
+          </a></li>
+          <li><a href="{% url 'profile' %}"{% if active_nav == "profile" %} class="menu-active" aria-current="page"{% endif %}>
+            <c-lucide name="user" size="18" /> {% trans "My Profile" %}
           </a></li>
         </ul>
         <div class="flex-1"></div>
@@ -121,7 +129,7 @@
                   class="lang-btn{% if LANGUAGE_CODE|slice:':2' == 'de' %} active{% endif %}">DE</button>
         </form>
         <div class="sidebar-user">
-          <span class="user-name">{{ user.username }}</span>
+          <a class="user-name link link-hover" href="{% url 'profile' %}" title="{% trans 'My profile' %}"{% if active_nav == 'profile' %} aria-current="page"{% endif %}>{{ user.username }}</a>
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
             <button type="submit" class="sign-out-btn">{% trans "Sign out" %}</button>

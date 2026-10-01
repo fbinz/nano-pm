@@ -1,4 +1,80 @@
 const http = require('http');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+const path = require('path');
+
+async function deliverTeamsNotifications() {
+  await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'deliver_teams_notifications', '--once'], {
+    cwd: path.resolve(__dirname, '../..'),
+    env: { ...process.env, DJANGO_DEBUG: 'true', DJANGO_DB_PATH: 'db.e2e.sqlite3', DJANGO_ENABLE_TEST_RESET: 'true' },
+  });
+}
+
+async function holdSQLiteWriteLock() {
+  // Exceed Django's five-second busy timeout to exercise actual cross-process contention.
+  let child;
+  const done = new Promise((resolve, reject) => {
+    child = execFile('uv', ['run', 'python', '-u', '-c', `
+import sqlite3, time
+with sqlite3.connect('db.e2e.sqlite3', timeout=10) as connection:
+    connection.execute('BEGIN IMMEDIATE')
+    print('locked', flush=True)
+    time.sleep(7)
+    connection.rollback()
+`], { cwd: path.resolve(__dirname, '../..'), timeout: 15000 }, (error) => error ? reject(error) : resolve());
+  });
+  await Promise.race([
+    new Promise(resolve => child.stdout.once('data', resolve)),
+    done.then(() => { throw new Error('Lock process exited before acquiring the write lock'); }),
+  ]);
+  return { done };
+}
+
+async function configureTeams(page, url, events = ['milestone.moved', 'milestone.updated']) {
+  const response = await page.goto('/workspaces/teams/');
+  expect(response.status()).toBe(200);
+  await page.getByRole('button', { name: 'Set up new webhook', exact: true }).click();
+  await page.getByLabel('Microsoft Teams webhook URL').fill(url);
+  await page.getByRole('button', { name: 'Save webhook', exact: true }).click();
+  await expect(page.locator('#teams-connection-status')).toHaveText('Webhook configured');
+  await expect(page.locator('#teams-webhook-dialog')).not.toBeVisible();
+  for (const input of await page.locator('input[name=teams_notify_events]').all()) {
+    await input.setChecked(events.includes(await input.getAttribute('value')));
+  }
+  await page.getByRole('button', { name: 'Save workspace notifications' }).click();
+  await expect(page.getByLabel('Microsoft Teams webhook URL')).toHaveValue('');
+}
+
+async function saveTeamsIdentity(page, address) {
+  await page.goto('/profile/');
+  await page.getByLabel('Teams email address', { exact: true }).fill(address);
+  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue(address.toLowerCase());
+}
+
+async function unfollowProject(project) {
+  await project.getByRole('button', { name: 'Subscribed', exact: true }).click();
+  await project.getByRole('button', { name: 'Unfollow', exact: true }).click();
+}
+
+async function postForm(page, url, fields) {
+  return page.evaluate(async ({ url, fields }) => {
+    const csrf = document.querySelector('input[name=csrfmiddlewaretoken]')?.value || document.querySelector('meta[name="csrf-token"]').content;
+    const response = await fetch(url, {
+      method: 'POST', headers: { 'X-CSRFToken': csrf }, body: new URLSearchParams(fields),
+    });
+    await response.text();
+    return response.status;
+  }, { url, fields });
+}
+
+async function enableRoadmap(page) {
+  await page.goto('/');
+  await page.locator('.ws-chevron-btn').click();
+  await page.getByRole('button', { name: 'Enable public roadmap' }).click();
+  await page.locator('.ws-chevron-btn').click();
+  return page.locator('#public-roadmap-link').getAttribute('href');
+}
 
 const { test, expect, login, reset } = require('./fixtures');
 
@@ -35,17 +111,20 @@ async function placeMilestoneGhost(page, project, offset = 140) {
   await expect(page.locator('#milestone-popover')).toBeVisible();
 }
 
-async function startWebhookServer() {
+async function startWebhookServer(statuses = [200], beforeRespond = async () => {}) {
   const requests = [];
+  const errors = [];
   const server = http.createServer((req, res) => {
     let body = '';
     req.setEncoding('utf8');
     req.on('data', chunk => { body += chunk; });
-    req.on('end', () => {
+    req.on('end', async () => {
       let json = null;
       try { json = JSON.parse(body || '{}'); } catch (_) {}
       requests.push({ method: req.method, url: req.url, headers: req.headers, body, json });
-      res.writeHead(200, { 'content-type': 'application/json' });
+      let status = statuses[Math.min(requests.length - 1, statuses.length - 1)];
+      try { await beforeRespond(); } catch (error) { errors.push(String(error)); status = 500; }
+      res.writeHead(status, { 'content-type': 'application/json', 'retry-after': '1' });
       res.end('{}');
     });
   });
@@ -54,9 +133,763 @@ async function startWebhookServer() {
   return {
     url: `http://127.0.0.1:${port}/teams-webhook`,
     requests,
+    errors,
     close: () => new Promise(resolve => server.close(resolve)),
   };
 }
+
+test.describe('self-service profile', () => {
+  test('profile edits personal fields and a clearly named Teams email address', async ({ appPage: page }) => {
+    const link = page.locator('.sidebar-user .user-name');
+    await expect(link).toHaveAttribute('href', '/profile/');
+    await link.click();
+    await expect(page.getByRole('heading', { name: 'My profile', exact: true })).toBeVisible();
+    await expect(page.getByLabel('Username', { exact: true })).toHaveAttribute('readonly', '');
+    await page.getByLabel('First name', { exact: true }).fill('Demo');
+    await page.getByLabel('Last name', { exact: true }).fill('User');
+    await page.getByLabel('Email address', { exact: true }).fill('contact@example.com');
+    await page.getByLabel('Teams email address', { exact: true }).fill('DEMO@teams.example.com');
+    await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+    await expect(page.getByRole('status')).toContainText('Profile saved.');
+    await page.reload();
+    await expect(page.getByLabel('First name', { exact: true })).toHaveValue('Demo');
+    await expect(page.getByLabel('Last name', { exact: true })).toHaveValue('User');
+    await expect(page.getByLabel('Email address', { exact: true })).toHaveValue('contact@example.com');
+    await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('demo@teams.example.com');
+    const workspace = await page.locator('#profile-form input[name=workspace_id]').inputValue();
+    // Browser validation bypass: invalid Teams address must not partially save account fields.
+    expect(await postForm(page, '/profile/', {
+      first_name: 'Should not persist', email: 'contact@example.com', teams_upn: 'not-an-address', workspace_id: workspace,
+    })).toBe(200);
+    await page.reload();
+    await expect(page.getByLabel('First name', { exact: true })).toHaveValue('Demo');
+    await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('demo@teams.example.com');
+    await page.getByLabel('Teams email address', { exact: true }).fill('');
+    await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+    await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('');
+    await page.goto('/workspaces/teams/');
+    await expect(page.getByLabel('Teams email address', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Set up new webhook', exact: true })).toBeVisible();
+    await expect(page.getByLabel('Microsoft Teams webhook URL')).not.toBeVisible();
+  });
+
+  test('profile remains self-service for members without exposing PM Teams settings', async ({ page, request, browser }) => {
+    await reset(request);
+    const anonymous = await request.get('/profile/', { maxRedirects: 0 });
+    expect(anonymous.status()).toBe(302);
+    expect(anonymous.headers().location).toContain('/accounts/login/');
+    await page.goto('/accounts/login/');
+    await page.locator('input[name=username]').fill('member1');
+    await page.locator('input[name=password]').fill('member1');
+    await page.locator('button[type=submit]').click();
+    await page.waitForURL('/');
+    await expect(page.getByRole('link', { name: 'Teams notifications', exact: true })).toHaveCount(0);
+    await page.locator('.sidebar-user .user-name').click();
+    const workspace = await page.locator('#profile-form input[name=workspace_id]').inputValue();
+    expect(await postForm(page, '/profile/', {
+      first_name: 'Member', last_name: 'Updated', email: 'member@example.com', teams_upn: 'member@teams.example.com', workspace_id: workspace,
+      username: 'demo', user_id: '1', is_staff: 'true', is_superuser: 'true', role: 'pm',
+    })).toBe(200);
+    await page.reload();
+    await expect(page.getByLabel('Username', { exact: true })).toHaveValue('member1');
+    await expect(page.getByLabel('First name', { exact: true })).toHaveValue('Member');
+    await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('member@teams.example.com');
+    for (const action of ['workspace', 'webhook', 'disconnect', 'public_subscribers']) {
+      expect(await postForm(page, '/workspaces/teams/', { action, teams_webhook_url: 'https://example.com' })).toBe(403);
+    }
+    const denied = await page.goto('/workspaces/teams/');
+    expect(denied.status()).toBe(403);
+    const otherContext = await browser.newContext();
+    try {
+      const other = await otherContext.newPage();
+      await login(other);
+      await other.goto('/profile/');
+      await expect(other.getByLabel('First name', { exact: true })).toHaveValue('');
+      await expect(other.getByLabel('Teams email address', { exact: true })).toHaveValue('');
+    } finally { await otherContext.close(); }
+  });
+
+  test('profile Teams email stays workspace-specific and rejects stale workspace submissions', async ({ appPage: page }) => {
+    await saveTeamsIdentity(page, 'original@example.com');
+    const sourceWorkspace = await page.locator('#profile-form input[name=workspace_id]').inputValue();
+    await page.locator('.ws-chevron-btn').click();
+    await page.locator('#workspace-create-name').fill('Another workspace');
+    await page.locator('#workspace-menu button', { hasText: 'Create' }).click();
+    await page.waitForURL('/');
+    await page.goto('/profile/');
+    await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('');
+    expect(await postForm(page, '/profile/', { workspace_id: sourceWorkspace, teams_upn: 'wrong@example.com', first_name: 'Stale' })).toBe(200);
+    await page.reload();
+    await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('');
+    await expect(page.getByLabel('First name', { exact: true })).toHaveValue('');
+    await saveTeamsIdentity(page, 'other@example.com');
+    await page.locator('.ws-chevron-btn').click();
+    await page.locator('#workspace-menu .workspace-item', { hasText: "demo's workspace" }).click();
+    await page.waitForURL('/');
+    await page.goto('/profile/');
+    await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('original@example.com');
+  });
+
+  test('profile password changes verify the old password and preserve the current session', async ({ appPage: page }) => {
+    await page.goto('/profile/');
+    await expect(page.getByRole('link', { name: 'Change password', exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Change password', exact: true }).click();
+    const password = 'N4no-Updated-Passphrase!2026';
+    await page.locator('input[name=old_password]').fill('wrong');
+    await page.locator('input[name=new_password1]').fill(password);
+    await page.locator('input[name=new_password2]').fill(password);
+    await page.getByRole('button', { name: 'Change password', exact: true }).click();
+    await expect(page.locator('#password-form .errorlist')).toContainText('Your old password was entered incorrectly.');
+    await page.locator('input[name=old_password]').fill('demo');
+    await page.locator('input[name=new_password1]').fill('123');
+    await page.locator('input[name=new_password2]').fill('123');
+    await page.getByRole('button', { name: 'Change password', exact: true }).click();
+    await expect(page.locator('#password-form .errorlist')).toContainText('This password is too short.');
+    await page.locator('input[name=old_password]').fill('demo');
+    await page.locator('input[name=new_password1]').fill(password);
+    await page.locator('input[name=new_password2]').fill(password);
+    await page.getByRole('button', { name: 'Change password', exact: true }).click();
+    await page.waitForURL('/profile/');
+    await expect(page.getByRole('status')).toContainText('Password changed.');
+    await expect(page.getByLabel('Username', { exact: true })).toHaveValue('demo');
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.goto('/accounts/login/');
+    await page.locator('input[name=username]').fill('demo');
+    await page.locator('input[name=password]').fill('demo');
+    await page.locator('button[type=submit]').click();
+    await expect(page.locator('.login-card .error')).toBeVisible();
+    await page.locator('input[name=username]').fill('demo');
+    await page.locator('input[name=password]').fill(password);
+    await page.locator('button[type=submit]').click();
+    await page.waitForURL('/');
+  });
+
+  test('profile uses understandable German Teams email wording', async ({ appPage: page }) => {
+    await page.goto('/profile/');
+    await expect(page.getByRole('heading', { name: 'My profile', exact: true })).toBeVisible();
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await expect(page.getByRole('heading', { name: 'Mein Profil', exact: true })).toBeVisible();
+    await expect(page.getByLabel('Teams-E-Mail-Adresse', { exact: true })).toBeVisible();
+    await expect(page.locator('#profile-form')).not.toContainText('UPN');
+  });
+});
+
+test.describe('workspace Teams subscriptions', () => {
+  test('anonymous followers remember a validated email for subsequent follows in the same roadmap', async ({ appPage: page, browser }) => {
+    await page.goto('/workspaces/teams/');
+    await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
+    await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
+    const roadmap = await enableRoadmap(page);
+    const context = await browser.newContext();
+    const otherContext = await browser.newContext();
+    try {
+      const visitor = await context.newPage();
+      await visitor.goto(roadmap);
+      const key = `nano-roadmap-email:${await visitor.locator('[data-roadmap]').getAttribute('data-roadmap-key')}`;
+      const project = name => visitor.locator('[data-project-subscription]', { hasText: name });
+      const dialog = visitor.getByRole('dialog', { name: 'Follow project', exact: true });
+      await project('API Migration').getByRole('button', { name: 'Follow', exact: true }).click();
+      await dialog.getByLabel('Teams email address', { exact: true }).fill('visitor@wrongcompany.com');
+      await dialog.getByRole('button', { name: 'Follow', exact: true }).click();
+      await expect(dialog.getByRole('alert')).toBeVisible();
+      expect(await visitor.evaluate(key => localStorage.getItem(key), key)).toBeNull();
+      await dialog.getByLabel('Teams email address', { exact: true }).fill('VISITOR@MYCOMPANY.COM');
+      await dialog.getByRole('button', { name: 'Follow', exact: true }).click();
+      await expect(project('API Migration').getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      await expect.poll(() => visitor.evaluate(key => localStorage.getItem(key), key)).toBe('visitor@mycompany.com');
+      await visitor.reload();
+      await project('Onboarding revamp').getByRole('button', { name: 'Follow', exact: true }).click();
+      await expect(project('Onboarding revamp').getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      await expect(dialog).not.toBeVisible();
+      const other = await otherContext.newPage();
+      await other.goto(roadmap);
+      expect(await other.content()).not.toContain('visitor@mycompany.com');
+      expect(await other.evaluate(key => localStorage.getItem(key), key)).toBeNull();
+      await visitor.getByRole('button', { name: 'Use another email address', exact: true }).click();
+      expect(await visitor.evaluate(key => localStorage.getItem(key), key)).toBeNull();
+      await project('Infra hardening').getByRole('button', { name: 'Follow', exact: true }).click();
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByLabel('Teams email address', { exact: true })).toHaveValue('');
+      await dialog.getByLabel('Teams email address', { exact: true }).fill('another@mycompany.com');
+      await dialog.getByRole('button', { name: 'Follow', exact: true }).click();
+      await expect(project('Infra hardening').getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      await expect.poll(() => visitor.evaluate(key => localStorage.getItem(key), key)).toBe('another@mycompany.com');
+    } finally { await context.close(); await otherContext.close(); }
+  });
+
+  test('cached anonymous email addresses are still checked against current domain restrictions', async ({ appPage: page, browser }) => {
+    await page.goto('/workspaces/teams/');
+    await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
+    await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
+    const roadmap = await enableRoadmap(page);
+    const context = await browser.newContext();
+    try {
+      const visitor = await context.newPage();
+      await visitor.goto(roadmap);
+      const key = `nano-roadmap-email:${await visitor.locator('[data-roadmap]').getAttribute('data-roadmap-key')}`;
+      await visitor.evaluate(key => localStorage.setItem(key, 'old@anothercompany.com'), key);
+      await visitor.reload();
+      const project = visitor.locator('[data-project-subscription]', { hasText: 'API Migration' });
+      await project.getByRole('button', { name: 'Follow', exact: true }).click();
+      const dialog = visitor.getByRole('dialog', { name: 'Follow project', exact: true });
+      await expect(dialog.getByRole('alert')).toContainText('Use a Teams email address from an allowed domain.');
+      expect(await visitor.evaluate(key => localStorage.getItem(key), key)).toBe('old@anothercompany.com');
+      await dialog.getByLabel('Teams email address', { exact: true }).fill('new@mycompany.com');
+      await dialog.getByRole('button', { name: 'Follow', exact: true }).click();
+      await expect(project.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      await expect.poll(() => visitor.evaluate(key => localStorage.getItem(key), key)).toBe('new@mycompany.com');
+    } finally { await context.close(); }
+  });
+
+  test('roadmap follow controls belong to each project card without changing its filter', async ({ appPage: page }) => {
+    const roadmap = await enableRoadmap(page);
+    await page.goto(roadmap);
+    const filters = page.locator('#roadmap-project-filter');
+    await expect(filters.getByText('API Migration', { exact: true })).toHaveCount(1);
+    const card = filters.locator('[data-project-subscription]', { hasText: 'API Migration' });
+    const toggle = card.locator('[data-project-filter]');
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await card.getByRole('button', { name: 'Follow', exact: true }).click();
+    const subscribed = card.getByRole('button', { name: 'Subscribed', exact: true });
+    await expect(subscribed).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(card.getByRole('button', { name: 'Unfollow', exact: true })).not.toBeVisible();
+    await subscribed.click();
+    await expect(card.getByRole('button', { name: 'Unfollow', exact: true })).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await page.keyboard.press('Escape');
+    await expect(card.getByRole('button', { name: 'Unfollow', exact: true })).not.toBeVisible();
+    await expect(subscribed).toBeFocused();
+    await subscribed.click();
+    await page.getByRole('heading', { name: "demo's workspace Roadmap", exact: true }).click();
+    await expect(card.getByRole('button', { name: 'Unfollow', exact: true })).not.toBeVisible();
+    await subscribed.click();
+    await card.getByRole('button', { name: 'Unfollow', exact: true }).click();
+    await expect(card.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('anonymous roadmap followers use allowed Teams domains and private browser-owned subscriptions', async ({ appPage: page, browser }) => {
+    const webhook = await startWebhookServer();
+    const context = await browser.newContext();
+    const otherContext = await browser.newContext();
+    const visitor = await context.newPage();
+    const other = await otherContext.newPage();
+    try {
+      const milestoneId = await page.locator('.milestone[data-title="v2 API beta"]').first().getAttribute('data-milestone-id');
+      await configureTeams(page, webhook.url, ['milestone.updated']);
+      await page.getByLabel('Allowed domains for public followers').fill('MYCOMPANY.COM, mycompany.com');
+      await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
+      await expect(page.getByLabel('Allowed domains for public followers')).toHaveValue('mycompany.com');
+      const roadmap = await enableRoadmap(page);
+      await visitor.goto(roadmap);
+      const project = visitor.locator('[data-project-subscription]', { hasText: 'API Migration' });
+      const action = await project.getAttribute('action');
+      await project.getByRole('button', { name: 'Follow', exact: true }).click();
+      const dialog = visitor.getByRole('dialog', { name: 'Follow project', exact: true });
+      for (const address of ['visitor@evilmycompany.com', 'visitor@sub.mycompany.com', 'visitor@mycompany.com.evil.net']) {
+        await dialog.getByLabel('Teams email address', { exact: true }).fill(address);
+        await dialog.getByRole('button', { name: 'Follow', exact: true }).click();
+        await expect(dialog.getByRole('alert')).toContainText('Use a Teams email address from an allowed domain.');
+      }
+      await dialog.getByLabel('Teams email address', { exact: true }).fill('VISITOR@MYCOMPANY.COM');
+      await dialog.getByRole('button', { name: 'Follow', exact: true }).click();
+      await visitor.waitForURL(roadmap);
+      await expect(project.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      await visitor.reload();
+      await expect(project.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      expect(await postForm(visitor, action, { action: 'follow', teams_email: 'visitor@mycompany.com' })).toBe(200);
+      await other.goto(roadmap);
+      expect(await other.content()).not.toContain('visitor@mycompany.com');
+      expect(await postForm(other, action, { action: 'unfollow', teams_email: 'visitor@mycompany.com' })).toBe(200);
+      await visitor.goto(roadmap);
+      await expect(project.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      expect((await visitor.request.post(action, { form: { action: 'unfollow' } })).status()).toBe(403);
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Anonymous follower notified' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      expect(webhook.requests[0].json.attachments[0].content.msteams.entities.map(e => e.mentioned.id)).toEqual(['visitor@mycompany.com']);
+      // An authenticated follower with the same address must not cause duplicate mentions.
+      await saveTeamsIdentity(page, 'visitor@mycompany.com');
+      await page.goto(roadmap);
+      await page.locator('[data-project-subscription]', { hasText: 'API Migration' }).getByRole('button', { name: 'Follow', exact: true }).click();
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Public followers notified' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(2);
+      expect(webhook.requests[1].json.attachments[0].content.msteams.entities.map(e => e.mentioned.id)).toEqual(['visitor@mycompany.com']);
+      await page.goto(roadmap);
+      await unfollowProject(page.locator('[data-project-subscription]', { hasText: 'API Migration' }));
+      // Logging in must not hide or strand the subscription owned by this browser.
+      await login(visitor);
+      await visitor.goto(roadmap);
+      await expect(project.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      await unfollowProject(project);
+      await expect(project.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Public followers removed' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests.at(-1).json.attachments[0].content.msteams).toBeUndefined();
+    } finally { await context.close(); await otherContext.close(); await webhook.close(); }
+  });
+
+  test('anonymous following works by default and optional domains restrict new mentions', async ({ appPage: page, browser }) => {
+    const webhook = await startWebhookServer();
+    const context = await browser.newContext();
+    const visitor = await context.newPage();
+    try {
+      const milestoneId = await page.locator('.milestone[data-title="v2 API beta"]').first().getAttribute('data-milestone-id');
+      await configureTeams(page, webhook.url, ['milestone.updated']);
+      const roadmap = await enableRoadmap(page);
+      await page.goto(roadmap);
+      const action = await page.locator('[data-project-subscription]', { hasText: 'API Migration' }).getAttribute('action');
+      await visitor.goto(roadmap);
+      await expect(visitor.getByRole('link', { name: 'Sign in to follow projects' })).toHaveCount(0);
+      const project = visitor.locator('[data-project-subscription]', { hasText: 'API Migration' });
+      await project.getByRole('button', { name: 'Follow', exact: true }).click();
+      const dialog = visitor.getByRole('dialog', { name: 'Follow project', exact: true });
+      await dialog.getByLabel('Teams email address', { exact: true }).fill('visitor@othercompany.com');
+      await dialog.getByRole('button', { name: 'Follow', exact: true }).click();
+      await expect(project.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Unrestricted public follow' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests[0].json.attachments[0].content.msteams.entities.map(e => e.mentioned.id)).toEqual(['visitor@othercompany.com']);
+      await page.goto('/workspaces/teams/');
+      for (const domain of ['*.mycompany.com', 'https://mycompany.com', '@mycompany.com']) {
+        await page.getByLabel('Allowed domains for public followers').fill(domain);
+        await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
+        await expect(page.locator('#teams-public-followers-form .errorlist')).toBeVisible();
+      }
+      await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
+      await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
+      await expect(page.getByLabel('Allowed domains for public followers')).toHaveValue('mycompany.com');
+      await visitor.goto(roadmap);
+      expect(await postForm(visitor, action, { action: 'follow', teams_email: 'visitor@othercompany.com' })).toBe(400);
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Restricted public follow' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(2);
+      expect(webhook.requests[1].json.attachments[0].content.msteams).toBeUndefined();
+      await page.getByLabel('Allowed domains for public followers').fill('');
+      await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
+      await expect(page.getByLabel('Allowed domains for public followers')).toHaveValue('');
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Restriction removed' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(3);
+      expect(webhook.requests[2].json.attachments[0].content.msteams.entities.map(e => e.mentioned.id)).toEqual(['visitor@othercompany.com']);
+      await visitor.goto(roadmap);
+      await unfollowProject(project);
+      await expect(project.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
+    } finally { await context.close(); await webhook.close(); }
+  });
+
+  test('anonymous subscriptions stay scoped to the public token and never follow projects across workspaces', async ({ appPage: page, browser }) => {
+    const context = await browser.newContext();
+    const visitor = await context.newPage();
+    try {
+      const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+      await page.goto('/profile/');
+      const sourceId = await page.locator('#profile-form input[name=workspace_id]').inputValue();
+      await page.goto('/workspaces/teams/');
+      await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
+      await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
+      const sourceRoadmap = await enableRoadmap(page);
+      const sourceAction = `${sourceRoadmap}projects/${projectId}/follow/`;
+      await visitor.goto(sourceRoadmap);
+      expect(await postForm(visitor, sourceAction, { action: 'follow', teams_email: 'visitor@mycompany.com' })).toBe(200);
+      expect(await postForm(page, '/workspaces/', { name: 'Another public channel' })).toBe(200);
+      await page.goto('/profile/');
+      const targetId = await page.locator('#profile-form input[name=workspace_id]').inputValue();
+      await page.goto('/workspaces/teams/');
+      await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
+      await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
+      const targetRoadmap = await enableRoadmap(page);
+      expect(await postForm(visitor, `${targetRoadmap}projects/${projectId}/follow/`, { action: 'follow', teams_email: 'visitor@mycompany.com' })).toBe(404);
+      expect(await postForm(page, `/workspaces/${sourceId}/switch/`, {})).toBe(200);
+      expect(await postForm(page, `/projects/${projectId}/move-workspace/`, { workspace_id: targetId })).toBe(200);
+      expect(await postForm(visitor, sourceAction, { action: 'follow', teams_email: 'visitor@mycompany.com' })).toBe(404);
+      await visitor.goto(targetRoadmap);
+      await expect(visitor.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
+      await expect(visitor.getByRole('button', { name: 'Unfollow', exact: true })).toHaveCount(0);
+      expect(await postForm(page, `/workspaces/${targetId}/switch/`, {})).toBe(200);
+      expect(await postForm(page, '/workspaces/public-roadmap/', { action: 'disable' })).toBe(200);
+      expect(await postForm(visitor, `${targetRoadmap}projects/${projectId}/follow/`, { action: 'follow', teams_email: 'visitor@mycompany.com' })).toBe(404);
+    } finally { await context.close(); }
+  });
+
+  test('Teams webhook actions configure and replace connections independently of event settings', async ({ appPage: page }) => {
+    const first = await startWebhookServer();
+    const replacement = await startWebhookServer();
+    try {
+      const milestoneId = await page.locator('.milestone').first().getAttribute('data-milestone-id');
+      await page.goto('/workspaces/teams/');
+      const setup = page.getByRole('button', { name: 'Set up new webhook', exact: true });
+      await expect(setup).toBeVisible();
+      await expect(page.getByLabel('Microsoft Teams webhook URL')).not.toBeVisible();
+      await expect(page.locator('input[name=disconnect]')).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Disconnect webhook', exact: true })).toHaveCount(0);
+      for (const input of await page.locator('input[name=teams_notify_events]').all()) {
+        await input.setChecked((await input.getAttribute('value')) === 'milestone.updated');
+      }
+      await page.getByRole('button', { name: 'Save workspace notifications' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Set up new webhook', exact: true });
+      await setup.click();
+      await expect(dialog).toBeVisible();
+      await dialog.getByLabel('Microsoft Teams webhook URL').fill(first.url);
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(dialog).not.toBeVisible();
+      await expect(setup).toBeFocused();
+      await setup.click();
+      await expect(dialog.getByLabel('Microsoft Teams webhook URL')).toHaveValue('');
+      await dialog.getByLabel('Microsoft Teams webhook URL').fill(first.url);
+      await page.keyboard.press('Escape');
+      await expect(dialog).not.toBeVisible();
+      await setup.click();
+      await expect(dialog.getByLabel('Microsoft Teams webhook URL')).toHaveValue('');
+      await dialog.getByLabel('Microsoft Teams webhook URL').fill(first.url);
+      await dialog.getByRole('button', { name: 'Save webhook', exact: true }).click();
+      await expect(dialog).not.toBeVisible();
+      await expect(page.locator('#teams-connection-status')).toHaveText('Webhook configured');
+      await expect(page.getByLabel('Milestone details changed', { exact: true })).toBeChecked();
+      await expect(page.getByLabel('Milestone date changed', { exact: true })).not.toBeChecked();
+      expect(await page.content()).not.toContain(first.url);
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'First connection' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(first.requests).toHaveLength(1);
+      await setup.click();
+      await dialog.getByLabel('Microsoft Teams webhook URL').fill(replacement.url);
+      await dialog.getByRole('button', { name: 'Save webhook', exact: true }).click();
+      await expect(page.locator('#teams-connection-status')).toHaveText('Webhook configured');
+      await expect(dialog).not.toBeVisible();
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Replacement connection' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(first.requests).toHaveLength(1);
+      expect(replacement.requests).toHaveLength(1);
+      await page.getByRole('button', { name: 'Disconnect webhook', exact: true }).click();
+      await expect(page.locator('#teams-connection-status')).toHaveText('No webhook configured');
+      await expect(page.getByLabel('Milestone details changed', { exact: true })).toBeChecked();
+      await expect(page.getByLabel('Milestone date changed', { exact: true })).not.toBeChecked();
+      await expect(page.getByRole('button', { name: 'Disconnect webhook', exact: true })).toHaveCount(0);
+    } finally { await first.close(); await replacement.close(); }
+  });
+
+  test('Teams webhook dialog keeps validation errors visible without changing the saved connection', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      const milestoneId = await page.locator('.milestone').first().getAttribute('data-milestone-id');
+      await configureTeams(page, webhook.url, ['milestone.updated']);
+      await page.getByRole('button', { name: 'Set up new webhook', exact: true }).click();
+      const dialog = page.getByRole('dialog', { name: 'Set up new webhook', exact: true });
+      await dialog.locator('form').evaluate(form => { form.noValidate = true; });
+      await dialog.getByRole('button', { name: 'Save webhook', exact: true }).click();
+      await expect(dialog.locator('.errorlist')).toContainText('This field is required.');
+      await expect(dialog).toBeVisible();
+      await dialog.getByLabel('Microsoft Teams webhook URL').fill('https://example.com/?sig=invalid-secret');
+      await dialog.getByRole('button', { name: 'Save webhook', exact: true }).click();
+      await expect(dialog.locator('.errorlist')).toBeVisible();
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByLabel('Microsoft Teams webhook URL')).toHaveValue('');
+      expect(await page.content()).not.toContain('invalid-secret');
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(page.locator('#teams-connection-status')).toHaveText('Webhook configured');
+      // Event preferences cannot implicitly replace or disconnect the webhook.
+      expect(await postForm(page, '/workspaces/teams/', {
+        action: 'workspace', teams_notify_events: 'milestone.updated',
+        teams_webhook_url: 'https://example.com', disconnect: 'on',
+      })).toBe(200);
+      await page.goto('/workspaces/teams/');
+      await expect(page.getByLabel('Milestone details changed', { exact: true })).toBeChecked();
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Original connection retained' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+    } finally { await webhook.close(); }
+  });
+
+  test('Teams webhook actions use clear German labels', async ({ appPage: page }) => {
+    await page.goto('/workspaces/teams/');
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await page.getByRole('button', { name: 'Neuen Webhook einrichten', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Neuen Webhook einrichten', exact: true });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel('Microsoft-Teams-Webhook-URL').fill('https://test.logic.azure.com/workflows/test?sig=test-secret');
+    await dialog.getByRole('button', { name: 'Webhook speichern', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(page.locator('#teams-connection-status')).toHaveText('Webhook eingerichtet');
+    await page.getByRole('button', { name: 'Webhook trennen', exact: true }).click();
+    await expect(page.locator('#teams-connection-status')).toHaveText('Kein Webhook eingerichtet');
+    await expect(page.getByRole('button', { name: 'Neuen Webhook einrichten', exact: true })).toBeVisible();
+  });
+
+  test('Teams settings no longer import legacy project webhooks', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    // Simulate an existing installation with a retained project-level secret.
+    await promisify(execFile)('uv', ['run', 'python', '-c', `
+import sqlite3, sys
+with sqlite3.connect('db.e2e.sqlite3') as connection:
+    connection.execute('UPDATE data_project SET teams_webhook_url = ? WHERE id = ?',
+                       ('https://legacy.logic.azure.com/workflows/test?sig=legacy-test-secret', sys.argv[1]))
+`, projectId], { cwd: path.resolve(__dirname, '../..') });
+    await page.goto('/workspaces/teams/');
+    expect(await postForm(page, '/workspaces/teams/', { action: 'workspace', legacy_project: projectId })).toBe(200);
+    await page.reload();
+    await expect(page.locator('#teams-connection-status')).toHaveText('No webhook configured');
+    await expect(page.locator('[name=legacy_project]')).toHaveCount(0);
+    await expect(page.getByText('Legacy project webhooks are no longer used.', { exact: false })).toHaveCount(0);
+    await configureTeams(page, 'https://workspace.logic.azure.com/workflows/test?sig=workspace-test-secret');
+    await expect(page.locator('#teams-connection-status')).toHaveText('Webhook configured');
+  });
+
+  test('workspace Teams webhook mentions roadmap followers for direct and task-driven changes', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await configureTeams(page, webhook.url);
+      await saveTeamsIdentity(page, 'demo@example.com');
+      const roadmap = await enableRoadmap(page);
+      const milestone = page.locator('.milestone[data-title="v2 API beta"]').first();
+      const milestoneId = await milestone.getAttribute('data-milestone-id');
+      const taskId = await milestone.getAttribute('data-task-id');
+      await page.goto(roadmap);
+      const follow = page.locator('[data-project-subscription]', { hasText: 'API Migration' });
+      await follow.getByRole('button', { name: 'Follow', exact: true }).click();
+      await expect(follow.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      await page.reload();
+      await expect(follow.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+      await page.goto('/');
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Subscribed milestone' })).toBe(200);
+      expect(webhook.requests).toHaveLength(0); // Delivery never blocks the browser request.
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      const card = webhook.requests[0].json.attachments[0].content;
+      expect(card.msteams.entities).toEqual([{
+        type: 'mention', text: '<at>demo@example.com</at>',
+        mentioned: { id: 'demo@example.com', name: 'demo@example.com' },
+      }]);
+      expect(card.body.some(block => block.text?.includes('<at>demo@example.com</at>'))).toBe(true);
+      await page.reload();
+      const oldDate = await page.locator(`#ms-${milestoneId}`).getAttribute('data-date');
+      const nextDate = new Date(`${oldDate}T00:00:00Z`);
+      nextDate.setUTCDate(nextDate.getUTCDate() + 2);
+      expect(await postForm(page, `/tasks/${taskId}/resize/end/`, { end: nextDate.toISOString().slice(0, 10) })).toBe(200);
+      await page.reload();
+      await expect(page.locator(`#ms-${milestoneId}`)).not.toHaveAttribute('data-date', oldDate);
+      await deliverTeamsNotifications();
+      const linkedChanges = webhook.requests.slice(1).filter(r => r.json.summary.includes('Subscribed milestone'));
+      expect(linkedChanges).toHaveLength(1);
+      expect(linkedChanges[0].json.attachments[0].content.msteams.entities).toHaveLength(1);
+      await page.goto(roadmap);
+      await unfollowProject(follow);
+      await expect(follow.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
+      await page.goto('/');
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Unsubscribed milestone' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests.at(-1).json.attachments[0].content.msteams).toBeUndefined();
+      await page.goto('/activity/');
+      await expect(page.locator('body')).not.toContainText(webhook.url);
+    } finally { await webhook.close(); }
+  });
+
+  test('Teams subscriptions are self-service and scoped to roadmap workspace membership', async ({ appPage: page, browser }) => {
+    const roadmap = await enableRoadmap(page);
+    await page.goto(roadmap);
+    const action = await page.locator('[data-project-subscription]', { hasText: 'API Migration' }).getAttribute('action');
+    const otherContext = await browser.newContext();
+    const other = await otherContext.newPage();
+    try {
+      await other.goto(roadmap);
+      await expect(other.getByRole('link', { name: 'Sign in to follow projects' })).toHaveCount(0);
+      await expect(other.locator('[data-project-subscription]')).toHaveCount(3);
+      await other.goto('/accounts/login/');
+      await other.locator('input[name=username]').fill('pm2');
+      await other.locator('input[name=password]').fill('pm2');
+      await other.locator('button[type=submit]').click();
+      await other.waitForURL('/');
+      // Non-members use the public flow and must supply a Teams address.
+      expect(await postForm(other, action, { action: 'follow' })).toBe(400);
+      await other.goto(roadmap);
+      await expect(other.locator('[data-project-subscription]')).toHaveCount(3);
+    } finally { await otherContext.close(); }
+
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.goto('/accounts/login/');
+    await page.locator('input[name=username]').fill('member1');
+    await page.locator('input[name=password]').fill('member1');
+    await page.locator('button[type=submit]').click();
+    await page.waitForURL('/');
+    expect((await page.goto('/workspaces/teams/')).status()).toBe(403);
+    await page.goto('/profile/');
+    expect(await postForm(page, '/workspaces/teams/', { teams_webhook_url: 'https://example.com', action: 'workspace' })).toBe(403);
+    await saveTeamsIdentity(page, 'member@example.com');
+    await page.goto(roadmap);
+    await page.locator('[data-project-subscription]', { hasText: 'API Migration' }).getByRole('button', { name: 'Follow', exact: true }).click();
+    await expect(page.locator('[data-project-subscription]', { hasText: 'API Migration' }).getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
+  });
+
+  test('Teams creation notifications wait for a real milestone title and deletion notifies once', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await configureTeams(page, webhook.url, ['milestone.created', 'milestone.deleted']);
+      await page.goto('/');
+      const project = page.locator('.project-group').filter({ hasText: 'API Migration' });
+      await project.locator('.left-cell.proj').click();
+      await page.locator('#pp-add-milestone').click();
+      await placeMilestoneGhost(page, project);
+      const id = await page.locator('#milestone-popover').getAttribute('data-milestone-id');
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(0);
+      await page.locator('#milestone-popover input[name=title]').fill('New customer launch');
+      await page.locator('#milestone-popover textarea[name=description]').fill('Customer launch readiness.');
+      await page.locator('#milestone-popover button[type=submit]').click();
+      await expect(page.locator('#milestone-popover')).toHaveCount(0);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      expect(webhook.requests[0].json.summary).toBe('Meilenstein New customer launch erstellt');
+      expect(await postForm(page, `/milestones/${id}/update/`, { title: 'New customer launch' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      expect(await postForm(page, `/milestones/${id}/delete/`, {})).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(2);
+      expect(webhook.requests[1].json.summary).toBe('Meilenstein New customer launch gelöscht');
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(2);
+    } finally { await webhook.close(); }
+  });
+
+  test('Teams task deletion notifies the milestone subscribers', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await configureTeams(page, webhook.url, ['milestone.deleted']);
+      await page.goto('/');
+      const taskId = await page.locator('.milestone[data-title="v2 API beta"]').getAttribute('data-task-id');
+      expect(await postForm(page, `/tasks/${taskId}/delete/`, {})).toBe(200);
+      await page.reload();
+      await expect(page.locator('.milestone[data-title="v2 API beta"]')).toHaveCount(0);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      expect(webhook.requests[0].json.summary).toBe('Meilenstein v2 API beta gelöscht');
+    } finally { await webhook.close(); }
+  });
+
+  test('Teams project transfers send one message mentioning both projects followers', async ({ appPage: page, browser }) => {
+    const webhook = await startWebhookServer();
+    const memberContext = await browser.newContext();
+    const member = await memberContext.newPage();
+    try {
+      await configureTeams(page, webhook.url, ['milestone.project_changed', 'milestone.updated']);
+      await saveTeamsIdentity(page, 'demo@example.com');
+      const roadmap = await enableRoadmap(page);
+      const milestoneId = await page.locator('.milestone[data-title="v2 API beta"]').getAttribute('data-milestone-id');
+      const taskId = await page.locator('.milestone[data-title="v2 API beta"]').getAttribute('data-task-id');
+      const target = await page.locator('.left-cell.proj', { hasText: 'Onboarding revamp' }).getAttribute('data-project-id');
+      await page.goto(roadmap);
+      await page.locator('[data-project-subscription]', { hasText: 'API Migration' }).getByRole('button', { name: 'Follow', exact: true }).click();
+      await page.locator('[data-project-subscription]', { hasText: 'Onboarding revamp' }).getByRole('button', { name: 'Follow', exact: true }).click();
+      await member.goto('/accounts/login/');
+      await member.locator('input[name=username]').fill('member1');
+      await member.locator('input[name=password]').fill('member1');
+      await member.locator('button[type=submit]').click();
+      await member.waitForURL('/');
+      await saveTeamsIdentity(member, 'member@example.com');
+      await member.goto(roadmap);
+      await member.locator('[data-project-subscription]', { hasText: 'Onboarding revamp' }).getByRole('button', { name: 'Follow', exact: true }).click();
+      await page.goto('/');
+      expect(await postForm(page, `/tasks/${taskId}/update/`, { project_id: target })).toBe(200);
+      await page.reload();
+      await expect(page.locator(`#ms-${milestoneId}`)).toHaveAttribute('data-project-id', target);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      const card = webhook.requests[0].json.attachments[0].content;
+      expect(card.msteams.entities.map(entity => entity.mentioned.id)).toEqual(['demo@example.com', 'member@example.com']);
+      // Same UPN on two subscriptions/users is mentioned only once.
+      await saveTeamsIdentity(member, 'DEMO@example.com');
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Shared follower' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests.at(-1).json.attachments[0].content.msteams.entities).toHaveLength(1);
+      await saveTeamsIdentity(member, '');
+      await saveTeamsIdentity(page, '');
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'No identities' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests.at(-1).json.attachments[0].content.msteams).toBeUndefined();
+    } finally {
+      await memberContext.close();
+      await webhook.close();
+    }
+  });
+
+  test('Teams settings validate destinations and cancel pending delivery when disconnected', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await configureTeams(page, webhook.url);
+      await page.getByRole('button', { name: 'Set up new webhook', exact: true }).click();
+      await page.getByLabel('Microsoft Teams webhook URL').fill('https://example.com/not-teams?sig=secret');
+      await page.getByRole('button', { name: 'Save webhook', exact: true }).click();
+      await expect(page.locator('#teams-webhook-dialog')).toContainText('Use an HTTPS Microsoft Teams or Power Automate webhook URL.');
+      await page.goto('/');
+      const id = await page.locator('.milestone').first().getAttribute('data-milestone-id');
+      expect(await postForm(page, `/milestones/${id}/update/`, { title: 'Never send this' })).toBe(200);
+      await page.goto('/workspaces/teams/');
+      await page.getByRole('button', { name: 'Disconnect webhook', exact: true }).click();
+      await expect(page.locator('#teams-connection-status')).toHaveText('No webhook configured');
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(0);
+      await page.reload();
+      await expect(page.locator('#teams-connection-status')).toHaveText('No webhook configured');
+      await expect(page.locator('#teams-deliveries')).toContainText('Cancelled');
+    } finally { await webhook.close(); }
+  });
+
+  for (const lockStage of ['before delivery', 'after HTTP acceptance']) {
+    test(`Teams worker survives SQLite contention ${lockStage} without resending`, async ({ appPage: page }) => {
+      let lock;
+      const webhook = await startWebhookServer([200], async () => {
+        if (lockStage === 'after HTTP acceptance' && !lock) lock = await holdSQLiteWriteLock();
+      });
+      try {
+        await configureTeams(page, webhook.url);
+        await page.goto('/');
+        const id = await page.locator('.milestone').first().getAttribute('data-milestone-id');
+        expect(await postForm(page, `/milestones/${id}/update/`, { title: 'Concurrent SQLite writer' })).toBe(200);
+        if (lockStage === 'before delivery') lock = await holdSQLiteWriteLock();
+        const result = await deliverTeamsNotifications().then(
+          () => ({ code: 0 }), error => ({ code: error.code, stderr: error.stderr }),
+        );
+        expect(result.code, result.stderr).toBe(0);
+        expect(webhook.errors).toEqual([]);
+        expect(webhook.requests).toHaveLength(1);
+        await deliverTeamsNotifications();
+        expect(webhook.requests).toHaveLength(1);
+        await page.goto('/workspaces/teams/');
+        await expect(page.locator('#teams-deliveries')).toContainText('Sent (1)');
+      } finally {
+        if (lock) await lock.done;
+        await webhook.close();
+      }
+    });
+  }
+
+  test('Teams delivery persists and retries throttled requests without duplicate successful sends', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer([429, 200]);
+    try {
+      await configureTeams(page, webhook.url);
+      await page.goto('/');
+      const id = await page.locator('.milestone').first().getAttribute('data-milestone-id');
+      expect(await postForm(page, `/milestones/${id}/update/`, { title: 'Retry notification' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      await page.goto('/workspaces/teams/');
+      await expect(page.locator('#teams-deliveries')).toContainText('Pending');
+      await expect.poll(async () => {
+        await deliverTeamsNotifications();
+        return webhook.requests.length;
+      }, { intervals: [1100], timeout: 10000 }).toBe(2);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(2);
+      expect(webhook.requests[0].json).toEqual(webhook.requests[1].json);
+      await page.reload();
+      await expect(page.locator('#teams-deliveries')).toContainText('Sent');
+    } finally { await webhook.close(); }
+  });
+});
 
 // =============================================================================
 // Auth + first render
@@ -2406,40 +3239,30 @@ test.describe('project & people management', () => {
     await expect(page.locator('#project-popover textarea[name=description]')).toHaveValue('Move all public API traffic to v2 before GA.');
   });
 
-  test('project Teams notification settings persist', async ({ appPage: page }) => {
+  test('workspace Teams notification settings persist without exposing webhook secrets', async ({ appPage: page }) => {
+    const url = 'http://127.0.0.1:54321/teams?sig=test-secret';
+    await configureTeams(page, url, ['milestone.created', 'milestone.updated']);
+    await page.reload();
+    await expect(page.locator('#teams-connection-status')).toHaveText('Webhook configured');
+    await expect(page.getByLabel('Microsoft Teams webhook URL')).toHaveValue('');
+    await expect(page.getByLabel('Milestone created', { exact: true })).toBeChecked();
+    await expect(page.getByLabel('Milestone date changed', { exact: true })).not.toBeChecked();
+    await expect(page.getByLabel('Milestone details changed', { exact: true })).toBeChecked();
+    await expect(page.getByLabel('Milestone deleted', { exact: true })).not.toBeChecked();
+    await page.goto('/activity/');
+    await expect(page.locator('body')).not.toContainText('test-secret');
+    await expect(page.locator('body')).toContainText('Microsoft Teams webhook URL');
+    await page.goto('/');
     await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
     await expect(page.locator('#project-popover')).toBeVisible();
-    await expect(page.locator('#project-popover input[name=teams_webhook_url]')).not.toBeVisible();
-    await page.getByLabel('Toggle Teams notification settings').check();
-    await expect(page.locator('#project-popover input[name=teams_webhook_url]')).toBeVisible();
-
-    await page.locator('#project-popover input[name=teams_webhook_url]').fill('http://127.0.0.1:54321/teams');
-    await page.locator('#teams-event-milestone-created').check();
-    await page.locator('#teams-event-milestone-moved').uncheck();
-    await page.locator('#teams-event-milestone-updated').check();
-    await page.locator('#teams-event-milestone-deleted').uncheck();
-    await page.locator('#project-popover button[type=submit]').click();
-    await expect(page.locator('#project-popover')).toHaveCount(0);
-
-    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
-    await page.getByLabel('Toggle Teams notification settings').check();
-    await expect(page.locator('#project-popover input[name=teams_webhook_url]')).toHaveValue('http://127.0.0.1:54321/teams');
-    await expect(page.locator('#teams-event-milestone-created')).toBeChecked();
-    await expect(page.locator('#teams-event-milestone-moved')).not.toBeChecked();
-    await expect(page.locator('#teams-event-milestone-updated')).toBeChecked();
-    await expect(page.locator('#teams-event-milestone-deleted')).not.toBeChecked();
+    await expect(page.locator('#project-popover input[name=teams_webhook_url]')).toHaveCount(0);
   });
 
   test('Teams notifications skip placeholder milestone creation', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
-      await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
-      await expect(page.locator('#project-popover')).toBeVisible();
-      await page.getByLabel('Toggle Teams notification settings').check();
-      await page.locator('#project-popover input[name=teams_webhook_url]').fill(webhook.url);
-      await page.locator('#teams-event-milestone-created').check();
-      await page.locator('#project-popover button[type=submit]').click();
-      await expect(page.locator('#project-popover')).toHaveCount(0);
+      await configureTeams(page, webhook.url, ['milestone.created', 'milestone.updated']);
+      await page.goto('/');
 
       const project = page.locator('.project-group').filter({ hasText: 'API Migration' });
       await project.locator('.left-cell.proj').click();
@@ -2447,7 +3270,8 @@ test.describe('project & people management', () => {
       await page.locator('#project-popover #pp-add-milestone').click();
       await placeMilestoneGhost(page, project);
       await expect(page.locator('#milestone-popover input[name=title]')).toHaveValue('New milestone');
-      await expect.poll(() => webhook.requests.length).toBe(0);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(0);
     } finally {
       await webhook.close();
     }
@@ -2456,14 +3280,8 @@ test.describe('project & people management', () => {
   test('Teams notifications respect selected milestone events', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
-      await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
-      await expect(page.locator('#project-popover')).toBeVisible();
-      await page.getByLabel('Toggle Teams notification settings').check();
-      await page.locator('#project-popover input[name=teams_webhook_url]').fill(webhook.url);
-      await page.locator('#teams-event-milestone-moved').uncheck();
-      await page.locator('#teams-event-milestone-updated').check();
-      await page.locator('#project-popover button[type=submit]').click();
-      await expect(page.locator('#project-popover')).toHaveCount(0);
+      await configureTeams(page, webhook.url, ['milestone.updated']);
+      await page.goto('/');
 
       const milestone = page.locator('.chart-row.proj .milestone').first();
       await milestone.scrollIntoViewIfNeeded();
@@ -2485,6 +3303,7 @@ test.describe('project & people management', () => {
         [milestoneId, oldDate],
         { timeout: 5000 }
       );
+      await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(0);
 
       const movedMilestone = page.locator(`#ms-${milestoneId}`);
@@ -2496,7 +3315,8 @@ test.describe('project & people management', () => {
       await page.locator('#milestone-popover button[type=submit]').click();
       await expect(page.locator('#milestone-popover')).toHaveCount(0);
 
-      await expect.poll(() => webhook.requests.length).toBe(1);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
       expect(webhook.requests[0].method).toBe('POST');
       expect(webhook.requests[0].json.type).toBe('message');
       const card = webhook.requests[0].json.attachments[0].content;
@@ -2515,14 +3335,8 @@ test.describe('project & people management', () => {
   test('Teams description notifications include the new milestone description', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
-      await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
-      await expect(page.locator('#project-popover')).toBeVisible();
-      await page.getByLabel('Toggle Teams notification settings').check();
-      await page.locator('#project-popover input[name=teams_webhook_url]').fill(webhook.url);
-      await page.locator('#teams-event-milestone-moved').uncheck();
-      await page.locator('#teams-event-milestone-updated').check();
-      await page.locator('#project-popover button[type=submit]').click();
-      await expect(page.locator('#project-popover')).toHaveCount(0);
+      await configureTeams(page, webhook.url, ['milestone.updated']);
+      await page.goto('/');
 
       const milestone = page.locator('.chart-row.proj .milestone').first();
       await milestone.scrollIntoViewIfNeeded();
@@ -2535,7 +3349,8 @@ test.describe('project & people management', () => {
       await page.locator('#milestone-popover button[type=submit]').click();
       await expect(page.locator('#milestone-popover')).toHaveCount(0);
 
-      await expect.poll(() => webhook.requests.length).toBe(1);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
       const card = webhook.requests[0].json.attachments[0].content;
       expect(card.body[0].text).toBe('Meilenstein v2 API beta aktualisiert');
       expect(card.body[2].text).toContain('demo hat die Beschreibung geändert:');
@@ -2549,12 +3364,8 @@ test.describe('project & people management', () => {
   test('Teams milestone move notifications use German localized dates', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
-      await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
-      await expect(page.locator('#project-popover')).toBeVisible();
-      await page.getByLabel('Toggle Teams notification settings').check();
-      await page.locator('#project-popover input[name=teams_webhook_url]').fill(webhook.url);
-      await page.locator('#project-popover button[type=submit]').click();
-      await expect(page.locator('#project-popover')).toHaveCount(0);
+      await configureTeams(page, webhook.url);
+      await page.goto('/');
 
       const milestone = page.locator('.chart-row.proj .milestone').first();
       await milestone.scrollIntoViewIfNeeded();
@@ -2577,7 +3388,8 @@ test.describe('project & people management', () => {
         { timeout: 5000 }
       );
 
-      await expect.poll(() => webhook.requests.length).toBe(1);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
       const newDate = await page.locator(`#ms-${milestoneId}`).getAttribute('data-date');
       const card = webhook.requests[0].json.attachments[0].content;
       expect(card.body[0].text).toBe('Meilenstein v2 API beta verschoben');
@@ -3239,6 +4051,19 @@ test.describe('member role', () => {
 // App sidebar
 // =============================================================================
 test.describe('app sidebar', () => {
+  test('My Profile menu item opens the profile and highlights the active page', async ({ appPage: page }) => {
+    const menu = page.locator('.drawer-side .menu');
+    const profile = menu.getByRole('link', { name: 'My Profile', exact: true });
+    await expect(profile).toBeVisible();
+    await expect(profile).toHaveAttribute('href', '/profile/');
+    await profile.click();
+    await page.waitForURL('/profile/');
+    await expect(profile).toHaveClass(/menu-active/);
+    await expect(page.getByRole('heading', { name: 'My profile', exact: true })).toBeVisible();
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await expect(menu.getByRole('link', { name: 'Mein Profil', exact: true })).toHaveClass(/menu-active/);
+  });
+
   test('sidebar shell precedes the page content in document order', async ({ appPage: page }) => {
     const sidebarBeforeContent = await page.locator('.drawer').evaluate((drawer) => {
       const sidebar = drawer.querySelector(':scope > .drawer-side');

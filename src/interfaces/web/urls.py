@@ -34,10 +34,16 @@ from .workspaces import (
     public_roadmap, public_roadmap_update, public_roadmap_regenerate,
 )
 from .activity import activity_page
+from .profile import profile, ProfilePasswordChangeView
+from .teams_notifications import teams_settings, roadmap_subscription
 
 urlpatterns = [
     path("", index, name="gantt_index"),
+    path("profile/", profile, name="profile"),
+    path("accounts/password/change/", ProfilePasswordChangeView.as_view(), name="password_change"),
     path("roadmap/<slug:token>/", public_roadmap, name="public_roadmap"),
+    path("roadmap/<slug:token>/projects/<int:project_id>/follow/", roadmap_subscription, name="roadmap_subscription"),
+    path("workspaces/teams/", teams_settings, name="teams_settings"),
     path("zoom/", zoom_set, name="zoom_set"),
     path("ui/sidebar-width/", sidebar_width_set, name="sidebar_width_set"),
     # Tasks

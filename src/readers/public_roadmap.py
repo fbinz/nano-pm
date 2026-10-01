@@ -1,8 +1,8 @@
 """Public roadmap state loading.
 
-The public roadmap intentionally does not reuse the private chart reader: it
-loads only workspace, projects and milestones so people, dependencies,
-and other internal planning state cannot leak through the public page.
+The public roadmap intentionally does not reuse the private chart reader.
+Viewers see workspace, projects and milestones, plus their own subscription
+flags when permitted. Recipient identities and browser capabilities are never exposed.
 """
 
 from dataclasses import dataclass, field
@@ -11,7 +11,7 @@ from datetime import date
 from django.db.models import Prefetch
 from django.utils.translation import gettext as _, ngettext
 
-from data.models import Milestone, Project, Workspace
+from data.models import Membership, Milestone, Project, PublicProjectSubscription, Workspace
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,8 @@ class PublicProjectVM:
     description: str
     color: str
     milestones: list[PublicMilestoneVM] = field(default_factory=list)
+    subscription_project_id: int | None = None
+    following: bool = False
 
 
 @dataclass(frozen=True)
@@ -49,6 +51,10 @@ class PublicRoadmapVM:
     workspace_name: str
     projects: list[PublicProjectVM]
     milestones: list[PublicTimelineMilestoneVM]
+    can_follow: bool = False
+    has_teams_upn: bool = False
+    is_public_subscriber: bool = False
+    public_subscriber_domains: list[str] = field(default_factory=list)
 
 
 def _relative_date_label(target: date, today: date) -> str:
@@ -81,7 +87,7 @@ def _relative_date_label(target: date, today: date) -> str:
     return (future if days > 0 else past) % {"count": value}
 
 
-def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
+def get_public_roadmap(token: str, user=None, browser_key_hash=None) -> PublicRoadmapVM | None:
     """Return a sanitized roadmap for an enabled public token, else None."""
     try:
         workspace = Workspace.objects.get(
@@ -91,6 +97,14 @@ def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
     except Workspace.DoesNotExist:
         return None
 
+    membership = None
+    if user is not None and user.is_authenticated:
+        membership = Membership.objects.filter(workspace=workspace, user=user).first()
+    followed_ids = set(membership.subscriptions.values_list("project_id", flat=True)) if membership else set()
+    if browser_key_hash:
+        followed_ids.update(PublicProjectSubscription.objects.filter(
+            project__workspace=workspace, browser_key_hash=browser_key_hash,
+        ).values_list("project_id", flat=True))
     today = date.today()
     projects = list(
         Project.objects.filter(workspace=workspace, completed_at__isnull=True)
@@ -134,6 +148,8 @@ def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
             description=project.description.strip(),
             color=project.color,
             milestones=milestones,
+            subscription_project_id=project.id,
+            following=project.id in followed_ids,
         ))
 
     timeline_milestones.sort(key=lambda milestone: (milestone.date, milestone.project_name, milestone.title))
@@ -144,4 +160,8 @@ def get_public_roadmap(token: str) -> PublicRoadmapVM | None:
         workspace_name=workspace.name,
         projects=project_vms,
         milestones=timeline_milestones,
+        can_follow=True,
+        has_teams_upn=bool(membership and membership.teams_upn),
+        is_public_subscriber=membership is None,
+        public_subscriber_domains=workspace.teams_public_subscriber_domains,
     )

@@ -15,7 +15,7 @@ from actions.manage_projects import (
     move_project_to_workspace, set_project_completed,
 )
 from data.models import Membership, Person, WorkspaceRole
-from data.models.project import PROJECT_COLORS, TEAMS_NOTIFY_EVENT_CHOICES
+from data.models.project import PROJECT_COLORS
 from readers import get_project
 
 from .helpers import (
@@ -24,13 +24,6 @@ from .helpers import (
     team_filter, can_manage_project, project_manager_required, request_data,
     request_person,
 )
-
-
-def teams_notify_events():
-    return [
-        {"key": key, "label": label, "slug": key.replace(".", "-").replace("_", "-")}
-        for key, label in TEAMS_NOTIFY_EVENT_CHOICES
-    ]
 
 
 @require_http_methods(["POST"])
@@ -82,7 +75,6 @@ def project_popover(request: HttpRequest, project_id: int):
                 and not proj.responsible_person_ids
                 and not can_manage
             ),
-            teams_notify_events=teams_notify_events(),
         )
     )
 
@@ -94,14 +86,14 @@ def project_update(request: HttpRequest, project_id: int):
     proj = get_project(request.workspace, project_id)
     if proj is None:
         return
-    can_update_teams = can_manage_project(request, proj)
+    can_manage = can_manage_project(request, proj)
     responsible_person_ids = [
         int(value)
         for value in request.POST.getlist("responsible_person_ids")
         if value.isdigit()
     ]
     current_person = request_person(request)
-    can_update_responsible_people = can_update_teams or (
+    can_update_responsible_people = can_manage or (
         current_person is not None
         and not proj.responsible_people.exists()
         and set(responsible_person_ids) == {current_person.id}
@@ -112,8 +104,6 @@ def project_update(request: HttpRequest, project_id: int):
         name=request.POST.get("name") or None,
         description=request.POST.get("description") if "description" in request.POST else None,
         color=request.POST.get("color") or None,
-        teams_webhook_url=request.POST.get("teams_webhook_url", "") if can_update_teams else None,
-        teams_notify_events=request.POST.getlist("teams_notify_events") if can_update_teams else None,
         responsible_person_ids=(
             responsible_person_ids if can_update_responsible_people else None
         ),

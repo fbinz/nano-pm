@@ -2,9 +2,12 @@
 
 from datetime import date, timedelta
 
+from django.db import transaction
+
 from data.models import Project, Task, Person, Milestone
 from actions.activity import change_set, created_changes, deleted_changes, log_activity, snapshot
 from actions.auto_cascade import cascade_workspace
+from actions.manage_milestones import delete_milestone
 
 
 TASK_FIELDS = ["title", "description", "start", "end"]
@@ -29,24 +32,6 @@ def _task_values(task: Task) -> dict:
     milestone = getattr(task, "milestone", None)
     values["milestone"] = milestone.title if milestone else ""
     return values
-
-
-def _sync_linked_milestones(workspace) -> None:
-    milestones = Milestone.objects.filter(
-        task__project__workspace=workspace
-    ).select_related("task", "task__project")
-    for milestone in milestones:
-        task = milestone.task
-        changed = []
-        if milestone.project_id != task.project_id:
-            milestone.project = task.project
-            changed.append("project")
-        if milestone.date != task.end:
-            milestone.date = task.end
-            changed.append("date")
-        if changed:
-            changed.append("updated_at")
-            milestone.save(update_fields=changed)
 
 
 def _set_task_milestone(task: Task, milestone_id: int | None) -> None:
@@ -79,12 +64,12 @@ def _set_task_milestone(task: Task, milestone_id: int | None) -> None:
     if current is not None and current.id != selected.id:
         current.task = None
         current.save(update_fields=["task", "updated_at"])
-    selected.project = task.project
     selected.task = task
-    selected.date = task.end
-    selected.save(update_fields=["project", "task", "date", "updated_at"])
+    # Date/project are synchronized after cascading, with notification capture.
+    selected.save(update_fields=["task", "updated_at"])
 
 
+@transaction.atomic
 def create_task(
     *,
     workspace,
@@ -112,11 +97,11 @@ def create_task(
         entity=t,
         changes=created_changes(_task_values(t)),
     )
-    cascaded = cascade_workspace(workspace)
-    _sync_linked_milestones(workspace)
+    cascaded = cascade_workspace(workspace, actor=actor)
     return t, cascaded
 
 
+@transaction.atomic
 def update_task(
     *,
     workspace,
@@ -170,11 +155,11 @@ def update_task(
         changes=changes,
         skip_empty_changes=True,
     )
-    cascaded = cascade_workspace(workspace)
-    _sync_linked_milestones(workspace)
+    cascaded = cascade_workspace(workspace, actor=actor)
     return t, cascaded
 
 
+@transaction.atomic
 def delete_task(*, workspace, task_id: int, actor=None) -> bool:
     task = Task.objects.filter(id=task_id, project__workspace=workspace).select_related("project").prefetch_related("assignees").first()
     if task is None:
@@ -182,6 +167,9 @@ def delete_task(*, workspace, task_id: int, actor=None) -> bool:
     values = _task_values(task)
     label = task.title
     entity_id = task.id
+    linked = getattr(task, "milestone", None)
+    if linked is not None:
+        delete_milestone(workspace=workspace, milestone_id=linked.id, actor=actor)
     task.delete()
     log_activity(
         workspace=workspace,
@@ -195,6 +183,7 @@ def delete_task(*, workspace, task_id: int, actor=None) -> bool:
     return True
 
 
+@transaction.atomic
 def move_task(*, workspace, task_id: int, new_start: date, actor=None) -> tuple[Task | None, set[int]]:
     """Slide a task by setting a new start date; preserves duration."""
     try:
@@ -217,11 +206,11 @@ def move_task(*, workspace, task_id: int, new_start: date, actor=None) -> tuple[
         changes=changes,
         skip_empty_changes=True,
     )
-    cascaded = cascade_workspace(workspace)
-    _sync_linked_milestones(workspace)
+    cascaded = cascade_workspace(workspace, actor=actor)
     return t, cascaded
 
 
+@transaction.atomic
 def move_many_tasks(
     *, workspace, task_ids: list[int], delta_days: int, actor=None
 ) -> tuple[list[Task], set[int]]:
@@ -251,11 +240,11 @@ def move_many_tasks(
                 "task_titles": [t.title for t in tasks],
             },
         )
-    cascaded = cascade_workspace(workspace)
-    _sync_linked_milestones(workspace)
+    cascaded = cascade_workspace(workspace, actor=actor)
     return tasks, cascaded
 
 
+@transaction.atomic
 def resize_end(*, workspace, task_id: int, new_end: date, actor=None) -> tuple[Task | None, set[int]]:
     try:
         t = Task.objects.select_related("project").get(
@@ -274,11 +263,11 @@ def resize_end(*, workspace, task_id: int, new_end: date, actor=None) -> tuple[T
         changes=change_set(before, snapshot(t, ["end"])),
         skip_empty_changes=True,
     )
-    cascaded = cascade_workspace(workspace)
-    _sync_linked_milestones(workspace)
+    cascaded = cascade_workspace(workspace, actor=actor)
     return t, cascaded
 
 
+@transaction.atomic
 def resize_start(*, workspace, task_id: int, new_start: date, actor=None) -> tuple[Task | None, set[int]]:
     try:
         t = Task.objects.select_related("project").get(
@@ -297,6 +286,5 @@ def resize_start(*, workspace, task_id: int, new_start: date, actor=None) -> tup
         changes=change_set(before, snapshot(t, ["start"])),
         skip_empty_changes=True,
     )
-    cascaded = cascade_workspace(workspace)
-    _sync_linked_milestones(workspace)
+    cascaded = cascade_workspace(workspace, actor=actor)
     return t, cascaded

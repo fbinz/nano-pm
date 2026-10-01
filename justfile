@@ -14,6 +14,10 @@ export DJANGO_ALLOW_INSECURE_SEED := "true"
 run port="8000":
     cd src && uv run python manage.py runserver {{port}}
 
+# Deliver Teams notifications in a separate process alongside `just run`.
+teams-worker:
+    uv run python src/manage.py deliver_teams_notifications
+
 # Run migrations
 migrate:
     cd src && uv run python manage.py migrate

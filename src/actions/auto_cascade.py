@@ -7,10 +7,14 @@ shrinking it never violates an FS dep, so we don't need to do anything in those
 cases.
 """
 
+from django.db import transaction
+
 from data.models import Dependency, Task
+from actions.sync_milestones import sync_linked_milestones
 
 
-def cascade_workspace(workspace) -> set[int]:
+@transaction.atomic
+def cascade_workspace(workspace, *, actor=None, exclude_notifications=()) -> set[int]:
     """Apply auto-cascade across every task in ``workspace``.
 
     Returns the set of task ids whose dates were shifted, so the caller can
@@ -54,4 +58,5 @@ def cascade_workspace(workspace) -> set[int]:
         Task.objects.bulk_update(
             [tasks[tid] for tid in changed], fields=["start", "end"]
         )
+    sync_linked_milestones(workspace, actor=actor, exclude_notifications=exclude_notifications)
     return changed
