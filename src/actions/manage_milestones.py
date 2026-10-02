@@ -163,6 +163,7 @@ def update_milestone(
             event_names=event_names,
             changes=changes,
             actor=actor,
+            move_reason=reason if moved else "",
             related_project_ids=(before_project.id,),
         )
     return m

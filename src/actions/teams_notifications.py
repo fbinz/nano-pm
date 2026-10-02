@@ -231,6 +231,7 @@ def _teams_payload(
     changes: dict | None = None,
     actor=None,
     milestone_description: str = "",
+    move_reason: str = "",
 ) -> dict:
     """Build an Adaptive Card payload for a Teams incoming webhook."""
     title = _card_title(milestone_title, event_names)
@@ -266,6 +267,13 @@ def _teams_payload(
     facts = _change_facts(changes, actor=actor)
     if facts:
         card_body.append({"type": "FactSet", "facts": facts})
+    if MILESTONE_MOVED in event_names and move_reason.strip():
+        card_body.append({
+            "type": "TextBlock",
+            "text": f"Grund: {move_reason.strip()[:500]}",
+            "spacing": "Medium",
+            "wrap": True,
+        })
     return {
         "type": "message",
         "summary": title,
@@ -340,6 +348,7 @@ def queue_project_notification(
     actor=None,
     milestone_id: int | None = None,
     milestone_description: str = "",
+    move_reason: str = "",
     related_project_ids: tuple[int, ...] = (),
 ) -> None:
     """Persist an outbox entry in the same transaction as the milestone mutation."""
@@ -355,6 +364,7 @@ def queue_project_notification(
         changes=changes,
         actor=actor,
         milestone_description=milestone_description,
+        move_reason=move_reason,
     )
     upns = _subscribers(project, related_project_ids)
     for card_payload in _with_mentions(payload, upns):
@@ -383,6 +393,7 @@ def queue_milestone_notification(
     event_names: set[str],
     changes: dict | None = None,
     actor=None,
+    move_reason: str = "",
     related_project_ids: tuple[int, ...] = (),
 ) -> None:
     queue_project_notification(
@@ -393,5 +404,6 @@ def queue_milestone_notification(
         actor=actor,
         milestone_id=milestone.id,
         milestone_description=milestone.description,
+        move_reason=move_reason,
         related_project_ids=related_project_ids,
     )

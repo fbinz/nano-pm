@@ -3361,6 +3361,57 @@ test.describe('project & people management', () => {
     }
   });
 
+  for (const moveVia of ['drag', 'editor']) {
+    test(`Teams milestone move notifications include the supplied reason via ${moveVia}`, async ({ appPage: page }) => {
+      const webhook = await startWebhookServer();
+      try {
+        await configureTeams(page, webhook.url, ['milestone.moved']);
+        await page.goto('/');
+        const milestone = page.locator('.chart-row.proj .milestone').first();
+        const oldDate = await milestone.getAttribute('data-date');
+        const proposed = new Date(`${oldDate}T00:00:00Z`);
+        proposed.setUTCDate(proposed.getUTCDate() + 2);
+        const newDate = proposed.toISOString().slice(0, 10);
+        await milestone.scrollIntoViewIfNeeded();
+        let box = await milestone.boundingBox();
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        const editor = page.locator('#milestone-popover');
+        await editor.locator('input[name=require_move_reason]').check();
+        await editor.locator('button[type=submit]').click();
+        await expect(editor).toHaveCount(0);
+        await expect(milestone).toHaveAttribute('data-requires-move-reason', 'true');
+
+        await milestone.scrollIntoViewIfNeeded();
+        box = await milestone.boundingBox();
+        if (moveVia === 'editor') {
+          await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+          await editor.locator('input[name=date]').fill(newDate);
+          await editor.locator('button[type=submit]').click();
+        } else {
+          const ppd = parseFloat(await page.locator('#grid-scroll').getAttribute('data-px-per-day'));
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+          await page.mouse.down();
+          await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
+          await page.mouse.up();
+        }
+        const dialog = page.locator('#milestone-move-dialog');
+        await expect(dialog).toBeVisible();
+        const reason = 'A customer dependency needs two more days.';
+        await dialog.locator('textarea[name=reason]').fill(reason);
+        await dialog.getByRole('button', { name: 'Move milestone' }).click();
+        await expect(milestone).toHaveAttribute('data-date', newDate);
+
+        await deliverTeamsNotifications();
+        expect(webhook.requests).toHaveLength(1);
+        const card = webhook.requests[0].json.attachments[0].content;
+        expect(card.body.filter(block => block.type === 'TextBlock').map(block => block.text).join('\n'))
+          .toContain(`Grund: ${reason}`);
+      } finally {
+        await webhook.close();
+      }
+    });
+  }
+
   test('Teams milestone move notifications use German localized dates', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
@@ -3395,6 +3446,7 @@ test.describe('project & people management', () => {
       expect(card.body[0].text).toBe('Meilenstein v2 API beta verschoben');
       expect(card.body[2].text)
         .toContain(`demo hat das Datum ${germanDateShift(oldDate, newDate)} verschoben.`);
+      expect(JSON.stringify(card)).not.toContain('Grund:');
       expect(card.body[3].facts).toContainEqual({
         title: 'Datum',
         value: `${germanDate(oldDate)} → ${germanDate(newDate)}`,
