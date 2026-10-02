@@ -78,28 +78,24 @@ async function enableRoadmap(page) {
 
 const { test, expect, login, reset } = require('./fixtures');
 
-function germanDate(iso, withArticle = false) {
+function germanDate(iso) {
   const months = [
-    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+    'Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni',
+    'Juli', 'Aug.', 'Sept.', 'Okt.', 'Nov.', 'Dez.',
   ];
   const [year, month, day] = iso.split('-').map(Number);
-  return `${withArticle ? 'den ' : ''}${day}. ${months[month - 1]} ${year}`;
+  return `${day}. ${months[month - 1]} ${year}`;
 }
 
-function germanDateShift(beforeIso, afterIso) {
-  const before = new Date(`${beforeIso}T00:00:00Z`);
-  const after = new Date(`${afterIso}T00:00:00Z`);
-  const deltaDays = Math.round((after - before) / (24 * 60 * 60 * 1000));
-  const absDays = Math.abs(deltaDays);
-  let amount;
-  if (absDays % 7 === 0) {
-    const weeks = absDays / 7;
-    amount = weeks === 1 ? 'eine Woche' : `${weeks} Wochen`;
-  } else {
-    amount = absDays === 1 ? 'einen Tag' : `${absDays} Tage`;
-  }
-  return `um ${amount} ${deltaDays > 0 ? 'nach hinten' : 'nach vorne'} auf ${germanDate(afterIso, true)}`;
+function expectTeamsLayout(card, project, event, milestone) {
+  expect(card.body[0]).toMatchObject({
+    type: 'TextBlock', text: project, weight: 'Bolder', size: 'Medium', wrap: true,
+  });
+  expect(card.body[0].isSubtle).not.toBe(true);
+  expect(card.body[0].color).not.toBe('Accent');
+  expect(card.body[1]).toMatchObject({ text: event, isSubtle: true, spacing: 'None' });
+  expect(card.body[2]).toMatchObject({ text: milestone, weight: 'Bolder', spacing: 'Medium', wrap: true });
+  expect(card.body.some(block => block.type === 'FactSet')).toBe(false);
 }
 
 async function placeMilestoneGhost(page, project, offset = 140) {
@@ -663,7 +659,9 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
         type: 'mention', text: '<at>demo@example.com</at>',
         mentioned: { id: 'demo@example.com', name: 'demo@example.com' },
       }]);
-      expect(card.body.some(block => block.text?.includes('<at>demo@example.com</at>'))).toBe(true);
+      expect(card.body.at(-1)).toMatchObject({
+        text: 'demo · <at>demo@example.com</at>', size: 'Small', wrap: true,
+      });
       await page.reload();
       const oldDate = await page.locator(`#ms-${milestoneId}`).getAttribute('data-date');
       const nextDate = new Date(`${oldDate}T00:00:00Z`);
@@ -742,14 +740,18 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
       await expect(page.locator('#milestone-popover')).toHaveCount(0);
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(1);
-      expect(webhook.requests[0].json.summary).toBe('Meilenstein New customer launch erstellt');
+      expect(webhook.requests[0].json.summary).toBe('API Migration · Meilenstein erstellt · New customer launch');
+      expectTeamsLayout(webhook.requests[0].json.attachments[0].content,
+        'API Migration', 'Meilenstein erstellt', 'New customer launch');
       expect(await postForm(page, `/milestones/${id}/update/`, { title: 'New customer launch' })).toBe(200);
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(1);
       expect(await postForm(page, `/milestones/${id}/delete/`, {})).toBe(200);
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(2);
-      expect(webhook.requests[1].json.summary).toBe('Meilenstein New customer launch gelöscht');
+      expect(webhook.requests[1].json.summary).toBe('API Migration · Meilenstein gelöscht · New customer launch');
+      expectTeamsLayout(webhook.requests[1].json.attachments[0].content,
+        'API Migration', 'Meilenstein gelöscht', 'New customer launch');
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(2);
     } finally { await webhook.close(); }
@@ -766,7 +768,7 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
       await expect(page.locator('.milestone[data-title="v2 API beta"]')).toHaveCount(0);
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(1);
-      expect(webhook.requests[0].json.summary).toBe('Meilenstein v2 API beta gelöscht');
+      expect(webhook.requests[0].json.summary).toBe('API Migration · Meilenstein gelöscht · v2 API beta');
     } finally { await webhook.close(); }
   });
 
@@ -799,6 +801,8 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(1);
       const card = webhook.requests[0].json.attachments[0].content;
+      expectTeamsLayout(card, 'Onboarding revamp', 'Projekt geändert', 'v2 API beta');
+      expect(card.body[3].text).toContain('Projekt: API Migration → Onboarding revamp');
       expect(card.msteams.entities.map(entity => entity.mentioned.id)).toEqual(['demo@example.com', 'member@example.com']);
       // Same UPN on two subscriptions/users is mentioned only once.
       await saveTeamsIdentity(member, 'DEMO@example.com');
@@ -3322,11 +3326,9 @@ test.describe('project & people management', () => {
       const card = webhook.requests[0].json.attachments[0].content;
       expect(webhook.requests[0].json.attachments[0].contentType).toBe('application/vnd.microsoft.card.adaptive');
       expect(card.type).toBe('AdaptiveCard');
-      expect(card.body[0].text).toBe('Meilenstein v2 API beta updated for Teams aktualisiert');
-      expect(card.body[1].text).toBe('Projekt: API Migration');
-      expect(card.body[2].text)
-        .toContain('demo hat den Titel von „v2 API beta“ in „v2 API beta updated for Teams“ geändert.');
-      expect(card.body[3].facts).toContainEqual({ title: 'Titel', value: 'v2 API beta → v2 API beta updated for Teams' });
+      expectTeamsLayout(card, 'API Migration', 'Meilenstein aktualisiert', 'v2 API beta updated for Teams');
+      expect(card.body[3].text).toBe('Bisheriger Titel: v2 API beta');
+      expect(card.body.at(-1)).toMatchObject({ text: 'demo', size: 'Small', isSubtle: true });
     } finally {
       await webhook.close();
     }
@@ -3352,10 +3354,9 @@ test.describe('project & people management', () => {
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(1);
       const card = webhook.requests[0].json.attachments[0].content;
-      expect(card.body[0].text).toBe('Meilenstein v2 API beta aktualisiert');
-      expect(card.body[2].text).toContain('demo hat die Beschreibung geändert:');
-      expect(card.body[2].text).toContain(description);
-      expect(card.body[3].facts).not.toContainEqual({ title: 'Beschreibung', value: 'geändert' });
+      expectTeamsLayout(card, 'API Migration', 'Meilenstein aktualisiert', 'v2 API beta');
+      expect(card.body[3].text).toBe(`Beschreibung geändert:\n\n${description}`);
+      expect(card.body.at(-1).text).toBe('demo');
     } finally {
       await webhook.close();
     }
@@ -3404,15 +3405,18 @@ test.describe('project & people management', () => {
         await deliverTeamsNotifications();
         expect(webhook.requests).toHaveLength(1);
         const card = webhook.requests[0].json.attachments[0].content;
-        expect(card.body.filter(block => block.type === 'TextBlock').map(block => block.text).join('\n'))
-          .toContain(`Grund: ${reason}`);
+        expectTeamsLayout(card, 'API Migration', 'Termin verschoben', 'v2 API beta');
+        expect(card.body[3].text).toBe(`Jetzt **${germanDate(newDate)}** — 2 Tage später`);
+        expect(card.body[4]).toMatchObject({ text: `**Grund:** ${reason}`, wrap: true });
+        expect(card.body[5]).toMatchObject({ text: 'demo', size: 'Small', isSubtle: true });
+        expect(card.body).toHaveLength(6);
       } finally {
         await webhook.close();
       }
     });
   }
 
-  test('Teams milestone move notifications use German localized dates', async ({ appPage: page }) => {
+  test('Teams milestone move notifications use the project-first layout and compact German dates', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
       await configureTeams(page, webhook.url);
@@ -3443,14 +3447,12 @@ test.describe('project & people management', () => {
       expect(webhook.requests).toHaveLength(1);
       const newDate = await page.locator(`#ms-${milestoneId}`).getAttribute('data-date');
       const card = webhook.requests[0].json.attachments[0].content;
-      expect(card.body[0].text).toBe('Meilenstein v2 API beta verschoben');
-      expect(card.body[2].text)
-        .toContain(`demo hat das Datum ${germanDateShift(oldDate, newDate)} verschoben.`);
+      expectTeamsLayout(card, 'API Migration', 'Termin verschoben', 'v2 API beta');
+      expect(card.body[3].text).toBe(`Jetzt **${germanDate(newDate)}** — 2 Tage später`);
+      expect(card.body[4]).toMatchObject({ text: 'demo', size: 'Small', isSubtle: true });
+      expect(card.body).toHaveLength(5);
       expect(JSON.stringify(card)).not.toContain('Grund:');
-      expect(card.body[3].facts).toContainEqual({
-        title: 'Datum',
-        value: `${germanDate(oldDate)} → ${germanDate(newDate)}`,
-      });
+      expect(JSON.stringify(card)).not.toContain(germanDate(oldDate));
     } finally {
       await webhook.close();
     }

@@ -16,8 +16,8 @@ MILESTONE_PROJECT_CHANGED = "milestone.project_changed"
 MILESTONE_DELETED = "milestone.deleted"
 
 GERMAN_MONTHS = [
-    "Januar", "Februar", "März", "April", "Mai", "Juni",
-    "Juli", "August", "September", "Oktober", "November", "Dezember",
+    "Jan.", "Feb.", "März", "Apr.", "Mai", "Juni",
+    "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez.",
 ]
 
 
@@ -60,12 +60,11 @@ def _parse_date(value: object) -> date | None:
     return None
 
 
-def _format_german_date(value: object, *, with_article: bool = False) -> str | None:
+def _format_german_date(value: object) -> str | None:
     parsed = _parse_date(value)
     if parsed is None:
         return None
-    prefix = "den " if with_article else ""
-    return f"{prefix}{parsed.day}. {GERMAN_MONTHS[parsed.month - 1]} {parsed.year}"
+    return f"{parsed.day}. {GERMAN_MONTHS[parsed.month - 1]} {parsed.year}"
 
 
 def _format_value(value: object) -> str:
@@ -83,21 +82,16 @@ def _format_field_value(field: str, value: object) -> str:
     return _format_value(value)
 
 
-def _card_title(milestone_title: str, event_names: set[str]) -> str:
+def _event_label(event_names: set[str]) -> str:
     if MILESTONE_CREATED in event_names:
-        action = "erstellt"
-    elif MILESTONE_DELETED in event_names:
-        action = "gelöscht"
-    elif MILESTONE_PROJECT_CHANGED in event_names or MILESTONE_MOVED in event_names:
-        action = "verschoben"
-    else:
-        action = "aktualisiert"
-    return f"Meilenstein {milestone_title[:200]} {action}"
-
-
-def _actor_subject(actor) -> str:
-    label = _actor_label(actor)
-    return label or "Jemand"
+        return "Meilenstein erstellt"
+    if MILESTONE_DELETED in event_names:
+        return "Meilenstein gelöscht"
+    if MILESTONE_MOVED in event_names:
+        return "Termin verschoben"
+    if MILESTONE_PROJECT_CHANGED in event_names:
+        return "Projekt geändert"
+    return "Meilenstein aktualisiert"
 
 
 def _field_label(field: str) -> str:
@@ -122,46 +116,39 @@ def _format_date_delta(before: object, after: object) -> str | None:
     abs_days = abs(delta_days)
     if abs_days % 7 == 0:
         weeks = abs_days // 7
-        amount = "eine Woche" if weeks == 1 else f"{weeks} Wochen"
+        amount = "1 Woche" if weeks == 1 else f"{weeks} Wochen"
     else:
-        amount = "einen Tag" if abs_days == 1 else f"{abs_days} Tage"
-    direction = "nach hinten" if delta_days > 0 else "nach vorne"
-    target = _format_german_date(after_date, with_article=True)
-    return f"um {amount} {direction} auf {target}"
+        amount = "1 Tag" if abs_days == 1 else f"{abs_days} Tage"
+    direction = "später" if delta_days > 0 else "früher"
+    return f"{amount} {direction}"
 
 
-def _sentence_for_change(
+def _detail_for_change(
     field: str,
     delta: object,
-    actor_label: str,
     *,
     milestone_description: str = "",
 ) -> str | None:
-    if not isinstance(delta, dict):
+    if not isinstance(delta, dict) or field == "require_move_reason":
         return None
     before = _format_field_value(field, delta.get("from"))
     after = _format_field_value(field, delta.get("to"))
     if field == "date" and "from" in delta and "to" in delta:
         shift = _format_date_delta(delta.get("from"), delta.get("to"))
-        if shift is not None:
-            return f"{actor_label} hat das Datum {shift} verschoben."
-        return f"{actor_label} hat das Datum von {before} nach {after} verschoben."
-    if field == "project" and "from" in delta and "to" in delta:
-        return f"{actor_label} hat den Meilenstein von {before} nach {after} verschoben."
+        return f"Jetzt **{after}**" + (f" — {shift}" if shift else "")
     if field == "title" and "from" in delta and "to" in delta:
-        return f"{actor_label} hat den Titel von „{before}“ in „{after}“ geändert."
+        # The new title is already the milestone heading.
+        return f"Bisheriger Titel: {before}"
     if field == "description" and delta.get("changed"):
         description = milestone_description.strip()
-        if description:
-            return f"{actor_label} hat die Beschreibung geändert:\n\n{description}"
-        return f"{actor_label} hat die Beschreibung geändert."
+        return f"Beschreibung geändert:\n\n{description}" if description else "Beschreibung entfernt"
+    label = _field_label(field)
     if "from" in delta and "to" in delta:
-        return f"{actor_label} hat {field.replace('_', ' ')} von {before} in {after} geändert."
+        return f"{label}: {before} → {after}"
     if "to" in delta:
-        value = _format_field_value(field, delta.get("to"))
-        return f"{actor_label} hat {field.replace('_', ' ')} auf {value} gesetzt."
+        return f"{label}: {after}"
     if "deleted" in delta:
-        return f"{actor_label} hat {field.replace('_', ' ')} gelöscht."
+        return f"{label}: {_format_field_value(field, delta['deleted'])}"
     return None
 
 
@@ -169,58 +156,27 @@ def _message_text(
     *,
     event_names: set[str],
     changes: dict | None = None,
-    actor=None,
     milestone_description: str = "",
 ) -> str:
-    actor_label = _actor_subject(actor)
-    if MILESTONE_CREATED in event_names:
-        return f"{actor_label} hat den Meilenstein erstellt."
-    if MILESTONE_DELETED in event_names:
-        return f"{actor_label} hat den Meilenstein gelöscht."
+    changes = changes or {}
+    if {MILESTONE_CREATED, MILESTONE_DELETED} & event_names:
+        # The event label and heading already describe creation/deletion.
+        delta = changes.get("date", {})
+        if isinstance(delta, dict):
+            value = delta.get("to", delta.get("deleted"))
+            if value:
+                return f"Termin: **{_format_field_value('date', value)}**"
+        return ""
 
-    sentences = []
-    for field, delta in (changes or {}).items():
-        sentence = _sentence_for_change(
-            field,
-            delta,
-            actor_label,
-            milestone_description=milestone_description,
+    details = []
+    # Keep the date prominent even when a long description changes with it.
+    for field in sorted(changes, key=lambda field: field != "date"):
+        detail = _detail_for_change(
+            field, changes[field], milestone_description=milestone_description,
         )
-        if sentence is not None:
-            sentences.append(sentence)
-    if sentences:
-        return "\n\n".join(sentences)
-    return f"{actor_label} hat den Meilenstein aktualisiert."
-
-
-def _card_color() -> str:
-    return "Accent"
-
-
-def _change_facts(changes: dict | None, actor=None) -> list[dict[str, str]]:
-    facts = []
-    actor_label = _actor_label(actor)
-    if actor_label:
-        facts.append({"title": "Geändert von", "value": actor_label})
-    for field, delta in (changes or {}).items():
-        if field == "description":
-            continue
-        if not isinstance(delta, dict):
-            continue
-        if "from" in delta and "to" in delta:
-            before = _format_field_value(field, delta.get("from"))
-            after = _format_field_value(field, delta.get("to"))
-            facts.append({
-                "title": _field_label(field),
-                "value": f"{before} → {after}",
-            })
-        elif delta.get("changed"):
-            facts.append({"title": _field_label(field), "value": "geändert"})
-        elif "to" in delta:
-            facts.append({"title": _field_label(field), "value": _format_field_value(field, delta.get("to"))})
-        elif "deleted" in delta:
-            facts.append({"title": _field_label(field), "value": _format_field_value(field, delta.get("deleted"))})
-    return facts
+        if detail is not None:
+            details.append(detail)
+    return "\n\n".join(details)
 
 
 def _teams_payload(
@@ -234,43 +190,59 @@ def _teams_payload(
     move_reason: str = "",
 ) -> dict:
     """Build an Adaptive Card payload for a Teams incoming webhook."""
-    title = _card_title(milestone_title, event_names)
+    event_label = _event_label(event_names)
+    title = f"{project.name[:200]} · {event_label} · {milestone_title[:200]}"
     body = _message_text(
         event_names=event_names,
         changes=changes,
-        actor=actor,
         milestone_description=milestone_description,
     )
     card_body = [
         {
             "type": "TextBlock",
-            "text": title,
+            "text": project.name[:200],
             "weight": "Bolder",
             "size": "Medium",
-            "color": _card_color(),
             "wrap": True,
         },
         {
             "type": "TextBlock",
-            "text": f"Projekt: {project.name[:200]}",
+            "text": event_label,
+            "size": "Small",
             "isSubtle": True,
             "spacing": "None",
             "wrap": True,
         },
         {
             "type": "TextBlock",
-            "text": body if len(body) <= 2000 else body[:1999] + "…",
+            "text": milestone_title[:200],
+            "weight": "Bolder",
             "spacing": "Medium",
             "wrap": True,
         },
     ]
-    facts = _change_facts(changes, actor=actor)
-    if facts:
-        card_body.append({"type": "FactSet", "facts": facts})
+    if body:
+        card_body.append({
+            "type": "TextBlock",
+            "text": body if len(body) <= 2000 else body[:1999] + "…",
+            "spacing": "Small",
+            "wrap": True,
+        })
     if MILESTONE_MOVED in event_names and move_reason.strip():
         card_body.append({
             "type": "TextBlock",
-            "text": f"Grund: {move_reason.strip()[:500]}",
+            "text": f"**Grund:** {move_reason.strip()[:500]}",
+            "spacing": "Medium",
+            "wrap": True,
+        })
+    actor_label = _actor_label(actor)
+    if actor_label:
+        card_body.append({
+            "type": "TextBlock",
+            "id": "notification-footer",
+            "text": actor_label,
+            "size": "Small",
+            "isSubtle": True,
             "spacing": "Medium",
             "wrap": True,
         })
@@ -318,11 +290,19 @@ def _with_mentions(payload: dict, upns: list[str]):
     card_payload = json.loads(json.dumps(payload))
     card = card_payload["attachments"][0]["content"]
     entities = []
-    text = {"type": "TextBlock", "text": "", "wrap": True}
     if not upns:
         yield card_payload
         return
-    card["body"].append(text)
+    if card["body"][-1].get("id") == "notification-footer":
+        text = card["body"][-1]
+    else:
+        text = {
+            "type": "TextBlock", "id": "notification-footer", "text": "",
+            "size": "Small", "isSubtle": True, "spacing": "Medium", "wrap": True,
+        }
+        card["body"].append(text)
+    prefix = f"{text['text']} · " if text["text"] else ""
+    text["text"] = prefix.rstrip()
     card["msteams"] = {"entities": entities}
     for upn in upns:
         mention = f"<at>{escape(upn)}</at>"
@@ -335,7 +315,7 @@ def _with_mentions(payload: dict, upns: list[str]):
             text["text"] = previous
             yield json.loads(json.dumps(card_payload))
             entities[:] = [entity]
-            text["text"] = mention
+            text["text"] = prefix + mention
     yield card_payload
 
 
