@@ -46,7 +46,7 @@ def project_wants_event(project: Project, event_names: set[str]) -> bool:
 def _actor_label(actor) -> str:
     if actor is None or not getattr(actor, "is_authenticated", False):
         return ""
-    return actor.get_username()
+    return actor.get_full_name().strip() or actor.get_username()
 
 
 def _parse_date(value: object) -> date | None:

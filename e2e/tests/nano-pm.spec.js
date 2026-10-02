@@ -3334,6 +3334,40 @@ test.describe('project & people management', () => {
     }
   });
 
+  test('Teams cards prefer the actors full name and fall back to username', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await configureTeams(page, webhook.url, ['milestone.updated']);
+      await page.goto('/');
+      const milestoneId = await page.locator('.chart-row.proj .milestone').first().getAttribute('data-milestone-id');
+      const names = [
+        ['Philipp', 'Eichhorn', 'Philipp Eichhorn'],
+        ['Philipp', '', 'Philipp'],
+        ['', 'Eichhorn', 'Eichhorn'],
+        ['', '', 'demo'],
+      ];
+      for (const [index, [first, last, expected]] of names.entries()) {
+        await page.goto('/profile/');
+        await page.getByLabel('First name', { exact: true }).fill(first);
+        await page.getByLabel('Last name', { exact: true }).fill(last);
+        await Promise.all([
+          page.waitForResponse(response => response.url().endsWith('/profile/') && response.request().method() === 'POST'),
+          page.getByRole('button', { name: 'Save profile', exact: true }).click(),
+        ]);
+        await page.reload();
+        await expect(page.getByLabel('First name', { exact: true })).toHaveValue(first);
+        await expect(page.getByLabel('Last name', { exact: true })).toHaveValue(last);
+        expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: `Actor display ${index}` })).toBe(200);
+        await deliverTeamsNotifications();
+        expect(webhook.requests).toHaveLength(index + 1);
+        const card = webhook.requests.at(-1).json.attachments[0].content;
+        expect(card.body.at(-1)).toMatchObject({ text: expected, size: 'Small', isSubtle: true });
+      }
+    } finally {
+      await webhook.close();
+    }
+  });
+
   test('Teams description notifications include the new milestone description', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
