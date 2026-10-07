@@ -58,7 +58,9 @@
     from its upstream URL into static/vendor/<name>-<version>.<ext>, bump
     the static tag reference here. Pinned upstream URLs:
       datastar + Rocket : https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar-rocket.js
+      source map : https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar-rocket.js.map
       sortable : https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js
+    Vendor both Datastar files and update sourceMappingURL to match the versioned map filename.
   {% endcomment %}
   <script type="module" src="{% static 'vendor/datastar-rocket-1.0.4.js' %}"></script>
 </head>
