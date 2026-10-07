@@ -2848,6 +2848,147 @@ test.describe('project & people management', () => {
     await expect(milestone).toHaveAttribute('data-date', originalDate);
   });
 
+  test('milestone components are safe when Datastar loads before their definition', async ({ page, request }) => {
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    // Reproduce a cold/slow component download while Datastar starts normally.
+    await page.route('**/static/js/milestone-label.js', async route => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await route.continue();
+    });
+    await reset(request);
+    await login(page);
+    expect(errors).toEqual([]);
+    await expect(page.locator('nano-milestone-label > span').first())
+      .toHaveCSS('max-width', /^\d+(\.\d+)?px$/);
+  });
+
+  test('milestone labels truncate before nearby diamonds and reveal on hover and focus', async ({ appPage: page }) => {
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    const first = page.locator('.chart-row.proj .milestone').first();
+    const firstId = await first.getAttribute('data-milestone-id');
+    const projectId = await first.getAttribute('data-project-id');
+    const date = await first.getAttribute('data-date');
+    const next = new Date(`${date}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    const nextDate = next.toISOString().slice(0, 10);
+    const title = 'A long milestone title that must remain readable in full';
+
+    // Use the real Datastar bridge and wait for server-committed attributes.
+    await page.evaluate(({ firstId, title }) => {
+      window.dispatchEvent(new CustomEvent('nano-commit', { detail: {
+        url: `/milestones/${firstId}/update/`, data: { title },
+      } }));
+    }, { firstId, title });
+    await expect(first).toHaveAttribute('data-title', title);
+    await page.evaluate(({ projectId, nextDate }) => {
+      window.dispatchEvent(new CustomEvent('nano-commit', { detail: {
+        url: `/projects/${projectId}/milestones/`, data: { date: nextDate },
+      } }));
+    }, { projectId, nextDate });
+    const editor = page.locator('#milestone-popover');
+    await expect(editor).toBeVisible();
+    const secondId = await editor.getAttribute('data-milestone-id');
+    await editor.locator('input[name=title]').fill('Nearby checkpoint');
+    await editor.locator('textarea[name=description]').fill('A close checkpoint.');
+    await editor.locator('button[type=submit]').click();
+    await expect(editor).toHaveCount(0);
+    const second = page.locator(`#ms-${secondId}`);
+    await expect(second).toHaveAttribute('data-date', nextDate);
+    await first.scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+
+    const label = page.locator(`#ms-${firstId} + .milestone-label`);
+    await expect(label).toHaveText(title);
+    await expect.poll(() => label.evaluate(el => {
+      const text = el.firstElementChild || el;
+      return text.scrollWidth > text.clientWidth;
+    })).toBe(true);
+    expect(await label.evaluate(el => el.getBoundingClientRect().right))
+      .toBeLessThan(await second.evaluate(el => el.getBoundingClientRect().left));
+    expect(await label.evaluate(el => getComputedStyle(el.firstElementChild || el).textOverflow)).toBe('ellipsis');
+
+    await first.hover();
+    await expect.poll(() => label.evaluate(el => {
+      const text = el.firstElementChild || el;
+      return text.scrollWidth <= text.clientWidth;
+    })).toBe(true);
+    expect(await label.evaluate(el => Number(getComputedStyle(el).zIndex)))
+      .toBeGreaterThan(await second.evaluate(el => Number(getComputedStyle(el).zIndex)));
+    expect(await label.evaluate(el => getComputedStyle(el.firstElementChild || el).backgroundColor))
+      .not.toBe('rgba(0, 0, 0, 0)');
+
+    // The foreground label must not steal hover from a covered diamond.
+    await second.hover();
+    await expect.poll(() => label.evaluate(el => {
+      const text = el.firstElementChild || el;
+      return text.scrollWidth > text.clientWidth;
+    })).toBe(true);
+    await first.focus();
+    await expect.poll(() => label.evaluate(el => {
+      const text = el.firstElementChild || el;
+      return text.scrollWidth <= text.clientWidth;
+    })).toBe(true);
+    await first.press('Enter');
+    await expect(page.locator('#milestone-popover input[name=title]')).toHaveValue(title);
+    expect(errors).toEqual([]);
+  });
+
+  test('milestone label components recalculate after density changes and SSE patches', async ({ appPage: page }) => {
+    const first = page.locator('.chart-row.proj .milestone').first();
+    const id = await first.getAttribute('data-milestone-id');
+    const date = await first.getAttribute('data-date');
+    const projectId = await first.getAttribute('data-project-id');
+    const title = 'Long checkpoint label for overlap testing';
+    await page.evaluate(({ id, title }) => {
+      window.dispatchEvent(new CustomEvent('nano-commit', { detail: {
+        url: `/milestones/${id}/update/`, data: { title },
+      } }));
+    }, { id, title });
+    await expect(first).toHaveAttribute('data-title', title);
+    const next = new Date(`${date}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    await page.evaluate(({ projectId, date }) => {
+      window.dispatchEvent(new CustomEvent('nano-commit', { detail: {
+        url: `/projects/${projectId}/milestones/`, data: { date },
+      } }));
+    }, { projectId, date: next.toISOString().slice(0, 10) });
+    const editor = page.locator('#milestone-popover');
+    await expect(editor).toBeVisible();
+    const newId = await editor.getAttribute('data-milestone-id');
+    await editor.locator('input[name=title]').fill('Nearby checkpoint');
+    await editor.locator('textarea[name=description]').fill('A close checkpoint.');
+    await editor.locator('button[type=submit]').click();
+    await expect(editor).toHaveCount(0);
+    await first.scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+    const label = page.locator(`#ms-${id} + .milestone-label`);
+    const width = () => label.evaluate(el => (el.firstElementChild || el).getBoundingClientRect().width);
+    await expect.poll(width).toBeLessThan(36);
+    const before = await width();
+    await page.locator('#zoom-slider').evaluate(el => {
+      el.value = el.max;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await expect(page.locator('#grid-scroll')).toHaveAttribute('data-px-per-day', '72');
+    await expect.poll(width).toBeGreaterThan(before + 30);
+    await first.scrollIntoViewIfNeeded();
+    await first.hover();
+    await expect.poll(width).toBeGreaterThan(100);
+    await page.mouse.move(0, 0);
+
+    // Deleting the neighbour must release the space without a reload.
+    await page.evaluate(newId => {
+      window.dispatchEvent(new CustomEvent('nano-commit', { detail: {
+        url: `/milestones/${newId}/delete/`, data: {},
+      } }));
+    }, newId);
+    await expect(page.locator(`#ms-${newId}`)).toHaveCount(0);
+    await expect.poll(width).toBeGreaterThan(100);
+    await expect(label).toHaveText(title);
+  });
+
   test('clicking a task milestone opens the regular milestone editor', async ({ appPage: page }) => {
     const ms = page.locator('.chart-row.proj .milestone').first();
     const taskId = await ms.getAttribute('data-task-id');

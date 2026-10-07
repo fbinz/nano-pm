@@ -479,6 +479,7 @@ html, body { height: 100%; }
 
   .milestone {
     @apply absolute w-3.5 h-3.5 cursor-pointer;
+    z-index: 1;
     top: 50%; margin-top: -7px;
     transform: rotate(45deg);
     box-shadow: 0 0 0 1px white, 0 1px 2px rgba(0,0,0,0.3);
@@ -491,8 +492,31 @@ html, body { height: 100%; }
     outline-offset: 2px;
   }
   .milestone-label {
-    @apply absolute text-base-content whitespace-nowrap pointer-events-none pl-1;
+    @apply absolute text-base-content whitespace-nowrap pointer-events-none;
     top: 50%; transform: translateY(-50%);
+    z-index: 0;
+  }
+  .milestone-label > span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Normal labels stay below diamonds. Only the active label covers them;
+     pointer-events:none keeps even covered diamonds available to hover. */
+  .milestone:hover + .milestone-label,
+  .milestone:focus + .milestone-label {
+    z-index: 3;
+  }
+  .milestone:hover + .milestone-label > span,
+  .milestone:focus + .milestone-label > span {
+    max-width: none !important;
+    background: var(--color-base-100);
+    border-radius: 2px;
+    box-shadow: 0 0 0 3px var(--color-base-100);
+  }
+  .milestone:focus-visible {
+    outline: 2px solid var(--color-base-content);
+    outline-offset: 2px;
   }
 
   #today-line {

@@ -2032,34 +2032,6 @@
   .sticky {
     position: sticky;
   }
-  .dropdown-end {
-    @layer daisyui.l1.l2 {
-      --anchor-h: span-left;
-      :where(.dropdown-content) {
-        inset-inline-end: calc(0.25rem * 0);
-        translate: 0 0;
-        [dir="rtl"] & {
-          translate: 0 0;
-        }
-      }
-      &.dropdown-left {
-        --anchor-h: left;
-        --anchor-v: span-top;
-        .dropdown-content {
-          top: auto;
-          bottom: calc(0.25rem * 0);
-        }
-      }
-      &.dropdown-right {
-        --anchor-h: right;
-        --anchor-v: span-top;
-        .dropdown-content {
-          top: auto;
-          bottom: calc(0.25rem * 0);
-        }
-      }
-    }
-  }
   .join {
     display: inline-flex;
     align-items: stretch;
@@ -3200,54 +3172,6 @@
       }
     }
   }
-  .btn-soft {
-    @layer daisyui.l1 {
-      &:not( .btn-active, :hover, :active:focus, :focus-visible, input:checked:not(.filter .btn), :disabled, [disabled], .btn-disabled ) {
-        --btn-shadow: "";
-        --btn-fg: var(--btn-color, var(--color-base-content));
-        --btn-bg: var(--btn-color, var(--color-base-content));
-        @supports (color: color-mix(in lab, red, red)) {
-          --btn-bg: color-mix(
-        in oklab,
-        var(--btn-color, var(--color-base-content)) 8%,
-        var(--color-base-100)
-      );
-        }
-        --btn-border: var(--btn-color, var(--color-base-content));
-        @supports (color: color-mix(in lab, red, red)) {
-          --btn-border: color-mix(
-        in oklab,
-        var(--btn-color, var(--color-base-content)) 10%,
-        var(--color-base-100)
-      );
-        }
-        --btn-noise: none;
-      }
-      @media (hover: none) {
-        &:not(.btn-active, :active, :focus-visible, input:checked:not(.filter .btn)):hover {
-          --btn-shadow: "";
-          --btn-fg: var(--btn-color, var(--color-base-content));
-          --btn-bg: var(--btn-color, var(--color-base-content));
-          @supports (color: color-mix(in lab, red, red)) {
-            --btn-bg: color-mix(
-          in oklab,
-          var(--btn-color, var(--color-base-content)) 8%,
-          var(--color-base-100)
-        );
-          }
-          --btn-border: var(--btn-color, var(--color-base-content));
-          @supports (color: color-mix(in lab, red, red)) {
-            --btn-border: color-mix(
-          in oklab,
-          var(--btn-color, var(--color-base-content)) 10%,
-          var(--color-base-100)
-        );
-          }
-          --btn-noise: none;
-        }
-      }
-    }
-  }
   .btn-sm {
     @layer daisyui.l1.l2 {
       --fontsize: 0.75rem;
@@ -3278,12 +3202,6 @@
     @layer daisyui.l1.l2.l3 {
       --btn-color: var(--color-neutral);
       --btn-fg: var(--color-neutral-content);
-    }
-  }
-  .btn-success {
-    @layer daisyui.l1.l2.l3 {
-      --btn-color: var(--color-success);
-      --btn-fg: var(--color-success-content);
     }
   }
   .range-xs {
@@ -5488,6 +5406,7 @@ html, body {
     height: calc(var(--spacing) * 3.5);
     width: calc(var(--spacing) * 3.5);
     cursor: pointer;
+    z-index: 1;
     top: 50%;
     margin-top: -7px;
     transform: rotate(45deg);
@@ -5503,11 +5422,29 @@ html, body {
   .milestone-label {
     pointer-events: none;
     position: absolute;
-    padding-left: calc(var(--spacing) * 1);
     white-space: nowrap;
     color: var(--color-base-content);
     top: 50%;
     transform: translateY(-50%);
+    z-index: 0;
+  }
+  .milestone-label > span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .milestone:hover + .milestone-label, .milestone:focus + .milestone-label {
+    z-index: 3;
+  }
+  .milestone:hover + .milestone-label > span, .milestone:focus + .milestone-label > span {
+    max-width: none !important;
+    background: var(--color-base-100);
+    border-radius: 2px;
+    box-shadow: 0 0 0 3px var(--color-base-100);
+  }
+  .milestone:focus-visible {
+    outline: 2px solid var(--color-base-content);
+    outline-offset: 2px;
   }
   #today-line {
     pointer-events: none;

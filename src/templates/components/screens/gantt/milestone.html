@@ -11,5 +11,11 @@
   data-date="{{ m.date_iso }}"
   data-on:mousedown="nano.milestoneMouseDown(evt, {{ m.id }}, {% if m.task_id %}{{ m.task_id }}{% else %}null{% endif %})"
   title="{{ m.title }}  {{ m.date_iso }}"
+  tabindex="0"
+  role="button"
+  aria-label="{{ m.title }} {{ m.date_iso }}"
+  data-on:keydown="if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); nano.openMilestonePopover({{ m.id }}) }"
 ></div>
-<div class="milestone-label" style="left:{{ m.x|add:'8' }}px;">{{ m.title }}</div>
+<nano-milestone-label id="ms-label-{{ m.id }}" class="milestone-label" style="left:{{ m.x|add:'12' }}px;">
+  <span data-preserve-attr="style">{{ m.title }}</span>
+</nano-milestone-label>

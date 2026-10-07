@@ -57,10 +57,10 @@
     JS deps are vendored under static/vendor/. Upgrading: pull the new file
     from its upstream URL into static/vendor/<name>-<version>.<ext>, bump
     the static tag reference here. Pinned upstream URLs:
-      datastar : https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.1/bundles/datastar.js
+      datastar + Rocket : https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar-rocket.js
       sortable : https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js
   {% endcomment %}
-  <script type="module" src="{% static 'vendor/datastar-1.0.1.js' %}"></script>
+  <script type="module" src="{% static 'vendor/datastar-rocket-1.0.4.js' %}"></script>
 </head>
 <body>
   {{ slot }}
