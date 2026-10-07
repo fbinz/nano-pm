@@ -1,5 +1,7 @@
 const http = require('http');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
+const { mkdtemp, rm } = require('fs/promises');
+const { tmpdir } = require('os');
 const { promisify } = require('util');
 const path = require('path');
 
@@ -2846,6 +2848,67 @@ test.describe('project & people management', () => {
     await expect(editor).toBeVisible();
     await expect(editor.locator('input[name=date]')).toHaveValue(originalDate);
     await expect(milestone).toHaveAttribute('data-date', originalDate);
+  });
+
+  test('production milestone modules share the hashed Datastar runtime', async ({ appPage: page }) => {
+    test.setTimeout(60000);
+    const staticRoot = await mkdtemp(path.join(tmpdir(), 'nano-pm-static-'));
+    const cwd = path.resolve(__dirname, '../..');
+    const env = {
+      ...process.env,
+      DJANGO_DEBUG: 'false',
+      DJANGO_SECRET_KEY: 'django-insecure-dev-only-DO-NOT-USE-IN-PROD',
+      DJANGO_ALLOWED_HOSTS: 'localhost,127.0.0.1',
+      DJANGO_DB_PATH: 'db.e2e.sqlite3',
+      DJANGO_STATIC_ROOT: staticRoot,
+    };
+    const url = 'http://localhost:8767';
+    let server;
+    try {
+      await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'collectstatic', '--noinput', '--verbosity', '0'], { cwd, env });
+      // --nostatic ensures WhiteNoise serves the collected production assets,
+      // rather than runserver's unhashed source files.
+      server = spawn('uv', ['run', 'python', 'src/manage.py', 'runserver', '8767', '--noreload', '--nostatic'], { cwd, env });
+      let logs = '';
+      server.stdout.on('data', chunk => { logs += chunk; });
+      server.stderr.on('data', chunk => { logs += chunk; });
+      await expect.poll(async () => {
+        if (server.exitCode !== null) throw new Error(logs);
+        try { return (await page.request.get(`${url}/accounts/login/`, { timeout: 1000 })).status(); }
+        catch (_) { return 0; }
+      }, { timeout: 15000 }).toBe(200);
+
+      // Check module identity before executing it, so a duplicate-runtime
+      // regression fails as a URL mismatch, not a browser freeze/timeout.
+      const html = await (await page.request.get(`${url}/`)).text();
+      const runtime = html.match(/src="([^"]*\/vendor\/datastar-rocket[^\"]+\.js)"/)[1];
+      const component = html.match(/src="([^"]*\/js\/milestone-label[^\"]+\.js)"/)[1];
+      expect(runtime).toMatch(/datastar-rocket-1\.0\.4\.[a-f0-9]+\.js$/);
+      const source = await (await page.request.get(new URL(component, url).href)).text();
+      const imported = source.match(/import\s+\{\s*rocket\s*\}\s+from\s+['"]([^'"]+)['"]/)[1];
+      expect(new URL(imported, new URL(component, url)).href).toBe(new URL(runtime, url).href);
+
+      const modules = new Set();
+      const errors = [];
+      page.on('request', request => {
+        if (request.url().includes('/vendor/datastar-rocket')) modules.add(request.url());
+      });
+      page.on('pageerror', error => errors.push(error.message));
+      await page.goto(url);
+      await expect(page.locator('nano-milestone-label > span').first()).toHaveCSS('max-width', /^\d+(\.\d+)?px$/);
+      // Exercise a real Datastar/SSE interaction with the production bundle.
+      await page.locator('.milestone').first().click();
+      await expect(page.locator('#milestone-popover')).toBeVisible();
+      expect([...modules]).toEqual([new URL(runtime, url).href]);
+      expect(errors).toEqual([]);
+    } finally {
+      if (server && server.exitCode === null) {
+        const stopped = new Promise(resolve => server.once('close', resolve));
+        server.kill();
+        await stopped;
+      }
+      await rm(staticRoot, { recursive: true, force: true });
+    }
   });
 
   test('milestone components are safe when Datastar loads before their definition', async ({ page, request }) => {

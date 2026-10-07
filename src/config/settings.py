@@ -243,7 +243,7 @@ STATIC_ROOT = os.environ.get("DJANGO_STATIC_ROOT") or str(BASE_DIR.parent / "sta
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "config.storage.StaticFilesStorage",
     },
 }
 
