@@ -66,6 +66,11 @@
                data-on:click="nano.focusTask({{ bar.id }})">
             <span class="title">{{ bar.title }}</span>
             <span class="assignees">{{ bar.assignees }}</span>
+            <a class="task-detail-link" href="{% url 'task_detail' bar.id %}"
+               aria-label="{% trans 'Open task details' %}" title="{% trans 'Open task details' %}"
+               data-on:click="evt.stopPropagation()">
+              <c-lucide name="maximize-2" size="14" />
+            </a>
           </div>
           <div class="chart-row" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
                style="{% if rg.collapsed %}display:none;{% endif %}width:{{ vm.chart_width }}px;"

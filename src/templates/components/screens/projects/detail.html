@@ -1,0 +1,97 @@
+{% load i18n %}
+<c-vars project tasks milestones responsible_people user is_pm workspace workspaces has_multiple_workspaces can_view_ideas />
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
+    :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
+    :can_view_ideas="can_view_ideas" active_nav="projects">
+  <main id="project-detail-page" class="w-full max-w-6xl mx-auto p-4 md:p-8 space-y-6">
+    <nav>
+      <a class="btn btn-sm btn-ghost" href="{% url 'gantt_index' %}">
+        <c-lucide name="arrow-left" size="16" /> {% trans "Back to Projects" %}
+      </a>
+    </nav>
+
+    <header class="flex items-start gap-3">
+      <span class="swatch size-4 rounded mt-2 shrink-0" style="background:{{ project.color }}" aria-hidden="true"></span>
+      <div class="min-w-0">
+        <h1 class="text-3xl font-semibold break-words">{{ project.name }}</h1>
+        <span class="badge badge-sm mt-2 {% if project.is_completed %}badge-success{% else %}badge-ghost{% endif %}">
+          {% if project.is_completed %}{% trans "Completed" %}{% else %}{% trans "Active" %}{% endif %}
+        </span>
+      </div>
+    </header>
+
+    <section class="rounded-box border border-base-300 bg-base-100 p-5 space-y-5" aria-label="{% trans 'Project overview' %}">
+      <div>
+        <h2 class="text-lg font-semibold mb-2">{% trans "Description" %}</h2>
+        {% if project.description %}
+          <div class="whitespace-pre-wrap break-words text-base-content/80">{{ project.description }}</div>
+        {% else %}
+          <p class="text-base-content/60">{% trans "No description yet." %}</p>
+        {% endif %}
+      </div>
+      <div>
+        <h2 class="text-lg font-semibold mb-2">{% trans "Responsible people" %}</h2>
+        <div class="flex flex-wrap gap-2">
+          {% for person in responsible_people %}
+            <span class="badge badge-outline">{{ person.name }}</span>
+          {% empty %}
+            <p class="text-base-content/60">{% trans "Nobody assigned" %}</p>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-box border border-base-300 bg-base-100 p-5" aria-labelledby="project-tasks-title">
+      <h2 id="project-tasks-title" class="text-lg font-semibold mb-3">{% trans "Tasks" %} <span class="badge badge-ghost">{{ tasks|length }}</span></h2>
+      {% if tasks %}
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th scope="col">{% trans "Task" %}</th>
+                <th scope="col">{% trans "Status" %}</th>
+                <th scope="col">{% trans "Start" %}</th>
+                <th scope="col">{% trans "End (exclusive)" %}</th>
+                <th scope="col">{% trans "Assignees" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for task in tasks %}
+                <tr data-task-id="{{ task.id }}">
+                  <th scope="row" class="font-medium">
+                    <a class="link link-hover" href="{% url 'task_detail' task.id %}">{{ task.title }}</a>
+                    {% if task.description %}<p class="font-normal text-base-content/60 whitespace-pre-wrap">{{ task.description }}</p>{% endif %}
+                  </th>
+                  <td><span class="badge badge-sm badge-ghost whitespace-nowrap">{{ task.status_label }}</span></td>
+                  <td class="whitespace-nowrap"><time datetime="{{ task.start|date:'Y-m-d' }}">{{ task.start|date:"DATE_FORMAT" }}</time></td>
+                  <td class="whitespace-nowrap"><time datetime="{{ task.end|date:'Y-m-d' }}">{{ task.end|date:"DATE_FORMAT" }}</time></td>
+                  <td>{% for person in task.assignees.all %}{{ person.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-base-content/60">{% trans "Nobody assigned" %}</span>{% endfor %}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-base-content/60">{% trans "No tasks yet." %}</p>
+      {% endif %}
+    </section>
+
+    <section class="rounded-box border border-base-300 bg-base-100 p-5" aria-labelledby="project-milestones-title">
+      <h2 id="project-milestones-title" class="text-lg font-semibold mb-3">{% trans "Milestones" %} <span class="badge badge-ghost">{{ milestones|length }}</span></h2>
+      <ul class="divide-y divide-base-300">
+        {% for milestone in milestones %}
+          <li class="flex items-start gap-3 py-3" data-milestone-id="{{ milestone.id }}">
+            <c-lucide name="diamond" size="18" class="mt-1 shrink-0 text-base-content/60" />
+            <div class="min-w-0 flex-1">
+              <h3 class="font-medium break-words">{{ milestone.title }}</h3>
+              <time class="text-sm text-base-content/60" datetime="{{ milestone.date|date:'Y-m-d' }}">{{ milestone.date|date:"DATE_FORMAT" }}</time>
+              {% if milestone.description %}<p class="mt-1 text-sm text-base-content/70 whitespace-pre-wrap break-words">{{ milestone.description }}</p>{% endif %}
+            </div>
+          </li>
+        {% empty %}
+          <li class="text-base-content/60">{% trans "No milestones yet." %}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </main>
+</c-layouts.app-shell>

@@ -325,6 +325,26 @@ html, body { height: 100%; }
   .future-milestone-warning {
     @apply inline-flex flex-shrink-0 items-center justify-center text-warning;
   }
+  .project-detail-link, .task-detail-link {
+    @apply inline-flex size-6 shrink-0 items-center justify-center rounded text-base-content/60;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .left-cell.proj:hover .project-detail-link,
+  .left-cell.proj:focus-within .project-detail-link,
+  #project-popover:hover .project-detail-link,
+  #project-popover .project-detail-link:focus,
+  .left-cell.task:hover .task-detail-link,
+  .left-cell.task:focus-within .task-detail-link,
+  #task-popover:hover .task-detail-link,
+  #task-popover .task-detail-link:focus {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .project-detail-link:hover, .task-detail-link:hover { @apply bg-base-content/10 text-base-content; }
+  .project-detail-link:focus-visible, .task-detail-link:focus-visible { @apply outline-2 outline-offset-2 outline-primary; }
+  .project-sort-mode .project-detail-link { display: none; }
+
   .project-create-actions {
     @apply flex flex-shrink-0 items-center gap-0.5;
   }

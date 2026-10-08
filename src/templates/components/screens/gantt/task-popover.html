@@ -10,6 +10,13 @@
     data-on:submit__prevent="@post('/tasks/{{ task.id }}/update/', { contentType: 'form' })"
   >
     {% csrf_token %}
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="font-semibold truncate">{{ task.title }}</h2>
+      <a class="task-detail-link" href="{% url 'task_detail' task.id %}"
+         aria-label="{% trans 'Open task details' %}" title="{% trans 'Open task details' %}">
+        <c-lucide name="maximize-2" size="16" />
+      </a>
+    </div>
     <fieldset class="fieldset">
       <label class="label" for="task-title">{% trans "Title" %}</label>
       <input id="task-title" class="input input-sm w-full" type="text" name="title" value="{{ task.title }}" autofocus>

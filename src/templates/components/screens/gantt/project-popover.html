@@ -8,6 +8,13 @@
     data-on:submit__prevent="@post('/projects/{{ project.id }}/update/', { contentType: 'form' })"
   >
     {% csrf_token %}
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="font-semibold truncate">{{ project.name }}</h2>
+      <a class="project-detail-link" href="{% url 'project_detail' project.id %}"
+         aria-label="{% trans 'Open project details' %}" title="{% trans 'Open project details' %}">
+        <c-lucide name="maximize-2" size="16" />
+      </a>
+    </div>
     <fieldset class="fieldset">
       <label class="label" for="project-name">{% trans "Name" %}</label>
       <input id="project-name" class="input input-sm w-full" type="text" name="name" value="{{ project.name }}" autofocus>

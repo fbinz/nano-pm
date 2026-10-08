@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-02 00:53+0200\n"
+"POT-Creation-Date: 2026-10-08 22:04+0200\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -194,7 +194,9 @@ msgid "%(actor)s %(verb)s %(entity)s %(label)s"
 msgstr "%(actor)s hat %(entity)s %(label)s %(verb)s"
 
 #: data/models/activity.py:129
-#: templates/components/screens/gantt/task-popover.html:53
+#: templates/components/screens/gantt/task-popover.html:60
+#: templates/components/screens/projects/detail.html:55
+#: templates/components/screens/tasks/detail.html:49
 msgid "Assignees"
 msgstr "Zuständige"
 
@@ -203,7 +205,7 @@ msgid "Body"
 msgstr "Text"
 
 #: data/models/activity.py:131
-#: templates/components/screens/gantt/project-popover.html:54
+#: templates/components/screens/gantt/project-popover.html:61
 msgid "Color"
 msgstr "Farbe"
 
@@ -226,18 +228,20 @@ msgstr "Datum"
 
 #: data/models/activity.py:136
 #: templates/components/screens/gantt/milestone-popover.html:21
-#: templates/components/screens/gantt/project-popover.html:16
-#: templates/components/screens/gantt/task-popover.html:18
+#: templates/components/screens/gantt/project-popover.html:23
+#: templates/components/screens/gantt/task-popover.html:25
+#: templates/components/screens/projects/detail.html:25
+#: templates/components/screens/tasks/detail.html:41
 msgid "Description"
 msgstr "Beschreibung"
 
 #: data/models/activity.py:137
-#: templates/components/screens/gantt/task-popover.html:27
+#: templates/components/screens/gantt/task-popover.html:34
 msgid "End"
 msgstr "Ende"
 
 #: data/models/activity.py:138
-#: templates/components/screens/gantt/project-popover.html:12
+#: templates/components/screens/gantt/project-popover.html:19
 msgid "Name"
 msgstr "Name"
 
@@ -251,13 +255,14 @@ msgstr "Vorgänger"
 
 #: data/models/activity.py:141
 #: templates/components/screens/gantt/milestone-popover.html:56
-#: templates/components/screens/gantt/task-popover.html:32
+#: templates/components/screens/gantt/task-popover.html:39
 #: templates/components/screens/ideas/detail.html:87
 msgid "Project"
 msgstr "Projekt"
 
 #: data/models/activity.py:142
-#: templates/components/screens/gantt/project-popover.html:20
+#: templates/components/screens/gantt/project-popover.html:27
+#: templates/components/screens/projects/detail.html:33
 msgid "Responsible people"
 msgstr "Verantwortliche"
 
@@ -282,11 +287,14 @@ msgid "Require move reason"
 msgstr "Begründung beim Verschieben erforderlich"
 
 #: data/models/activity.py:148
-#: templates/components/screens/gantt/task-popover.html:23
+#: templates/components/screens/gantt/task-popover.html:30
+#: templates/components/screens/projects/detail.html:53
+#: templates/components/screens/tasks/detail.html:28
 msgid "Start"
 msgstr "Start"
 
 #: data/models/activity.py:149
+#: templates/components/screens/projects/detail.html:52
 msgid "Status"
 msgstr "Status"
 
@@ -320,7 +328,7 @@ msgstr "Erlaubte Domains für öffentliche Abonnements"
 
 #: data/models/activity.py:156
 #: templates/components/screens/gantt/milestone-popover.html:17
-#: templates/components/screens/gantt/task-popover.html:14
+#: templates/components/screens/gantt/task-popover.html:21
 msgid "Title"
 msgstr "Titel"
 
@@ -787,8 +795,8 @@ msgstr "Optionale öffentliche Beschreibung"
 
 #: templates/components/layouts/app-shell.html:63
 #: templates/components/screens/gantt/milestone-popover.html:72
-#: templates/components/screens/gantt/project-popover.html:104
-#: templates/components/screens/gantt/task-popover.html:118
+#: templates/components/screens/gantt/project-popover.html:111
+#: templates/components/screens/gantt/task-popover.html:125
 msgid "Save"
 msgstr "Speichern"
 
@@ -984,7 +992,7 @@ msgid "timeline"
 msgstr "Zeitachse"
 
 #: templates/components/screens/gantt/chart.html:65
-#: templates/components/screens/gantt/chart.html:149
+#: templates/components/screens/gantt/chart.html:159
 msgid "Add Project"
 msgstr "Projekt hinzufügen"
 
@@ -997,23 +1005,28 @@ msgstr "Ziehen, um das Projekt neu anzuordnen"
 msgid "No future milestone"
 msgstr "Kein zukünftiger Meilenstein"
 
-#: templates/components/screens/gantt/chart.html:101
+#: templates/components/screens/gantt/chart.html:100
+#: templates/components/screens/gantt/project-popover.html:14
+msgid "Open project details"
+msgstr "Projektdetails öffnen"
+
+#: templates/components/screens/gantt/chart.html:106
 msgid "Add task"
 msgstr "Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:102
+#: templates/components/screens/gantt/chart.html:107
 msgid "Add a highlighted row for a new task"
 msgstr "Hervorgehobene Zeile für eine neue Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:108
+#: templates/components/screens/gantt/chart.html:113
 msgid "Add milestone"
 msgstr "Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:109
+#: templates/components/screens/gantt/chart.html:114
 msgid "Add milestone, then place it on the timeline"
 msgstr "Meilenstein hinzufügen und dann auf der Zeitachse platzieren"
 
-#: templates/components/screens/gantt/chart.html:118
+#: templates/components/screens/gantt/chart.html:123
 msgid ""
 "Choose Milestone beside the project, then place it here. Shift-click and "
 "Shift-drag are shortcuts."
@@ -1021,15 +1034,21 @@ msgstr ""
 "Meilenstein neben dem Projekt auswählen und dann hier platzieren. Umschalt-"
 "Klick und Umschalt-Ziehen sind Kurzbefehle."
 
-#: templates/components/screens/gantt/chart.html:164
+#: templates/components/screens/gantt/chart.html:140
+#: templates/components/screens/gantt/chart_resource.html:70
+#: templates/components/screens/gantt/task-popover.html:16
+msgid "Open task details"
+msgstr "Aufgabendetails öffnen"
+
+#: templates/components/screens/gantt/chart.html:174
 msgid "Click to remove this dependency"
 msgstr "Klicken, um diese Abhängigkeit zu entfernen"
 
-#: templates/components/screens/gantt/chart.html:177
+#: templates/components/screens/gantt/chart.html:187
 msgid "No projects yet."
 msgstr "Noch keine Projekte."
 
-#: templates/components/screens/gantt/chart.html:178
+#: templates/components/screens/gantt/chart.html:188
 msgid "+ Create your first project"
 msgstr "+ Erstellen Sie Ihr erstes Projekt"
 
@@ -1094,7 +1113,7 @@ msgid "Require a reason when moving this milestone"
 msgstr "Beim Verschieben dieses Meilensteins eine Begründung verlangen"
 
 #: templates/components/screens/gantt/milestone-popover.html:67
-#: templates/components/screens/gantt/task-popover.html:113
+#: templates/components/screens/gantt/task-popover.html:120
 #: templates/components/screens/teams/settings.html:88
 #: templates/public/roadmap.html:237
 msgid "Cancel"
@@ -1105,7 +1124,7 @@ msgid "Delete this milestone?"
 msgstr "Diesen Meilenstein löschen?"
 
 #: templates/components/screens/gantt/milestone-popover.html:70
-#: templates/components/screens/gantt/task-popover.html:116
+#: templates/components/screens/gantt/task-popover.html:123
 msgid "Delete"
 msgstr "Löschen"
 
@@ -1117,78 +1136,81 @@ msgstr "Projekt erstellt, aber durch den aktiven Teamfilter ausgeblendet."
 msgid "Clear team filter"
 msgstr "Teamfilter löschen"
 
-#: templates/components/screens/gantt/project-popover.html:22
-#: templates/components/screens/gantt/task-popover.html:55
+#: templates/components/screens/gantt/project-popover.html:29
+#: templates/components/screens/gantt/task-popover.html:62
+#: templates/components/screens/projects/detail.html:38
+#: templates/components/screens/projects/detail.html:68
+#: templates/components/screens/tasks/detail.html:54
 msgid "Nobody assigned"
 msgstr "Niemand zugewiesen"
 
-#: templates/components/screens/gantt/project-popover.html:28
-#: templates/components/screens/gantt/task-popover.html:61
+#: templates/components/screens/gantt/project-popover.html:35
+#: templates/components/screens/gantt/task-popover.html:68
 #, python-format
 msgid "Remove %(name)s"
 msgstr "%(name)s entfernen"
 
-#: templates/components/screens/gantt/project-popover.html:37
+#: templates/components/screens/gantt/project-popover.html:44
 msgid "Add responsible person"
 msgstr "Verantwortliche Person hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:39
+#: templates/components/screens/gantt/project-popover.html:46
 msgid "Add responsible person…"
 msgstr "Verantwortliche Person hinzufügen…"
 
-#: templates/components/screens/gantt/project-popover.html:49
-#: templates/components/screens/gantt/task-popover.html:82
+#: templates/components/screens/gantt/project-popover.html:56
+#: templates/components/screens/gantt/task-popover.html:89
 msgid "Assign to me"
 msgstr "Mir zuweisen"
 
-#: templates/components/screens/gantt/project-popover.html:67
+#: templates/components/screens/gantt/project-popover.html:74
 msgid "move up"
 msgstr "nach oben"
 
-#: templates/components/screens/gantt/project-popover.html:69
+#: templates/components/screens/gantt/project-popover.html:76
 msgid "move down"
 msgstr "nach unten"
 
-#: templates/components/screens/gantt/project-popover.html:73
+#: templates/components/screens/gantt/project-popover.html:80
 msgid "+ Add task"
 msgstr "+ Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:75
+#: templates/components/screens/gantt/project-popover.html:82
 msgid "+ Add milestone"
 msgstr "+ Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:80
+#: templates/components/screens/gantt/project-popover.html:87
 msgid "Reopen project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:80
+#: templates/components/screens/gantt/project-popover.html:87
 msgid "Mark complete"
 msgstr "Als erledigt markieren"
 
-#: templates/components/screens/gantt/project-popover.html:85
+#: templates/components/screens/gantt/project-popover.html:92
 #, fuzzy
 #| msgid "Create workspace"
 msgid "Move to workspace"
 msgstr "Arbeitsbereich erstellen"
 
-#: templates/components/screens/gantt/project-popover.html:94
+#: templates/components/screens/gantt/project-popover.html:101
 #, fuzzy, python-format
 #| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgid "Move project &quot;%(name)s&quot; to the selected workspace?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:95
+#: templates/components/screens/gantt/project-popover.html:102
 #, fuzzy
 #| msgid "Reopen project"
 msgid "Move project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:102
+#: templates/components/screens/gantt/project-popover.html:109
 #, python-format
 msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:102
+#: templates/components/screens/gantt/project-popover.html:109
 msgid "Delete project"
 msgstr "Projekt löschen"
 
@@ -1204,15 +1226,17 @@ msgstr "Erledigte ausblenden"
 msgid "Show completed"
 msgstr "Erledigte anzeigen"
 
-#: templates/components/screens/gantt/task-popover.html:40
+#: templates/components/screens/gantt/task-popover.html:47
+#: templates/components/screens/tasks/detail.html:61
 msgid "Milestone"
 msgstr "Meilenstein"
 
-#: templates/components/screens/gantt/task-popover.html:42
+#: templates/components/screens/gantt/task-popover.html:49
+#: templates/components/screens/tasks/detail.html:72
 msgid "No milestone"
 msgstr "Kein Meilenstein"
 
-#: templates/components/screens/gantt/task-popover.html:50
+#: templates/components/screens/gantt/task-popover.html:57
 msgid ""
 "Choose an existing unconnected milestone from this project. Create "
 "milestones from the project timeline."
@@ -1220,32 +1244,33 @@ msgstr ""
 "Wählen Sie einen bestehenden, nicht verknüpften Meilenstein aus diesem "
 "Projekt. Erstellen Sie Meilensteine über die Projektzeitleiste."
 
-#: templates/components/screens/gantt/task-popover.html:70
+#: templates/components/screens/gantt/task-popover.html:77
 msgid "Add assignee"
 msgstr "Zuständige Person hinzufügen"
 
-#: templates/components/screens/gantt/task-popover.html:72
+#: templates/components/screens/gantt/task-popover.html:79
 msgid "Add assignee…"
 msgstr "Zuständige Person hinzufügen…"
 
-#: templates/components/screens/gantt/task-popover.html:86
+#: templates/components/screens/gantt/task-popover.html:93
+#: templates/components/screens/tasks/detail.html:77
 msgid "Dependencies"
 msgstr "Abhängigkeiten"
 
-#: templates/components/screens/gantt/task-popover.html:90
+#: templates/components/screens/gantt/task-popover.html:97
 msgid "depends on"
 msgstr "hängt ab von"
 
-#: templates/components/screens/gantt/task-popover.html:92
-#: templates/components/screens/gantt/task-popover.html:100
+#: templates/components/screens/gantt/task-popover.html:99
+#: templates/components/screens/gantt/task-popover.html:107
 msgid "Remove dependency"
 msgstr "Abhängigkeit entfernen"
 
-#: templates/components/screens/gantt/task-popover.html:98
+#: templates/components/screens/gantt/task-popover.html:105
 msgid "blocks"
 msgstr "blockiert"
 
-#: templates/components/screens/gantt/task-popover.html:105
+#: templates/components/screens/gantt/task-popover.html:112
 msgid ""
 "No dependencies. Drag from a bar's right-edge handle onto another bar to "
 "create one."
@@ -1253,7 +1278,7 @@ msgstr ""
 "Keine Abhängigkeiten. Ziehen Sie vom rechten Rand eines Balkens auf einen "
 "anderen Balken, um eine zu erstellen."
 
-#: templates/components/screens/gantt/task-popover.html:116
+#: templates/components/screens/gantt/task-popover.html:123
 msgid "Delete this task?"
 msgstr "Diese Aufgabe löschen?"
 
@@ -1503,6 +1528,84 @@ msgstr "Profil speichern"
 msgid "Change password"
 msgstr "Passwort ändern"
 
+#: templates/components/screens/projects/detail.html:9
+#: templates/components/screens/tasks/detail.html:12
+msgid "Back to Projects"
+msgstr "Zurück zu Projekten"
+
+#: templates/components/screens/projects/detail.html:18
+msgid "Completed"
+msgstr "Abgeschlossen"
+
+#: templates/components/screens/projects/detail.html:18
+msgid "Active"
+msgstr "Aktiv"
+
+#: templates/components/screens/projects/detail.html:23
+msgid "Project overview"
+msgstr "Projektübersicht"
+
+#: templates/components/screens/projects/detail.html:29
+#: templates/components/screens/tasks/detail.html:45
+msgid "No description yet."
+msgstr "Noch keine Beschreibung."
+
+#: templates/components/screens/projects/detail.html:45
+msgid "Tasks"
+msgstr "Aufgaben"
+
+#: templates/components/screens/projects/detail.html:51
+msgid "Task"
+msgstr "Aufgabe"
+
+#: templates/components/screens/projects/detail.html:54
+#: templates/components/screens/tasks/detail.html:32
+msgid "End (exclusive)"
+msgstr "Ende (exklusiv)"
+
+#: templates/components/screens/projects/detail.html:75
+msgid "No tasks yet."
+msgstr "Noch keine Aufgaben."
+
+#: templates/components/screens/projects/detail.html:80
+msgid "Milestones"
+msgstr "Meilensteine"
+
+#: templates/components/screens/projects/detail.html:92
+msgid "No milestones yet."
+msgstr "Noch keine Meilensteine."
+
+#: templates/components/screens/tasks/detail.html:9
+msgid "Back to project"
+msgstr "Zurück zum Projekt"
+
+#: templates/components/screens/tasks/detail.html:25
+msgid "Task overview"
+msgstr "Aufgabenübersicht"
+
+#: templates/components/screens/tasks/detail.html:36
+msgid "Duration"
+msgstr "Dauer"
+
+#: templates/components/screens/tasks/detail.html:37
+#, python-format
+msgid "%(days)s day"
+msgid_plural "%(days)s days"
+msgstr[0] "%(days)s Tag"
+msgstr[1] "%(days)s Tage"
+
+#: templates/components/screens/tasks/detail.html:82
+msgid "Depends on"
+msgstr "Hängt ab von"
+
+#: templates/components/screens/tasks/detail.html:95
+msgid "Blocks"
+msgstr "Blockiert"
+
+#: templates/components/screens/tasks/detail.html:108
+msgid "No dependencies."
+msgstr "Keine Abhängigkeiten."
+
 #: templates/components/screens/teams/settings.html:7
 msgid "Workspace channel"
 msgstr "Kanal des Arbeitsbereichs"
@@ -1655,7 +1758,9 @@ msgstr ""
 msgid ""
 "Your email will be remembered in this browser for future follows on this "
 "roadmap."
-msgstr "Ihre E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser Roadmap gespeichert."
+msgstr ""
+"Ihre E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
+"Roadmap gespeichert."
 
 #~ msgid "Sign in to follow projects"
 #~ msgstr "Anmelden, um Projekten zu folgen"
@@ -1717,9 +1822,6 @@ msgstr "Ihre E-Mail-Adresse wird in diesem Browser für weitere Abonnements dies
 
 #~ msgid "This date matches the end of an unconnected task."
 #~ msgstr "Dieses Datum entspricht dem Ende einer nicht verknüpften Aufgabe."
-
-#~ msgid "Task"
-#~ msgstr "Aufgabe"
 
 #~ msgid "Keep independent"
 #~ msgstr "Unabhängig lassen"

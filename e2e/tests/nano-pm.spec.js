@@ -901,6 +901,21 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
 // Auth + first render
 // =============================================================================
 test.describe('auth + page render', () => {
+  test('session survives another localhost app replacing the default session cookie', async ({ appPage: page }) => {
+    // Cookies are shared across ports: simulate another Django app on 8111.
+    await page.context().addCookies([{
+      name: 'sessionid', value: 'another-django-app-session',
+      url: 'http://localhost:8111', httpOnly: true, sameSite: 'Lax',
+    }]);
+    await page.reload();
+    await expect(page).toHaveURL('/');
+    await expect(page.locator('#grid-scroll')).toBeVisible();
+    await expect(page.locator('.sidebar-user .user-name')).toHaveText('demo');
+    const cookies = await page.context().cookies();
+    expect(cookies.find(cookie => cookie.name === 'nano_pm_sessionid')?.httpOnly).toBe(true);
+    expect(cookies.find(cookie => cookie.name === 'sessionid')?.value).toBe('another-django-app-session');
+  });
+
   test('login page renders the form', async ({ page, request }) => {
     await reset(request);
     await page.goto('/accounts/login/');
@@ -2095,6 +2110,140 @@ test.describe('resource view', () => {
     await page.waitForURL(/\/$/);
     await expect(nav.locator('a.menu-active')).toHaveText(/Projects/);
     await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toBeVisible();
+  });
+});
+
+
+// =============================================================================
+// Task detail
+// =============================================================================
+test.describe('task detail', () => {
+  test('task detail opens from the hover-only sidebar maximize link', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    const start = await bar.getAttribute('data-start');
+    const end = await bar.getAttribute('data-end');
+    await bar.click();
+    const sidebar = page.locator('#task-popover');
+    await expect(sidebar).toBeVisible();
+    const link = sidebar.getByRole('link', { name: 'Open task details' });
+    await page.mouse.move(700, 20);
+    await expect(link).toHaveCSS('opacity', '0');
+    await sidebar.hover();
+    await expect(link).toHaveCSS('opacity', '1');
+    await link.focus();
+    await page.mouse.move(700, 20);
+    await expect(link).toHaveCSS('opacity', '1');
+    await link.press('Enter');
+    await expect(page).toHaveURL(/\/tasks\/\d+\/$/);
+    const detail = page.locator('#task-detail-page');
+    await expect(detail.getByRole('heading', { name: 'Migrate /users endpoints', exact: true })).toBeVisible();
+    await expect(detail.locator('[data-status]')).toHaveAttribute('data-status', 'in-progress');
+    await expect(detail.locator('[data-task-start]')).toHaveAttribute('datetime', start);
+    await expect(detail.locator('[data-task-end]')).toHaveAttribute('datetime', end);
+    await expect(detail).toContainText('Alex Chen');
+    await expect(detail).toContainText('Sam Patel');
+    await expect(detail).toContainText('No milestone');
+    await expect(detail.getByRole('link', { name: 'Spike on auth changes', exact: true })).toBeVisible();
+    await expect(detail.getByRole('link', { name: 'Cutover and deprecation', exact: true })).toBeVisible();
+    await page.reload();
+    await expect(detail.getByRole('heading', { name: 'Migrate /users endpoints', exact: true })).toBeVisible();
+  });
+
+  test('task detail links from project tasks show linked milestones and related tasks', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${projectId}/`);
+    await page.getByRole('link', { name: 'Cutover and deprecation', exact: true }).click();
+    const detail = page.locator('#task-detail-page');
+    await expect(detail.getByRole('heading', { name: 'Cutover and deprecation', exact: true })).toBeVisible();
+    await expect(detail.locator('[data-status]')).toHaveAttribute('data-status', 'planned');
+    await expect(detail).toContainText('v2 API beta');
+    await expect(detail).toContainText('v2 API beta readiness checkpoint.');
+    await detail.getByRole('link', { name: 'Migrate /users endpoints', exact: true }).click();
+    await detail.getByRole('link', { name: 'Spike on auth changes', exact: true }).click();
+    await expect(detail.locator('[data-status]')).toHaveAttribute('data-status', 'done');
+    // Cross-project dependencies stay navigable within the same workspace.
+    await detail.getByRole('link', { name: 'Tutorial flow v2', exact: true }).click();
+    await expect(detail.getByRole('heading', { name: 'Tutorial flow v2', exact: true })).toBeVisible();
+    await detail.getByRole('link', { name: 'Back to project', exact: true }).click();
+    await expect(page.locator('#project-detail-page h1')).toHaveText('Onboarding revamp');
+  });
+
+  test('task detail hover links work from project and resource timeline lists', async ({ appPage: page }) => {
+    const row = page.locator('.left-cell.task', { hasText: 'Migrate /users endpoints' });
+    const id = await row.getAttribute('data-task-id');
+    const link = row.getByRole('link', { name: 'Open task details' });
+    await page.mouse.move(700, 20);
+    await expect(link).toHaveCSS('opacity', '0');
+    await row.hover();
+    await expect(link).toHaveCSS('opacity', '1');
+    await link.click();
+    await expect(page).toHaveURL(`/tasks/${id}/`);
+    await page.goto('/resources/');
+    const resourceRow = page.locator(`.left-cell.task[data-task-id="${id}"]`).first();
+    await resourceRow.hover();
+    await resourceRow.getByRole('link', { name: 'Open task details' }).click();
+    await expect(page).toHaveURL(`/tasks/${id}/`);
+  });
+
+  test('task detail shows saved descriptions safely and fits mobile screens', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    const id = await bar.getAttribute('data-task-id');
+    const description = 'Check permissions before cutover.\n<img src=x onerror=alert(1)>';
+    await bar.click();
+    await page.locator('#task-description').fill(description);
+    await page.locator('#task-popover button[type=submit]').click();
+    await expect(page.locator('#task-popover')).toHaveCount(0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/tasks/${id}/`);
+    await expect(page.locator('#task-detail-description')).toHaveText(description);
+    await expect(page.locator('#task-detail-description img')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+
+  test('task detail is available to workspace members and translated in German', async ({ appPage: page }) => {
+    const id = await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).getAttribute('data-task-id');
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.fill('input[name=username]', 'member1');
+    await page.fill('input[name=password]', 'member1');
+    await page.click('button[type=submit]');
+    await page.waitForURL('/');
+    await page.goto(`/tasks/${id}/`);
+    await expect(page.locator('#task-detail-page h1')).toHaveText('Migrate /users endpoints');
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    const detail = page.locator('#task-detail-page');
+    await expect(detail.getByRole('heading', { name: 'Beschreibung', exact: true })).toBeVisible();
+    await expect(detail.locator('[data-status]')).toHaveText('In Bearbeitung');
+    await expect(detail).toContainText('Dauer');
+    await expect(detail).toContainText('12 Tage');
+    await expect(detail.getByRole('link', { name: 'Zurück zum Projekt', exact: true })).toBeVisible();
+    await expect(detail.getByRole('heading', { name: 'Hängt ab von', exact: true })).toBeVisible();
+  });
+
+  test('task detail handles unassigned tasks and enforces workspace and login boundaries', async ({ appPage: page, browser }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const start = await page.locator('.bar').first().getAttribute('data-start');
+    const end = await page.locator('.bar').first().getAttribute('data-end');
+    expect(await postForm(page, '/tasks/create/', { project_id: projectId, start, end, title: 'Unassigned detail task' })).toBe(200);
+    await page.reload();
+    const id = await page.locator('.left-cell.task', { hasText: 'Unassigned detail task' }).getAttribute('data-task-id');
+    await page.goto(`/tasks/${id}/`);
+    const detail = page.locator('#task-detail-page');
+    await expect(detail).toContainText('Nobody assigned');
+    await expect(detail).toContainText('No description yet.');
+    await expect(detail).toContainText('No milestone');
+    await expect(detail).toContainText('No dependencies.');
+    const anonymous = await browser.newContext();
+    try {
+      const response = await anonymous.request.get(new URL(`/tasks/${id}/`, page.url()).href, { maxRedirects: 0 });
+      expect(response.status()).toBe(302);
+      expect(response.headers().location).toContain('/accounts/login/');
+    } finally {
+      await anonymous.close();
+    }
+    expect((await page.goto('/tasks/999999/')).status()).toBe(404);
+    await page.goto('/');
+    await postForm(page, '/workspaces/', { name: 'Task detail other workspace' });
+    expect((await page.goto(`/tasks/${id}/`)).status()).toBe(404);
   });
 });
 
@@ -3434,6 +3583,68 @@ test.describe('project & people management', () => {
     await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
     await expect(page.locator('#project-popover')).toBeVisible();
     await expect(page.locator('#project-popover input[name=name]')).toHaveValue('API Migration');
+  });
+
+  test('hover-only project list link opens a dedicated project detail page', async ({ appPage: page }) => {
+    const row = page.locator('.left-cell.proj', { hasText: 'API Migration' });
+    const link = row.getByRole('link', { name: 'Open project details' });
+    await page.mouse.move(700, 20);
+    await expect(link).toHaveCSS('opacity', '0');
+    await row.hover();
+    await expect(link).toHaveCSS('opacity', '1');
+    await link.focus();
+    await page.mouse.move(700, 20);
+    await expect(link).toHaveCSS('opacity', '1');
+    await link.press('Enter');
+    await expect(page).toHaveURL(/\/projects\/\d+\/$/);
+    const detail = page.locator('#project-detail-page');
+    await expect(detail.getByRole('heading', { name: 'API Migration', exact: true })).toBeVisible();
+    await expect(detail).toContainText('Move public API traffic to the new v2 platform.');
+    await expect(detail.locator('[data-task-id]')).toHaveCount(3);
+    await expect(detail).toContainText('Migrate /users endpoints');
+    await expect(detail).toContainText('Alex Chen');
+    await expect(detail.locator('[data-milestone-id]')).toHaveCount(1);
+    await expect(detail).toContainText('v2 API beta');
+    await expect(detail).not.toContainText('Tutorial flow v2');
+    await expect(detail).not.toContainText('Soft launch');
+    await page.reload();
+    await expect(detail.getByRole('heading', { name: 'API Migration', exact: true })).toBeVisible();
+    await detail.getByRole('link', { name: 'Back to Projects' }).click();
+    await expect(page.locator('#grid-scroll')).toBeVisible();
+  });
+
+  test('project sidebar maximize link opens the same project detail page', async ({ appPage: page }) => {
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    const sidebar = page.locator('#project-popover');
+    await expect(sidebar).toBeVisible();
+    const link = sidebar.getByRole('link', { name: 'Open project details' });
+    await page.mouse.move(700, 20);
+    await expect(link).toHaveCSS('opacity', '0');
+    await sidebar.hover();
+    await expect(link).toHaveCSS('opacity', '1');
+    await expect(link.locator('svg')).toBeVisible();
+    await link.click();
+    await expect(page).toHaveURL(/\/projects\/\d+\/$/);
+    await expect(page.locator('#project-detail-page h1')).toHaveText('API Migration');
+  });
+
+  test('project detail is workspace-scoped and handles empty projects', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const missing = await page.goto('/projects/999999/');
+    expect(missing.status()).toBe(404);
+    await page.goto('/');
+    await page.locator('.left-cell.add-project-row').first().click();
+    const row = page.locator('.left-cell.proj', { hasText: 'New project' });
+    await expect(row).toBeVisible();
+    const emptyId = await row.getAttribute('data-project-id');
+    await page.goto(`/projects/${emptyId}/`);
+    await expect(page.locator('#project-detail-page')).toContainText('No tasks yet.');
+    await expect(page.locator('#project-detail-page')).toContainText('No milestones yet.');
+    await expect(page.locator('#project-detail-page')).toContainText('Nobody assigned');
+    await expect(page.locator('#project-detail-page')).toContainText('No description yet.');
+    await postForm(page, '/workspaces/', { name: 'Other workspace' });
+    const foreign = await page.goto(`/projects/${id}/`);
+    expect(foreign.status()).toBe(404);
   });
 
   test('project descriptions can be edited from the sidebar', async ({ appPage: page }) => {

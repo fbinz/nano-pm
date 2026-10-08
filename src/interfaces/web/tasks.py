@@ -1,7 +1,9 @@
 """Task endpoints — CRUD, move, resize, popover."""
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest
+from django.http import Http404, HttpRequest, HttpResponse
+from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from datastar_py.django import (
@@ -15,9 +17,35 @@ from actions.manage_tasks import (
     resize_start, resize_end,
 )
 from data.models import Dependency, Milestone
+from data.models.task import status_for_dates
 from readers import get_chart_state, get_task
 
-from .helpers import can_manage_task, parse_iso, patch_chart, request_data, request_person
+from .helpers import (
+    can_manage_task, is_pm, parse_iso, patch_chart, request_data, request_person,
+    workspace_context,
+)
+
+
+@require_http_methods(["GET"])
+@login_required
+def task_detail(request: HttpRequest, task_id: int) -> HttpResponse:
+    task = get_task(request.workspace, task_id)
+    if task is None:
+        raise Http404
+    dependencies = Dependency.objects.filter(
+        predecessor__project__workspace=request.workspace,
+        successor__project__workspace=request.workspace,
+    ).select_related("predecessor__project", "successor__project")
+    return render(request, "components/screens/tasks/detail.html", {
+        "task": task,
+        "status": status_for_dates(task.start, task.end, timezone.localdate()),
+        "duration_days": (task.end - task.start).days,
+        "milestone": Milestone.objects.filter(task=task, project=task.project).first(),
+        "preds": list(dependencies.filter(successor=task).order_by("predecessor__start", "id")),
+        "succs": list(dependencies.filter(predecessor=task).order_by("successor__start", "id")),
+        "is_pm": is_pm(request),
+        **workspace_context(request),
+    })
 
 
 def render_task_popover(request: HttpRequest, task_id: int, *, is_initial: bool = False) -> str | None:

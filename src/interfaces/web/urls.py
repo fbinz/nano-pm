@@ -4,7 +4,7 @@ from django.urls import path
 
 from .pages import index, zoom_set, sidebar_width_set
 from .tasks import (
-    task_popover, task_update, task_move, task_move_many,
+    task_detail, task_popover, task_update, task_move, task_move_many,
     task_resize_start, task_resize_end, task_create, task_delete_view,
 )
 from .milestones import (
@@ -13,7 +13,7 @@ from .milestones import (
 )
 from .dependencies import dep_add, dep_delete
 from .projects import (
-    project_create, project_popover, project_update, project_move, project_reorder,
+    project_create, project_detail, project_popover, project_update, project_move, project_reorder,
     project_move_workspace, project_delete, project_toggle_collapse, set_all_collapsed,
     project_toggle_completed, toggle_show_completed,
 )
@@ -47,6 +47,7 @@ urlpatterns = [
     path("zoom/", zoom_set, name="zoom_set"),
     path("ui/sidebar-width/", sidebar_width_set, name="sidebar_width_set"),
     # Tasks
+    path("tasks/<int:task_id>/",               task_detail,         name="task_detail"),
     path("tasks/<int:task_id>/popover/",       task_popover,        name="task_popover"),
     path("tasks/<int:task_id>/update/",        task_update,         name="task_update"),
     path("tasks/<int:task_id>/move/",          task_move,           name="task_move"),
@@ -67,6 +68,7 @@ urlpatterns = [
                                                                      dep_delete, name="dep_delete"),
     # Projects
     path("projects/",                                project_create,   name="project_create"),
+    path("projects/<int:project_id>/",                project_detail,   name="project_detail"),
     path("projects/<int:project_id>/popover/",       project_popover,  name="project_popover"),
     path("projects/<int:project_id>/update/",        project_update,   name="project_update"),
     path("projects/<int:project_id>/move/",          project_move,     name="project_move"),

@@ -96,6 +96,11 @@
         {% endif %}
         {% if rg.completed %}<span class="done-badge">{% trans "Done" %}</span>{% endif %}
         <span class="project-create-actions">
+          <a class="project-detail-link" href="{% url 'project_detail' rg.id %}"
+             aria-label="{% trans 'Open project details' %}" title="{% trans 'Open project details' %}"
+             data-on:click="evt.stopPropagation()">
+            <c-lucide name="maximize-2" size="14" />
+          </a>
           <button type="button" class="project-create-btn"
                   data-project-id="{{ rg.id }}" data-creation-type="task"
                   aria-label="{% trans 'Add task' %}" aria-pressed="false"
@@ -131,6 +136,11 @@
                data-on:click="nano.focusTask({{ bar.id }})">
             <span class="title">{{ bar.title }}</span>
             <span class="assignees">{{ bar.assignees }}</span>
+            <a class="task-detail-link" href="{% url 'task_detail' bar.id %}"
+               aria-label="{% trans 'Open task details' %}" title="{% trans 'Open task details' %}"
+               data-on:click="evt.stopPropagation()">
+              <c-lucide name="maximize-2" size="14" />
+            </a>
           </div>
           <div class="chart-row{% if rg.completed %} completed{% endif %}" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
                style="--project-color: {{ rg.color }};{% if rg.collapsed %}display:none;{% endif %}width:{{ vm.chart_width }}px;"

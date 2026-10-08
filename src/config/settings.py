@@ -287,6 +287,8 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 
 # Auth
+# Cookies are shared across ports; avoid collisions with other local Django apps.
+SESSION_COOKIE_NAME = "nano_pm_sessionid"
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"

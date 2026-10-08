@@ -1,7 +1,9 @@
 """Project endpoints — CRUD, popover, collapse."""
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse
+from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from datastar_py.django import (
@@ -16,14 +18,35 @@ from actions.manage_projects import (
 )
 from data.models import Membership, Person, WorkspaceRole
 from data.models.project import PROJECT_COLORS
+from data.models.task import status_for_dates
 from readers import get_project
 
 from .helpers import (
     collapsed_projects, set_collapsed_projects,
     show_completed, set_show_completed, patch_chart,
     team_filter, can_manage_project, project_manager_required, request_data,
-    request_person,
+    request_person, is_pm, workspace_context,
 )
+
+
+@require_http_methods(["GET"])
+@login_required
+def project_detail(request: HttpRequest, project_id: int):
+    project = get_project(request.workspace, project_id)
+    if project is None:
+        raise Http404
+    tasks = list(project.tasks.prefetch_related("assignees"))
+    today = timezone.localdate()
+    for task in tasks:
+        task.status_label = status_for_dates(task.start, task.end, today).label
+    return render(request, "components/screens/projects/detail.html", {
+        "project": project,
+        "tasks": tasks,
+        "milestones": project.milestones.all(),
+        "responsible_people": project.responsible_people.all(),
+        "is_pm": is_pm(request),
+        **workspace_context(request),
+    })
 
 
 @require_http_methods(["POST"])
