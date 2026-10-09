@@ -2117,6 +2117,34 @@ test.describe('resource view', () => {
 // =============================================================================
 // Task detail
 // =============================================================================
+test.describe('detail page alignment', () => {
+  for (const kind of ['project', 'task']) {
+    test(`${kind} detail uses the same left alignment as Ideas`, async ({ appPage: page }) => {
+      const row = kind === 'task'
+        ? page.locator('.bar', { hasText: 'Migrate /users endpoints' })
+        : page.locator('.left-cell.proj', { hasText: 'API Migration' });
+      const id = await row.getAttribute(`data-${kind}-id`);
+      // A wide desktop exposes automatic centering beyond the content max-width.
+      for (const width of [1920, 720, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto('/ideas/');
+        const reference = await page.locator('#ideas-page').evaluate(el => {
+          const rect = el.getBoundingClientRect();
+          return { x: rect.x, contentX: rect.x + parseFloat(getComputedStyle(el).paddingLeft) };
+        });
+        await page.goto(`/${kind}s/${id}/`);
+        const detail = page.locator(`#${kind}-detail-page`);
+        await expect(detail).toBeVisible();
+        const bounds = await detail.boundingBox();
+        const section = await detail.locator('section').first().boundingBox();
+        expect(bounds.x).toBeCloseTo(reference.x, 0);
+        expect(section.x).toBeCloseTo(reference.contentX, 0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+      }
+    });
+  }
+});
+
 test.describe('detail editor checkbox layout', () => {
   for (const kind of ['task', 'project']) {
     test(`${kind} detail checkboxes align with their labels without a fake checkbox container`, async ({ appPage: page }) => {

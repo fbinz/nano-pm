@@ -3630,11 +3630,6 @@
       justify-self: flex-end;
     }
   }
-  .md\:p-8 {
-    @media (width >= 48rem) {
-      padding: calc(var(--spacing) * 8);
-    }
-  }
   .lg\:drawer-open {
     @media (width >= 64rem) {
       @layer daisyui.l1.l2.l3 {
@@ -6851,7 +6846,7 @@ html, body {
   overflow-y: auto;
 }
 @layer components {
-  #ideas-page, #idea-detail-page {
+  #ideas-page, #idea-detail-page, #project-detail-page, #task-detail-page {
     max-width: var(--container-6xl);
     padding: calc(var(--spacing) * 6);
   }
@@ -7271,7 +7266,7 @@ html, body {
     display: contents;
   }
   @media (max-width: 700px) {
-    #ideas-page, #idea-detail-page {
+    #ideas-page, #idea-detail-page, #project-detail-page, #task-detail-page {
       padding: calc(var(--spacing) * 4);
     }
     .idea-quick-create, .idea-title-row {

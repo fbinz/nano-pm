@@ -773,7 +773,9 @@ html, body { height: 100%; }
    =================================================================== */
 @layer components {
   #ideas-page,
-  #idea-detail-page {
+  #idea-detail-page,
+  #project-detail-page,
+  #task-detail-page {
     @apply p-6 max-w-6xl;
   }
   .ideas-header {
@@ -839,7 +841,9 @@ html, body { height: 100%; }
 
   @media (max-width: 700px) {
     #ideas-page,
-    #idea-detail-page { @apply p-4; }
+    #idea-detail-page,
+    #project-detail-page,
+    #task-detail-page { @apply p-4; }
     .idea-quick-create,
     .idea-title-row { @apply flex-col; }
     .idea-quick-create input { @apply w-full; }
