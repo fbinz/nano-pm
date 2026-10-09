@@ -1,0 +1,40 @@
+{% load i18n %}
+<c-vars form editor_id edit_label save_label />
+<details id="{{ editor_id }}" class="rounded-box border border-base-300 bg-base-100 p-5"{% if form.is_bound %} open{% endif %}>
+  <summary class="btn btn-sm btn-outline">{{ edit_label }}</summary>
+  <form method="post" action="{{ request.path }}" class="mt-4 space-y-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="text-error" role="alert">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% for field in form %}
+      <fieldset class="fieldset min-w-0">
+        {% if field.use_fieldset %}
+          <legend class="label">{{ field.label }}</legend>
+        {% else %}
+          <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {% endif %}
+        {% if field.use_fieldset %}
+          <div id="{{ field.auto_id }}" class="flex flex-col gap-2">
+            {% for choice in field %}
+              <label class="flex min-h-9 items-center gap-2 text-base cursor-pointer">
+                {{ choice.tag }}
+                <span class="min-w-0 break-words">{{ choice.choice_label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        {% else %}
+          {{ field }}
+        {% endif %}
+        {% if field.errors %}
+          <div id="{{ field.auto_id }}_error" class="text-error" role="alert">{{ field.errors }}</div>
+        {% endif %}
+      </fieldset>
+    {% endfor %}
+    <div class="flex flex-wrap justify-end gap-2">
+      <button type="button" class="btn btn-ghost"
+              data-on:click="el.closest('form').reset(); el.closest('details').open = false">{% trans "Cancel" %}</button>
+      <button type="submit" class="btn btn-neutral">{{ save_label }}</button>
+    </div>
+  </form>
+</details>

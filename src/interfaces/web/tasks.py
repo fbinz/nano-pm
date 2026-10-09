@@ -1,9 +1,11 @@
 """Task endpoints — CRUD, move, resize, popover."""
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
 
 from datastar_py.django import (
@@ -20,24 +22,46 @@ from data.models import Dependency, Milestone
 from data.models.task import status_for_dates
 from readers import get_chart_state, get_task
 
+from .detail_forms import TaskDetailForm
 from .helpers import (
     can_manage_task, is_pm, parse_iso, patch_chart, request_data, request_person,
     workspace_context,
 )
 
 
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 @login_required
 def task_detail(request: HttpRequest, task_id: int) -> HttpResponse:
     task = get_task(request.workspace, task_id)
     if task is None:
         raise Http404
+    can_edit = can_manage_task(request, task)
+    if request.method == "POST" and not can_edit:
+        return HttpResponse(status=403)
+    form = TaskDetailForm(
+        request.POST if request.method == "POST" else None,
+        task=task, workspace=request.workspace,
+    ) if can_edit else None
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
+        update_task(
+            workspace=request.workspace, task_id=task.id,
+            title=data["title"], description=data["description"],
+            start=data["start"], end=data["end"], project_id=data["project_id"].id,
+            assignee_ids=[person.id for person in data["assignee_ids"]],
+            milestone_id=data["milestone_id"].id if data["milestone_id"] else 0,
+            actor=request.user,
+        )
+        messages.success(request, _("Task saved."))
+        return redirect("task_detail", task_id=task.id)
     dependencies = Dependency.objects.filter(
         predecessor__project__workspace=request.workspace,
         successor__project__workspace=request.workspace,
     ).select_related("predecessor__project", "successor__project")
     return render(request, "components/screens/tasks/detail.html", {
         "task": task,
+        "form": form, "can_edit": can_edit,
+        "edit_label": _("Edit task"), "save_label": _("Save task"),
         "status": status_for_dates(task.start, task.end, timezone.localdate()),
         "duration_days": (task.end - task.start).days,
         "milestone": Milestone.objects.filter(task=task, project=task.project).first(),
@@ -45,7 +69,7 @@ def task_detail(request: HttpRequest, task_id: int) -> HttpResponse:
         "succs": list(dependencies.filter(predecessor=task).order_by("successor__start", "id")),
         "is_pm": is_pm(request),
         **workspace_context(request),
-    })
+    }, status=400 if request.method == "POST" else 200)
 
 
 def render_task_popover(request: HttpRequest, task_id: int, *, is_initial: bool = False) -> str | None:

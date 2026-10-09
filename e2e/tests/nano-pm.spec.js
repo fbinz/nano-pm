@@ -2117,6 +2117,299 @@ test.describe('resource view', () => {
 // =============================================================================
 // Task detail
 // =============================================================================
+test.describe('detail editor checkbox layout', () => {
+  for (const kind of ['task', 'project']) {
+    test(`${kind} detail checkboxes align with their labels without a fake checkbox container`, async ({ appPage: page }) => {
+      const row = kind === 'task'
+        ? page.locator('.bar', { hasText: 'Migrate /users endpoints' })
+        : page.locator('.left-cell.proj', { hasText: 'API Migration' });
+      const id = await row.getAttribute(`data-${kind}-id`);
+      await page.goto(`/${kind}s/${id}/`);
+      await page.getByText(`Edit ${kind}`, { exact: true }).click();
+      const editor = page.locator(`#${kind}-detail-editor`);
+      const group = editor.getByRole('group', { name: kind === 'task' ? 'Assignees' : 'Responsible people', exact: true });
+      // Django's default widget repeats attrs.class on its outer div as well
+      // as the inputs. DaisyUI must style only real checkbox inputs.
+      await expect(group.locator('.checkbox:not(input)')).toHaveCount(0);
+      await expect(group.getByRole('checkbox')).toHaveCount(3);
+      for (const width of [1280, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        for (const label of await group.locator('label').all()) {
+          const input = await label.getByRole('checkbox').boundingBox();
+          const text = await label.locator('span').boundingBox();
+          const bounds = await group.boundingBox();
+          expect(text.x).toBeGreaterThanOrEqual(input.x + input.width + 4);
+          expect(Math.abs((input.y + input.height / 2) - (text.y + text.height / 2))).toBeLessThan(2);
+          expect(input.y + input.height).toBeLessThanOrEqual(bounds.y + bounds.height);
+          expect(text.x + text.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+        }
+      }
+      const alex = group.getByRole('checkbox', { name: 'Alex Chen', exact: true });
+      const initiallyChecked = await alex.isChecked();
+      await group.getByText('Alex Chen', { exact: true }).click();
+      await expect(alex).toBeChecked({ checked: !initiallyChecked });
+      await editor.getByRole('button', { name: `Save ${kind}`, exact: true }).click();
+      await page.reload();
+      await page.getByText(`Edit ${kind}`, { exact: true }).click();
+      await expect(alex).toBeChecked({ checked: !initiallyChecked });
+    });
+  }
+});
+
+
+test.describe('task detail editing', () => {
+  test('task detail saves edits in place and cascades dates to dependent tasks and milestones', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    const id = await bar.getAttribute('data-task-id');
+    const end = await bar.getAttribute('data-end');
+    const successor = page.locator('.bar', { hasText: 'Cutover and deprecation' });
+    const successorId = await successor.getAttribute('data-task-id');
+    const successorEnd = await successor.getAttribute('data-end');
+    const shift = date => new Date(new Date(`${date}T00:00:00Z`).getTime() + 4 * 86400000).toISOString().slice(0, 10);
+    await page.goto(`/tasks/${id}/`);
+    await page.getByText('Edit task', { exact: true }).click();
+    const editor = page.locator('#task-detail-editor');
+    await editor.getByLabel('Title', { exact: true }).fill('Migrate users from the detail page');
+    await editor.getByLabel('Description', { exact: true }).fill('Verify permissions and migrate public traffic.');
+    await editor.getByLabel('End (exclusive)', { exact: true }).fill(shift(end));
+    await editor.getByLabel('Sam Patel', { exact: true }).uncheck();
+    await editor.getByRole('button', { name: 'Save task', exact: true }).click();
+    await expect(page).toHaveURL(`/tasks/${id}/`);
+    await expect(page.locator('#task-detail-page h1')).toHaveText('Migrate users from the detail page');
+    await expect(page.getByRole('status')).toHaveText('Task saved.');
+    await expect(page.locator('#task-detail-description')).toHaveText('Verify permissions and migrate public traffic.');
+    await expect(page.locator('[data-task-end]')).toHaveAttribute('datetime', shift(end));
+    await expect(page.getByRole('region', { name: 'Task overview' })).not.toContainText('Sam Patel');
+    await page.reload();
+    await expect(page.locator('#task-detail-page h1')).toHaveText('Migrate users from the detail page');
+    await page.goto(`/tasks/${successorId}/`);
+    await expect(page.locator('[data-task-start]')).toHaveAttribute('datetime', shift(end));
+    await expect(page.locator('[data-task-end]')).toHaveAttribute('datetime', shift(successorEnd));
+    await expect(page.locator('[data-milestone-id] time')).toHaveAttribute('datetime', shift(successorEnd));
+    await page.goto('/');
+    await expect(page.locator(`#bar-${id}`)).toHaveAttribute('data-end', shift(end));
+    await expect(page.locator(`#bar-${id}`)).toContainText('Migrate users from the detail page');
+  });
+
+  test('task detail can move projects and connect and disconnect milestones', async ({ appPage: page }) => {
+    const id = await page.locator('.bar', { hasText: 'Audit IAM policies' }).getAttribute('data-task-id');
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'Onboarding revamp' }).getAttribute('data-project-id');
+    const date = await page.locator('.bar', { hasText: 'Audit IAM policies' }).getAttribute('data-end');
+    expect(await postForm(page, `/projects/${projectId}/milestones/`, { date })).toBe(200);
+    await page.goto(`/tasks/${id}/`);
+    await page.getByText('Edit task', { exact: true }).click();
+    const editor = page.locator('#task-detail-editor');
+    await editor.getByLabel('Project', { exact: true }).selectOption(projectId);
+    const milestone = await editor.getByLabel('Milestone', { exact: true }).locator('option', { hasText: 'New milestone' }).getAttribute('value');
+    await editor.getByLabel('Milestone', { exact: true }).selectOption(milestone);
+    await editor.getByRole('button', { name: 'Save task', exact: true }).click();
+    await expect(page.locator('#task-detail-page > header')).toContainText('Onboarding revamp');
+    await expect(page.locator('[data-milestone-id]')).toHaveAttribute('data-milestone-id', milestone);
+    await expect(page.locator('[data-milestone-id] time')).toHaveAttribute('datetime', date);
+    await page.getByText('Edit task', { exact: true }).click();
+    await editor.getByLabel('Milestone', { exact: true }).selectOption('');
+    await editor.getByRole('button', { name: 'Save task', exact: true }).click();
+    await expect(page.locator('#task-detail-page')).toContainText('No milestone');
+    await page.goto(`/projects/${projectId}/`);
+    await expect(page.locator('[data-milestone-id]')).toHaveCount(2);
+    await expect(page.getByRole('link', { name: 'Audit IAM policies', exact: true })).toBeVisible();
+  });
+
+  test('task detail validates milestone connections and preserves linked milestones when moving projects', async ({ appPage: page }) => {
+    const id = await page.locator('.bar', { hasText: 'Audit IAM policies' }).getAttribute('data-task-id');
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const infraId = await page.locator('.left-cell.proj', { hasText: 'Infra hardening' }).getAttribute('data-project-id');
+    const start = await page.locator(`#bar-${id}`).getAttribute('data-start');
+    const end = await page.locator(`#bar-${id}`).getAttribute('data-end');
+    const linkedTask = await page.locator('.bar', { hasText: 'Cutover and deprecation' }).getAttribute('data-task-id');
+    const linkedMilestone = await page.locator('.milestone[data-title="v2 API beta"]').getAttribute('data-milestone-id');
+    expect(await postForm(page, `/projects/${projectId}/milestones/`, { date: end })).toBe(200);
+    await page.goto(`/tasks/${id}/`);
+    await page.getByText('Edit task', { exact: true }).click();
+    const editor = page.locator('#task-detail-editor');
+    await editor.getByLabel('Milestone', { exact: true }).selectOption({ label: 'API Migration — New milestone' });
+    await editor.getByRole('button', { name: 'Save task', exact: true }).click();
+    await expect(editor.getByRole('alert')).toContainText('Choose a milestone from the selected project.');
+    await expect(page.locator('#task-detail-page [data-milestone-id]')).toHaveCount(0);
+    expect(await postForm(page, `/tasks/${id}/`, { title: 'Steal linked milestone', description: '', start, end, project_id: infraId, milestone_id: linkedMilestone })).toBe(400);
+    await page.goto(`/tasks/${linkedTask}/`);
+    await page.getByText('Edit task', { exact: true }).click();
+    await editor.getByLabel('Project', { exact: true }).selectOption(infraId);
+    await editor.getByRole('button', { name: 'Save task', exact: true }).click();
+    await expect(page.locator('#task-detail-page > header')).toContainText('Infra hardening');
+    await expect(page.locator('#task-detail-page [data-milestone-id]')).toHaveAttribute('data-milestone-id', linkedMilestone);
+    await page.goto(`/projects/${infraId}/`);
+    await expect(page.locator(`[data-milestone-id="${linkedMilestone}"]`)).toContainText('v2 API beta');
+  });
+
+  test('task detail invalid edits retain input and leave committed state unchanged', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    const id = await bar.getAttribute('data-task-id');
+    const start = await bar.getAttribute('data-start');
+    const end = await bar.getAttribute('data-end');
+    await page.goto(`/tasks/${id}/`);
+    await page.getByText('Edit task', { exact: true }).click();
+    const editor = page.locator('#task-detail-editor');
+    await editor.getByLabel('Title', { exact: true }).fill('Unsaved invalid edit');
+    await editor.getByLabel('End (exclusive)', { exact: true }).fill(start);
+    await editor.getByRole('button', { name: 'Save task', exact: true }).click();
+    await expect(editor).toHaveAttribute('open', '');
+    await expect(editor.getByRole('alert')).toContainText('End must be after start.');
+    await expect(editor.getByLabel('Title', { exact: true })).toHaveValue('Unsaved invalid edit');
+    await expect(page.locator('#task-detail-page h1')).toHaveText('Migrate /users endpoints');
+    await expect(page.locator('[data-task-end]')).toHaveAttribute('datetime', end);
+    await page.goto(`/tasks/${id}/`);
+    await expect(page.locator('#task-detail-page h1')).toHaveText('Migrate /users endpoints');
+  });
+
+  test('task detail cancel discards edits without changing the task', async ({ appPage: page }) => {
+    const id = await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).getAttribute('data-task-id');
+    await page.goto(`/tasks/${id}/`);
+    await page.getByText('Edit task', { exact: true }).click();
+    const editor = page.locator('#task-detail-editor');
+    await editor.getByLabel('Title', { exact: true }).fill('Discard me');
+    await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(editor).not.toHaveAttribute('open', '');
+    await page.getByText('Edit task', { exact: true }).click();
+    await expect(editor.getByLabel('Title', { exact: true })).toHaveValue('Migrate /users endpoints');
+    await page.reload();
+    await expect(page.locator('#task-detail-page h1')).toHaveText('Migrate /users endpoints');
+  });
+
+  test('detail editing enforces member permissions on the server', async ({ appPage: page }) => {
+    const assignedId = await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).getAttribute('data-task-id');
+    const otherId = await page.locator('.bar', { hasText: 'User research interviews' }).getAttribute('data-task-id');
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.fill('input[name=username]', 'member1');
+    await page.fill('input[name=password]', 'member1');
+    await page.click('button[type=submit]');
+    await page.waitForURL('/');
+    await page.goto(`/tasks/${assignedId}/`);
+    await page.getByText('Edit task', { exact: true }).click();
+    const editor = page.locator('#task-detail-editor');
+    await editor.getByLabel('Title', { exact: true }).fill('Updated by assigned member');
+    await editor.getByRole('button', { name: 'Save task', exact: true }).click();
+    await expect(page.locator('#task-detail-page h1')).toHaveText('Updated by assigned member');
+    await page.goto(`/tasks/${otherId}/`);
+    await expect(page.locator('#task-detail-editor')).toHaveCount(0);
+    expect(await postForm(page, `/tasks/${otherId}/`, { title: 'Forbidden task edit' })).toBe(403);
+    await page.reload();
+    await expect(page.locator('#task-detail-page h1')).toHaveText('User research interviews');
+    await page.goto(`/projects/${projectId}/`);
+    await expect(page.locator('#project-detail-editor')).toHaveCount(0);
+    expect(await postForm(page, `/projects/${projectId}/`, { name: 'Forbidden project edit' })).toBe(403);
+    await page.reload();
+    await expect(page.locator('#project-detail-page h1')).toHaveText('API Migration');
+  });
+
+  test('detail editing rejects cross-workspace relations and stale workspace submissions', async ({ appPage: page }) => {
+    const id = await page.locator('.bar', { hasText: 'Migrate /users endpoints' }).getAttribute('data-task-id');
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const start = await page.locator(`#bar-${id}`).getAttribute('data-start');
+    const end = await page.locator(`#bar-${id}`).getAttribute('data-end');
+    const sourceWorkspace = await page.locator('#workspace-menu form[action$="/switch/"]').first().getAttribute('action');
+    await postForm(page, '/workspaces/', { name: 'Foreign edit workspace' });
+    await page.goto('/');
+    await page.locator('.left-cell.add-project-row').first().click();
+    await expect(page.locator('.left-cell.proj')).toHaveCount(1);
+    const foreignId = await page.locator('.left-cell.proj').getAttribute('data-project-id');
+    expect(await postForm(page, `/tasks/${id}/`, { title: 'Wrong workspace' })).toBe(404);
+    expect(await postForm(page, `/projects/${projectId}/`, { name: 'Wrong workspace' })).toBe(404);
+    await postForm(page, sourceWorkspace, {});
+    await page.goto(`/tasks/${id}/`);
+    expect(await postForm(page, `/tasks/${id}/`, { title: 'Foreign project edit', description: '', start, end, project_id: foreignId })).toBe(400);
+    expect(await postForm(page, `/tasks/${id}/`, { title: 'Foreign person edit', description: '', start, end, project_id: projectId, assignee_ids: '999999' })).toBe(400);
+    await page.reload();
+    await expect(page.locator('#task-detail-page h1')).toHaveText('Migrate /users endpoints');
+    await expect(page.locator('#task-detail-page')).toContainText('Sam Patel');
+    await page.goto(`/projects/${projectId}/`);
+    expect(await postForm(page, `/projects/${projectId}/`, { name: 'Invalid project edit', description: '', color: '#3b82f6', responsible_person_ids: '999999' })).toBe(400);
+    expect(await postForm(page, `/projects/${projectId}/`, { name: 'Invalid color', description: '', color: 'red; background:url(evil)' })).toBe(400);
+    await page.reload();
+    await expect(page.locator('#project-detail-page h1')).toHaveText('API Migration');
+  });
+});
+
+
+test.describe('project detail editing', () => {
+  test('project detail saves name description color and responsible people in place', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    await page.getByText('Edit project', { exact: true }).click();
+    const editor = page.locator('#project-detail-editor');
+    await editor.getByLabel('Name', { exact: true }).fill('API v2 rollout');
+    await editor.getByLabel('Description', { exact: true }).fill('Ship v2 safely.\nKeep migration notes here.');
+    await editor.getByLabel('Color', { exact: true }).selectOption('#10b981');
+    await editor.getByLabel('Alex Chen', { exact: true }).check();
+    await editor.getByLabel('Sam Patel', { exact: true }).check();
+    await editor.getByRole('button', { name: 'Save project', exact: true }).click();
+    await expect(page).toHaveURL(`/projects/${id}/`);
+    await expect(page.locator('#project-detail-page h1')).toHaveText('API v2 rollout');
+    await expect(page.getByRole('status')).toHaveText('Project saved.');
+    await expect(page.locator('#project-detail-page > header .swatch')).toHaveCSS('background-color', 'rgb(16, 185, 129)');
+    await expect(page.locator('#project-detail-page')).toContainText('Ship v2 safely.');
+    const responsible = page.getByRole('region', { name: 'Project overview' });
+    await expect(responsible).toContainText('Alex Chen');
+    await expect(responsible).toContainText('Sam Patel');
+    await page.reload();
+    await page.getByText('Edit project', { exact: true }).click();
+    await expect(editor.getByLabel('Name', { exact: true })).toHaveValue('API v2 rollout');
+    await expect(editor.getByLabel('Alex Chen', { exact: true })).toBeChecked();
+    await editor.getByLabel('Alex Chen', { exact: true }).uncheck();
+    await editor.getByLabel('Sam Patel', { exact: true }).uncheck();
+    await editor.getByRole('button', { name: 'Save project', exact: true }).click();
+    await expect(responsible).toContainText('Nobody assigned');
+    await page.goto('/');
+    await expect(page.locator(`#proj-${id} .name`)).toHaveText('API v2 rollout');
+  });
+
+  test('project detail validates required names and supports cancelling edits', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    await page.getByText('Edit project', { exact: true }).click();
+    const editor = page.locator('#project-detail-editor');
+    await editor.getByLabel('Name', { exact: true }).fill('   ');
+    await editor.getByLabel('Description', { exact: true }).fill('Do not commit this.');
+    await editor.getByRole('button', { name: 'Save project', exact: true }).click();
+    await expect(editor.getByRole('alert')).toContainText('This field is required.');
+    await expect(editor.getByLabel('Description', { exact: true })).toHaveValue('Do not commit this.');
+    await expect(page.locator('#project-detail-page h1')).toHaveText('API Migration');
+    await page.goto(`/projects/${id}/`);
+    await page.getByText('Edit project', { exact: true }).click();
+    await editor.getByLabel('Name', { exact: true }).fill('Discard project change');
+    await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(editor).not.toHaveAttribute('open', '');
+    await page.getByText('Edit project', { exact: true }).click();
+    await expect(editor.getByLabel('Name', { exact: true })).toHaveValue('API Migration');
+  });
+
+  test('project responsible members can edit project details and unassigned-to-them tasks', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const taskId = await page.locator('.bar', { hasText: 'Cutover and deprecation' }).getAttribute('data-task-id');
+    await page.goto(`/projects/${projectId}/`);
+    await page.getByText('Edit project', { exact: true }).click();
+    await page.locator('#project-detail-editor').getByLabel('Alex Chen', { exact: true }).check();
+    await page.getByRole('button', { name: 'Save project', exact: true }).click();
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.fill('input[name=username]', 'member1');
+    await page.fill('input[name=password]', 'member1');
+    await page.click('button[type=submit]');
+    await page.waitForURL('/');
+    await page.goto(`/projects/${projectId}/`);
+    await page.getByText('Edit project', { exact: true }).click();
+    await page.locator('#project-detail-editor').getByLabel('Description', { exact: true }).fill('Managed by Alex.');
+    await page.getByRole('button', { name: 'Save project', exact: true }).click();
+    await expect(page.locator('#project-detail-page')).toContainText('Managed by Alex.');
+    await page.goto(`/tasks/${taskId}/`);
+    await page.getByText('Edit task', { exact: true }).click();
+    await page.locator('#task-detail-editor').getByLabel('Title', { exact: true }).fill('Cutover managed by Alex');
+    await page.getByRole('button', { name: 'Save task', exact: true }).click();
+    await expect(page.locator('#task-detail-page h1')).toHaveText('Cutover managed by Alex');
+  });
+});
+
+
 test.describe('task detail', () => {
   test('task detail opens from the hover-only sidebar maximize link', async ({ appPage: page }) => {
     const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
@@ -2217,6 +2510,13 @@ test.describe('task detail', () => {
     await expect(detail).toContainText('12 Tage');
     await expect(detail.getByRole('link', { name: 'Zurück zum Projekt', exact: true })).toBeVisible();
     await expect(detail.getByRole('heading', { name: 'Hängt ab von', exact: true })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByText('Aufgabe bearbeiten', { exact: true }).click();
+    await page.locator('#task-detail-editor').getByLabel('Titel', { exact: true }).fill('Von Alex aktualisiert');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await page.getByRole('button', { name: 'Aufgabe speichern', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Aufgabe gespeichert.');
+    await expect(detail.locator('h1')).toHaveText('Von Alex aktualisiert');
   });
 
   test('task detail handles unassigned tasks and enforces workspace and login boundaries', async ({ appPage: page, browser }) => {

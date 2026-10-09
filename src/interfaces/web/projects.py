@@ -1,9 +1,11 @@
 """Project endpoints — CRUD, popover, collapse."""
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
 
 from datastar_py.django import (
@@ -21,6 +23,7 @@ from data.models.project import PROJECT_COLORS
 from data.models.task import status_for_dates
 from readers import get_project
 
+from .detail_forms import ProjectDetailForm
 from .helpers import (
     collapsed_projects, set_collapsed_projects,
     show_completed, set_show_completed, patch_chart,
@@ -29,24 +32,43 @@ from .helpers import (
 )
 
 
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 @login_required
 def project_detail(request: HttpRequest, project_id: int):
     project = get_project(request.workspace, project_id)
     if project is None:
         raise Http404
+    can_edit = can_manage_project(request, project)
+    if request.method == "POST" and not can_edit:
+        return HttpResponse(status=403)
+    form = ProjectDetailForm(
+        request.POST if request.method == "POST" else None,
+        project=project, workspace=request.workspace,
+    ) if can_edit else None
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
+        update_project(
+            workspace=request.workspace, project_id=project.id,
+            name=data["name"], description=data["description"], color=data["color"],
+            responsible_person_ids=[person.id for person in data["responsible_person_ids"]],
+            actor=request.user,
+        )
+        messages.success(request, _("Project saved."))
+        return redirect("project_detail", project_id=project.id)
     tasks = list(project.tasks.prefetch_related("assignees"))
     today = timezone.localdate()
     for task in tasks:
         task.status_label = status_for_dates(task.start, task.end, today).label
     return render(request, "components/screens/projects/detail.html", {
         "project": project,
+        "form": form, "can_edit": can_edit,
+        "edit_label": _("Edit project"), "save_label": _("Save project"),
         "tasks": tasks,
         "milestones": project.milestones.all(),
         "responsible_people": project.responsible_people.all(),
         "is_pm": is_pm(request),
         **workspace_context(request),
-    })
+    }, status=400 if request.method == "POST" else 200)
 
 
 @require_http_methods(["POST"])

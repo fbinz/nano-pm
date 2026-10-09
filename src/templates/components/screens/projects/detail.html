@@ -1,5 +1,5 @@
 {% load i18n %}
-<c-vars project tasks milestones responsible_people user is_pm workspace workspaces has_multiple_workspaces can_view_ideas />
+<c-vars project tasks milestones responsible_people form can_edit edit_label save_label user is_pm workspace workspaces has_multiple_workspaces can_view_ideas />
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
     :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
     :can_view_ideas="can_view_ideas" active_nav="projects">
@@ -10,6 +10,10 @@
       </a>
     </nav>
 
+    {% for message in messages %}
+      <p class="text-success" role="status">{{ message }}</p>
+    {% endfor %}
+
     <header class="flex items-start gap-3">
       <span class="swatch size-4 rounded mt-2 shrink-0" style="background:{{ project.color }}" aria-hidden="true"></span>
       <div class="min-w-0">
@@ -19,6 +23,10 @@
         </span>
       </div>
     </header>
+
+    {% if can_edit %}
+      <c-detail-editor :form="form" editor_id="project-detail-editor" :edit_label="edit_label" :save_label="save_label" />
+    {% endif %}
 
     <section class="rounded-box border border-base-300 bg-base-100 p-5 space-y-5" aria-label="{% trans 'Project overview' %}">
       <div>
