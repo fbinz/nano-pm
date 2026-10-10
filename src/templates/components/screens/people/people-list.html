@@ -84,6 +84,22 @@
           {% trans "Invite" %}
         </button>
         {% elif p.workspace_role %}
+        {% if request.workspace.workload_enabled %}
+        <details class="person-teams-popup">
+          <summary class="btn btn-sm btn-ghost">{% trans "Workload" %}</summary>
+          <div class="person-teams-panel">
+        <form data-on:submit__prevent="@post('/people/{{ p.id }}/workload/', { contentType: 'form' })">
+          {% csrf_token %}
+          <label for="workload-person-{{ p.id }}">{% trans "Workload participation" %}</label>
+            <select id="workload-person-{{ p.id }}" name="participation" class="select select-sm" data-on:change="el.form.requestSubmit()">
+              <option value="inherit" {% if p.workload_participation == 'inherit' %}selected{% endif %}>{% trans "Inherit" %}</option>
+              <option value="included" {% if p.workload_participation == 'included' %}selected{% endif %}>{% trans "Included" %}</option>
+              <option value="exempt" {% if p.workload_participation == 'exempt' %}selected{% endif %}>{% trans "Exempt" %}</option>
+            </select>
+        </form>
+          </div>
+        </details>
+        {% endif %}
         <form data-on:submit__prevent="@post('/people/{{ p.id }}/role/', { contentType: 'form' })">
           {% csrf_token %}
           {% if p.workspace_role == "pm" %}

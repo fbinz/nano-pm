@@ -1,0 +1,9 @@
+{% load i18n %}
+<c-vars workspace active_nav="" />
+<li id="workload-overview-nav" {% if not workspace.workload_enabled %}hidden{% endif %}>
+  {% if workspace.workload_enabled %}
+    <a href="/workload/overview/"{% if active_nav == 'workload-overview' %} class="menu-active"{% endif %}>
+      <c-lucide name="chart-bar" size="18" /> {% trans "Workload overview" %}
+    </a>
+  {% endif %}
+</li>

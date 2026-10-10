@@ -30,10 +30,10 @@
       <button class="btn btn-neutral" type="submit">{% trans "Save profile" %}</button>
     </form>
     <div class="mt-6 flex flex-wrap gap-4">
-      <a class="link" href="{% url 'password_change' %}">{% trans "Change password" %}</a>
-      {% if workspace.public_roadmap_enabled %}
-        <a class="link" href="{% url 'public_roadmap' token=workspace.public_roadmap_token %}">{% trans "Open public roadmap" %}</a>
+      {% if request.membership.can_report_workload %}
+        <a class="link" href="{% url 'my_workload' %}">{% trans "My workload" %}</a>
       {% endif %}
+      <a class="link" href="{% url 'password_change' %}">{% trans "Change password" %}</a>
     </div>
   </main>
 </c-layouts.app-shell>

@@ -11,7 +11,15 @@ from data.models.invitation import Invitation
 from data.models.activity import ActivityEvent
 from data.models.teams import ProjectSubscription, PublicProjectSubscription, TeamsDelivery
 
+from data.models.workload import (
+    WorkloadCategory, WorkloadReport, WorkloadAllocation, WorkloadProjectAllocation,
+)
+
 __all__ = [
+    "WorkloadCategory",
+    "WorkloadReport",
+    "WorkloadAllocation",
+    "WorkloadProjectAllocation",
     "Workspace",
     "Membership",
     "WorkspaceRole",

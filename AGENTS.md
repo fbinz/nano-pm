@@ -2,7 +2,15 @@
 
 ## Default testing strategy
 
-**Use red/green TDD with Playwright.** The canonical loop:
+**Use red/green TDD with Playwright for behavior changes and bug fixes.**
+Small presentation-only changes—text copy, translations, spacing, colors, borders,
+and similar layout or styling tweaks—do **not** require adding or updating tests,
+or a red/green cycle. Use judgment: existing tests, screenshots, or a quick visual
+check can be useful, but a test run is not mandatory for these small changes.
+If a layout change affects interactions (drag geometry, focus, scrolling, responsive
+controls, etc.), treat it as a behavior change and use TDD.
+
+For behavior changes, the canonical loop is:
 
 1. **Red.** Add or update a Playwright test in `e2e/tests/nano-pm.spec.js`
    (or a focused screenshot/persona spec when the change is purely visual) that
@@ -13,8 +21,8 @@
    before proceeding.
 2. **Green.** Make the smallest change that turns the test green.
 3. **Regression.** Run `cd e2e && npx playwright test tests/nano-pm.spec.js`
-   for app behaviour changes. Run the relevant screenshot specs too when a
-   visual-only fixture is changed.
+   for app behaviour changes. Run relevant screenshot specs when useful for
+   visual verification; small presentation-only changes do not require them.
 
 There are currently **no meaningful Django unit tests** in this repo. Most
 coverage is e2e through Playwright. If you find yourself wanting a unit test for
@@ -63,6 +71,16 @@ comment (currently 3 projects, 8 tasks, 6 dependencies, 2 milestones).
   — they are stable across SSE re-renders and read directly from the view-model.
 - Tests run serially with one Django process and reset between tests. Keep tests
   isolated; do not depend on mutations made by an earlier test.
+
+## German UI tone
+
+Use informal singular address throughout the German UI: `du`, `dich`, `dir`,
+`dein` and singular imperatives (e.g. „Gib … ein“, „Wähle …“, „Speichere …“).
+Capitalize only at the start of a sentence or heading; never address users with
+formal `Sie` / `Ihr`. This applies to all pages, help text, validation messages,
+public roadmaps, and both `django` and `djangojs` catalogs. Neutral button labels
+such as „Speichern“ are fine. Preserve grammatical third-person pronouns
+(e.g. „Sie kann …“ referring to an email address).
 
 ## Django template gotchas
 

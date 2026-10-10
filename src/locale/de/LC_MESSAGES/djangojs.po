@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-15 18:12+0000\n"
+"POT-Creation-Date: 2026-10-10 00:05+0200\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -67,3 +67,52 @@ msgstr "später"
 #: static/js/nano.js:743
 msgid "earlier"
 msgstr "früher"
+
+#: static/js/workload.js:34
+msgid "allocated"
+msgstr "zugewiesen"
+
+#: static/js/workload.js:35 static/js/workload.js:77
+msgid "Enter whole percentages between 0 and 100."
+msgstr "Gib ganze Prozentwerte zwischen 0 und 100 ein."
+
+#: static/js/workload.js:36
+msgid "%(amount)s% over — reduce an allocation"
+msgstr "%(amount)s% zu viel — reduziere einen Anteil"
+
+#: static/js/workload.js:37
+msgid "%(amount)s% left to allocate"
+msgstr "%(amount)s% noch zu verteilen"
+
+#: static/js/workload.js:37
+msgid "100% allocated"
+msgstr "100% zugewiesen"
+
+#: static/js/workload.js:50
+msgid "Fill remaining %(amount)s%"
+msgstr "Verbleibende %(amount)s% zuweisen"
+
+#: static/js/workload.js:77
+msgid "Project allocations cannot exceed their category percentage."
+msgstr "Projektanteile dürfen den Anteil ihrer Kategorie nicht überschreiten."
+
+#: static/js/workload.js:80
+msgid "%(amount)s% over category"
+msgstr "%(amount)s% über dem Kategorieanteil"
+
+#: static/js/workload.js:81
+msgid "%(assigned)s% assigned · %(unspecified)s% unspecified"
+msgstr "%(assigned)s% zugewiesen · %(unspecified)s% ohne Zuordnung"
+
+#: static/js/workload.js:108
+msgid "Unspecified: %(amount)s%"
+msgstr "Ohne Zuordnung: %(amount)s%"
+
+#~ msgid "Check percentages"
+#~ msgstr "Prozentanteile prüfen"
+
+#~ msgid "over allocated"
+#~ msgstr "zu viel zugewiesen"
+
+#~ msgid "left to allocate"
+#~ msgstr "noch zu verteilen"

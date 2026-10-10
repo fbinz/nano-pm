@@ -99,6 +99,12 @@
               <c-lucide name="bell" size="18" /> {% trans "Teams notifications" %}
             </a></li>
           {% endif %}
+          {% if is_pm %}
+            <c-screens.workload.overview-nav :workspace="workspace" :active_nav="active_nav" />
+            <li><a href="/workspaces/workload/"{% if active_nav == "workload-settings" %} class="menu-active"{% endif %}>
+              <c-lucide name="settings" size="18" /> {% trans "Workload settings" %}
+            </a></li>
+          {% endif %}
           <li><a href="/activity/"{% if active_nav == "activity" %} class="menu-active"{% endif %}>
             <c-lucide name="history" size="18" /> {% trans "Activity" %}
           </a></li>

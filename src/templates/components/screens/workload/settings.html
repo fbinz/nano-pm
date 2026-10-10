@@ -1,0 +1,48 @@
+{% load i18n %}
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" :can_view_ideas="can_view_ideas" active_nav="workload-settings">
+  <main class="p-6 max-w-4xl space-y-6">
+    <h1 class="text-2xl font-bold">{% trans "Workload settings" %}</h1>
+    {% if error %}<p role="alert" class="text-error">{{ error }}</p>{% endif %}
+    <div class="space-y-3">
+      {% for option in options %}<c-screens.workload.setting-toggle :option="option" />{% endfor %}
+    </div>
+    <section class="space-y-3">
+      <h2 id="workload-categories-heading" class="text-xl font-semibold">{% trans "Categories" %}</h2>
+      <p>{% trans "Changes save automatically." %}</p>
+      <div class="overflow-x-auto" role="region" aria-labelledby="workload-categories-heading" tabindex="0">
+        <table class="table table-sm w-full" aria-labelledby="workload-categories-heading">
+          <thead>
+            <tr>
+              <th scope="col">{% trans "Category name" %}</th>
+              <th scope="col">{% trans "Active" %}</th>
+              <th scope="col">{% trans "Allow project breakdown" %}</th>
+            </tr>
+          </thead>
+          <tbody id="workload-categories-body">
+            {% for category in categories %}<c-screens.workload.category-row :category="category" />{% endfor %}
+          </tbody>
+          <tfoot><c-screens.workload.category-new-row /></tfoot>
+        </table>
+      </div>
+    </section>
+    <section class="space-y-3">
+      <h2 id="workload-participation-heading" class="text-xl font-semibold">{% trans "Participation overrides" %}</h2>
+      <p>{% trans "Changes save automatically." %}</p>
+      <div class="overflow-x-auto" role="region" aria-labelledby="workload-participation-heading" tabindex="0">
+        <table class="table table-sm w-full" aria-labelledby="workload-participation-heading">
+          <thead>
+            <tr>
+              <th scope="col">{% trans "Person" %}</th>
+              <th scope="col" class="text-center">{% trans "Inherit" %}</th>
+              <th scope="col" class="text-center">{% trans "Included" %}</th>
+              <th scope="col" class="text-center">{% trans "Exempt" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for membership in memberships %}<c-screens.workload.participation-row :membership="membership" />{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</c-layouts.app-shell>

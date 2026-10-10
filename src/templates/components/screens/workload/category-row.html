@@ -1,0 +1,36 @@
+{% load i18n %}
+<c-vars category />
+<tr id="workload-category-{{ category.id }}" data-workload-category="{{ category.id }}"
+    data-name="{{ category.name }}" data-active="{{ category.active|yesno:'true,false' }}"
+    data-supports-projects="{{ category.supports_projects|yesno:'true,false' }}">
+  <td>
+    <div class="flex items-center gap-2">
+      <form id="workload-category-form-{{ category.id }}" class="min-w-0 flex-1" method="post" action="/workspaces/workload/categories/{{ category.id }}/"
+            data-on:submit__prevent="@post('/workspaces/workload/categories/{{ category.id }}/', { contentType: 'form' })">
+        {% csrf_token %}
+        <input class="input input-sm w-full" aria-label="{% trans 'Category name' %}"
+               name="name" value="{{ category.name }}" maxlength="100" required
+               data-on:change="el.form.requestSubmit()">
+      </form>
+      <form method="post" action="/workspaces/workload/categories/{{ category.id }}/delete/"
+            data-on:submit__prevent="confirm('{% blocktrans with name=category.name|escapejs %}Delete category &quot;{{ name }}&quot;? Existing estimates and history will be preserved.{% endblocktrans %}') && @post('/workspaces/workload/categories/{{ category.id }}/delete/', { contentType: 'form' })">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-ghost text-error"
+                aria-label="{% trans 'Delete category' %}" title="{% trans 'Delete category' %}">
+          <c-lucide name="trash-2" size="14" />
+        </button>
+      </form>
+    </div>
+    <c-screens.workload.category-status :category_id="category.id" />
+  </td>
+  <td>
+    <input class="checkbox checkbox-sm" type="checkbox" name="active" form="workload-category-form-{{ category.id }}"
+           aria-label="{% trans 'Active' %}" {% if category.active %}checked{% endif %}
+           data-on:change="el.form.requestSubmit()">
+  </td>
+  <td>
+    <input class="checkbox checkbox-sm" type="checkbox" name="supports_projects" form="workload-category-form-{{ category.id }}"
+           aria-label="{% trans 'Allow project breakdown' %}" {% if category.supports_projects %}checked{% endif %}
+           data-on:change="el.form.requestSubmit()">
+  </td>
+</tr>

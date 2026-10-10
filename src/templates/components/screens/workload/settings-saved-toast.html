@@ -1,0 +1,9 @@
+{% load i18n %}
+<c-vars option />
+<div id="toast-slot">
+  <div class="nano-toast success workload-settings-toast" role="status">
+    <span><strong>{{ option.label }}</strong> — {% trans "Workload settings saved." %}</span>
+    <button type="button" class="toast-action"
+            data-on:click="el.closest('.nano-toast').remove()">{% trans "Dismiss" %}</button>
+  </div>
+</div>

@@ -1,0 +1,5 @@
+{% load i18n %}
+<c-vars report project_details="inline" />
+<div class="flex w-full h-4 rounded overflow-hidden" role="img" aria-label="{% trans 'Workload allocation' %}">
+  {% for allocation in report.allocations %}<span style="width: {{ allocation.percentage }}%; background-color: {{ allocation.color }}" title="{{ allocation.name }}: {{ allocation.percentage }}%{% if project_details == 'hover' and allocation.supports_projects %}{% for project in allocation.projects %}&#10;{{ project.project_label }}: {{ project.percentage }}%{% endfor %}&#10;{% trans 'Unspecified project work' %}: {{ allocation.unspecified }}%{% endif %}"></span>{% endfor %}
+</div>

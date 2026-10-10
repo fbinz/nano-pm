@@ -37,9 +37,32 @@ from .activity import activity_page
 from .profile import profile, ProfilePasswordChangeView
 from .teams_notifications import teams_settings, roadmap_subscription
 
+from .workload import (
+    settings as workload_settings, my_workload, legacy_my_workload, save as workload_save,
+    workload_overview, person_participation, category_update, category_create, category_delete,
+    participation_update, setting_update,
+)
+
 urlpatterns = [
+    path("workspaces/workload/", workload_settings, name="workload_settings"),
+    path("workspaces/workload/settings/<str:setting>/", setting_update,
+         name="workload_setting_update"),
+    path("workspaces/workload/participation/<int:membership_id>/", participation_update,
+         name="workload_participation_update"),
+    path("workspaces/workload/categories/", category_create, name="workload_category_create"),
+    path("workspaces/workload/categories/<int:category_id>/delete/", category_delete,
+         name="workload_category_delete"),
+    path("workspaces/workload/categories/<int:category_id>/", category_update,
+         name="workload_category_update"),
+    path("workload/", legacy_my_workload, name="legacy_my_workload"),
+    path("workload/save/", workload_save, name="legacy_workload_save"),
+    path("workload/overview/", workload_overview, name="workload_overview"),
+    path("people/<int:person_id>/workload/", person_participation,
+         name="person_workload_participation"),
     path("", index, name="gantt_index"),
     path("profile/", profile, name="profile"),
+    path("profile/workload/", my_workload, name="my_workload"),
+    path("profile/workload/save/", workload_save, name="workload_save"),
     path("accounts/password/change/", ProfilePasswordChangeView.as_view(), name="password_change"),
     path("roadmap/<slug:token>/", public_roadmap, name="public_roadmap"),
     path("roadmap/<slug:token>/projects/<int:project_id>/follow/", roadmap_subscription, name="roadmap_subscription"),

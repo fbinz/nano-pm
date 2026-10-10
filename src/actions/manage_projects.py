@@ -6,7 +6,9 @@ from django.utils import timezone
 
 from actions.activity import change_set, created_changes, deleted_changes, log_activity, snapshot
 from actions.manage_milestones import delete_milestone
-from data.models import Dependency, Membership, Person, Project, WorkspaceRole
+from data.models import (
+    Dependency, Membership, Person, Project, WorkspaceRole, WorkloadProjectAllocation,
+)
 from data.models.project import PROJECT_COLORS
 
 
@@ -265,6 +267,8 @@ def move_project_to_workspace(
         # Subscriptions are workspace membership scoped; never move them across tenants.
         proj.subscriptions.all().delete()
         proj.public_subscriptions.all().delete()
+        # Estimates belong to the original workspace, not to the moving project.
+        WorkloadProjectAllocation.objects.filter(project=proj).update(project=None)
         proj.workspace = target_workspace
         proj.order = (last_order or 0) + 1.0
         proj.save(update_fields=["workspace", "order", "updated_at"])

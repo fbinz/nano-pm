@@ -24,6 +24,15 @@ class Membership(models.Model):
         choices=WorkspaceRole.choices,
         default=WorkspaceRole.MEMBER,
     )
+    workload_participation = models.CharField(
+        max_length=10,
+        choices=[
+            ("inherit", _("Inherit")),
+            ("included", _("Included")),
+            ("exempt", _("Exempt")),
+        ],
+        default="inherit",
+    )
     # Self-declared Microsoft sign-in address, scoped to this workspace/tenant.
     teams_upn = models.EmailField(max_length=254, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -34,6 +43,16 @@ class Membership(models.Model):
                 fields=["user", "workspace"], name="unique_membership"
             ),
         ]
+
+    @property
+    def can_report_workload(self) -> bool:
+        if not self.workspace.workload_enabled:
+            return False
+        if self.workload_participation != "inherit":
+            return self.workload_participation == "included"
+        if self.role == WorkspaceRole.PM:
+            return self.workspace.workload_pms_included
+        return self.workspace.workload_members_included
 
     def __str__(self) -> str:
         return f"{self.user} @ {self.workspace} ({self.role})"

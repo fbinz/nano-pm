@@ -1,0 +1,21 @@
+{% load i18n %}
+<tr id="workload-new-category">
+  <td class="min-w-72">
+    <form id="workload-add-category" class="flex items-center gap-2" method="post" action="/workspaces/workload/categories/"
+          data-on:submit__prevent="@post('/workspaces/workload/categories/', { contentType: 'form' })">
+      {% csrf_token %}
+      <input class="input input-sm min-w-0 w-full" name="name" maxlength="100" required
+             aria-label="{% trans 'New category' %}" placeholder="{% trans 'New category' %}">
+      <button class="btn btn-sm" type="submit">{% trans "Add category" %}</button>
+    </form>
+    <c-screens.workload.category-status category_id="new" />
+  </td>
+  <td>
+    <input class="checkbox checkbox-sm" type="checkbox" name="active" form="workload-add-category"
+           aria-label="{% trans 'Active' %}" checked>
+  </td>
+  <td>
+    <input class="checkbox checkbox-sm" type="checkbox" name="supports_projects" form="workload-add-category"
+           aria-label="{% trans 'Allow project breakdown' %}">
+  </td>
+</tr>

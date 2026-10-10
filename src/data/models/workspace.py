@@ -5,6 +5,9 @@ from data.models.project import default_teams_notify_events
 
 class Workspace(models.Model):
     name = models.CharField(max_length=200)
+    workload_enabled = models.BooleanField(default=False)
+    workload_members_included = models.BooleanField(default=True)
+    workload_pms_included = models.BooleanField(default=False)
     teams_webhook_url = models.URLField(max_length=2048, blank=True, default="")
     teams_notify_events = models.JSONField(default=default_teams_notify_events, blank=True)
     teams_public_subscriber_domains = models.JSONField(default=list, blank=True)

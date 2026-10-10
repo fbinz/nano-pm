@@ -1,0 +1,14 @@
+{% load i18n %}
+<c-vars option />
+<form id="workload-setting-{{ option.name }}" method="post"
+      action="/workspaces/workload/settings/{{ option.name }}/"
+      data-workload-setting="{{ option.name }}" data-enabled="{{ option.enabled|yesno:'true,false' }}"
+      data-on:submit__prevent="@post('/workspaces/workload/settings/{{ option.name }}/', { contentType: 'form' })">
+  {% csrf_token %}
+  <label class="flex gap-3 items-center">
+    <input id="workload-switch-{{ option.name }}" type="checkbox" role="switch" class="toggle toggle-sm"
+           name="{{ option.name }}" value="on" {% if option.enabled %}checked{% endif %}
+           data-on:change="el.form.requestSubmit()">
+    {{ option.label }}
+  </label>
+</form>

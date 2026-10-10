@@ -1,0 +1,20 @@
+{% load i18n %}
+<c-vars reports show_people="false" />
+<table class="workload-history-table" aria-label="{% trans 'Recent estimate history' %}">
+  <colgroup><col class="workload-history-date"><col></colgroup>
+  <thead class="sr-only">
+    <tr><th scope="col">{% trans "Reviewed" %}</th><th scope="col">{% trans "Workload allocation" %}</th></tr>
+  </thead>
+  <tbody>
+    {% for report in reports %}
+      <tr data-workload-history="{{ report.id }}">
+        <td>
+          <time datetime="{{ report.reviewed_at|date:'c' }}">{{ report.reviewed_at|date:'SHORT_DATETIME_FORMAT' }}</time>
+          {% if show_people == 'true' %}<span class="block text-base-content/60 break-words">{{ report.user_label }}</span>{% endif %}
+          {% if report.outdated %}<span class="block text-warning" title="{% trans 'Outdated estimate (over 90 days)' %}">{% trans "Outdated estimate (over 90 days)" %}</span>{% endif %}
+        </td>
+        <td><c-screens.workload.allocation-bar :report="report" project_details="hover" /></td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

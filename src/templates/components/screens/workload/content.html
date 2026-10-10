@@ -1,0 +1,124 @@
+{% load i18n %}
+<c-vars rows suggested current history total error="" status="" />
+<div id="workload-content" class="space-y-6">
+  {% if error %}<p role="alert" class="text-error">{{ error }}</p>{% endif %}
+  <p id="workload-status" role="status" class="text-sm text-success empty:hidden">{{ status }}</p>
+  <section>
+    {% if current %}
+      <header class="workload-editor-header">
+        <p class="text-xs text-base-content/60">{% blocktrans with ago=current.reviewed_at|timesince %}Last reviewed {{ ago }} ago{% endblocktrans %}</p>
+        <form data-on:submit__prevent="@post('{% url 'workload_save' %}', { contentType: 'form' })">
+          {% csrf_token %}<input type="hidden" name="action" value="review">
+          <button class="btn btn-sm btn-ghost" type="submit"><c-lucide name="check" size="16" />{% trans "Still accurate" %}</button>
+        </form>
+      </header>
+    {% endif %}
+    <form id="workload-form" data-on:submit__prevent="@post('{% url 'workload_save' %}', { contentType: 'form' })">
+      {% csrf_token %}
+      <div class="workload-editor">
+        <div class="workload-chart-panel">
+          <div class="workload-donut-wrap">
+            <svg data-workload-donut viewBox="0 0 240 240" role="group" aria-label="{% trans 'Workload allocation' %}">
+              <circle class="workload-ring-track" cx="120" cy="120" r="88" fill="none" stroke-width="30" />
+              {% for row in rows %}
+                <circle class="workload-slice" data-workload-slice="{{ row.field }}" cx="120" cy="120" r="88" fill="none" stroke="{{ row.color }}" stroke-width="30" pathLength="100" transform="rotate(-90 120 120)" stroke-dasharray="0 100" role="button" tabindex="-1" aria-label="{{ row.category.name }}">
+                  <title>{{ row.category.name }}</title>
+                </circle>
+              {% endfor %}
+              <circle data-workload-remainder class="workload-ring-remainder" cx="120" cy="120" r="88" fill="none" stroke-width="30" pathLength="100" transform="rotate(-90 120 120)" stroke-dasharray="0 100" />
+              {% for row in rows %}{% if row.category.supports_projects %}
+                {% for item in row.projects %}
+                  <circle id="workload-project-slice-{{ item.field }}" class="workload-project-slice" data-workload-project-slice="{{ item.field }}" data-category-field="{{ row.field }}" cx="120" cy="120" r="112" fill="none" stroke="{{ item.project.color }}" stroke-width="10" pathLength="100" transform="rotate(-90 120 120)" stroke-dasharray="0 100" role="button" tabindex="-1" aria-label="{{ item.project.name }}"><title>{{ item.project.name }}</title></circle>
+                {% endfor %}
+                <circle data-workload-project-ring-remainder="{{ row.field }}" class="workload-ring-remainder workload-project-ring-remainder" cx="120" cy="120" r="112" fill="none" stroke-width="10" pathLength="100" transform="rotate(-90 120 120)" stroke-dasharray="0 100"><title>{% trans "Unspecified project work" %}</title></circle>
+              {% endif %}{% endfor %}
+            </svg>
+            <div class="workload-donut-center" aria-hidden="true">
+              <span data-workload-center-value class="workload-center-value">{{ total }}%</span>
+              <span data-workload-center-label class="workload-center-label">{% trans "allocated" %}</span>
+            </div>
+          </div>
+          <p id="workload-feedback" data-workload-feedback role="status" class="workload-feedback"></p>
+          <p class="text-xs text-base-content/50">{% trans "Shares of your workload, not hours." %}</p>
+          <div data-workload-project-legend class="workload-project-legend" hidden>
+            <p class="text-xs text-base-content/60 mb-2">{% trans "Projects · outer ring" %}</p>
+            {% for row in rows %}{% if row.category.supports_projects %}
+              <div data-workload-project-legend-category="{{ row.field }}" hidden>
+                <p class="workload-project-legend-heading">{{ row.category.name }}</p>
+                {% for item in row.projects %}
+                  <button type="button" data-workload-project-legend-item="{{ item.field }}" data-category-field="{{ row.field }}" class="workload-project-legend-item" hidden><span class="workload-color-dot" style="background: {{ item.project.color }};" aria-hidden="true"></span><span class="flex-1 min-w-0 break-words">{{ item.project.name }}</span><span data-workload-project-legend-value class="tabular-nums"></span></button>
+                {% endfor %}
+                <p data-workload-project-legend-remainder="{{ row.field }}" class="workload-project-legend-unspecified" hidden><span class="workload-color-dot bg-base-300" aria-hidden="true"></span><span data-workload-project-legend-remainder-label></span></p>
+              </div>
+            {% endif %}{% endfor %}
+          </div>
+        </div>
+        <div class="workload-controls">
+          {% for row in rows %}
+            <fieldset id="workload-row-{{ row.field }}" data-workload-row="{{ row.field }}" data-category-name="{{ row.category.name }}" class="workload-category" style="--allocation-color: {{ row.color }};">
+              <legend class="sr-only">{{ row.category.name }}</legend>
+              <div class="workload-category-heading">
+                <label for="{{ row.field }}" class="workload-category-label"><span class="workload-color-dot" aria-hidden="true"></span>{{ row.category.name }}</label>
+                <div class="workload-number">
+                  <input id="{{ row.field }}" class="input input-sm" aria-label="{% blocktrans with name=row.category.name %}{{ name }} percentage{% endblocktrans %}" type="number" inputmode="numeric" name="{{ row.field }}" value="{{ row.value }}" min="0" max="100" step="1" required data-workload-percentage aria-describedby="workload-feedback workload-total-hint">
+                  <span aria-hidden="true">%</span>
+                </div>
+              </div>
+              <input id="workload-slider-{{ row.field }}" class="workload-slider" type="range" min="0" max="100" step="1" value="{{ row.value }}" data-workload-slider aria-label="{% blocktrans with name=row.category.name %}{{ name }} allocation{% endblocktrans %}" aria-describedby="workload-feedback workload-total-hint">
+              <div class="workload-fill-slot"><button data-workload-fill type="button" class="workload-fill" hidden></button></div>
+              {% if row.category.supports_projects %}
+                <details class="workload-projects" {% if row.project_open %}open{% endif %}>
+                  <summary><span>{% trans "Optional project breakdown" %}</span><span data-workload-project-summary class="workload-project-summary"></span></summary>
+                  <div class="workload-project-body">
+                    <p id="workload-project-units-{{ row.field }}" class="text-xs text-base-content/60">{% trans "Percentages of your total workload" %}</p>
+                    <div class="workload-project-bar" aria-hidden="true">
+                      {% for item in row.projects %}<span data-workload-project-segment="{{ item.field }}" style="background: {{ item.project.color }};"></span>{% endfor %}
+                    </div>
+                    <p id="workload-project-error-{{ row.field }}" data-workload-project-error role="status" class="text-xs text-error" hidden>{% trans "Project allocations cannot exceed their category percentage." %}</p>
+                    <p data-workload-project-empty class="text-xs text-base-content/60">{% trans "Leave any remainder unspecified, or assign a project below." %}</p>
+                    <div class="workload-project-list">
+                      {% for item in row.projects %}
+                        <div id="workload-project-row-{{ item.field }}" class="workload-project-row" data-workload-project-row data-project-name="{{ item.project.name }}" data-selected="{{ item.selected|yesno:'true,false' }}" {% if not item.selected %}hidden{% endif %}>
+                          <label class="workload-project-name" for="{{ item.field }}"><span class="workload-color-dot" style="background: {{ item.project.color }};" aria-hidden="true"></span>{{ item.project.name }}</label>
+                          <span class="workload-number">
+                            <input id="{{ item.field }}" class="input input-sm" type="number" inputmode="numeric" name="{{ item.field }}" value="{{ item.value }}" min="0" max="100" step="1" required data-workload-project data-project-id="{{ item.project.id }}" {% if not item.selected %}disabled{% endif %} aria-describedby="workload-project-units-{{ row.field }} workload-project-error-{{ row.field }}" aria-label="{% blocktrans with category=row.category.name project=item.project.name %}{{ category }}: {{ project }} percentage{% endblocktrans %}">
+                            <span aria-hidden="true">%</span>
+                          </span>
+                          <input type="hidden" name="selected_{{ item.field }}" value="on" data-workload-project-selected {% if not item.selected %}disabled{% endif %}>
+                          <button id="workload-project-remove-{{ item.field }}" type="button" class="workload-project-remove" data-workload-project-remove="{{ item.field }}" aria-label="{% blocktrans with name=item.project.name %}Remove {{ name }}{% endblocktrans %}"><c-lucide name="x" size="16" /></button>
+                        </div>
+                      {% endfor %}
+                    </div>
+                    {% if row.projects %}
+                      <div data-workload-project-picker>
+                        <p class="text-xs text-base-content/60 mb-2">{% trans "Assign a project" %}</p>
+                        <div class="workload-project-chips">
+                          {% for item in row.projects %}
+                            <button id="workload-project-add-{{ item.field }}" type="button" class="workload-project-chip" data-workload-project-add="{{ item.field }}" aria-label="{% blocktrans with name=item.project.name %}Add {{ name }}{% endblocktrans %}" {% if item.selected %}hidden{% endif %}><c-lucide name="plus" size="14" /><span>{{ item.project.name }}</span></button>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    {% else %}<p class="text-sm text-base-content/60">{% trans "No unfinished projects available." %}</p>{% endif %}
+                  </div>
+                </details>
+              {% endif %}
+            </fieldset>
+          {% empty %}<p>{% trans "Ask a PM to configure workload categories." %}</p>{% endfor %}
+        </div>
+      </div>
+      <footer class="workload-editor-footer">
+        <p id="workload-total-hint" class="text-sm text-base-content/60">{% trans "Total" %}: <output id="workload-total" class="font-semibold text-base-content">{{ total }}%</output> / 100%</p>
+        {% if rows %}<button class="btn btn-neutral" type="submit" data-workload-save>{% trans "Save estimate" %}</button>{% endif %}
+      </footer>
+    </form>
+  </section>
+  <section id="workload-guidance" class="workload-guidance">
+    <h2 class="text-sm font-semibold">{% trans "Your active projects" %}</h2>
+    <p class="text-xs text-base-content/60">{% trans "Based on current task assignments and project responsibility. Use these as guidance; they do not determine your percentages." %}</p>
+    <div class="flex flex-wrap gap-2 mt-3">{% for project in suggested %}<button class="btn btn-sm btn-soft" type="button" data-workload-project-focus="{{ project.id }}">{{ project.name }}<c-lucide name="arrow-up-right" size="14" /></button>{% empty %}<p class="text-sm text-base-content/60">{% trans "No active projects assigned." %}</p>{% endfor %}</div>
+  </section>
+  <details class="workload-history">
+    <summary>{% trans "Recent estimate history" %}</summary>
+    <c-screens.workload.history :reports="history" />
+  </details>
+</div>

@@ -1,0 +1,34 @@
+{% load i18n %}
+<c-vars membership />
+<tr id="workload-membership-{{ membership.id }}" data-workload-member="{{ membership.user.username }}"
+    data-membership-id="{{ membership.id }}" data-participation="{{ membership.workload_participation }}">
+  <th scope="row" class="font-normal">
+    <form id="workload-participation-form-{{ membership.id }}" method="post"
+          action="/workspaces/workload/participation/{{ membership.id }}/"
+          data-on:submit__prevent="@post('/workspaces/workload/participation/{{ membership.id }}/', { contentType: 'form' })">
+      {% csrf_token %}
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="font-medium">{{ membership.user.username }}</span>
+        <span class="badge badge-sm badge-ghost">{{ membership.get_role_display }}</span>
+      </div>
+    </form>
+  </th>
+  <td class="text-center">
+    <input id="workload-inherit-{{ membership.id }}" class="radio radio-sm" type="radio" name="participation" value="inherit"
+           form="workload-participation-form-{{ membership.id }}" aria-label="{% trans 'Inherit' %}" required
+           {% if membership.workload_participation == 'inherit' %}checked{% endif %}
+           data-on:change="el.checked && el.form.requestSubmit()">
+  </td>
+  <td class="text-center">
+    <input id="workload-included-{{ membership.id }}" class="radio radio-sm" type="radio" name="participation" value="included"
+           form="workload-participation-form-{{ membership.id }}" aria-label="{% trans 'Included' %}" required
+           {% if membership.workload_participation == 'included' %}checked{% endif %}
+           data-on:change="el.checked && el.form.requestSubmit()">
+  </td>
+  <td class="text-center">
+    <input id="workload-exempt-{{ membership.id }}" class="radio radio-sm" type="radio" name="participation" value="exempt"
+           form="workload-participation-form-{{ membership.id }}" aria-label="{% trans 'Exempt' %}" required
+           {% if membership.workload_participation == 'exempt' %}checked{% endif %}
+           data-on:change="el.checked && el.form.requestSubmit()">
+  </td>
+</tr>

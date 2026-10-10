@@ -33,7 +33,12 @@ def _people_queryset(request: HttpRequest):
         Person.objects.filter(workspace=request.workspace)
         .select_related("user")
         .prefetch_related("teams")
-        .annotate(workspace_role=Subquery(workspace_role))
+        .annotate(
+            workspace_role=Subquery(workspace_role),
+            workload_participation=Subquery(Membership.objects.filter(
+                workspace=request.workspace, user_id=OuterRef("user_id"),
+            ).values("workload_participation")[:1]),
+        )
     )
 
 

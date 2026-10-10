@@ -136,7 +136,1118 @@ async function startWebhookServer(statuses = [200], beforeRespond = async () => 
   };
 }
 
+async function enableWorkload(page) {
+  expect((await page.goto('/workspaces/workload/')).status()).toBe(200);
+  await page.getByLabel('Enable workload reporting', { exact: true }).check();
+  await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'true');
+}
+
+async function signInAs(page, username) {
+  await page.locator('.sign-out-btn').click();
+  await page.fill('input[name=username]', username);
+  await page.fill('input[name=password]', username);
+  await page.click('button[type=submit]');
+  await page.waitForURL('/');
+}
+
+async function submitWorkloadExample(page) {
+  await page.goto('/workload/');
+  await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+  await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+  await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+  await page.getByText('Optional project breakdown', { exact: true }).click();
+  await page.locator('.workload-projects').getByRole('button', { name: 'Add API Migration', exact: true }).click();
+  await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('40');
+  await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+  await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+}
+
+test.describe('workload estimates', () => {
+  test('German workload guidance and validation use informal address', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/profile/workload/');
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(page.locator('#workload-content')).toContainText('Anteile deiner Arbeit, keine Stunden.');
+    await expect(page.getByRole('heading', { name: 'Deine aktiven Projekte', exact: true })).toBeVisible();
+    await page.getByText('Optionale Aufteilung nach Projekten', { exact: true }).click();
+    await expect(page.locator('.workload-project-body')).toContainText('Anteile deiner gesamten Arbeit in Prozent');
+    await expect(page.locator('.workload-project-body')).toContainText('Lass den Rest ohne Zuordnung oder wähle unten ein Projekt.');
+    await expect(page.locator('body')).not.toContainText(/\b(?:Sie|Ihnen|Ihr(?:e|en|em|er|es)?)\b/);
+
+    const maintenance = page.getByLabel('Maintenance – Prozentanteil', { exact: true });
+    await maintenance.fill('-1');
+    await expect(page.locator('#workload-feedback')).toHaveText('Gib ganze Prozentwerte zwischen 0 und 100 ein.');
+    await maintenance.fill('100');
+    await page.getByLabel('Meetings – Prozentanteil', { exact: true }).fill('10');
+    await expect(page.locator('#workload-feedback')).toHaveText('10% zu viel — reduziere einen Anteil');
+    await expect(page.getByRole('button', { name: 'Schätzung speichern', exact: true })).toBeDisabled();
+  });
+
+  for (const width of [320, 520, 1024]) {
+    test(`workload percentage inputs remain readable at ${width}px`, async ({ appPage: page }, testInfo) => {
+      await enableWorkload(page);
+      await signInAs(page, 'member1');
+      await page.goto('/profile/workload/');
+      await page.getByRole('button', { name: 'DE', exact: true }).click();
+      await expect(page.getByLabel('Maintenance – Prozentanteil', { exact: true })).toBeVisible();
+      await page.setViewportSize({ width, height: 900 });
+      await page.getByLabel('Project work – Prozentanteil', { exact: true }).fill('57');
+      await page.getByText('Optionale Aufteilung nach Projekten', { exact: true }).click();
+      await page.locator('.workload-projects').getByRole('button', { name: 'API Migration hinzufügen', exact: true }).click();
+      const category = page.getByLabel('Maintenance – Prozentanteil', { exact: true });
+      const project = page.getByLabel('Project work: API Migration – Prozentanteil', { exact: true });
+      for (const input of [category, project]) {
+        for (const value of ['0', '43', '100']) {
+          await input.fill(value);
+          await input.hover();
+          await expect(input).toBeFocused();
+          await expect(input).toHaveValue(value);
+          await expect(input).toHaveCSS('text-align', 'right');
+          // A fixed, nonshrinking control must fit three digits plus padding;
+          // native steppers cannot eat the text area at compact widths.
+          await expect(input).toHaveCSS('flex-shrink', '0');
+          const dimensions = await input.evaluate(element => {
+            const style = getComputedStyle(element);
+            const canvas = document.createElement('canvas').getContext('2d');
+            canvas.font = `${style.fontSize} ${style.fontFamily}`;
+            const box = element.getBoundingClientRect();
+            const suffix = element.parentElement.querySelector('span').getBoundingClientRect();
+            return {
+              width: box.width,
+              textSpace: element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+              digits: canvas.measureText('100').width,
+              right: box.right,
+              suffixLeft: suffix.left,
+            };
+          });
+          expect(dimensions.width).toBeGreaterThanOrEqual(76);
+          expect(dimensions.textSpace).toBeGreaterThanOrEqual(dimensions.digits + 8);
+          expect(dimensions.suffixLeft).toBeGreaterThan(dimensions.right);
+        }
+        await input.fill('43');
+      }
+      const projectName = await project.evaluate(element => {
+        const label = element.closest('[data-workload-project-row]').querySelector('label');
+        const style = getComputedStyle(label);
+        const canvas = document.createElement('canvas').getContext('2d');
+        canvas.font = `${style.fontSize} ${style.fontFamily}`;
+        return { width: label.getBoundingClientRect().width, needed: canvas.measureText(label.textContent.trim()).width + 18 };
+      });
+      expect(projectName.width).toBeGreaterThanOrEqual(projectName.needed);
+      await expect(category).toHaveCSS('appearance', 'textfield');
+      await expect(project).toHaveCSS('appearance', 'textfield');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath('workload-compact-inputs.png'), fullPage: true });
+      await category.scrollIntoViewIfNeeded();
+      await category.focus();
+      await category.press('ArrowUp');
+      await expect(category).toHaveValue('44');
+      await category.press('ArrowDown');
+      await expect(category).toHaveValue('43');
+    });
+  }
+
+  test('workload donut visualizes project shares without double counting categories', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/profile/workload/');
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+    await page.getByText('Optional project breakdown', { exact: true }).click();
+    const body = page.locator('.workload-project-body');
+    await body.getByRole('button', { name: 'Add API Migration', exact: true }).click();
+    const api = page.getByLabel('Project work: API Migration percentage', { exact: true });
+    await api.fill('40');
+    const donut = page.locator('[data-workload-donut]');
+    const arc = donut.getByRole('button', { name: 'Project work: API Migration: 40%', exact: true });
+    await expect(arc).toBeVisible();
+    await expect(arc).toHaveAttribute('data-percentage', '40');
+    await expect(arc).toHaveAttribute('stroke-dashoffset', '-30.2');
+    await expect(page.locator('[data-workload-project-ring-remainder]')).toHaveAttribute('data-percentage', '20');
+    const legend = page.locator('[data-workload-project-legend]');
+    await expect(legend).toContainText('API Migration');
+    await expect(legend).toContainText('40%');
+    await expect(legend).toContainText('Unspecified: 20%');
+    await page.getByText('Optional project breakdown', { exact: true }).click();
+    await expect(api).toBeHidden();
+    await expect(arc).toBeVisible();
+    await arc.focus();
+    await arc.press('Enter');
+    await expect(api).toBeFocused();
+    await expect(arc).toHaveClass(/is-highlighted/);
+    await body.getByRole('button', { name: 'Add Onboarding revamp', exact: true }).click();
+    await page.getByLabel('Project work: Onboarding revamp percentage', { exact: true }).fill('15');
+    await expect(donut.getByRole('button', { name: 'Project work: Onboarding revamp: 15%', exact: true })).toBeVisible();
+    await expect(page.locator('[data-workload-project-ring-remainder]')).toHaveAttribute('data-percentage', '5');
+    await expect(page.locator('[data-workload-center-value]')).toHaveText('100%');
+    await api.fill('65');
+    await expect(page.locator('[data-workload-project-slice]:visible')).toHaveCount(0);
+    await api.fill('40');
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    await expect(arc).toBeVisible();
+    await page.reload();
+    await expect(arc).toBeVisible();
+    await body.getByRole('button', { name: 'Remove API Migration', exact: true }).click();
+    await expect(arc).toBeHidden();
+    await expect(legend.locator('[data-workload-project-legend-item]:visible')).toHaveCount(1);
+    await expect(legend.locator('[data-workload-project-legend-item]:visible')).toContainText('Onboarding revamp');
+    await expect(page.locator('[data-workload-project-ring-remainder]')).toHaveAttribute('data-percentage', '45');
+  });
+
+  for (const [layout, viewport] of Object.entries({
+    desktop: { width: 1280, height: 1000 },
+    mobile: { width: 390, height: 844 },
+  })) {
+    test(`workload project chips add and remove only selected allocation rows on ${layout}`, async ({ appPage: page }) => {
+      await enableWorkload(page);
+      await signInAs(page, 'member1');
+      await page.setViewportSize(viewport);
+      await page.goto('/profile/workload/');
+      await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+      await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+      await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+      await page.getByText('Optional project breakdown', { exact: true }).click();
+      const body = page.locator('.workload-project-body');
+      const rows = body.locator('[data-workload-project-row]:visible');
+      const api = page.getByLabel('Project work: API Migration percentage', { exact: true });
+      const onboarding = page.getByLabel('Project work: Onboarding revamp percentage', { exact: true });
+      const addApi = body.getByRole('button', { name: 'Add API Migration', exact: true });
+      await expect(rows).toHaveCount(0);
+      await expect(body.getByText('Percentages of your total workload', { exact: true })).toBeVisible();
+      await expect(body.locator('[data-workload-project-add]:visible')).toHaveCount(3);
+      await addApi.click();
+      await expect(rows).toHaveCount(1);
+      await expect(api).toBeFocused();
+      await expect(api).toHaveValue('0');
+      await expect(addApi).toBeHidden();
+      await api.fill('40');
+      await body.getByRole('button', { name: 'Add Onboarding revamp', exact: true }).click();
+      await onboarding.fill('15');
+      await expect(page.locator('[data-workload-project-summary]')).toHaveText('55% assigned · 5% unspecified');
+      await body.getByRole('button', { name: 'Remove API Migration', exact: true }).click();
+      await expect(rows).toHaveCount(1);
+      await expect(api).toBeHidden();
+      await expect(api).toBeDisabled();
+      await expect(addApi).toBeFocused();
+      await expect(onboarding).toHaveValue('15');
+      await expect(page.locator('[data-workload-project-summary]')).toHaveText('15% assigned · 45% unspecified');
+      await addApi.press('Enter');
+      await expect(api).toBeFocused();
+      await expect(api).toHaveValue('0');
+      await api.fill('20');
+      await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+      await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+      await expect(rows).toHaveCount(2);
+      await expect(body.locator('[data-workload-project-add]:visible')).toHaveCount(1);
+      await page.reload();
+      await expect(rows).toHaveCount(2);
+      await expect(api).toHaveValue('20');
+      await expect(onboarding).toHaveValue('15');
+      await body.getByRole('button', { name: 'Remove API Migration', exact: true }).click();
+      await body.getByRole('button', { name: 'Remove Onboarding revamp', exact: true }).click();
+      await expect(page.locator('[data-workload-project-summary]')).toHaveText('0% assigned · 60% unspecified');
+      await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+      await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+      await page.reload();
+      await page.getByText('Optional project breakdown', { exact: true }).click();
+      await expect(rows).toHaveCount(0);
+      await expect(body.locator('[data-workload-project-add]:visible')).toHaveCount(3);
+      await expect(page.locator('[data-workload-history]').first().locator('span[title^="Project work:"]')).not.toHaveAttribute('title', /API Migration:/);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    });
+  }
+
+  for (const [layout, viewport] of Object.entries({
+    desktop: { width: 1280, height: 1000 },
+    mobile: { width: 390, height: 844 },
+  })) {
+    test(`workload sliders keep dragging and focus stable across preview changes on ${layout}`, async ({ appPage: page }) => {
+      await enableWorkload(page);
+      await signInAs(page, 'member1');
+      await page.setViewportSize(viewport);
+      await page.goto('/profile/workload/');
+      await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+      await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+      await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+      await page.getByText('Optional project breakdown', { exact: true }).click();
+      await page.locator('.workload-projects').getByRole('button', { name: 'Add API Migration', exact: true }).click();
+      await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('40');
+      await page.getByText('Optional project breakdown', { exact: true }).click();
+      const slider = page.getByRole('slider', { name: 'Meetings allocation', exact: true });
+      await slider.scrollIntoViewIfNeeded();
+      const box = await slider.boundingBox();
+      const x = percentage => box.x + 9 + (box.width - 18) * percentage / 100;
+      const y = box.y + box.height / 2;
+      let submissions = 0;
+      page.on('request', request => { if (request.url().endsWith('/profile/workload/save/')) submissions++; });
+      await slider.evaluate(element => { window.draggedWorkloadSlider = element; });
+      await page.mouse.move(x(10), y);
+      await page.mouse.down();
+      for (const value of [5, 20, 0, 10]) {
+        await page.mouse.move(x(value), y, { steps: 5 });
+        await expect(slider).toBeFocused();
+        await expect(slider).toHaveValue(String(value));
+        await expect(page.getByLabel('Meetings percentage', { exact: true })).toHaveValue(String(value));
+        expect((await slider.boundingBox()).y).toBe(box.y);
+        expect(await slider.evaluate(element => element === window.draggedWorkloadSlider)).toBe(true);
+      }
+      await page.mouse.up();
+      expect(submissions).toBe(0);
+      await expect(slider).toHaveAttribute('id', /workload-slider-category_\d+/);
+    });
+  }
+
+  test('workload project rings align with each project-enabled category', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const maintenanceSetting = page.locator('[data-workload-category]', { has: page.locator('input[value="Maintenance"]') });
+    await maintenanceSetting.getByLabel('Allow project breakdown', { exact: true }).check();
+    await expect(maintenanceSetting).toHaveAttribute('data-supports-projects', 'true');
+    await signInAs(page, 'member1');
+    await page.goto('/profile/workload/');
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('40');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('50');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+    for (const [category, project, amount] of [
+      ['Maintenance', 'API Migration', '20'],
+      ['Project work', 'Infra hardening', '35'],
+    ]) {
+      const row = page.locator('[data-workload-row]').filter({ has: page.getByLabel(`${category} percentage`, { exact: true }) });
+      await row.getByText('Optional project breakdown', { exact: true }).click();
+      await row.getByRole('button', { name: `Add ${project}`, exact: true }).click();
+      await page.getByLabel(`${category}: ${project} percentage`, { exact: true }).fill(amount);
+    }
+    const donut = page.locator('[data-workload-donut]');
+    await expect(donut.getByRole('button', { name: 'Maintenance: API Migration: 20%', exact: true })).toHaveAttribute('stroke-dashoffset', '-0.2');
+    const projectWorkArc = donut.getByRole('button', { name: 'Project work: Infra hardening: 35%', exact: true });
+    await expect(projectWorkArc).toHaveAttribute('stroke-dashoffset', '-40.2');
+    await expect(page.locator('[data-workload-project-ring-remainder]')).toHaveCount(2);
+    await expect(page.locator('[data-workload-project-ring-remainder]').first()).toHaveAttribute('data-percentage', '20');
+    await expect(page.locator('[data-workload-project-ring-remainder]').last()).toHaveAttribute('data-percentage', '15');
+    await expect(page.locator('[data-workload-center-value]')).toHaveText('100%');
+    await page.getByLabel('Maintenance: API Migration percentage', { exact: true }).fill('45');
+    await expect(page.locator('[data-workload-project-slice]:visible')).toHaveCount(1);
+    await expect(projectWorkArc).toBeVisible();
+  });
+
+  test('workload project chips preserve zero-valued selections after server validation', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/profile/workload/');
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+    await page.getByText('Optional project breakdown', { exact: true }).click();
+    const body = page.locator('.workload-project-body');
+    await body.getByRole('button', { name: 'Add API Migration', exact: true }).click();
+    await body.getByRole('button', { name: 'Add Onboarding revamp', exact: true }).click();
+    const onboarding = page.getByLabel('Project work: Onboarding revamp percentage', { exact: true });
+    await onboarding.fill('65');
+    // Bypass the disabled Save button to exercise a genuine server error patch.
+    await page.locator('#workload-form').evaluate(form => form.requestSubmit());
+    await expect(page.getByRole('alert')).toContainText('Project allocations cannot exceed');
+    await expect(body.locator('[data-workload-project-row]:visible')).toHaveCount(2);
+    await expect(page.getByLabel('Project work: API Migration percentage', { exact: true })).toHaveValue('0');
+    await expect(onboarding).toHaveValue('65');
+    await expect(body.getByRole('button', { name: 'Add API Migration', exact: true })).toBeHidden();
+    await expect(body.getByRole('button', { name: 'Add Infra hardening', exact: true })).toBeVisible();
+    await onboarding.fill('15');
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    await expect(body.locator('[data-workload-project-row]:visible')).toHaveCount(1);
+    await expect(body.getByRole('button', { name: 'Add API Migration', exact: true })).toBeVisible();
+  });
+
+  test('workload SSE saves preserve a focused keyed slider', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/profile/workload/');
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+    let release;
+    const pending = new Promise(resolve => { release = resolve; });
+    let received;
+    const responseReady = new Promise(resolve => { received = resolve; });
+    await page.route('**/profile/workload/save/', async route => {
+      const response = await route.fetch();
+      received();
+      await pending;
+      await route.fulfill({ response });
+    });
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await responseReady;
+    const slider = page.getByRole('slider', { name: 'Project work allocation', exact: true });
+    await slider.focus();
+    await slider.evaluate(element => { window.focusedWorkloadSlider = element; });
+    release();
+    await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    await expect(slider).toBeFocused();
+    expect(await slider.evaluate(element => element === window.focusedWorkloadSlider)).toBe(true);
+    await expect(slider).toHaveAttribute('id', /workload-slider-category_\d+/);
+    await slider.press('ArrowRight');
+    await expect(page.getByLabel('Project work percentage', { exact: true })).toHaveValue('61');
+    const ids = await page.locator('#workload-content [id]').evaluateAll(elements => elements.map(element => element.id));
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test('workload donut center always shows summed category percentages', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/profile/workload/');
+    const center = page.locator('[data-workload-center-value]');
+    const label = page.locator('[data-workload-center-label]');
+    await expect(center).toHaveText('0%');
+    await expect(label).toHaveText('allocated');
+    for (const [maintenance, projects, meetings, sum] of [
+      ['25', '0', '0', '25%'],
+      ['25', '60', '0', '85%'],
+      ['25', '60', '15', '100%'],
+      ['25', '60', '25', '110%'],
+      ['101', '0', '0', '101%'],
+      ['50.5', '0', '0', '50.5%'],
+      ['-1', '0', '0', '-1%'],
+      ['', '0', '0', '0%'],
+    ]) {
+      await page.getByLabel('Maintenance percentage', { exact: true }).fill(maintenance);
+      await page.getByLabel('Project work percentage', { exact: true }).fill(projects);
+      await page.getByLabel('Meetings percentage', { exact: true }).fill(meetings);
+      await expect(center).toHaveText(sum);
+      await expect(label).toHaveText('allocated');
+    }
+    await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+    await page.getByText('Optional project breakdown', { exact: true }).click();
+    await page.locator('.workload-projects').getByRole('button', { name: 'Add API Migration', exact: true }).click();
+    await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('40');
+    await expect(center).toHaveText('60%');
+  });
+
+  test('workload donut previews sliders, remaining allocation and explicit saves', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/profile/workload/');
+    const save = page.getByRole('button', { name: 'Save estimate', exact: true });
+    const maintenance = page.getByLabel('Maintenance percentage', { exact: true });
+    const slider = page.getByRole('slider', { name: 'Maintenance allocation', exact: true });
+    const donut = page.locator('[data-workload-donut]');
+    await expect(donut).toBeVisible();
+    await expect(page.locator('[data-workload-feedback]')).toHaveText('100% left to allocate');
+    await expect(save).toBeDisabled();
+    await slider.focus();
+    await slider.press('ArrowRight');
+    await expect(maintenance).toHaveValue('1');
+    await maintenance.fill('25');
+    await expect(slider).toHaveValue('25');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+    await expect(page.locator('[data-workload-feedback]')).toHaveText('15% left to allocate');
+    await expect(page.locator('[data-workload-remainder]')).toHaveAttribute('data-percentage', '15');
+    await page.locator('[data-workload-row]').filter({ has: page.getByLabel('Meetings percentage', { exact: true }) }).getByRole('button', { name: 'Fill remaining 15%', exact: true }).click();
+    await expect(page.getByLabel('Meetings percentage', { exact: true })).toHaveValue('15');
+    await expect(page.locator('[data-workload-feedback]')).toHaveText('100% allocated');
+    await expect(save).toBeEnabled();
+    const slice = donut.getByRole('button', { name: 'Maintenance: 25%', exact: true });
+    await slice.focus();
+    await slice.press('Enter');
+    await expect(maintenance).toBeFocused();
+    await expect(slice).toHaveClass(/is-highlighted/);
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('25');
+    await expect(page.locator('[data-workload-feedback]')).toHaveText('10% over — reduce an allocation');
+    await expect(save).toBeDisabled();
+    await expect(maintenance).toHaveValue('25');
+    await expect(page.getByLabel('Project work percentage', { exact: true })).toHaveValue('60');
+    await expect(page.locator('#workload-current')).toHaveCount(0);
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('15');
+    await save.click();
+    await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    await expect(page.locator('[data-workload-feedback]')).toHaveText('100% allocated');
+    await expect(slider).toHaveValue('25');
+    await slider.focus();
+    await slider.press('ArrowLeft');
+    await expect(maintenance).toHaveValue('24');
+    await expect(page.locator('[data-workload-feedback]')).toHaveText('1% left to allocate');
+    await page.getByRole('button', { name: 'Still accurate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Review date refreshed');
+    await expect(maintenance).toHaveValue('25');
+    await page.reload();
+    await expect(donut.getByRole('button', { name: 'Maintenance: 25%', exact: true })).toBeVisible();
+  });
+
+  test('workload preview explains invalid numbers and translates dynamic labels', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/profile/workload/');
+    const maintenance = page.getByLabel('Maintenance percentage', { exact: true });
+    await maintenance.fill('100');
+    await expect(page.getByRole('button', { name: 'Save estimate', exact: true })).toBeEnabled();
+    for (const value of ['-1', '101', '50.5', '']) {
+      await maintenance.fill(value);
+      await expect(page.locator('[data-workload-feedback]')).toHaveText('Enter whole percentages between 0 and 100.');
+      await expect(maintenance).toHaveAttribute('aria-invalid', 'true');
+      await expect(page.getByRole('button', { name: 'Save estimate', exact: true })).toBeDisabled();
+    }
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(page.locator('[data-workload-feedback]')).toHaveText('100% noch zu verteilen');
+    await page.getByLabel('Maintenance – Prozentanteil', { exact: true }).fill('80');
+    await expect(page.getByRole('slider', { name: 'Maintenance – Anteil', exact: true })).toHaveValue('80');
+    await expect(page.locator('[data-workload-feedback]')).toHaveText('20% noch zu verteilen');
+    await expect(page.getByRole('button', { name: 'Verbleibende 20% zuweisen', exact: true })).toHaveCount(3);
+    await page.getByText('Optionale Aufteilung nach Projekten', { exact: true }).click();
+    await expect(page.locator('[data-workload-project-summary]')).toHaveText('0% zugewiesen · 0% ohne Zuordnung');
+    const body = page.locator('.workload-project-body');
+    await body.getByRole('button', { name: 'API Migration hinzufügen', exact: true }).click();
+    const api = page.getByLabel('Project work: API Migration – Prozentanteil', { exact: true });
+    await expect(api).toBeFocused();
+    await page.getByLabel('Project work – Prozentanteil', { exact: true }).fill('20');
+    await api.fill('10');
+    await expect(page.locator('[data-workload-project-legend]')).toContainText('Projekte · äußerer Ring');
+    await expect(page.locator('[data-workload-project-legend]')).toContainText('Ohne Zuordnung: 10%');
+    await body.getByRole('button', { name: 'API Migration entfernen', exact: true }).click();
+    await expect(body.getByRole('button', { name: 'API Migration hinzufügen', exact: true })).toBeFocused();
+  });
+
+  test('workload project breakdown previews overall shares and blocks invalid drafts', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/profile/workload/');
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+    await page.locator('#workload-guidance').getByRole('button', { name: 'API Migration', exact: true }).click();
+    const project = page.getByLabel('Project work: API Migration percentage', { exact: true });
+    await expect(project).toBeFocused();
+    await project.fill('40');
+    await expect(page.locator('[data-workload-project-summary]')).toHaveText('40% assigned · 20% unspecified');
+    await expect(page.locator('[data-workload-project-segment]').first()).toHaveAttribute('data-percentage', '40');
+    await project.fill('65');
+    await expect(page.locator('[data-workload-project-error]')).toContainText('Project allocations cannot exceed their category percentage.');
+    await expect(page.getByRole('button', { name: 'Save estimate', exact: true })).toBeDisabled();
+    await project.fill('40');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('35');
+    await expect(project).toHaveValue('40');
+    await expect(page.locator('[data-workload-project-error]')).toBeVisible();
+    await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    await expect(page.locator('[data-workload-project-summary]')).toHaveText('40% assigned · 20% unspecified');
+    await expect(project).toBeVisible();
+  });
+
+  test('personal workload is a profile sub-page rather than a sidebar entry', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    const menu = page.locator('.drawer-side .menu');
+    await expect(menu.getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    const profile = menu.getByRole('link', { name: 'My Profile', exact: true });
+    await profile.click();
+    await page.waitForURL('/profile/');
+    const workload = page.locator('main').getByRole('link', { name: 'My workload', exact: true });
+    await expect(workload).toHaveAttribute('href', '/profile/workload/');
+    await workload.click();
+    await page.waitForURL('/profile/workload/');
+    await expect(profile).toHaveClass(/menu-active/);
+    await expect(profile).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { name: 'My workload', exact: true })).toBeVisible();
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+    await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/profile/workload/save/') && response.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Save estimate', exact: true }).click(),
+    ]);
+    await expect(page.locator('#workload-status')).toContainText('Estimate saved.');
+    await page.locator('main').getByRole('link', { name: 'My profile', exact: true }).click();
+    await page.waitForURL('/profile/');
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(page.locator('main').getByRole('link', { name: 'Meine Arbeitsverteilung', exact: true })).toBeVisible();
+    await page.locator('main').getByRole('link', { name: 'Meine Arbeitsverteilung', exact: true }).click();
+    await page.waitForURL('/profile/workload/');
+    await expect(menu.getByRole('link', { name: 'Meine Arbeitsverteilung', exact: true })).toHaveCount(0);
+    await expect(menu.getByRole('link', { name: 'Mein Profil', exact: true })).toHaveClass(/menu-active/);
+    await expect(page.getByRole('heading', { name: 'Meine Arbeitsverteilung', exact: true })).toBeVisible();
+    await expect(page.locator('main').getByRole('link', { name: 'Mein Profil', exact: true })).toHaveAttribute('href', '/profile/');
+  });
+
+  test('profile workload sub-page respects participation and redirects old personal links', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await page.goto('/profile/');
+    await expect(page.locator('main').getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    expect((await page.goto('/profile/workload/')).status()).toBe(403);
+    await page.goto('/');
+    await signInAs(page, 'member1');
+    await page.goto('/workload/');
+    await expect(page).toHaveURL(/\/profile\/workload\/$/);
+    await page.goto('/');
+    await signInAs(page, 'demo');
+    await page.goto('/workspaces/workload/');
+    const member = page.locator('[data-workload-member="member1"]');
+    await member.getByRole('radio', { name: 'Exempt', exact: true }).check();
+    await expect(member).toHaveAttribute('data-participation', 'exempt');
+    await signInAs(page, 'member1');
+    await page.goto('/profile/');
+    await expect(page.locator('main').getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    expect(await postForm(page, '/profile/workload/save/', {})).toBe(403);
+    expect((await page.goto('/profile/workload/')).status()).toBe(403);
+  });
+
+  test('workload settings switches save independently and refresh categories and navigation without reload', async ({ appPage: page }) => {
+    await page.goto('/workspaces/workload/');
+    await expect(page.getByRole('switch')).toHaveCount(3);
+    await expect(page.getByRole('button', { name: 'Save workload settings' })).toHaveCount(0);
+    const enabled = page.getByRole('switch', { name: 'Enable workload reporting', exact: true });
+    const members = page.getByRole('switch', { name: 'Include members by default', exact: true });
+    const pms = page.getByRole('switch', { name: 'Include PMs by default', exact: true });
+    const setting = name => page.locator(`[data-workload-setting="workload_${name}"]`);
+    await expect(enabled).not.toBeChecked();
+    await expect(members).toBeChecked();
+    await expect(pms).not.toBeChecked();
+    let navigations = 0;
+    page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations++; });
+    await members.uncheck();
+    await expect(setting('members_included')).toHaveAttribute('data-enabled', 'false');
+    await pms.check();
+    await expect(setting('pms_included')).toHaveAttribute('data-enabled', 'true');
+    await expect(page.getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    await enabled.check();
+    await expect(setting('enabled')).toHaveAttribute('data-enabled', 'true');
+    await expect(page.locator('#workload-categories-body tr')).toHaveCount(3);
+    await expect(members).not.toBeChecked();
+    await expect(pms).toBeChecked();
+    await expect(page.getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Workload overview', exact: true })).toBeVisible();
+    const toast = page.locator('#toast-slot .workload-settings-toast');
+    await expect(toast).toContainText('Workload settings saved.');
+    await toast.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(toast).toHaveCount(0);
+    await enabled.uncheck();
+    await expect(setting('enabled')).toHaveAttribute('data-enabled', 'false');
+    await expect(page.getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Workload overview', exact: true })).toHaveCount(0);
+    expect(navigations).toBe(0);
+    await page.reload();
+    await expect(enabled).not.toBeChecked();
+    await expect(members).not.toBeChecked();
+    await expect(pms).toBeChecked();
+    await enabled.check();
+    await expect(setting('enabled')).toHaveAttribute('data-enabled', 'true');
+    await expect(page.locator('#workload-categories-body tr')).toHaveCount(3);
+    await pms.uncheck();
+    await expect(setting('pms_included')).toHaveAttribute('data-enabled', 'false');
+    await expect(page.getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Workload overview', exact: true })).toBeVisible();
+  });
+
+  test('workload settings switches validate values and respect workspace PM permissions', async ({ appPage: page }) => {
+    await page.goto('/workspaces/workload/');
+    await expect(page.getByRole('switch')).toHaveCount(3);
+    const url = '/workspaces/workload/settings/workload_enabled/';
+    expect((await page.request.get(url)).status()).toBe(405);
+    expect(await postForm(page, url, { workload_enabled: 'invalid' })).toBe(400);
+    expect(await postForm(page, '/workspaces/workload/settings/name/', { name: 'Changed' })).toBe(400);
+    await signInAs(page, 'member1');
+    expect(await postForm(page, url, { workload_enabled: 'on' })).toBe(403);
+    await signInAs(page, 'pm2');
+    expect(await postForm(page, url, { workload_enabled: 'on' })).toBe(200);
+    await signInAs(page, 'demo');
+    await page.goto('/workspaces/workload/');
+    await expect(page.getByRole('switch', { name: 'Enable workload reporting', exact: true })).not.toBeChecked();
+    expect(await postForm(page, url, { workload_enabled: 'on', workload_members_included: '', workload_pms_included: 'on' })).toBe(200);
+    await page.reload();
+    await expect(page.getByRole('switch', { name: 'Enable workload reporting', exact: true })).toBeChecked();
+    await expect(page.getByRole('switch', { name: 'Include members by default', exact: true })).toBeChecked();
+    await expect(page.getByRole('switch', { name: 'Include PMs by default', exact: true })).not.toBeChecked();
+  });
+
+  test('workload participation table saves independent radio choices without navigation', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const table = page.getByRole('table', { name: 'Participation overrides', exact: true });
+    await expect(table).toBeVisible();
+    await expect(table.getByRole('columnheader')).toHaveText(['Person', 'Inherit', 'Included', 'Exempt']);
+    const member = table.locator('[data-workload-member="member1"]');
+    const manager = table.locator('[data-workload-member="demo"]');
+    await expect(member.getByRole('radio')).toHaveCount(3);
+    await expect(member.getByRole('radio', { name: 'Inherit', exact: true })).toBeChecked();
+    await expect(manager.getByRole('radio', { name: 'Inherit', exact: true })).toBeChecked();
+    let navigations = 0;
+    page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations++; });
+    await member.getByRole('radio', { name: 'Exempt', exact: true }).check();
+    await expect(member).toHaveAttribute('data-participation', 'exempt');
+    const toast = page.locator('#toast-slot .workload-participation-toast');
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText('member1');
+    await expect(toast).toContainText('Participation saved.');
+    await manager.getByRole('radio', { name: 'Included', exact: true }).check();
+    await expect(manager).toHaveAttribute('data-participation', 'included');
+    await expect(page.getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    await expect(member.getByRole('radio', { name: 'Exempt', exact: true })).toBeChecked();
+    await manager.getByRole('radio', { name: 'Exempt', exact: true }).check();
+    await expect(manager).toHaveAttribute('data-participation', 'exempt');
+    await expect(page.getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    await member.getByRole('radio', { name: 'Included', exact: true }).check();
+    await expect(member).toHaveAttribute('data-participation', 'included');
+    await member.getByRole('radio', { name: 'Inherit', exact: true }).check();
+    await expect(member).toHaveAttribute('data-participation', 'inherit');
+    await expect(manager.getByRole('radio', { name: 'Exempt', exact: true })).toBeChecked();
+    await expect(table.getByRole('combobox')).toHaveCount(0);
+    await expect(table.getByRole('button', { name: 'Save participation' })).toHaveCount(0);
+    expect(navigations).toBe(0);
+    await page.reload();
+    await expect(member.getByRole('radio', { name: 'Inherit', exact: true })).toBeChecked();
+    await expect(manager.getByRole('radio', { name: 'Exempt', exact: true })).toBeChecked();
+  });
+
+  test('workload participation radio table supports German labels and keyboard selection', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(page.getByRole('switch', { name: 'Meldung der Arbeitsverteilung aktivieren', exact: true })).toBeChecked();
+    await expect(page.getByRole('switch', { name: 'Mitglieder standardmäßig einbeziehen', exact: true })).toBeChecked();
+    const pmDefault = page.getByRole('switch', { name: 'PMs standardmäßig einbeziehen', exact: true });
+    await pmDefault.check();
+    await expect(page.locator('[data-workload-setting="workload_pms_included"]')).toHaveAttribute('data-enabled', 'true');
+    await expect(page.locator('#toast-slot .workload-settings-toast')).toContainText('Einstellungen zur Arbeitsverteilung gespeichert.');
+    await pmDefault.uncheck();
+    await expect(page.locator('[data-workload-setting="workload_pms_included"]')).toHaveAttribute('data-enabled', 'false');
+    const table = page.getByRole('table', { name: 'Individuelle Teilnahme-Einstellungen', exact: true });
+    await expect(table).toBeVisible();
+    await expect(table.getByRole('columnheader')).toHaveText(['Person', 'Standard übernehmen', 'Einbezogen', 'Ausgenommen']);
+    const manager = table.locator('[data-workload-member="demo"]');
+    await manager.getByRole('radio', { name: 'Standard übernehmen', exact: true }).press('ArrowRight');
+    await expect(manager).toHaveAttribute('data-participation', 'included');
+    await expect(manager.getByRole('radio', { name: 'Einbezogen', exact: true })).toBeChecked();
+    await expect(page.locator('#toast-slot .workload-participation-toast')).toContainText('Teilnahme gespeichert.');
+    await manager.getByRole('radio', { name: 'Einbezogen', exact: true }).press('ArrowRight');
+    await expect(manager).toHaveAttribute('data-participation', 'exempt');
+    await expect(manager.getByRole('radio', { name: 'Ausgenommen', exact: true })).toBeChecked();
+    await expect(table.locator('[data-workload-member="member1"]').getByRole('radio', { name: 'Standard übernehmen', exact: true })).toBeChecked();
+  });
+
+  test('workload participation radio editing validates values and enforces workspace PM permissions', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const member = page.locator('[data-workload-member="member1"]');
+    await expect(member.getByRole('radio', { name: 'Inherit', exact: true })).toBeVisible();
+    const membershipId = await member.getAttribute('data-membership-id');
+    const url = `/workspaces/workload/participation/${membershipId}/`;
+    expect((await page.request.get(url)).status()).toBe(405);
+    expect(await postForm(page, url, { participation: 'invalid' })).toBe(400);
+    await page.reload();
+    await expect(member).toHaveAttribute('data-participation', 'inherit');
+    await signInAs(page, 'member1');
+    expect(await postForm(page, url, { participation: 'exempt' })).toBe(403);
+    await signInAs(page, 'pm2');
+    expect(await postForm(page, url, { participation: 'exempt' })).toBe(404);
+    await signInAs(page, 'demo');
+    await page.goto('/workspaces/workload/');
+    await expect(member.getByRole('radio', { name: 'Inherit', exact: true })).toBeChecked();
+    expect(await postForm(page, url, { participation: 'exempt' })).toBe(200);
+    await page.reload();
+    await expect(member.getByRole('radio', { name: 'Exempt', exact: true })).toBeChecked();
+    await signInAs(page, 'member1');
+    expect((await page.goto('/workload/')).status()).toBe(403);
+  });
+
+  test('workload category deletion confirms removal and preserves snapshot names and project breakdowns', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const categoryId = await page.locator('[data-workload-category]', { has: page.locator('input[value="Project work"]') }).getAttribute('data-workload-category');
+    const row = page.locator(`[data-workload-category="${categoryId}"]`);
+    await expect(row.getByRole('button', { name: 'Delete category', exact: true })).toBeVisible();
+    await signInAs(page, 'member1');
+    await submitWorkloadExample(page);
+    await signInAs(page, 'demo');
+    await page.goto('/workspaces/workload/');
+    const categoryName = 'Delivery\'s "project work"';
+    await row.getByLabel('Category name', { exact: true }).fill(categoryName);
+    await row.getByLabel('Category name', { exact: true }).press('Tab');
+    await expect(row).toHaveAttribute('data-name', categoryName);
+    page.once('dialog', async dialog => {
+      expect(dialog.message()).toContain(categoryName);
+      expect(dialog.message()).toContain('Existing estimates and history will be preserved.');
+      await dialog.dismiss();
+    });
+    await row.getByRole('button', { name: 'Delete category', exact: true }).click();
+    await expect(row).toBeVisible();
+    await expect(page.locator('#toast-slot .workload-category-deleted-toast')).toHaveCount(0);
+    page.once('dialog', dialog => dialog.accept());
+    await row.getByRole('button', { name: 'Delete category', exact: true }).click();
+    await expect(row).toHaveCount(0);
+    const toast = page.locator('#toast-slot .workload-category-deleted-toast');
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText(categoryName);
+    await expect(toast).toContainText('Category deleted.');
+    await toast.getByRole('button', { name: 'Dismiss' }).click();
+    await page.reload();
+    await expect(row).toHaveCount(0);
+    await expect(page.locator('[data-workload-category]')).toHaveCount(2);
+    await page.goto('/workload/overview/');
+    await expect(page.locator('[data-workload-user="member1"]')).toContainText('Project work: 60%');
+    await expect(page.locator('[data-workload-user="member1"]')).toContainText('API Migration: 40%');
+    await expect(page.locator('#workload-averages')).toContainText('Project work: 60%');
+    await signInAs(page, 'member1');
+    await page.goto('/workload/');
+    await expect(page.getByLabel('Project work percentage', { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel(`${categoryName} percentage`, { exact: true })).toHaveCount(0);
+    const latestProject = page.locator('[data-workload-history]').first().locator('span[title^="Project work:"]');
+    await expect(latestProject).toHaveAttribute('title', /Project work: 60%\nAPI Migration: 40%/);
+    await expect(page.locator('#workload-total')).toHaveText('40%');
+    await page.getByRole('button', { name: 'Still accurate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Review date refreshed');
+    await expect(latestProject).toHaveAttribute('title', /API Migration: 40%/);
+    await expect(page.locator('[data-workload-history]')).toHaveCount(2);
+    await expect(page.getByRole('button', { name: 'Save estimate', exact: true })).toBeDisabled();
+    await expect(page.locator('[data-workload-feedback]')).toHaveText('60% left to allocate');
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('90');
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await expect(page.locator('[data-workload-history]').first().locator('span[title^="Maintenance:"]')).toHaveAttribute('title', 'Maintenance: 90%');
+    await expect(page.locator('[data-workload-history]').first().locator('span[title^="Project work:"]')).toHaveCount(0);
+    await expect(page.locator('[data-workload-history]')).toHaveCount(3);
+    await expect(page.locator('[data-workload-history]').last().locator('span[title^="Project work:"]')).toHaveAttribute('title', /Project work: 60%/);
+    const history = page.locator('[data-workload-history]').last();
+    await expect(history).not.toContainText('API Migration: 40%');
+    await expect(history.locator('span[title^="Project work:"]')).toHaveAttribute('title', 'Project work: 60%\nAPI Migration: 40%\nUnspecified project work: 20%');
+  });
+
+  test('workload category deletion is POST-only, PM-only and workspace scoped', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const row = page.locator('[data-workload-category]').first();
+    await expect(row.getByRole('button', { name: 'Delete category', exact: true })).toBeVisible();
+    const categoryId = await row.getAttribute('data-workload-category');
+    const url = `/workspaces/workload/categories/${categoryId}/delete/`;
+    expect((await page.request.get(url)).status()).toBe(405);
+    await signInAs(page, 'member1');
+    expect(await postForm(page, url, {})).toBe(403);
+    await signInAs(page, 'pm2');
+    expect(await postForm(page, url, {})).toBe(404);
+    await signInAs(page, 'demo');
+    await page.goto('/workspaces/workload/');
+    await expect(page.locator(`[data-workload-category="${categoryId}"]`)).toBeVisible();
+    expect(await postForm(page, url, {})).toBe(200);
+    expect(await postForm(page, url, {})).toBe(404);
+    await page.reload();
+    await expect(page.locator(`[data-workload-category="${categoryId}"]`)).toHaveCount(0);
+    await expect(page.locator('[data-workload-category]')).toHaveCount(2);
+    const add = page.locator('#workload-new-category');
+    await add.getByLabel('New category', { exact: true }).fill('Maintenance');
+    await add.getByRole('button', { name: 'Add category' }).click();
+    const replacement = page.locator('[data-workload-category]', { has: page.locator('input[value="Maintenance"]') });
+    await expect(replacement).toHaveAttribute('data-active', 'true');
+    expect(await replacement.getAttribute('data-workload-category')).not.toBe(categoryId);
+  });
+
+  test('workload new category row is inside the table and uses the same columns', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const table = page.getByRole('table', { name: 'Categories', exact: true });
+    const add = table.locator('#workload-new-category');
+    await expect(add).toBeVisible();
+    await expect(table.getByRole('columnheader')).toHaveText(['Category name', 'Active', 'Allow project breakdown']);
+    await expect(add.locator('td')).toHaveCount(3);
+    await expect(add.getByLabel('Active', { exact: true })).toBeChecked();
+    let navigations = 0;
+    page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations++; });
+    await add.getByLabel('New category', { exact: true }).fill('Support');
+    await add.getByLabel('Active', { exact: true }).uncheck();
+    await add.getByLabel('Allow project breakdown', { exact: true }).check();
+    await add.getByRole('button', { name: 'Add category' }).click();
+    const saved = table.locator('[data-workload-category]', { has: page.locator('input[value="Support"]') });
+    await expect(saved).toHaveAttribute('data-active', 'false');
+    await expect(saved).toHaveAttribute('data-supports-projects', 'true');
+    await expect(table.locator('[data-workload-category]')).toHaveCount(4);
+    const toast = page.locator('#toast-slot .workload-category-toast');
+    await expect(toast).toContainText('Support');
+    await expect(toast).toContainText('Category saved.');
+    await expect(add.getByLabel('New category', { exact: true })).toHaveValue('');
+    await expect(add.getByLabel('Active', { exact: true })).toBeChecked();
+    await expect(add.getByLabel('Allow project breakdown', { exact: true })).not.toBeChecked();
+    await toast.getByRole('button', { name: 'Dismiss' }).click();
+    await add.getByLabel('New category', { exact: true }).fill('Support');
+    await add.getByRole('button', { name: 'Add category' }).click();
+    await expect(add.locator('td').first().getByRole('alert')).toContainText('already exists');
+    await expect(add.getByLabel('New category', { exact: true })).toHaveValue('Support');
+    await expect(table.locator('[data-workload-category]')).toHaveCount(4);
+    await expect(toast).toHaveCount(0);
+    expect(navigations).toBe(0);
+    await page.reload();
+    await expect(saved).toHaveAttribute('data-active', 'false');
+    await expect(saved).toHaveAttribute('data-supports-projects', 'true');
+  });
+  test('workload category table saves direct edits without navigating', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const table = page.getByRole('table', { name: 'Categories', exact: true });
+    await expect(table).toBeVisible();
+    await expect(table.getByRole('columnheader')).toHaveText(['Category name', 'Active', 'Allow project breakdown']);
+    const categoryId = await table.locator('[data-workload-category]', { has: page.locator('input[value="Maintenance"]') }).getAttribute('data-workload-category');
+    const row = table.locator(`[data-workload-category="${categoryId}"]`);
+    const toast = page.locator('#toast-slot .workload-category-toast');
+    let navigations = 0;
+    page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations++; });
+    await row.getByLabel('Category name', { exact: true }).fill('Operations');
+    await row.getByLabel('Category name', { exact: true }).press('Tab');
+    await expect(row).toHaveAttribute('data-name', 'Operations');
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText('Operations');
+    await expect(toast).toContainText('Category saved.');
+    await expect(toast).toHaveClass(/\bsuccess\b/);
+    await expect(toast).toHaveAttribute('role', 'status');
+    await expect(row.getByRole('status')).toHaveCount(0);
+    await toast.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(toast).toHaveCount(0);
+    await row.getByLabel('Active', { exact: true }).uncheck();
+    await expect(row).toHaveAttribute('data-active', 'false');
+    await expect(toast).toBeVisible();
+    await row.getByLabel('Allow project breakdown', { exact: true }).check();
+    await expect(row).toHaveAttribute('data-supports-projects', 'true');
+    await expect(toast).toHaveCount(1);
+    await toast.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(toast).toHaveCount(0);
+    await row.getByLabel('Category name', { exact: true }).fill('Project work');
+    await row.getByLabel('Category name', { exact: true }).press('Tab');
+    await expect(row.locator('td').first().getByRole('alert')).toContainText('already exists');
+    await expect(toast).toHaveCount(0);
+    await expect(row).toHaveAttribute('data-name', 'Operations');
+    await expect(row.getByLabel('Category name', { exact: true })).toHaveValue('Project work');
+    await row.getByLabel('Category name', { exact: true }).fill('Operations');
+    await row.getByLabel('Category name', { exact: true }).press('Tab');
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText('Category saved.');
+    await expect(row.getByRole('alert')).toHaveCount(0);
+    expect(navigations).toBe(0);
+    await page.reload();
+    await expect(row.getByLabel('Category name', { exact: true })).toHaveValue('Operations');
+    await expect(row.getByLabel('Active', { exact: true })).not.toBeChecked();
+    await expect(row.getByLabel('Allow project breakdown', { exact: true })).toBeChecked();
+    await expect(table.getByRole('button', { name: 'Save category' })).toHaveCount(0);
+  });
+  test('workload rejects direct exempt submissions and foreign category/project references', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    expect(await postForm(page, '/workload/save/', {})).toBe(403);
+    await signInAs(page, 'member1');
+    await page.goto('/workload/');
+    const fields = await page.locator('#workload-form').evaluate(form => Object.fromEntries(new FormData(form)));
+    const maintenance = await page.getByLabel('Maintenance percentage', { exact: true }).getAttribute('name');
+    fields[maintenance] = '100';
+    const responseText = await page.evaluate(async fields => {
+      const response = await fetch('/workload/save/', { method: 'POST', body: new URLSearchParams({ ...fields, project_999999_999999: '10' }) });
+      return response.text();
+    }, fields);
+    expect(responseText).toContain('unavailable in this workspace');
+    await page.reload();
+    await expect(page.locator('#workload-current')).toHaveCount(0);
+    expect(await postForm(page, '/workspaces/workload/', { workload_enabled: 'on' })).toBe(403);
+    await submitWorkloadExample(page);
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('40');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('50');
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await expect(page.locator('[data-workload-history]').first().locator('span[title^="Maintenance:"]')).toHaveAttribute('title', 'Maintenance: 40%');
+    await expect(page.locator('[data-workload-history]')).toHaveCount(2);
+    await expect(page.locator('[data-workload-history]').last().locator('span[title^="Maintenance:"]')).toHaveAttribute('title', 'Maintenance: 30%');
+    await page.goto('/');
+    await signInAs(page, 'multi1');
+    await page.goto('/workload/');
+    await expect(page.getByLabel('Maintenance percentage', { exact: true })).toHaveValue('0');
+    await expect(page.locator('#workload-current')).toHaveCount(0);
+  });
+
+  test('workload retains snapshots through category archival and disabling, and filters coverage', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await submitWorkloadExample(page);
+    await page.goto('/');
+    await signInAs(page, 'demo');
+    await page.goto('/workload/overview/');
+    await page.getByLabel('Team', { exact: true }).selectOption({ label: 'Backend' });
+    await page.getByRole('button', { name: 'Filter', exact: true }).click();
+    await expect(page.locator('#workload-coverage')).toHaveText('1 of 1 participating members reported.');
+    await page.getByLabel('Team', { exact: true }).selectOption({ label: 'Design' });
+    await page.getByRole('button', { name: 'Filter', exact: true }).click();
+    await expect(page.locator('#workload-coverage')).toHaveText('0 of 0 participating members reported.');
+    await page.goto('/workspaces/workload/');
+    const maintenanceId = await page.locator('[data-workload-category]', { has: page.locator('input[value="Maintenance"]') }).getAttribute('data-workload-category');
+    const maintenance = page.locator(`[data-workload-category="${maintenanceId}"]`);
+    await maintenance.getByLabel('Category name', { exact: true }).fill('Operations');
+    await maintenance.getByLabel('Category name', { exact: true }).press('Tab');
+    await expect(maintenance).toHaveAttribute('data-name', 'Operations');
+    await maintenance.getByLabel('Active', { exact: true }).uncheck();
+    await expect(maintenance).toHaveAttribute('data-active', 'false');
+    const add = page.locator('#workload-add-category');
+    await add.getByLabel('New category', { exact: true }).fill('Support');
+    await add.getByRole('button', { name: 'Add category' }).click();
+    await expect(page.locator('[data-workload-category]', { has: page.locator('input[value="Support"]') })).toHaveAttribute('data-active', 'true');
+    await page.goto('/');
+    await signInAs(page, 'member1');
+    await page.goto('/workload/');
+    await expect(page.getByLabel('Maintenance percentage', { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('Support percentage', { exact: true })).toHaveValue('0');
+    const latestMaintenance = page.locator('[data-workload-history]').first().locator('span[title^="Maintenance:"]');
+    await expect(latestMaintenance).toHaveAttribute('title', 'Maintenance: 30%');
+    await page.getByRole('button', { name: 'Still accurate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Review date refreshed');
+    await expect(latestMaintenance).toHaveAttribute('title', 'Maintenance: 30%');
+    await page.goto('/');
+    await signInAs(page, 'demo');
+    await page.goto('/workspaces/workload/');
+    await page.getByLabel('Enable workload reporting', { exact: true }).uncheck();
+    await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'false');
+    await page.goto('/workload/overview/');
+    await expect(page.locator('[data-workload-user="member1"]')).toContainText('Maintenance: 30%');
+    await expect(page.locator('#workload-coverage')).toHaveText('0 of 0 participating members reported.');
+    await page.goto('/');
+    await signInAs(page, 'member1');
+    expect(await postForm(page, '/workload/save/', { action: 'review' })).toBe(403);
+  });
+
+  test('workload history stays in the source workspace when a project moves or is deleted', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await submitWorkloadExample(page);
+    await page.goto('/');
+    await signInAs(page, 'demo');
+    await page.locator('.ws-chevron-btn').click();
+    await page.fill('#workspace-create-name', 'Workload destination');
+    await page.locator('#workspace-create-name').press('Enter');
+    await expect(page.locator('#workspace-name')).toHaveText('Workload destination');
+    await enableWorkload(page);
+    const destinationId = await page.locator('#workspace-menu form', { has: page.locator('.workspace-item', { hasText: 'Workload destination' }) }).getAttribute('action').then(action => action.match(/\d+/)[0]);
+    await page.locator('.ws-chevron-btn').click();
+    await page.locator('#workspace-menu .workspace-item', { hasText: "demo's workspace" }).click();
+    await expect(page.locator('#workspace-name')).toHaveText("demo's workspace");
+    const projectId = await page.locator('.project-group', { has: page.locator('.left-cell.proj', { hasText: 'API Migration' }) }).getAttribute('data-project-id');
+    expect(await postForm(page, `/projects/${projectId}/move-workspace/`, { workspace_id: destinationId })).toBe(200);
+    await page.goto('/workload/overview/');
+    await expect(page.locator('[data-workload-user="member1"]')).toContainText('API Migration: 40%');
+    await page.locator('.ws-chevron-btn').click();
+    await page.locator('#workspace-menu .workspace-item', { hasText: 'Workload destination' }).click();
+    await expect(page.locator('#workspace-name')).toHaveText('Workload destination');
+    await page.goto('/workload/overview/');
+    await expect(page.locator('main')).not.toContainText('API Migration: 40%');
+    expect(await postForm(page, `/projects/${projectId}/delete/`, {})).toBe(200);
+    await page.goto('/');
+    await page.locator('.ws-chevron-btn').click();
+    await page.locator('#workspace-menu .workspace-item', { hasText: "demo's workspace" }).click();
+    await expect(page.locator('#workspace-name')).toHaveText("demo's workspace");
+    await signInAs(page, 'member1');
+    await page.goto('/workload/');
+    const latestProject = page.locator('[data-workload-history]').first().locator('span[title^="Project work:"]');
+    await expect(latestProject).toHaveAttribute('title', /API Migration: 40%/);
+    await page.getByRole('button', { name: 'Still accurate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Review date refreshed');
+    await expect(latestProject).toHaveAttribute('title', /API Migration: 40%/);
+  });
+  test('workload rejects malformed percentages without a server error or a new snapshot', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/workload/');
+    const fields = await page.locator('#workload-form').evaluate(form => Object.fromEntries(new FormData(form)));
+    const field = await page.getByLabel('Maintenance percentage', { exact: true }).getAttribute('name');
+    for (const value of ['101', '-1', '0.5', '1'.repeat(4500)]) {
+      const response = await page.evaluate(async fields => {
+        const r = await fetch('/workload/save/', { method: 'POST', body: new URLSearchParams(fields) });
+        return { status: r.status, text: await r.text() };
+      }, { ...fields, [field]: value });
+      expect(response.status).toBe(200);
+      expect(response.text).toContain('Percentages must be whole numbers');
+    }
+    await page.reload();
+    await expect(page.locator('#workload-current')).toHaveCount(0);
+  });
+
+  test('workload guidance includes explicit project responsibility but excludes completed projects', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await page.goto('/people/');
+    const alex = page.locator('.person-row', { has: page.locator('input[value="Alex Chen"]') });
+    const personId = (await alex.getAttribute('id')).replace('person-row-', '');
+    await alex.getByText('Workload', { exact: true }).click();
+    await alex.getByLabel('Workload participation', { exact: true }).selectOption('included');
+    await expect(alex.locator('select[name=participation] option[value=included]')).toHaveAttribute('selected', '');
+    await page.goto('/');
+    const onboardingId = await page.locator('.project-group', { has: page.locator('.left-cell.proj', { hasText: 'Onboarding revamp' }) }).getAttribute('data-project-id');
+    const infraId = await page.locator('.project-group', { has: page.locator('.left-cell.proj', { hasText: 'Infra hardening' }) }).getAttribute('data-project-id');
+    expect(await postForm(page, `/projects/${onboardingId}/update/`, { responsible_person_ids: personId })).toBe(200);
+    expect(await postForm(page, `/projects/${infraId}/set-completed/`, {})).toBe(200);
+    await signInAs(page, 'member1');
+    await page.goto('/workload/');
+    await expect(page.locator('#workload-guidance')).toContainText('API Migration');
+    await expect(page.locator('#workload-guidance')).toContainText('Onboarding revamp');
+    await expect(page.locator('#workload-guidance')).not.toContainText('Infra hardening');
+    await expect(page.getByLabel('Project work: Infra hardening percentage', { exact: true })).toHaveCount(0);
+  });
+
+  test('workload configuration is workspace scoped and PMs are exempt by default', async ({ appPage: page }) => {
+    await expect(page.getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    await enableWorkload(page);
+    await expect(page.getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Workload overview', exact: true })).toBeVisible();
+    expect((await page.goto('/workload/')).status()).toBe(403);
+    await page.goto('/workspaces/workload/');
+    const categoryId = await page.locator('[data-workload-category]').first().getAttribute('data-workload-category');
+    const member = page.locator('[data-workload-member="member1"]');
+    await member.getByRole('radio', { name: 'Exempt', exact: true }).check();
+    await expect(member).toHaveAttribute('data-participation', 'exempt');
+    await signInAs(page, 'member1');
+    expect(await postForm(page, `/workspaces/workload/categories/${categoryId}/`, { name: 'Unauthorized change' })).toBe(403);
+    expect(await postForm(page, '/workspaces/workload/categories/', { name: 'Unauthorized category' })).toBe(403);
+    expect((await page.goto('/workload/')).status()).toBe(403);
+    expect((await page.goto('/workspaces/workload/')).status()).toBe(403);
+    expect((await page.goto('/workload/overview/')).status()).toBe(403);
+    await page.goto('/');
+    await signInAs(page, 'pm2');
+    await page.goto('/workspaces/workload/');
+    await expect(page.getByLabel('Enable workload reporting', { exact: true })).not.toBeChecked();
+    await expect(page.locator('[data-workload-category]')).toHaveCount(0);
+    expect(await postForm(page, `/workspaces/workload/categories/${categoryId}/`, { name: 'Foreign change' })).toBe(404);
+  });
+
+  test('workload percentages validate, persist and optionally break down projects without double counting', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.getByRole('link', { name: 'My Profile', exact: true }).click();
+    await page.getByRole('link', { name: 'My workload', exact: true }).click();
+    await expect(page.locator('#workload-guidance')).toContainText('API Migration');
+    await expect(page.locator('#workload-guidance')).toContainText('Infra hardening');
+    await expect(page.locator('#workload-guidance')).not.toContainText('Onboarding revamp');
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('5');
+    await expect(page.getByRole('button', { name: 'Save estimate', exact: true })).toBeDisabled();
+    await expect(page.locator('[data-workload-feedback]')).toHaveText('5% left to allocate');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+    await page.getByText('Optional project breakdown', { exact: true }).click();
+    await page.locator('.workload-projects').getByRole('button', { name: 'Add API Migration', exact: true }).click();
+    await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('65');
+    await expect(page.getByRole('button', { name: 'Save estimate', exact: true })).toBeDisabled();
+    await expect(page.locator('[data-workload-project-error]')).toContainText('exceed');
+    await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('40');
+    await page.locator('.workload-projects').getByRole('button', { name: 'Add Onboarding revamp', exact: true }).click();
+    await page.getByLabel('Project work: Onboarding revamp percentage', { exact: true }).fill('15');
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    await expect(page.locator('[data-workload-history]').first().locator('span[title^="Project work:"]')).toHaveAttribute('title', /Unspecified project work: 5%/);
+    await page.reload();
+    await expect(page.getByLabel('Maintenance percentage', { exact: true })).toHaveValue('30');
+    await page.getByRole('button', { name: 'Still accurate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Review date refreshed');
+    await expect(page.locator('[data-workload-history]')).toHaveCount(2);
+    await page.goto('/');
+    await signInAs(page, 'demo');
+    await page.goto('/workload/overview/');
+    await expect(page.locator('#workload-coverage')).toHaveText('1 of 3 participating members reported.');
+    await expect(page.locator('#workload-averages')).toContainText('Maintenance: 30%');
+    await expect(page.locator('[data-workload-user="member1"]')).toContainText('Unspecified project work: 5%');
+    await expect(page.locator('[data-workload-user="ideaeditor"]')).toContainText('Not reported');
+    await expect(page.locator('[data-workload-user="demo"]')).toContainText('Exempt');
+  });
+});
+
 test.describe('self-service profile', () => {
+  test('profile omits the public roadmap link even when the roadmap is enabled', async ({ appPage: page }) => {
+    const roadmapUrl = await enableRoadmap(page);
+    await page.goto('/profile/');
+    await expect(page.getByRole('link', { name: 'Open public roadmap', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Change password', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Mein Profil', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Öffentliche Roadmap öffnen', exact: true })).toHaveCount(0);
+    expect((await page.request.get(roadmapUrl)).status()).toBe(200);
+  });
+
   test('profile edits personal fields and a clearly named Teams email address', async ({ appPage: page }) => {
     const link = page.locator('.sidebar-user .user-name');
     await expect(link).toHaveAttribute('href', '/profile/');
@@ -269,6 +1380,9 @@ test.describe('self-service profile', () => {
     await expect(page.getByRole('heading', { name: 'Mein Profil', exact: true })).toBeVisible();
     await expect(page.getByLabel('Teams-E-Mail-Adresse', { exact: true })).toBeVisible();
     await expect(page.locator('#profile-form')).not.toContainText('UPN');
+    await expect(page.locator('#profile-form')).toContainText('Verwende die E-Mail-Adresse, mit der du dich für diesen Arbeitsbereich bei Microsoft Teams anmeldest.');
+    await expect(page.locator('body')).toContainText('Dein Name und deine Kontakt-E-Mail gelten für dein Konto');
+    await expect(page.locator('body')).toContainText('Dein Benutzername für die Anmeldung kann hier nicht geändert werden.');
   });
 });
 
@@ -5058,6 +6172,7 @@ test.describe('i18n (German)', () => {
     // The choice persists across navigation (language cookie / session).
     await page.goto('/people/');
     await expect(page.locator('.people-page-header h1')).toHaveText('Personen');
+    await expect(page.locator('.people-page-header')).toContainText('Teammitglieder, die du Aufgaben zuweisen kannst.');
 
     // Switch back to English.
     await page.locator('.lang-btn', { hasText: 'EN' }).click();
@@ -5126,7 +6241,7 @@ test.describe('i18n (German)', () => {
     const page = await ctx.newPage();
     // Log in fresh in this German-locale context.
     await page.goto('/accounts/login/');
-    await expect(page.locator('.login-card .hint').first()).toHaveText('Melden Sie sich bei Ihren Projekten an.');
+    await expect(page.locator('.login-card .hint').first()).toHaveText('Melde dich bei deinen Projekten an.');
     await page.fill('input[name=username]', 'demo');
     await page.fill('input[name=password]', 'demo');
     await page.click('button[type=submit]');
