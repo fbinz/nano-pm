@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-10 00:05+0200\n"
+"POT-Creation-Date: 2026-10-14 09:33+0200\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -87,7 +87,7 @@ msgid "Category allocations must total 100%."
 msgstr "Die Kategorieanteile müssen insgesamt 100% ergeben."
 
 #: actions/manage_workload.py:231
-#: templates/components/screens/workload/content.html:81
+#: templates/components/screens/workload/content.html:57
 msgid "Project allocations cannot exceed their category percentage."
 msgstr "Projektanteile dürfen den Anteil ihrer Kategorie nicht überschreiten."
 
@@ -95,8 +95,7 @@ msgstr "Projektanteile dürfen den Anteil ihrer Kategorie nicht überschreiten."
 msgid ""
 "Enter domain names such as mycompany.com, without URLs, @ signs or wildcards."
 msgstr ""
-"Gib Domainnamen wie mycompany.com ein, ohne URLs, @-Zeichen oder "
-"Platzhalter."
+"Gib Domainnamen wie mycompany.com ein, ohne URLs, @-Zeichen oder Platzhalter."
 
 #: actions/public_subscriptions.py:22
 msgid "Enter no more than 20 domains."
@@ -328,6 +327,7 @@ msgid "Responsible people"
 msgstr "Verantwortliche"
 
 #: data/models/activity.py:143
+#: templates/components/screens/workspaces/settings.html:30
 msgid "Public roadmap description"
 msgstr "Beschreibung der öffentlichen Roadmap"
 
@@ -336,6 +336,7 @@ msgid "Public roadmap enabled"
 msgstr "Öffentliche Roadmap aktiviert"
 
 #: data/models/activity.py:145
+#: templates/components/screens/workspaces/settings.html:26
 msgid "Public roadmap title"
 msgstr "Titel der öffentlichen Roadmap"
 
@@ -446,23 +447,23 @@ msgstr "Mitglied"
 
 #: data/models/membership.py:30
 #: templates/components/screens/people/people-list.html:95
+#: templates/components/screens/workload/configuration.html:37
 #: templates/components/screens/workload/participation-row.html:18
-#: templates/components/screens/workload/settings.html:36
 msgid "Inherit"
 msgstr "Standard übernehmen"
 
 #: data/models/membership.py:31
 #: templates/components/screens/people/people-list.html:96
+#: templates/components/screens/workload/configuration.html:38
 #: templates/components/screens/workload/participation-row.html:24
-#: templates/components/screens/workload/settings.html:37
 msgid "Included"
 msgstr "Einbezogen"
 
 #: data/models/membership.py:32
 #: templates/components/screens/people/people-list.html:97
-#: templates/components/screens/workload/overview.html:26
+#: templates/components/screens/workload/configuration.html:39
+#: templates/components/screens/workload/overview.html:37
 #: templates/components/screens/workload/participation-row.html:30
-#: templates/components/screens/workload/settings.html:38
 msgid "Exempt"
 msgstr "Ausgenommen"
 
@@ -577,8 +578,8 @@ msgid ""
 "workspace. It may differ from your contact email. Leave blank to turn off "
 "your mentions."
 msgstr ""
-"Verwende die E-Mail-Adresse, mit der du dich für diesen Arbeitsbereich "
-"bei Microsoft Teams anmeldest. Sie kann von deiner Kontakt-E-Mail abweichen. "
+"Verwende die E-Mail-Adresse, mit der du dich für diesen Arbeitsbereich bei "
+"Microsoft Teams anmeldest. Sie kann von deiner Kontakt-E-Mail abweichen. "
 "Lass das Feld leer, um deine Erwähnungen auszuschalten."
 
 #: interfaces/web/profile.py:33
@@ -634,9 +635,9 @@ msgid ""
 "Use your own Microsoft Teams sign-in address. You need access to this "
 "workspace's Teams channel. No confirmation email will be sent."
 msgstr ""
-"Verwende deine eigene Microsoft-Teams-Anmeldeadresse. Du benötigst "
-"Zugriff auf den Teams-Kanal dieses Arbeitsbereichs. Es wird keine "
-"Bestätigungs-E-Mail versendet."
+"Verwende deine eigene Microsoft-Teams-Anmeldeadresse. Du benötigst Zugriff "
+"auf den Teams-Kanal dieses Arbeitsbereichs. Es wird keine Bestätigungs-E-"
+"Mail versendet."
 
 #: interfaces/web/tasks.py:55
 msgid "Task saved."
@@ -655,8 +656,8 @@ msgid ""
 "Paste the URL from your Teams Workflow. Treat it like a password; saved URLs "
 "are never displayed."
 msgstr ""
-"Füge die URL aus deinem Teams-Workflow ein. Behandle sie wie ein "
-"Passwort; gespeicherte URLs werden nicht angezeigt."
+"Füge die URL aus deinem Teams-Workflow ein. Behandle sie wie ein Passwort; "
+"gespeicherte URLs werden nicht angezeigt."
 
 #: interfaces/web/workload.py:44
 msgid "Invalid identifier."
@@ -674,19 +675,19 @@ msgstr "Mitglieder standardmäßig einbeziehen"
 msgid "Include PMs by default"
 msgstr "PMs standardmäßig einbeziehen"
 
-#: interfaces/web/workload.py:86
+#: interfaces/web/workload.py:98
 msgid "Unknown setting."
 msgstr "Unbekannte Einstellung."
 
-#: interfaces/web/workload.py:361
+#: interfaces/web/workload.py:357
 msgid "Unknown action."
 msgstr "Unbekannte Aktion."
 
-#: interfaces/web/workload.py:369
+#: interfaces/web/workload.py:365
 msgid "Review date refreshed."
 msgstr "Überprüfungsdatum aktualisiert."
 
-#: interfaces/web/workload.py:369
+#: interfaces/web/workload.py:365
 msgid "Estimate saved."
 msgstr "Schätzung gespeichert."
 
@@ -926,181 +927,144 @@ msgid "Close sidebar"
 msgstr "Seitenleiste schließen"
 
 #: templates/components/layouts/app-shell.html:14
+#: templates/components/layouts/app-shell.html:35
+#: templates/components/screens/workspaces/settings.html:6
+msgid "Workspace settings"
+msgstr "Arbeitsbereich – Einstellungen"
+
+#: templates/components/layouts/app-shell.html:17
 msgid "Switch workspace"
 msgstr "Arbeitsbereich wechseln"
 
-#: templates/components/layouts/app-shell.html:21
+#: templates/components/layouts/app-shell.html:24
 msgid "Workspaces"
 msgstr "Arbeitsbereiche"
 
-#: templates/components/layouts/app-shell.html:36
+#: templates/components/layouts/app-shell.html:40
+#: templates/components/screens/workspaces/settings.html:12
 msgid "Workspace name"
 msgstr "Arbeitsbereichsname"
 
-#: templates/components/layouts/app-shell.html:37
+#: templates/components/layouts/app-shell.html:41
+#: templates/components/screens/workspaces/settings.html:15
 msgid "Rename"
 msgstr "Umbenennen"
 
-#: templates/components/layouts/app-shell.html:43
+#: templates/components/layouts/app-shell.html:47
 msgid "Create workspace"
 msgstr "Arbeitsbereich erstellen"
 
-#: templates/components/layouts/app-shell.html:44
+#: templates/components/layouts/app-shell.html:48
 msgid "Create"
 msgstr "Erstellen"
 
-#: templates/components/layouts/app-shell.html:47
-msgid "Public roadmap"
-msgstr "Öffentliche Roadmap"
-
 #: templates/components/layouts/app-shell.html:54
-msgid "Open public roadmap"
-msgstr "Öffentliche Roadmap öffnen"
-
-#: templates/components/layouts/app-shell.html:59
-msgid "Roadmap"
-msgstr "Roadmap"
-
-#: templates/components/layouts/app-shell.html:61
-msgid "Optional public description"
-msgstr "Optionale öffentliche Beschreibung"
-
-#: templates/components/layouts/app-shell.html:63
-#: templates/components/screens/gantt/milestone-popover.html:72
-#: templates/components/screens/gantt/project-popover.html:111
-#: templates/components/screens/gantt/task-popover.html:125
-msgid "Save"
-msgstr "Speichern"
-
-#: templates/components/layouts/app-shell.html:64
-msgid "Disable public roadmap"
-msgstr "Öffentliche Roadmap deaktivieren"
-
-#: templates/components/layouts/app-shell.html:69
-msgid "Regenerate public link"
-msgstr "Öffentlichen Link neu erzeugen"
-
-#: templates/components/layouts/app-shell.html:72
-msgid "Share task milestones without exposing people or dependencies."
-msgstr ""
-"Aufgaben-Meilensteine teilen, ohne Personen oder Abhängigkeiten offenzulegen."
-
-#: templates/components/layouts/app-shell.html:75
-msgid "Enable public roadmap"
-msgstr "Öffentliche Roadmap aktivieren"
-
-#: templates/components/layouts/app-shell.html:84
 #: templates/components/screens/profile/index.html:4
 #: templates/public/roadmap.html:48
 msgid "Projects"
 msgstr "Projekte"
 
-#: templates/components/layouts/app-shell.html:87
+#: templates/components/layouts/app-shell.html:57
 msgid "Resources"
 msgstr "Ressourcen"
 
-#: templates/components/layouts/app-shell.html:91
+#: templates/components/layouts/app-shell.html:61
 #: templates/components/screens/ideas/index.html:9
 msgid "Ideas"
 msgstr "Ideen"
 
-#: templates/components/layouts/app-shell.html:95
+#: templates/components/layouts/app-shell.html:65
 #: templates/components/screens/people/index.html:8
 #: templates/components/screens/people/people-content.html:18
 msgid "People"
 msgstr "Personen"
 
-#: templates/components/layouts/app-shell.html:99
+#: templates/components/layouts/app-shell.html:69
 #: templates/components/screens/teams/settings.html:4
 msgid "Teams notifications"
 msgstr "Teams-Benachrichtigungen"
 
-#: templates/components/layouts/app-shell.html:105
-#: templates/components/screens/workload/settings.html:4
-msgid "Workload settings"
-msgstr "Arbeitsverteilung – Einstellungen"
-
-#: templates/components/layouts/app-shell.html:109
+#: templates/components/layouts/app-shell.html:76
 #: templates/components/screens/activity/index.html:9
 msgid "Activity"
 msgstr "Aktivität"
 
-#: templates/components/layouts/app-shell.html:112
+#: templates/components/layouts/app-shell.html:79
 msgid "My Profile"
 msgstr "Mein Profil"
 
-#: templates/components/layouts/app-shell.html:120
-#: templates/components/layouts/app-shell.html:122
-#: templates/components/layouts/app-shell.html:123
+#: templates/components/layouts/app-shell.html:87
+#: templates/components/layouts/app-shell.html:89
+#: templates/components/layouts/app-shell.html:90
 msgid "Switch to dark mode"
 msgstr "In den Dunkelmodus wechseln"
 
-#: templates/components/layouts/app-shell.html:121
+#: templates/components/layouts/app-shell.html:88
 msgid "Switch to light mode"
 msgstr "In den Hellmodus wechseln"
 
-#: templates/components/layouts/app-shell.html:126
+#: templates/components/layouts/app-shell.html:93
 msgid "Theme"
 msgstr "Design"
 
-#: templates/components/layouts/app-shell.html:138
+#: templates/components/layouts/app-shell.html:105
 #: templates/components/screens/profile/index.html:5
 #: templates/components/screens/profile/password.html:4
 #: templates/components/screens/workload/index.html:4
 msgid "My profile"
 msgstr "Mein Profil"
 
-#: templates/components/layouts/app-shell.html:141
+#: templates/components/layouts/app-shell.html:108
 msgid "Sign out"
 msgstr "Abmelden"
 
-#: templates/components/layouts/app-shell.html:156
+#: templates/components/layouts/app-shell.html:123
 msgid "Close"
 msgstr "Schließen"
 
-#: templates/components/layouts/app-shell.html:170
+#: templates/components/layouts/app-shell.html:137
 msgid "Why is this milestone moving?"
 msgstr "Warum wird dieser Meilenstein verschoben?"
 
-#: templates/components/layouts/app-shell.html:181
+#: templates/components/layouts/app-shell.html:148
 #: templates/components/screens/activity/index.html:36
 #: templates/components/screens/activity/index.html:49
 msgid "Reason"
 msgstr "Begründung"
 
-#: templates/components/layouts/app-shell.html:187
+#: templates/components/layouts/app-shell.html:154
 msgid "Briefly explain what changed…"
 msgstr "Kurz erklären, was sich geändert hat…"
 
-#: templates/components/layouts/app-shell.html:192
+#: templates/components/layouts/app-shell.html:159
 msgid "Common reasons"
 msgstr "Häufige Gründe"
 
-#: templates/components/layouts/app-shell.html:193
+#: templates/components/layouts/app-shell.html:160
 msgid "Dependency delayed"
 msgstr "Abhängigkeit verzögert"
 
-#: templates/components/layouts/app-shell.html:194
+#: templates/components/layouts/app-shell.html:161
 msgid "Scope changed"
 msgstr "Umfang geändert"
 
-#: templates/components/layouts/app-shell.html:195
+#: templates/components/layouts/app-shell.html:162
 msgid "Resource availability"
 msgstr "Ressourcenverfügbarkeit"
 
-#: templates/components/layouts/app-shell.html:196
+#: templates/components/layouts/app-shell.html:163
 msgid "External commitment"
 msgstr "Externe Verpflichtung"
 
-#: templates/components/layouts/app-shell.html:197
+#: templates/components/layouts/app-shell.html:164
 msgid "Waiting for feedback"
 msgstr "Rückmeldung ausstehend"
 
-#: templates/components/layouts/app-shell.html:201
+#: templates/components/layouts/app-shell.html:168
 msgid "Keep original date"
 msgstr "Ursprüngliches Datum behalten"
 
-#: templates/components/layouts/app-shell.html:202
+#: templates/components/layouts/app-shell.html:169
 msgid "Move milestone"
 msgstr "Meilenstein verschieben"
 
@@ -1232,6 +1196,8 @@ msgstr "+ Erstelle dein erstes Projekt"
 
 #: templates/components/screens/gantt/index.html:7
 #: templates/components/screens/gantt/resource_index.html:7
+#: templates/components/screens/workload/overview.html:5
+#: templates/components/screens/workspaces/settings.html:5
 msgid "Open menu"
 msgstr "Menü öffnen"
 
@@ -1303,6 +1269,13 @@ msgstr "Diesen Meilenstein löschen?"
 msgid "Delete"
 msgstr "Löschen"
 
+#: templates/components/screens/gantt/milestone-popover.html:72
+#: templates/components/screens/gantt/project-popover.html:111
+#: templates/components/screens/gantt/task-popover.html:125
+#: templates/components/screens/workspaces/settings.html:34
+msgid "Save"
+msgstr "Speichern"
+
 #: templates/components/screens/gantt/project-hidden-toast.html:4
 msgid "Project created, but it’s hidden by the active team filter."
 msgstr "Projekt erstellt, aber durch den aktiven Teamfilter ausgeblendet."
@@ -1321,7 +1294,7 @@ msgstr "Niemand zugewiesen"
 
 #: templates/components/screens/gantt/project-popover.html:35
 #: templates/components/screens/gantt/task-popover.html:68
-#: templates/components/screens/workload/content.html:92
+#: templates/components/screens/workload/content.html:68
 #, python-format
 msgid "Remove %(name)s"
 msgstr "%(name)s entfernen"
@@ -1407,8 +1380,8 @@ msgid ""
 "Choose an existing unconnected milestone from this project. Create "
 "milestones from the project timeline."
 msgstr ""
-"Wähle einen bestehenden, nicht verknüpften Meilenstein aus diesem "
-"Projekt. Erstelle Meilensteine über die Projektzeitleiste."
+"Wähle einen bestehenden, nicht verknüpften Meilenstein aus diesem Projekt. "
+"Erstelle Meilensteine über die Projektzeitleiste."
 
 #: templates/components/screens/gantt/task-popover.html:77
 msgid "Add assignee"
@@ -1441,8 +1414,8 @@ msgid ""
 "No dependencies. Drag from a bar's right-edge handle onto another bar to "
 "create one."
 msgstr ""
-"Keine Abhängigkeiten. Ziehe vom rechten Rand eines Balkens auf einen "
-"anderen Balken, um eine zu erstellen."
+"Keine Abhängigkeiten. Ziehe vom rechten Rand eines Balkens auf einen anderen "
+"Balken, um eine zu erstellen."
 
 #: templates/components/screens/gantt/task-popover.html:123
 msgid "Delete this task?"
@@ -1719,7 +1692,7 @@ msgstr "Abgeschlossen"
 #: templates/components/screens/projects/detail.html:22
 #: templates/components/screens/workload/category-new-row.html:15
 #: templates/components/screens/workload/category-row.html:28
-#: templates/components/screens/workload/settings.html:17
+#: templates/components/screens/workload/configuration.html:18
 msgid "Active"
 msgstr "Aktiv"
 
@@ -1843,6 +1816,18 @@ msgstr ""
 msgid "Save webhook"
 msgstr "Webhook speichern"
 
+#: templates/components/screens/workload/allocation-bar.html:3
+#: templates/components/screens/workload/donut.html:4
+#: templates/components/screens/workload/history.html:6
+msgid "Workload allocation"
+msgstr "Arbeitsverteilung"
+
+#: templates/components/screens/workload/allocation-bar.html:4
+#: templates/components/screens/workload/donut.html:25
+#: templates/components/screens/workload/summary.html:13
+msgid "Unspecified project work"
+msgstr "Projektarbeit ohne Zuordnung"
+
 #: templates/components/screens/workload/category-deleted-toast.html:5
 msgid "Category deleted."
 msgstr "Kategorie gelöscht."
@@ -1857,12 +1842,12 @@ msgstr "Kategorie hinzufügen"
 
 #: templates/components/screens/workload/category-new-row.html:19
 #: templates/components/screens/workload/category-row.html:33
-#: templates/components/screens/workload/settings.html:18
+#: templates/components/screens/workload/configuration.html:19
 msgid "Allow project breakdown"
 msgstr "Aufteilung nach Projekten erlauben"
 
 #: templates/components/screens/workload/category-row.html:11
-#: templates/components/screens/workload/settings.html:16
+#: templates/components/screens/workload/configuration.html:17
 msgid "Category name"
 msgstr "Kategoriename"
 
@@ -1883,105 +1868,103 @@ msgstr "Kategorie löschen"
 msgid "Category saved."
 msgstr "Kategorie gespeichert."
 
+#: templates/components/screens/workload/configuration.html:4
+msgid "Workload settings"
+msgstr "Arbeitsverteilung – Einstellungen"
+
+#: templates/components/screens/workload/configuration.html:11
+msgid "Categories"
+msgstr "Kategorien"
+
+#: templates/components/screens/workload/configuration.html:12
+#: templates/components/screens/workload/configuration.html:31
+msgid "Changes save automatically."
+msgstr "Änderungen werden automatisch gespeichert."
+
+#: templates/components/screens/workload/configuration.html:30
+msgid "Participation overrides"
+msgstr "Individuelle Teilnahme-Einstellungen"
+
+#: templates/components/screens/workload/configuration.html:36
+#: templates/components/screens/workload/overview.html:19
+msgid "Person"
+msgstr "Person"
+
 #: templates/components/screens/workload/content.html:9
-msgid "Your typical workload"
-msgstr "Deine typische Arbeitsverteilung"
-
-#: templates/components/screens/workload/content.html:10
-msgid "Rough estimates are fine. Adjust the sliders or enter percentages."
-msgstr ""
-"Eine grobe Schätzung genügt. Nutze die Regler oder gib "
-"Prozentwerte ein."
-
-#: templates/components/screens/workload/content.html:11
 #, python-format
 msgid "Last reviewed %(ago)s ago"
 msgstr "Zuletzt vor %(ago)s überprüft"
 
-#: templates/components/screens/workload/content.html:16
+#: templates/components/screens/workload/content.html:12
 msgid "Still accurate"
 msgstr "Weiterhin zutreffend"
 
-#: templates/components/screens/workload/content.html:25
-#: templates/components/screens/workload/report.html:7
-msgid "Workload allocation"
-msgstr "Arbeitsverteilung"
-
-#: templates/components/screens/workload/content.html:37
-#: templates/components/screens/workload/report.html:16
-msgid "Unspecified project work"
-msgstr "Projektarbeit ohne Zuordnung"
-
-#: templates/components/screens/workload/content.html:42
-msgid "allocated"
-msgstr "zugewiesen"
-
-#: templates/components/screens/workload/content.html:46
+#: templates/components/screens/workload/content.html:22
 msgid "Shares of your workload, not hours."
 msgstr "Anteile deiner Arbeit, keine Stunden."
 
-#: templates/components/screens/workload/content.html:48
+#: templates/components/screens/workload/content.html:24
+#: templates/components/screens/workload/summary.html:19
 msgid "Projects · outer ring"
 msgstr "Projekte · äußerer Ring"
 
-#: templates/components/screens/workload/content.html:67
+#: templates/components/screens/workload/content.html:43
 #, python-format
 msgid "%(name)s percentage"
 msgstr "%(name)s – Prozentanteil"
 
-#: templates/components/screens/workload/content.html:71
+#: templates/components/screens/workload/content.html:47
 #, python-format
 msgid "%(name)s allocation"
 msgstr "%(name)s – Anteil"
 
-#: templates/components/screens/workload/content.html:75
+#: templates/components/screens/workload/content.html:51
 msgid "Optional project breakdown"
 msgstr "Optionale Aufteilung nach Projekten"
 
-#: templates/components/screens/workload/content.html:77
+#: templates/components/screens/workload/content.html:53
 msgid "Percentages of your total workload"
 msgstr "Anteile deiner gesamten Arbeit in Prozent"
 
-#: templates/components/screens/workload/content.html:82
+#: templates/components/screens/workload/content.html:58
 msgid "Leave any remainder unspecified, or assign a project below."
 msgstr "Lass den Rest ohne Zuordnung oder wähle unten ein Projekt."
 
-#: templates/components/screens/workload/content.html:88
+#: templates/components/screens/workload/content.html:64
 #, python-format
 msgid "%(category)s: %(project)s percentage"
 msgstr "%(category)s: %(project)s – Prozentanteil"
 
-#: templates/components/screens/workload/content.html:98
+#: templates/components/screens/workload/content.html:74
 msgid "Assign a project"
 msgstr "Projekt zuordnen"
 
-#: templates/components/screens/workload/content.html:101
+#: templates/components/screens/workload/content.html:77
 #, python-format
 msgid "Add %(name)s"
 msgstr "%(name)s hinzufügen"
 
-#: templates/components/screens/workload/content.html:105
+#: templates/components/screens/workload/content.html:81
 msgid "No unfinished projects available."
 msgstr "Keine offenen Projekte verfügbar."
 
-#: templates/components/screens/workload/content.html:110
+#: templates/components/screens/workload/content.html:86
 msgid "Ask a PM to configure workload categories."
-msgstr ""
-"Bitte einen PM, Kategorien für die Arbeitsverteilung einzurichten."
+msgstr "Bitte einen PM, Kategorien für die Arbeitsverteilung einzurichten."
 
-#: templates/components/screens/workload/content.html:114
+#: templates/components/screens/workload/content.html:90
 msgid "Total"
 msgstr "Summe"
 
-#: templates/components/screens/workload/content.html:115
+#: templates/components/screens/workload/content.html:91
 msgid "Save estimate"
 msgstr "Schätzung speichern"
 
-#: templates/components/screens/workload/content.html:120
+#: templates/components/screens/workload/content.html:96
 msgid "Your active projects"
 msgstr "Deine aktiven Projekte"
 
-#: templates/components/screens/workload/content.html:121
+#: templates/components/screens/workload/content.html:97
 msgid ""
 "Based on current task assignments and project responsibility. Use these as "
 "guidance; they do not determine your percentages."
@@ -1989,37 +1972,44 @@ msgstr ""
 "Basierend auf aktuellen Aufgabenzuweisungen und Projektverantwortung. Diese "
 "dienen als Orientierung und legen deine Prozentanteile nicht fest."
 
-#: templates/components/screens/workload/content.html:122
+#: templates/components/screens/workload/content.html:98
 msgid "No active projects assigned."
 msgstr "Keine aktiven Projekte zugewiesen."
 
-#: templates/components/screens/workload/content.html:126
-msgid "Current estimate"
-msgstr "Aktuelle Schätzung"
-
-#: templates/components/screens/workload/content.html:131
+#: templates/components/screens/workload/content.html:101
+#: templates/components/screens/workload/history.html:3
 msgid "Recent estimate history"
 msgstr "Letzte Schätzungen"
 
-#: templates/components/screens/workload/index.html:6
-msgid "Estimate your typical workload—not an exact accounting of your time."
-msgstr ""
-"Schätze deine typische Arbeitsverteilung – keine genaue Zeiterfassung."
+#: templates/components/screens/workload/donut.html:31
+msgid "allocated"
+msgstr "zugewiesen"
 
-#: templates/components/screens/workload/index.html:6
-msgid ""
-"Your estimate remains current until you update it. Percentages describe your "
-"overall workload, not hours."
-msgstr ""
-"Deine Schätzung gilt, bis du sie aktualisierst. Die Prozentanteile "
-"beschreiben deine gesamte Arbeit, keine Stunden."
+#: templates/components/screens/workload/history-row.html:7
+msgid "Outdated estimate (over 90 days)"
+msgstr "Veraltete Schätzung (über 90 Tage)"
+
+#: templates/components/screens/workload/history.html:6
+msgid "Reviewed"
+msgstr "Überprüft"
 
 #: templates/components/screens/workload/overview-nav.html:6
-#: templates/components/screens/workload/overview.html:4
+msgctxt "sidebar"
+msgid "Workload overview"
+msgstr "Arbeitsverteilung"
+
+#: templates/components/screens/workload/overview.html:6
 msgid "Workload overview"
 msgstr "Arbeitsverteilung – Übersicht"
 
-#: templates/components/screens/workload/overview.html:5
+#: templates/components/screens/workload/overview.html:7
+#, python-format
+msgid "%(reported)s of %(participating)s participating members reported."
+msgstr ""
+"%(reported)s von %(participating)s teilnehmenden Mitgliedern haben eine "
+"Schätzung abgegeben."
+
+#: templates/components/screens/workload/overview.html:9
 msgid ""
 "Reporting is disabled. Historical estimates are retained; no members are "
 "currently participating."
@@ -2027,39 +2017,27 @@ msgstr ""
 "Die Meldung ist deaktiviert. Frühere Schätzungen bleiben erhalten; derzeit "
 "nehmen keine Mitglieder teil."
 
-#: templates/components/screens/workload/overview.html:7
+#: templates/components/screens/workload/overview.html:12
 msgid "Team"
 msgstr "Team"
 
-#: templates/components/screens/workload/overview.html:8
+#: templates/components/screens/workload/overview.html:14
 msgid "All teams"
 msgstr "Alle Teams"
 
-#: templates/components/screens/workload/overview.html:11
-#: templates/components/screens/workload/settings.html:35
-msgid "Person"
-msgstr "Person"
-
-#: templates/components/screens/workload/overview.html:12
+#: templates/components/screens/workload/overview.html:21
 msgid "All people"
 msgstr "Alle Personen"
 
-#: templates/components/screens/workload/overview.html:15
+#: templates/components/screens/workload/overview.html:25
 msgid "Filter"
 msgstr "Filtern"
 
-#: templates/components/screens/workload/overview.html:18
-#, python-format
-msgid "%(reported)s of %(participating)s participating members reported."
-msgstr ""
-"%(reported)s von %(participating)s teilnehmenden Mitgliedern haben eine "
-"Schätzung abgegeben."
-
-#: templates/components/screens/workload/overview.html:19
+#: templates/components/screens/workload/overview.html:28
 msgid "Average workload mix"
 msgstr "Durchschnittliche Arbeitsverteilung"
 
-#: templates/components/screens/workload/overview.html:20
+#: templates/components/screens/workload/overview.html:29
 msgid ""
 "Averages include respondents only, not missing or exempt members. These "
 "estimates are not absolute team capacity."
@@ -2068,15 +2046,11 @@ msgstr ""
 "oder ausgenommenen Mitglieder. Sie beschreiben nicht die absolute "
 "Teamkapazität."
 
-#: templates/components/screens/workload/overview.html:21
-msgid "No reports from participating members."
-msgstr "Keine Schätzungen von teilnehmenden Mitgliedern."
-
-#: templates/components/screens/workload/overview.html:27
+#: templates/components/screens/workload/overview.html:38
 msgid "Not reported"
 msgstr "Noch nicht gemeldet"
 
-#: templates/components/screens/workload/overview.html:32
+#: templates/components/screens/workload/overview.html:45
 msgid "Recent workspace estimate history (including former members)"
 msgstr ""
 "Letzte Schätzungen im Arbeitsbereich (einschließlich ehemaliger Mitglieder)"
@@ -2085,46 +2059,62 @@ msgstr ""
 msgid "Participation saved."
 msgstr "Teilnahme gespeichert."
 
-#: templates/components/screens/workload/report.html:4
-msgid "Reviewed"
-msgstr "Überprüft"
-
-#: templates/components/screens/workload/report.html:5
-msgid "Outdated estimate (over 90 days)"
-msgstr "Veraltete Schätzung (über 90 Tage)"
-
 #: templates/components/screens/workload/settings-saved-toast.html:5
 msgid "Workload settings saved."
 msgstr "Einstellungen zur Arbeitsverteilung gespeichert."
 
-#: templates/components/screens/workload/settings.html:10
-msgid "Categories"
-msgstr "Kategorien"
+#: templates/components/screens/workload/summary.html:18
+msgid "No reports from participating members."
+msgstr "Keine Schätzungen von teilnehmenden Mitgliedern."
 
-#: templates/components/screens/workload/settings.html:11
-#: templates/components/screens/workload/settings.html:30
-msgid "Changes save automatically."
-msgstr "Änderungen werden automatisch gespeichert."
+#: templates/components/screens/workspaces/settings.html:20
+msgid "Public roadmap"
+msgstr "Öffentliche Roadmap"
 
-#: templates/components/screens/workload/settings.html:29
-msgid "Participation overrides"
-msgstr "Individuelle Teilnahme-Einstellungen"
+#: templates/components/screens/workspaces/settings.html:22
+msgid "Open public roadmap"
+msgstr "Öffentliche Roadmap öffnen"
+
+#: templates/components/screens/workspaces/settings.html:27
+msgid "Roadmap"
+msgstr "Roadmap"
+
+#: templates/components/screens/workspaces/settings.html:31
+msgid "Optional public description"
+msgstr "Optionale öffentliche Beschreibung"
+
+#: templates/components/screens/workspaces/settings.html:35
+msgid "Disable public roadmap"
+msgstr "Öffentliche Roadmap deaktivieren"
+
+#: templates/components/screens/workspaces/settings.html:40
+msgid "Regenerate public link"
+msgstr "Öffentlichen Link neu erzeugen"
+
+#: templates/components/screens/workspaces/settings.html:43
+msgid "Share task milestones without exposing people or dependencies."
+msgstr ""
+"Aufgaben-Meilensteine teilen, ohne Personen oder Abhängigkeiten offenzulegen."
+
+#: templates/components/screens/workspaces/settings.html:46
+msgid "Enable public roadmap"
+msgstr "Öffentliche Roadmap aktivieren"
 
 #: templates/public/roadmap.html:32
 msgid ""
 "Follow projects to receive Teams mentions. You must have access to the "
 "workspace's Teams channel."
 msgstr ""
-"Folge Projekten, um in Teams erwähnt zu werden. Du benötigst Zugriff "
-"auf den Teams-Kanal des Arbeitsbereichs."
+"Folge Projekten, um in Teams erwähnt zu werden. Du benötigst Zugriff auf den "
+"Teams-Kanal des Arbeitsbereichs."
 
 #: templates/public/roadmap.html:34
 msgid ""
 "Set your Teams email address in your profile for this workspace to receive "
 "mentions."
 msgstr ""
-"Trage deine Teams-E-Mail-Adresse im Profil für diesen Arbeitsbereich "
-"ein, um Erwähnungen zu erhalten."
+"Trage deine Teams-E-Mail-Adresse im Profil für diesen Arbeitsbereich ein, um "
+"Erwähnungen zu erhalten."
 
 #: templates/public/roadmap.html:40
 msgid "Email for new follows:"
@@ -2206,12 +2196,33 @@ msgstr ""
 "Deine E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
 "Roadmap gespeichert."
 
+#~ msgid "Your typical workload"
+#~ msgstr "Deine typische Arbeitsverteilung"
+
+#~ msgid "Rough estimates are fine. Adjust the sliders or enter percentages."
+#~ msgstr ""
+#~ "Eine grobe Schätzung genügt. Nutze die Regler oder gib Prozentwerte ein."
+
+#~ msgid "Current estimate"
+#~ msgstr "Aktuelle Schätzung"
+
+#~ msgid "Estimate your typical workload—not an exact accounting of your time."
+#~ msgstr ""
+#~ "Schätze deine typische Arbeitsverteilung – keine genaue Zeiterfassung."
+
+#~ msgid ""
+#~ "Your estimate remains current until you update it. Percentages describe "
+#~ "your overall workload, not hours."
+#~ msgstr ""
+#~ "Deine Schätzung gilt, bis du sie aktualisierst. Die Prozentanteile "
+#~ "beschreiben deine gesamte Arbeit, keine Stunden."
+
 #~ msgid ""
 #~ "Project percentages are shares of your overall workload. Leave any "
 #~ "remainder unspecified."
 #~ msgstr ""
-#~ "Projektanteile beziehen sich auf deine gesamte Arbeit. Ein Restanteil kann "
-#~ "ohne Projektzuordnung bleiben."
+#~ "Projektanteile beziehen sich auf deine gesamte Arbeit. Ein Restanteil "
+#~ "kann ohne Projektzuordnung bleiben."
 
 #~ msgid "View workload overview and history"
 #~ msgstr "Übersicht und frühere Arbeitsverteilungen ansehen"
@@ -2244,8 +2255,8 @@ msgstr ""
 #~ "One channel per workspace. Follow projects on the roadmap to be mentioned "
 #~ "when milestones change."
 #~ msgstr ""
-#~ "Ein Kanal pro Arbeitsbereich. Folge Projekten auf der Roadmap, um "
-#~ "bei Meilensteinänderungen erwähnt zu werden."
+#~ "Ein Kanal pro Arbeitsbereich. Folge Projekten auf der Roadmap, um bei "
+#~ "Meilensteinänderungen erwähnt zu werden."
 
 #~ msgid "Edit your Teams email address in your profile"
 #~ msgstr "Teams-E-Mail-Adresse im Profil bearbeiten"
@@ -2255,8 +2266,8 @@ msgstr ""
 #~ "channels, select the one this workspace should use."
 #~ msgstr ""
 #~ "Bisherige Projekt-Webhooks werden nicht mehr verwendet. Falls Projekte "
-#~ "unterschiedliche Kanäle hatten, wähle den Kanal für diesen "
-#~ "Arbeitsbereich aus."
+#~ "unterschiedliche Kanäle hatten, wähle den Kanal für diesen Arbeitsbereich "
+#~ "aus."
 
 #~ msgid "Your Teams UPN"
 #~ msgstr "Dein Teams-UPN"
@@ -2266,8 +2277,8 @@ msgstr ""
 #~ "your email. Use your own account. Clearing it disables your mentions."
 #~ msgstr ""
 #~ "Deine Microsoft-Anmeldeadresse für diesen Arbeitsbereich. Sie kann von "
-#~ "deiner E-Mail-Adresse abweichen. Verwende dein eigenes Konto. Ein "
-#~ "leeres Feld deaktiviert deine Erwähnungen."
+#~ "deiner E-Mail-Adresse abweichen. Verwende dein eigenes Konto. Ein leeres "
+#~ "Feld deaktiviert deine Erwähnungen."
 
 #~ msgid "Save my Teams identity"
 #~ msgstr "Meine Teams-Identität speichern"
@@ -2319,8 +2330,8 @@ msgstr ""
 #~ "and end date. Click the milestone to edit its description."
 #~ msgstr ""
 #~ "Ein nicht leerer Meilensteintitel erstellt einen Meilenstein mit dem "
-#~ "Projekt und Enddatum dieser Aufgabe. Klicke auf den Meilenstein, um "
-#~ "seine Beschreibung zu bearbeiten."
+#~ "Projekt und Enddatum dieser Aufgabe. Klicke auf den Meilenstein, um seine "
+#~ "Beschreibung zu bearbeiten."
 
 #, python-format
 #~ msgid "Page %(current)s of %(total)s"

@@ -1,8 +1,9 @@
 """Workload estimates, project guidance and respondent-only summaries."""
 
 from datetime import timedelta
+from hashlib import sha256
 
-from django.db.models import OuterRef, Q, Subquery
+from django.db.models import OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 
 from actions.manage_workload import participates
@@ -12,29 +13,102 @@ from data.models import (
     Project,
     Team,
     WorkloadCategory,
+    WorkloadProjectAllocation,
     WorkloadReport,
 )
 from data.models.project import PROJECT_COLORS
 
 
+def donut_arc(amount, offset, gap):
+    gap = 0 if amount == 100 else min(gap, amount / 2)
+    return {
+        "percentage": f"{amount:.6g}",
+        "dasharray": f"{max(0, amount - gap):.6g} {100 - amount + gap:.6g}",
+        "offset": f"{-offset - gap / 2:.6g}",
+    }
+
+
+def donut_vm(allocations, chart_id):
+    """Read-only geometry on the same overall-workload scale as the editor."""
+    rows, offset = [], 0
+    for index, allocation in enumerate(allocations):
+        value = allocation["percentage"]
+        field = f"{chart_id}-category-{index}"
+        projects, project_offset = [], offset
+        for project_index, project in enumerate(allocation["projects"]):
+            projects.append(
+                {
+                    "field": f"{field}-project-{project_index}",
+                    "project": {
+                        "name": project["project_label"],
+                        "color": project["color"],
+                    },
+                    "value": project["percentage"],
+                    "arc": donut_arc(project["percentage"], project_offset, 0.4),
+                }
+            )
+            project_offset += project["percentage"]
+        unspecified = max(0, value - sum(p["value"] for p in projects))
+        rows.append(
+            {
+                "field": field,
+                "category": {
+                    "name": allocation["name"],
+                    "supports_projects": allocation["supports_projects"],
+                },
+                "color": allocation["color"],
+                "value": value,
+                "arc": donut_arc(value, offset, 0.8),
+                "projects": projects,
+                "has_projects": any(p["value"] for p in projects),
+                "unspecified": round(unspecified, 6),
+                "remainder_arc": donut_arc(unspecified, project_offset, 0.4),
+            }
+        )
+        offset += value
+    return {
+        "rows": rows,
+        "total": round(offset, 6),
+        "remainder": max(0, round(100 - offset, 6)),
+        "has_projects": any(row["has_projects"] for row in rows),
+    }
+
+
 def reports(workspace):
     return WorkloadReport.objects.filter(workspace=workspace).prefetch_related(
-        "allocations__projects"
+        Prefetch(
+            "allocations__projects",
+            queryset=WorkloadProjectAllocation.objects.select_related("project"),
+        )
     )
 
 
 def report_vm(report):
     allocations = []
     for index, allocation in enumerate(report.allocations.all()):
-        projects = list(allocation.projects.all())
+        projects = [
+            {
+                "key": project.project_id or project.project_label,
+                "project_label": project.project_label,
+                "percentage": project.percentage,
+                "color": project.project.color
+                if project.project
+                else PROJECT_COLORS[
+                    sha256(project.project_label.encode()).digest()[0]
+                    % len(PROJECT_COLORS)
+                ],
+            }
+            for project in allocation.projects.all()
+        ]
         allocations.append(
             {
+                "key": allocation.category_id or allocation.category_label,
                 "name": allocation.category_label,
                 "percentage": allocation.percentage,
                 "supports_projects": allocation.supports_projects,
                 "projects": projects,
                 "unspecified": allocation.percentage
-                - sum(p.percentage for p in projects),
+                - sum(p["percentage"] for p in projects),
                 "color": PROJECT_COLORS[
                     ((allocation.category_id - 1) if allocation.category_id else index)
                     % len(PROJECT_COLORS)
@@ -104,8 +178,7 @@ def personal(workspace, user, data=None):
             # Keep explicitly added zero-valued draft rows after validation
             # errors. Snapshots only restore projects with an actual share.
             item["selected"] = str(item["value"]) not in {"0", ""} or (
-                data is not None
-                and data.get(f"selected_{item['field']}") == "on"
+                data is not None and data.get(f"selected_{item['field']}") == "on"
             )
         row["project_open"] = any(item["selected"] for item in row["projects"])
     total = sum(
@@ -151,35 +224,64 @@ def overview(workspace, team_id="", user_id=""):
             id__in=[m.latest_report for m in memberships if m.latest_report]
         )
     }
-    rows, sums, labels = [], {}, {}
+    rows, averages = [], {}
     participating = reported = 0
     for m in memberships:
         included = participates(m)
-        report = latest_reports.get(m.latest_report)
+        latest_report = latest_reports.get(m.latest_report)
+        report = report_vm(latest_report) if latest_report else None
         participating += int(included)
         if included and report:
             reported += 1
-            for a in report.allocations.all():
-                key = a.category_id or a.category_label
-                sums[key] = sums.get(key, 0) + a.percentage
-                labels[key] = a.category_label
+            for allocation in report["allocations"]:
+                aggregate = averages.setdefault(
+                    allocation["key"],
+                    {
+                        **allocation,
+                        "percentage": 0,
+                        "projects": {},
+                    },
+                )
+                aggregate["percentage"] += allocation["percentage"]
+                aggregate["name"] = allocation["name"]
+                aggregate["supports_projects"] |= allocation["supports_projects"]
+                for project in allocation["projects"]:
+                    share = aggregate["projects"].setdefault(
+                        project["key"],
+                        {
+                            **project,
+                            "percentage": 0,
+                        },
+                    )
+                    share["percentage"] += project["percentage"]
         rows.append(
             {
                 "membership": m,
                 "included": included,
-                "report": report_vm(report) if report else None,
+                "report": report,
             }
         )
+    average_allocations = (
+        [
+            {
+                **allocation,
+                "percentage": allocation["percentage"] / reported,
+                "projects": [
+                    {**project, "percentage": project["percentage"] / reported}
+                    for project in allocation["projects"].values()
+                ],
+            }
+            for allocation in averages.values()
+        ]
+        if reported
+        else []
+    )
     return {
         "members": rows,
         "participating": participating,
         "reported": reported,
-        "averages": [
-            {"name": labels[k], "percentage": round(v / reported, 1)}
-            for k, v in sums.items()
-        ]
-        if reported
-        else [],
+        "averages": average_allocations,
+        "average_donut": donut_vm(average_allocations, "average"),
         "teams": teams,
         "team_id": str(team_id),
         "user_id": str(user_id),

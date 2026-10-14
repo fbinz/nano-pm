@@ -1,0 +1,21 @@
+{% load i18n %}
+<c-vars donut />
+<div class="workload-summary">
+  <c-screens.workload.donut :rows="donut.rows" :total="donut.total" :remainder="donut.remainder" />
+  <div class="workload-summary-legend">
+    {% for row in donut.rows %}
+      {% if row.value %}
+        <div class="space-y-1">
+          <p class="workload-summary-category"><span class="workload-color-dot" style="background: {{ row.color }}" aria-hidden="true"></span><span>{{ row.category.name }}: {{ row.value|floatformat:'-1' }}%</span></p>
+          {% if row.category.supports_projects %}
+            <div class="workload-summary-projects">
+              {% for item in row.projects %}{% if item.value %}<p><span class="workload-color-dot" style="background: {{ item.project.color }}" aria-hidden="true"></span><span>{{ item.project.name }}: {{ item.value|floatformat:'-1' }}%</span></p>{% endif %}{% endfor %}
+              {% if row.unspecified %}<p class="text-base-content/50">{% trans "Unspecified project work" %}: {{ row.unspecified|floatformat:'-1' }}%</p>{% endif %}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% empty %}<p class="text-sm text-base-content/60">{% trans "No reports from participating members." %}</p>{% endfor %}
+    {% if donut.has_projects %}<p class="text-xs text-base-content/50">{% trans "Projects · outer ring" %}</p>{% endif %}
+  </div>
+</div>

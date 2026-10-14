@@ -71,10 +71,8 @@ async function postForm(page, url, fields) {
 }
 
 async function enableRoadmap(page) {
-  await page.goto('/');
-  await page.locator('.ws-chevron-btn').click();
+  await page.goto('/workspaces/settings/');
   await page.getByRole('button', { name: 'Enable public roadmap' }).click();
-  await page.locator('.ws-chevron-btn').click();
   return page.locator('#public-roadmap-link').getAttribute('href');
 }
 
@@ -163,6 +161,87 @@ async function submitWorkloadExample(page) {
 }
 
 test.describe('workload estimates', () => {
+  test('workload overview uses the shared average donut and per-user history bars', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await submitWorkloadExample(page);
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('31');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('59');
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    await signInAs(page, 'ideaeditor');
+    await submitWorkloadExample(page);
+    await page.getByLabel('Project work percentage', { exact: true }).fill('61');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('9');
+    await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('10');
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    await signInAs(page, 'demo');
+    await page.goto('/workload/overview/');
+    await expect(page.locator('#workload-coverage')).toHaveText('2 of 3 participating members reported.');
+    const average = page.locator('#workload-averages');
+    await expect(average.locator('[data-workload-donut]')).toBeVisible();
+    await expect(average.locator('[data-workload-center-value]')).toHaveText('100%');
+    await expect(average.locator('[data-workload-slice][data-percentage="30.5"]')).toHaveAttribute('stroke-dasharray', '29.7 70.3');
+    await expect(average.locator('[data-workload-project-slice]')).toHaveAttribute('data-percentage', '25');
+    await expect(average.locator('[data-workload-project-slice]')).toHaveAttribute('stroke-dashoffset', '-30.7');
+    await expect(average).toContainText('API Migration: 25%');
+    await expect(average).toContainText('Unspecified project work: 35%');
+    const member = page.locator('[data-workload-user="member1"]');
+    await expect(member.locator('[data-workload-donut]')).toHaveCount(0);
+    await expect(member.locator('table tbody tr')).toHaveCount(1);
+    await expect(member.locator('td').first().locator('time')).toBeVisible();
+    await expect(member.locator('td').nth(1).getByRole('img', { name: 'Workload allocation', exact: true })).toBeVisible();
+    await expect(member.locator('span[title="Maintenance: 31%"]')).toBeVisible();
+    await expect(member.locator('span[title^="Project work:"]')).toHaveAttribute('title', 'Project work: 59%\nAPI Migration: 40%\nUnspecified project work: 19%');
+    await expect(member).not.toContainText('API Migration:');
+    await expect(page.locator('main input[type="range"], main input[type="number"]')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Save estimate', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(average.locator('[data-workload-slice][data-percentage="30.5"]')).toHaveAttribute('stroke-dasharray', '29.7 70.3');
+    await page.setViewportSize({ width: 320, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByLabel('Person', { exact: true }).selectOption({ label: 'member1' });
+    await page.getByRole('button', { name: 'Filtern', exact: true }).click();
+    await expect(average.locator('[data-workload-slice][data-percentage="31"]')).toBeVisible();
+    await expect(average.locator('[data-workload-project-slice]')).toHaveAttribute('data-percentage', '40');
+  });
+
+  test('workload overview keeps small averaged project shares visible in the shared donut', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    for (const username of ['member1', 'ideaeditor', 'multi1']) {
+      await signInAs(page, username);
+      await page.goto('/profile/workload/');
+      await page.getByLabel('Project work percentage', { exact: true }).fill('100');
+      if (username === 'member1') {
+        await page.getByText('Optional project breakdown', { exact: true }).click();
+        await page.locator('.workload-projects').getByRole('button', { name: 'Add API Migration', exact: true }).click();
+        await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('1');
+      }
+      await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+      await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    }
+    await signInAs(page, 'demo');
+    await page.goto('/workload/overview/');
+    const project = page.locator('#workload-averages [data-workload-project-slice]');
+    await expect(project).toHaveAttribute('data-percentage', '0.333333');
+    expect(Number((await project.getAttribute('stroke-dasharray')).split(' ')[0])).toBeGreaterThan(0);
+    await expect(page.locator('#workload-averages [data-workload-center-value]')).toHaveText('100%');
+  });
+
+  test('workload overview shared donut represents an empty respondent set without invented allocations', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await page.goto('/workload/overview/');
+    const average = page.locator('#workload-averages');
+    await expect(average.locator('[data-workload-donut]')).toBeVisible();
+    await expect(average.locator('[data-workload-center-value]')).toHaveText('0%');
+    await expect(average.locator('[data-workload-remainder]')).toHaveAttribute('data-percentage', '100');
+    await expect(average).toContainText('No reports from participating members.');
+    await expect(page.locator('[data-workload-user="member1"]')).toContainText('Not reported');
+    await expect(page.locator('[data-workload-user="demo"]')).toContainText('Exempt');
+    await expect(page.locator('[data-workload-project-slice]')).toHaveCount(0);
+  });
+
   test('German workload guidance and validation use informal address', async ({ appPage: page }) => {
     await enableWorkload(page);
     await signInAs(page, 'member1');
@@ -693,17 +772,22 @@ test.describe('workload estimates', () => {
 
   test('workload settings switches save independently and refresh categories and navigation without reload', async ({ appPage: page }) => {
     await page.goto('/workspaces/workload/');
-    await expect(page.getByRole('switch')).toHaveCount(3);
+    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await expect(page.getByRole('switch')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Save workload settings' })).toHaveCount(0);
     const enabled = page.getByRole('switch', { name: 'Enable workload reporting', exact: true });
     const members = page.getByRole('switch', { name: 'Include members by default', exact: true });
     const pms = page.getByRole('switch', { name: 'Include PMs by default', exact: true });
     const setting = name => page.locator(`[data-workload-setting="workload_${name}"]`);
     await expect(enabled).not.toBeChecked();
-    await expect(members).toBeChecked();
-    await expect(pms).not.toBeChecked();
+    await expect(members).toHaveCount(0);
+    await expect(pms).toHaveCount(0);
     let navigations = 0;
     page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations++; });
+    await enabled.check();
+    await expect(setting('enabled')).toHaveAttribute('data-enabled', 'true');
+    await expect(members).toBeChecked();
+    await expect(pms).not.toBeChecked();
     await members.uncheck();
     await expect(setting('members_included')).toHaveAttribute('data-enabled', 'false');
     await pms.check();
@@ -727,10 +811,12 @@ test.describe('workload estimates', () => {
     expect(navigations).toBe(0);
     await page.reload();
     await expect(enabled).not.toBeChecked();
-    await expect(members).not.toBeChecked();
-    await expect(pms).toBeChecked();
+    await expect(members).toHaveCount(0);
+    await expect(pms).toHaveCount(0);
     await enabled.check();
     await expect(setting('enabled')).toHaveAttribute('data-enabled', 'true');
+    await expect(members).not.toBeChecked();
+    await expect(pms).toBeChecked();
     await expect(page.locator('#workload-categories-body tr')).toHaveCount(3);
     await pms.uncheck();
     await expect(setting('pms_included')).toHaveAttribute('data-enabled', 'false');
@@ -740,7 +826,7 @@ test.describe('workload estimates', () => {
 
   test('workload settings switches validate values and respect workspace PM permissions', async ({ appPage: page }) => {
     await page.goto('/workspaces/workload/');
-    await expect(page.getByRole('switch')).toHaveCount(3);
+    await expect(page.getByRole('switch')).toHaveCount(1);
     const url = '/workspaces/workload/settings/workload_enabled/';
     expect((await page.request.get(url)).status()).toBe(405);
     expect(await postForm(page, url, { workload_enabled: 'invalid' })).toBe(400);
@@ -879,8 +965,7 @@ test.describe('workload estimates', () => {
     await expect(row).toHaveCount(0);
     await expect(page.locator('[data-workload-category]')).toHaveCount(2);
     await page.goto('/workload/overview/');
-    await expect(page.locator('[data-workload-user="member1"]')).toContainText('Project work: 60%');
-    await expect(page.locator('[data-workload-user="member1"]')).toContainText('API Migration: 40%');
+    await expect(page.locator('[data-workload-user="member1"] span[title^="Project work:"]')).toHaveAttribute('title', /Project work: 60%\nAPI Migration: 40%/);
     await expect(page.locator('#workload-averages')).toContainText('Project work: 60%');
     await signInAs(page, 'member1');
     await page.goto('/workload/');
@@ -1087,7 +1172,7 @@ test.describe('workload estimates', () => {
     await page.getByLabel('Enable workload reporting', { exact: true }).uncheck();
     await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'false');
     await page.goto('/workload/overview/');
-    await expect(page.locator('[data-workload-user="member1"]')).toContainText('Maintenance: 30%');
+    await expect(page.locator('[data-workload-user="member1"] span[title^="Maintenance:"]')).toHaveAttribute('title', 'Maintenance: 30%');
     await expect(page.locator('#workload-coverage')).toHaveText('0 of 0 participating members reported.');
     await page.goto('/');
     await signInAs(page, 'member1');
@@ -1112,7 +1197,7 @@ test.describe('workload estimates', () => {
     const projectId = await page.locator('.project-group', { has: page.locator('.left-cell.proj', { hasText: 'API Migration' }) }).getAttribute('data-project-id');
     expect(await postForm(page, `/projects/${projectId}/move-workspace/`, { workspace_id: destinationId })).toBe(200);
     await page.goto('/workload/overview/');
-    await expect(page.locator('[data-workload-user="member1"]')).toContainText('API Migration: 40%');
+    await expect(page.locator('[data-workload-user="member1"] span[title^="Project work:"]')).toHaveAttribute('title', /API Migration: 40%/);
     await page.locator('.ws-chevron-btn').click();
     await page.locator('#workspace-menu .workspace-item', { hasText: 'Workload destination' }).click();
     await expect(page.locator('#workspace-name')).toHaveText('Workload destination');
@@ -1230,7 +1315,7 @@ test.describe('workload estimates', () => {
     await page.goto('/workload/overview/');
     await expect(page.locator('#workload-coverage')).toHaveText('1 of 3 participating members reported.');
     await expect(page.locator('#workload-averages')).toContainText('Maintenance: 30%');
-    await expect(page.locator('[data-workload-user="member1"]')).toContainText('Unspecified project work: 5%');
+    await expect(page.locator('[data-workload-user="member1"] span[title^="Project work:"]')).toHaveAttribute('title', /Unspecified project work: 5%/);
     await expect(page.locator('[data-workload-user="ideaeditor"]')).toContainText('Not reported');
     await expect(page.locator('[data-workload-user="demo"]')).toContainText('Exempt');
   });
@@ -1756,6 +1841,7 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
       await configureTeams(page, webhook.url);
       await saveTeamsIdentity(page, 'demo@example.com');
       const roadmap = await enableRoadmap(page);
+      await page.goto('/');
       const milestone = page.locator('.milestone[data-title="v2 API beta"]').first();
       const milestoneId = await milestone.getAttribute('data-milestone-id');
       const taskId = await milestone.getAttribute('data-task-id');
@@ -1896,6 +1982,7 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
       await configureTeams(page, webhook.url, ['milestone.project_changed', 'milestone.updated']);
       await saveTeamsIdentity(page, 'demo@example.com');
       const roadmap = await enableRoadmap(page);
+      await page.goto('/');
       const milestoneId = await page.locator('.milestone[data-title="v2 API beta"]').getAttribute('data-milestone-id');
       const taskId = await page.locator('.milestone[data-title="v2 API beta"]').getAttribute('data-task-id');
       const target = await page.locator('.left-cell.proj', { hasText: 'Onboarding revamp' }).getAttribute('data-project-id');
@@ -5580,6 +5667,94 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('.bar')).toHaveCount(0);
   });
 
+  test('workspace settings are reachable from the name cog and picker and gate workload configuration', async ({ appPage: page }) => {
+    const cog = page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true });
+    await expect(cog).toBeVisible();
+    await expect(cog).toHaveAttribute('href', '/workspaces/settings/');
+    await page.locator('.ws-chevron-btn').click();
+    const picker = page.locator('#workspace-menu');
+    await expect(picker.getByRole('button', { name: 'Enable public roadmap', exact: true })).toHaveCount(0);
+    await picker.getByRole('link', { name: 'Workspace settings', exact: true }).click();
+    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await expect(page.getByRole('heading', { name: 'Workspace settings', exact: true })).toBeVisible();
+    await page.locator('main').getByLabel('Workspace name', { exact: true }).fill('Planning');
+    await page.locator('main').getByRole('button', { name: 'Rename', exact: true }).click();
+    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await expect(page.locator('#workspace-name')).toHaveText('Planning');
+    const enabled = page.getByRole('switch', { name: 'Enable workload reporting', exact: true });
+    const categories = page.getByRole('table', { name: 'Categories', exact: true });
+    await expect(enabled).not.toBeChecked();
+    await expect(categories).toHaveCount(0);
+    await expect(page.getByLabel('Include members by default', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('table', { name: 'Participation overrides', exact: true })).toHaveCount(0);
+    await expect(page.locator('.drawer-side .menu a[href="/workspaces/workload/"]')).toHaveCount(0);
+    let navigations = 0;
+    page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations++; });
+    await enabled.check();
+    await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'true');
+    await expect(categories.locator('tbody tr')).toHaveCount(3);
+    await expect(page.getByLabel('Include members by default', { exact: true })).toBeChecked();
+    await expect(page.getByRole('table', { name: 'Participation overrides', exact: true })).toBeVisible();
+    await categories.locator('tbody tr').first().getByLabel('Category name', { exact: true }).fill('Operations');
+    await categories.locator('tbody tr').first().getByLabel('Category name', { exact: true }).press('Tab');
+    await expect(categories.locator('tbody tr').first()).toHaveAttribute('data-name', 'Operations');
+    await enabled.uncheck();
+    await expect(categories).toHaveCount(0);
+    await expect(page.getByLabel('Include PMs by default', { exact: true })).toHaveCount(0);
+    await enabled.check();
+    await expect(categories.locator('tbody tr')).toHaveCount(3);
+    await expect(categories.locator('tbody tr').first().getByLabel('Category name', { exact: true })).toHaveValue('Operations');
+    expect(navigations).toBe(0);
+    await page.reload();
+    await expect(enabled).toBeChecked();
+    await expect(categories.locator('tbody tr')).toHaveCount(3);
+  });
+
+  test('workspace settings configure the public roadmap and keep changes on the settings page', async ({ appPage: page, request }) => {
+    await page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true }).click();
+    await page.getByRole('button', { name: 'Enable public roadmap', exact: true }).click();
+    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await page.getByLabel('Public roadmap title', { exact: true }).fill('Product roadmap');
+    await page.getByLabel('Public roadmap description', { exact: true }).fill('Upcoming releases');
+    await page.locator('#workspace-roadmap-settings').getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await expect(page.getByLabel('Public roadmap title', { exact: true })).toHaveValue('Product roadmap');
+    const oldHref = await page.locator('#public-roadmap-link').getAttribute('href');
+    const roadmap = await request.get(oldHref);
+    expect(roadmap.status()).toBe(200);
+    expect(await roadmap.text()).toContain('Upcoming releases');
+    await page.getByRole('button', { name: 'Regenerate public link', exact: true }).click();
+    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    const newHref = await page.locator('#public-roadmap-link').getAttribute('href');
+    expect(newHref).not.toBe(oldHref);
+    expect((await request.get(oldHref)).status()).toBe(404);
+    expect((await request.get(newHref)).status()).toBe(200);
+    await page.getByRole('button', { name: 'Disable public roadmap', exact: true }).click();
+    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await expect(page.getByLabel('Public roadmap title', { exact: true })).toHaveCount(0);
+    expect((await request.get(newHref)).status()).toBe(404);
+    await expect(page.getByLabel('Enable workload reporting', { exact: true })).not.toBeChecked();
+  });
+
+  test('workspace settings are PM-only and scoped to the active workspace', async ({ appPage: page }) => {
+    await page.locator('.ws-chevron-btn').click();
+    await page.fill('#workspace-create-name', 'Settings sandbox');
+    await page.locator('#workspace-create-name').press('Enter');
+    await page.waitForURL('/');
+    await page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true }).click();
+    await page.getByLabel('Enable workload reporting', { exact: true }).check();
+    await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'true');
+    await page.locator('.ws-chevron-btn').click();
+    await page.locator('#workspace-menu .workspace-item', { hasText: "demo's workspace" }).click();
+    await page.waitForURL('/');
+    await page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true }).click();
+    await expect(page.getByLabel('Enable workload reporting', { exact: true })).not.toBeChecked();
+    await expect(page.getByRole('table', { name: 'Categories', exact: true })).toHaveCount(0);
+    await signInAs(page, 'member1');
+    await expect(page.getByRole('link', { name: 'Workspace settings', exact: true })).toHaveCount(0);
+    expect((await page.goto('/workspaces/settings/')).status()).toBe(403);
+  });
+
   test('topbar shows the current workspace name', async ({ appPage: page }) => {
     await expect(page.locator('#workspace-name')).toHaveText("demo's workspace");
   });
@@ -5647,14 +5822,11 @@ test.describe('workspace isolation', () => {
   });
 
   test('PM can enable and revoke a public roadmap generated from milestones', async ({ appPage: page, request }) => {
-    await page.locator('.ws-chevron-btn').click();
-    await expect(page.locator('#workspace-menu')).toBeVisible();
+    await page.goto('/workspaces/settings/');
     await expect(page.locator('#public-roadmap-link')).toHaveCount(0);
-
     await page.getByRole('button', { name: 'Enable public roadmap' }).click();
-    await page.waitForURL('/');
+    await page.waitForURL('/workspaces/settings/');
 
-    await page.locator('.ws-chevron-btn').click();
     const href = await page.locator('#public-roadmap-link').getAttribute('href');
     expect(href).toMatch(/^\/roadmap\/[\w-]+\/$/);
 
@@ -5671,18 +5843,13 @@ test.describe('workspace isolation', () => {
     expect(body).not.toContain('Alex Chen');
 
     await page.getByRole('button', { name: 'Disable public roadmap' }).click();
-    await page.waitForURL('/');
+    await page.waitForURL('/workspaces/settings/');
     const revoked = await request.get(href);
     expect(revoked.status()).toBe(404);
   });
 
   test('public roadmap filters milestones by project and switches grouped/timeline views', async ({ appPage: page }) => {
-    await page.locator('.ws-chevron-btn').click();
-    await page.getByRole('button', { name: 'Enable public roadmap' }).click();
-    await page.waitForURL('/');
-
-    await page.locator('.ws-chevron-btn').click();
-    const href = await page.locator('#public-roadmap-link').getAttribute('href');
+    const href = await enableRoadmap(page);
     await page.goto(href);
 
     const filters = page.locator('#roadmap-project-filter');
@@ -5720,16 +5887,10 @@ test.describe('workspace isolation', () => {
   });
 
   test('regenerating the public roadmap link revokes the old URL', async ({ appPage: page, request }) => {
-    await page.locator('.ws-chevron-btn').click();
-    await page.getByRole('button', { name: 'Enable public roadmap' }).click();
-    await page.waitForURL('/');
-
-    await page.locator('.ws-chevron-btn').click();
-    const oldHref = await page.locator('#public-roadmap-link').getAttribute('href');
+    const oldHref = await enableRoadmap(page);
     await page.getByRole('button', { name: 'Regenerate public link' }).click();
-    await page.waitForURL('/');
+    await page.waitForURL('/workspaces/settings/');
 
-    await page.locator('.ws-chevron-btn').click();
     const newHref = await page.locator('#public-roadmap-link').getAttribute('href');
     expect(newHref).toMatch(/^\/roadmap\/[\w-]+\/$/);
     expect(newHref).not.toBe(oldHref);
@@ -6043,7 +6204,7 @@ test.describe('app sidebar', () => {
     await expect(workspaceMenu.locator('#workspace-rename-name')).toHaveCSS('font-size', '16px');
     await expect(workspaceMenu.locator('#workspace-create-name')).toHaveCSS('font-size', '16px');
     await expect(workspaceMenu.getByRole('button', { name: 'Rename' })).toHaveCSS('font-size', '16px');
-    await expect(workspaceMenu.locator('p').first()).toHaveCSS('font-size', '16px');
+    await expect(workspaceMenu.getByRole('link', { name: 'Workspace settings', exact: true })).toHaveCSS('font-size', '16px');
 
     // Projects link is active on the main page
     await expect(nav.locator('a', { hasText: 'Projects' })).toHaveClass(/menu-active/);

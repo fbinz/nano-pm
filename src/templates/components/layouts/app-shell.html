@@ -10,6 +10,9 @@
         <div class="sidebar-workspace">
           <div class="sidebar-workspace-display">
             <span id="workspace-name" class="ws-name">{{ workspace.name }}</span>
+            {% if is_pm %}
+              <a class="ws-settings-link" href="{% url 'workspace_settings' %}" aria-label="{% trans 'Workspace settings' %}" title="{% trans 'Workspace settings' %}"><c-lucide name="settings" size="14" /></a>
+            {% endif %}
             <button type="button" class="ws-chevron-btn"
                     aria-label="{% trans 'Switch workspace' %}"
                     popovertarget="workspace-menu">
@@ -29,6 +32,7 @@
               </form>
             {% endfor %}
             {% if is_pm %}
+              <a class="workspace-item" href="{% url 'workspace_settings' %}"><span>{% trans "Workspace settings" %}</span><c-lucide name="settings" size="14" /></a>
               <form method="post" action="/workspaces/rename/" class="workspace-create">
                 {% csrf_token %}
                 <c-lucide name="pencil" size="14" />
@@ -43,40 +47,6 @@
               <input id="workspace-create-name" class="input input-sm w-full" type="text" name="name" placeholder="{% trans 'Create workspace' %}" required>
               <button type="submit" class="btn btn-sm btn-neutral workspace-create-btn">{% trans "Create" %}</button>
             </form>
-            {% if is_pm %}
-              <div class="workspace-menu-header mt-2">{% trans "Public roadmap" %}</div>
-              <div class="px-2 pb-2 text-sm">
-                {% if workspace.public_roadmap_enabled and workspace.public_roadmap_token %}
-                  <a id="public-roadmap-link"
-                     class="link link-primary break-all"
-                     href="/roadmap/{{ workspace.public_roadmap_token }}/"
-                     target="_blank"
-                     rel="noopener">{% trans "Open public roadmap" %}</a>
-                  <form method="post" action="/workspaces/public-roadmap/" class="mt-2 space-y-2">
-                    {% csrf_token %}
-                    <input class="input input-sm w-full" type="text" name="title"
-                           value="{{ workspace.public_roadmap_title }}"
-                           placeholder="{{ workspace.name }} {% trans 'Roadmap' %}">
-                    <textarea class="textarea textarea-sm w-full" name="description"
-                              placeholder="{% trans 'Optional public description' %}">{{ workspace.public_roadmap_description }}</textarea>
-                    <div class="flex gap-2">
-                      <button type="submit" name="action" value="save" class="btn btn-xs btn-neutral">{% trans "Save" %}</button>
-                      <button type="submit" name="action" value="disable" class="btn btn-xs btn-ghost">{% trans "Disable public roadmap" %}</button>
-                    </div>
-                  </form>
-                  <form method="post" action="/workspaces/public-roadmap/regenerate/" class="mt-2">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-xs btn-ghost">{% trans "Regenerate public link" %}</button>
-                  </form>
-                {% else %}
-                  <p class="mb-2 text-xs opacity-70">{% trans "Share task milestones without exposing people or dependencies." %}</p>
-                  <form method="post" action="/workspaces/public-roadmap/">
-                    {% csrf_token %}
-                    <button type="submit" name="action" value="enable" class="btn btn-sm btn-neutral w-full">{% trans "Enable public roadmap" %}</button>
-                  </form>
-                {% endif %}
-              </div>
-            {% endif %}
           </div>
         </div>
         <ul class="menu gap-0 w-full p-0 rounded-none">
@@ -101,9 +71,6 @@
           {% endif %}
           {% if is_pm %}
             <c-screens.workload.overview-nav :workspace="workspace" :active_nav="active_nav" />
-            <li><a href="/workspaces/workload/"{% if active_nav == "workload-settings" %} class="menu-active"{% endif %}>
-              <c-lucide name="settings" size="18" /> {% trans "Workload settings" %}
-            </a></li>
           {% endif %}
           <li><a href="/activity/"{% if active_nav == "activity" %} class="menu-active"{% endif %}>
             <c-lucide name="history" size="18" /> {% trans "Activity" %}

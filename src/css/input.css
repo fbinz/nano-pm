@@ -147,6 +147,10 @@ html, body { height: 100%; }
   .sidebar-workspace-display .ws-name {
     @apply flex-1 font-medium truncate;
   }
+  .ws-settings-link {
+    @apply flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded
+           text-base-content/60 hover:bg-base-300/50 hover:text-base-content;
+  }
   .ws-chevron-btn {
     @apply flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded
            bg-transparent border border-base-300 cursor-pointer
@@ -988,6 +992,21 @@ html, body { height: 100%; }
 
 /* Personal workload editor: a visual draft, with ordinary form inputs. */
 @layer components {
+  .workload-overview-filters { @apply grid gap-3 items-end; grid-template-columns: minmax(0, 1fr); }
+  .workload-summary { @apply grid gap-4 items-center py-3; grid-template-columns: minmax(0, 1fr); }
+  .workload-summary .workload-donut-wrap { @apply mx-auto; max-width: 224px; }
+  .workload-average .workload-donut-wrap { max-width: 260px; }
+  .workload-summary-legend { @apply min-w-0 space-y-3 text-sm; }
+  .workload-summary-category { @apply flex gap-2 items-center font-semibold; overflow-wrap: anywhere; }
+  .workload-summary-projects { @apply ml-4 space-y-1 text-xs text-base-content/70; }
+  .workload-summary-projects p { @apply flex gap-2 items-center; overflow-wrap: anywhere; }
+  [data-workload-readonly] .workload-slice, [data-workload-readonly] .workload-project-slice { cursor: help; }
+  [data-workload-readonly] .workload-slice:hover { stroke-width: 34px; }
+  [data-workload-readonly] .workload-project-slice:hover { stroke-width: 14px; }
+  @media (min-width: 640px) {
+    .workload-overview-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+    .workload-summary { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
+  }
   .workload-editor-header { @apply flex flex-wrap items-start justify-between gap-3; }
   .workload-editor { @apply grid gap-6 py-6; grid-template-columns: minmax(0, 1fr); }
   .workload-chart-panel { @apply flex flex-col items-center justify-center text-center gap-2; }

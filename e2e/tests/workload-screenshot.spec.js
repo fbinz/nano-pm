@@ -14,7 +14,12 @@ for (const [name, viewport] of Object.entries({
 })) {
   test(`workload estimates and settings fit ${name} screens`, async ({ appPage: page }, testInfo) => {
     await page.setViewportSize(viewport);
-    await page.goto('/workspaces/workload/');
+    await page.goto('/workspaces/settings/');
+    await expect(page.getByRole('heading', { name: 'Workspace settings', exact: true })).toBeVisible();
+    await expect(page.getByRole('switch')).toHaveCount(1);
+    await expect(page.getByRole('table', { name: 'Categories', exact: true })).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath('workspace-settings-disabled.png'), fullPage: true });
     await expect(page.getByText('Disabling reporting prevents new estimates but preserves history.', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'View workload overview and history', exact: true })).toHaveCount(0);
     await page.getByLabel('Enable workload reporting', { exact: true }).check();

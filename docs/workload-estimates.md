@@ -7,7 +7,16 @@ from Gantt task durations. Estimates remain current until replaced or reviewed.
 ## Setup
 
 Run `just migrate` after deploying. Existing and new workspaces start with the
-feature disabled. A workspace PM can open **Workload settings** to enable it.
+feature disabled. A workspace PM can open **Workspace settings** at
+`/workspaces/settings/` using the cog beside the workspace name or the settings
+link in the workspace picker. The page also contains workspace renaming and
+public roadmap configuration (enable/disable, title, description, and public-link
+regeneration). Roadmap changes return to the settings page. The old
+`/workspaces/workload/` page redirects here.
+
+**Workload settings** shows only the reporting toggle while disabled. Enabling it
+reveals participation defaults, categories, and membership overrides immediately;
+disabling it hides them without discarding the configuration or estimate history.
 The reporting toggle and both participation-default toggles save immediately,
 without a Save button or a page reload. Each toggle updates only its own setting
 and shows a dismissible success toast. The overview navigation updates immediately.
@@ -101,7 +110,16 @@ The running form total can therefore change after category configuration changes
 ## Overview and history
 
 PMs can filter current membership rows by team and person. Coverage distinguishes
-missing reports from exempt members. Averages use the latest snapshot for each
+missing reports from exempt members. The overview reuses the personal editor's
+donut widget in a read-only mode for the respondent average. Individual estimates
+use the same date/time and stacked-bar rows as workspace history, aligned across
+members, with category and project details on hover. Category legends and the thin
+project ring use percentages of
+total workload; project averages include unspecified shares and use the same
+respondent denominator as categories. Empty respondent sets show a neutral 0%
+donut rather than invented allocations. Fractional SVG geometry remains
+locale-independent, while visible percentages follow the selected language.
+History stays a compact date/time and stacked-bar table with hover details. Averages use the latest snapshot for each
 participating respondent only; missing, exempt and former members are not counted
 as zero. Percentages are unweighted respondent averages, not absolute team capacity.
 Estimates older than 90 days are labelled outdated but remain in the averages.

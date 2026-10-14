@@ -30,7 +30,7 @@ from .ideas import (
     idea_convert_project, idea_create_task, idea_delete,
 )
 from .workspaces import (
-    workspace_switch, workspace_create, workspace_rename,
+    workspace_switch, workspace_create, workspace_rename, workspace_settings,
     public_roadmap, public_roadmap_update, public_roadmap_regenerate,
 )
 from .activity import activity_page
@@ -44,6 +44,7 @@ from .workload import (
 )
 
 urlpatterns = [
+    path("workspaces/settings/", workspace_settings, name="workspace_settings"),
     path("workspaces/workload/", workload_settings, name="workload_settings"),
     path("workspaces/workload/settings/<str:setting>/", setting_update,
          name="workload_setting_update"),

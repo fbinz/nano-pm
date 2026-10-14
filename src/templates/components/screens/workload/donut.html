@@ -1,0 +1,33 @@
+{% load i18n %}
+<c-vars rows total editable="false" remainder=0 />
+<div class="workload-donut-wrap" {% if editable != 'true' %}data-workload-readonly{% endif %}>
+  <svg data-workload-donut viewBox="0 0 240 240" role="group" aria-label="{% trans 'Workload allocation' %}">
+    <circle class="workload-ring-track" cx="120" cy="120" r="88" fill="none" stroke-width="30" />
+    {% for row in rows %}
+      <circle class="workload-slice" data-workload-slice="{{ row.field }}" cx="120" cy="120" r="88" fill="none" stroke="{{ row.color }}" stroke-width="30" pathLength="100" transform="rotate(-90 120 120)"
+        {% if editable == 'true' %}stroke-dasharray="0 100" role="button" tabindex="-1" aria-label="{{ row.category.name }}"
+        {% else %}data-percentage="{{ row.arc.percentage }}" stroke-dasharray="{{ row.arc.dasharray }}" stroke-dashoffset="{{ row.arc.offset }}" role="img" tabindex="{% if row.value %}0{% else %}-1{% endif %}" aria-label="{{ row.category.name }}: {{ row.value|floatformat:'-1' }}%" {% if not row.value %}style="display: none"{% endif %}{% endif %}>
+        <title>{{ row.category.name }}{% if editable != 'true' %}: {{ row.value|floatformat:'-1' }}%{% endif %}</title>
+      </circle>
+    {% endfor %}
+    <circle data-workload-remainder class="workload-ring-remainder" cx="120" cy="120" r="88" fill="none" stroke-width="30" pathLength="100" transform="rotate(-90 120 120)"
+      {% if editable == 'true' %}stroke-dasharray="0 100"{% else %}data-percentage="{{ remainder|floatformat:'-6u' }}" stroke-dasharray="{{ remainder|floatformat:'-6u' }} 100" stroke-dashoffset="-{{ total|floatformat:'-6u' }}" {% if not remainder %}style="display: none"{% endif %}{% endif %} />
+    {% for row in rows %}{% if row.category.supports_projects %}
+      {% for item in row.projects %}
+        <circle id="workload-project-slice-{{ item.field }}" class="workload-project-slice" data-workload-project-slice="{{ item.field }}" data-category-field="{{ row.field }}" cx="120" cy="120" r="112" fill="none" stroke="{{ item.project.color }}" stroke-width="10" pathLength="100" transform="rotate(-90 120 120)"
+          {% if editable == 'true' %}stroke-dasharray="0 100" role="button" tabindex="-1" aria-label="{{ item.project.name }}"
+          {% else %}data-percentage="{{ item.arc.percentage }}" stroke-dasharray="{{ item.arc.dasharray }}" stroke-dashoffset="{{ item.arc.offset }}" role="img" tabindex="{% if item.value %}0{% else %}-1{% endif %}" aria-label="{{ row.category.name }}: {{ item.project.name }}: {{ item.value|floatformat:'-1' }}%" {% if not item.value %}style="display: none"{% endif %}{% endif %}>
+          <title>{{ item.project.name }}{% if editable != 'true' %}: {{ item.value|floatformat:'-1' }}%{% endif %}</title>
+        </circle>
+      {% endfor %}
+      <circle data-workload-project-ring-remainder="{{ row.field }}" class="workload-ring-remainder workload-project-ring-remainder" cx="120" cy="120" r="112" fill="none" stroke-width="10" pathLength="100" transform="rotate(-90 120 120)"
+        {% if editable == 'true' %}stroke-dasharray="0 100"{% else %}data-percentage="{{ row.remainder_arc.percentage }}" stroke-dasharray="{{ row.remainder_arc.dasharray }}" stroke-dashoffset="{{ row.remainder_arc.offset }}" {% if not row.has_projects or not row.unspecified %}style="display: none"{% endif %}{% endif %}>
+        <title>{% trans "Unspecified project work" %}{% if editable != 'true' %}: {{ row.unspecified|floatformat:'-1' }}%{% endif %}</title>
+      </circle>
+    {% endif %}{% endfor %}
+  </svg>
+  <div class="workload-donut-center" aria-hidden="true">
+    <span data-workload-center-value class="workload-center-value">{{ total|floatformat:'-1' }}%</span>
+    <span data-workload-center-label class="workload-center-label">{% trans "allocated" %}</span>
+  </div>
+</div>

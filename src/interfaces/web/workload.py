@@ -56,10 +56,22 @@ def settings_options(workspace):
     ]
 
 
+def settings_context(workspace):
+    return {
+        "options": settings_options(workspace),
+        "categories": WorkloadCategory.objects.filter(workspace=workspace),
+        "memberships": Membership.objects.filter(workspace=workspace)
+        .select_related("user")
+        .order_by("user__username"),
+    }
+
+
 @login_required
 @pm_required
 @require_http_methods(["GET", "POST"])
 def settings(request):
+    if request.method == "GET":
+        return redirect("workspace_settings")
     error = ""
     if request.method == "POST":
         try:
@@ -87,19 +99,11 @@ def settings(request):
         except ValidationError as exc:
             error = " ".join(exc.messages)
         else:
-            return redirect("workload_settings")
+            return redirect("workspace_settings")
     return render(
         request,
-        "components/screens/workload/settings.html",
-        {
-            **context(request),
-            "error": error,
-            "options": settings_options(request.workspace),
-            "categories": WorkloadCategory.objects.filter(workspace=request.workspace),
-            "memberships": Membership.objects.filter(workspace=request.workspace)
-            .select_related("user")
-            .order_by("user__username"),
-        },
+        "components/screens/workspaces/settings.html",
+        {**context(request), **settings_context(request.workspace), "error": error},
     )
 
 
@@ -108,7 +112,7 @@ def settings(request):
 @require_http_methods(["POST"])
 def setting_update(request, setting):
     try:
-        created_categories = configure(
+        configure(
             workspace=request.workspace,
             actor=request.user,
             data=request.POST,
@@ -122,14 +126,19 @@ def setting_update(request, setting):
         for option in settings_options(request.workspace)
         if option["name"] == setting
     )
+    if setting == "workload_enabled":
+        fragment = render_component(
+            request,
+            "screens/workload/configuration",
+            workspace=request.workspace,
+            **settings_context(request.workspace),
+        )
+    else:
+        fragment = render_component(
+            request, "screens/workload/setting-toggle", option=option
+        )
     patches = [
-        SSE.patch_elements(
-            render_component(
-                request,
-                "screens/workload/setting-toggle",
-                option=option,
-            )
-        ),
+        SSE.patch_elements(fragment),
         SSE.patch_elements(
             render_component(
                 request,
@@ -142,23 +151,10 @@ def setting_update(request, setting):
                 request,
                 "screens/workload/overview-nav",
                 workspace=request.workspace,
-                active_nav="workload-settings",
+                active_nav="workspace-settings",
             )
         ),
     ]
-    if created_categories:
-        patches.append(
-            SSE.patch_elements(
-                "".join(
-                    render_component(
-                        request, "screens/workload/category-row", category=category
-                    )
-                    for category in created_categories
-                ),
-                selector="#workload-categories-body",
-                mode=ElementPatchMode.APPEND,
-            )
-        )
     return DatastarResponse(patches)
 
 

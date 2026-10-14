@@ -1,20 +1,2 @@
-{% load i18n %}
-<c-vars report project_details="inline" />
-<div class="space-y-2">
-  <p>{% trans "Reviewed" %}: <time datetime="{{ report.reviewed_at|date:'c' }}">{{ report.reviewed_at|date:'SHORT_DATETIME_FORMAT' }}</time>
-    {% if report.outdated %}<span class="badge badge-warning">{% trans "Outdated estimate (over 90 days)" %}</span>{% endif %}
-  </p>
-  <c-screens.workload.allocation-bar :report="report" :project_details="project_details" />
-  <ul>
-    {% for allocation in report.allocations %}
-      <li>{{ allocation.name }}: {{ allocation.percentage }}%
-        {% if allocation.supports_projects and project_details == 'inline' %}
-          <ul class="pl-6">
-            {% for project in allocation.projects %}<li>{{ project.project_label }}: {{ project.percentage }}%</li>{% endfor %}
-            <li>{% trans "Unspecified project work" %}: {{ allocation.unspecified }}%</li>
-          </ul>
-        {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
-</div>
+<c-vars report />
+<c-screens.workload.history :single_report="report" />

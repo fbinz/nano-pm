@@ -1,35 +1,47 @@
 {% load i18n %}
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" :can_view_ideas="can_view_ideas" active_nav="workload-overview">
-  <main class="p-6 max-w-4xl space-y-6">
-    <h1 class="text-2xl font-bold">{% trans "Workload overview" %}</h1>
-    {% if not workspace.workload_enabled %}<p>{% trans "Reporting is disabled. Historical estimates are retained; no members are currently participating." %}</p>{% endif %}
-    <form method="get" class="flex flex-wrap gap-3 items-center">
-      <label for="workload-team">{% trans "Team" %}</label><select id="workload-team" name="team" class="select select-sm">
-        <option value="">{% trans "All teams" %}</option>
-        {% for team in teams %}<option value="{{ team.id }}" {% if team_id == team.id|stringformat:'s' %}selected{% endif %}>{{ team.name }}</option>{% endfor %}
-      </select>
-      <label for="workload-person">{% trans "Person" %}</label><select id="workload-person" name="person" class="select select-sm">
-        <option value="">{% trans "All people" %}</option>
-        {% for m in people_choices %}<option value="{{ m.user_id }}" {% if user_id == m.user_id|stringformat:'s' %}selected{% endif %}>{{ m.user.username }}</option>{% endfor %}
-      </select>
+  <main class="p-4 sm:p-6 max-w-5xl space-y-8">
+    <header class="flex flex-wrap items-center gap-3">
+      <label for="app-drawer" class="btn btn-sm btn-ghost lg:hidden" aria-label="{% trans 'Open menu' %}"><c-lucide name="menu" size="20" /></label>
+      <h1 class="text-2xl font-bold">{% trans "Workload overview" %}</h1>
+      <p id="workload-coverage" class="text-sm text-base-content/60">{% blocktrans %}{{ reported }} of {{ participating }} participating members reported.{% endblocktrans %}</p>
+    </header>
+    {% if not workspace.workload_enabled %}<p class="text-sm text-base-content/60">{% trans "Reporting is disabled. Historical estimates are retained; no members are currently participating." %}</p>{% endif %}
+    <form method="get" class="workload-overview-filters">
+      <div class="space-y-1 min-w-0">
+        <label class="block text-sm font-semibold" for="workload-team">{% trans "Team" %}</label>
+        <select id="workload-team" name="team" class="select select-sm w-full">
+          <option value="">{% trans "All teams" %}</option>
+          {% for team in teams %}<option value="{{ team.id }}" {% if team_id == team.id|stringformat:'s' %}selected{% endif %}>{{ team.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="space-y-1 min-w-0">
+        <label class="block text-sm font-semibold" for="workload-person">{% trans "Person" %}</label>
+        <select id="workload-person" name="person" class="select select-sm w-full">
+          <option value="">{% trans "All people" %}</option>
+          {% for m in people_choices %}<option value="{{ m.user_id }}" {% if user_id == m.user_id|stringformat:'s' %}selected{% endif %}>{{ m.user.username }}</option>{% endfor %}
+        </select>
+      </div>
       <button class="btn btn-sm" type="submit">{% trans "Filter" %}</button>
     </form>
-    <section>
-      <p id="workload-coverage">{% blocktrans %}{{ reported }} of {{ participating }} participating members reported.{% endblocktrans %}</p>
+    <section class="space-y-3 workload-average">
       <h2 class="text-xl font-semibold">{% trans "Average workload mix" %}</h2>
-      <p>{% trans "Averages include respondents only, not missing or exempt members. These estimates are not absolute team capacity." %}</p>
-      <ul id="workload-averages">{% for average in averages %}<li>{{ average.name }}: {{ average.percentage|floatformat:'-1' }}%</li>{% empty %}<li>{% trans "No reports from participating members." %}</li>{% endfor %}</ul>
+      <div id="workload-averages" class="max-w-2xl"><c-screens.workload.summary :donut="average_donut" /></div>
     </section>
-    {% for member in members %}
-      <section class="border border-base-300 rounded p-4 space-y-2" data-workload-user="{{ member.membership.user.username }}">
-        <h2 class="font-semibold">{{ member.membership.user.username }}</h2>
-        {% if not member.included %}<p class="badge badge-ghost">{% trans "Exempt" %}</p>
-        {% elif not member.report %}<p>{% trans "Not reported" %}</p>{% endif %}
-        {% if member.report %}<c-screens.workload.report :report="member.report" />{% endif %}
-      </section>
-    {% endfor %}
-    <details>
-      <summary class="cursor-pointer">{% trans "Recent workspace estimate history (including former members)" %}</summary>
+    <div class="grid gap-6">
+      {% for member in members %}
+        <section class="border-t border-base-300 pt-4 space-y-3 min-w-0" data-workload-user="{{ member.membership.user.username }}">
+          <header class="flex flex-wrap items-center gap-2">
+            <h2 class="font-semibold">{{ member.membership.user.username }}</h2>
+            {% if not member.included %}<span class="badge badge-ghost">{% trans "Exempt" %}</span>
+            {% elif not member.report %}<span class="badge badge-ghost">{% trans "Not reported" %}</span>{% endif %}
+          </header>
+          {% if member.report %}<c-screens.workload.report :report="member.report" />{% endif %}
+        </section>
+      {% endfor %}
+    </div>
+    <details class="workload-history">
+      <summary>{% trans "Recent workspace estimate history (including former members)" %}</summary>
       <c-screens.workload.history :reports="recent_history" show_people="true" />
     </details>
   </main>

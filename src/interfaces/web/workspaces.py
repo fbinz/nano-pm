@@ -4,7 +4,7 @@ import secrets
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.cache import never_cache
 
@@ -12,7 +12,24 @@ from actions.activity import change_set, created_changes, log_activity, snapshot
 from data.models import Membership, Workspace, WorkspaceRole
 from .public_subscriptions import render_public_roadmap
 
-from .helpers import is_pm
+from .helpers import is_pm, pm_required, workspace_context
+from .workload import settings_context
+
+
+@login_required
+@pm_required
+@require_http_methods(["GET"])
+def workspace_settings(request: HttpRequest):
+    return render(
+        request,
+        "components/screens/workspaces/settings.html",
+        {
+            "user": request.user,
+            "is_pm": True,
+            **workspace_context(request),
+            **settings_context(request.workspace),
+        },
+    )
 
 
 @require_http_methods(["POST"])
@@ -65,6 +82,8 @@ def workspace_rename(request: HttpRequest):
         changes=change_set(before, snapshot(workspace, ["name"])),
         skip_empty_changes=True,
     )
+    if request.POST.get("next") == "workspace_settings":
+        return redirect("workspace_settings")
     return redirect("/")
 
 
@@ -130,7 +149,7 @@ def public_roadmap_update(request: HttpRequest):
         ])),
         skip_empty_changes=True,
     )
-    return redirect("/")
+    return redirect("workspace_settings")
 
 
 @require_http_methods(["POST"])
@@ -155,7 +174,7 @@ def public_roadmap_regenerate(request: HttpRequest):
         entity_label=workspace.name,
         changes=changes,
     )
-    return redirect("/")
+    return redirect("workspace_settings")
 
 
 @never_cache
