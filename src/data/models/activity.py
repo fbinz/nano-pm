@@ -152,6 +152,7 @@ class ActivityEvent(models.Model):
             "teams": _("Teams"),
             "teams_webhook_url": _("Microsoft Teams webhook URL"),
             "teams_notify_events": _("Notify for"),
+            "prompt_milestone_move_reason": _("Offer a reason when moving milestones"),
             "teams_public_subscriber_domains": _("Allowed domains for public followers"),
             "title": _("Title"),
             "workspace": _("Workspace"),

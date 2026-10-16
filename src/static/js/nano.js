@@ -720,7 +720,7 @@
 
   function syncMilestoneMoveReason(textarea) {
     const submit = document.getElementById('milestone-move-submit');
-    if (submit) submit.disabled = textarea.value.trim().length < 3;
+    if (submit) submit.disabled = textarea.required && textarea.value.trim().length < 3;
   }
 
   function chooseMilestoneMoveReason(reason) {
@@ -731,7 +731,7 @@
     textarea.focus();
   }
 
-  function showMilestoneMovePrompt({ milestoneId, title, originalDate, newDate, data, restore }) {
+  function showMilestoneMovePrompt({ milestoneId, title, originalDate, newDate, requireReason, data, restore }) {
     const dialog = milestoneMoveDialog();
     if (!dialog) return;
     const [oy, om, od] = originalDate.split('-').map(Number);
@@ -742,13 +742,15 @@
     const unit = absDays === 1 ? _('day') : _('days');
     const direction = days > 0 ? _('later') : _('earlier');
 
-    pendingMilestoneMove = { milestoneId, data, restore };
+    pendingMilestoneMove = { milestoneId, data, restore, requireReason };
     dialog.querySelector('[data-milestone-title]').textContent = title;
     dialog.querySelector('[data-original-date]').textContent = originalDate;
     dialog.querySelector('[data-new-date]').textContent = newDate;
     dialog.querySelector('[data-date-delta]').textContent = `(${absDays} ${unit} ${direction})`;
     const textarea = dialog.querySelector('textarea[name="reason"]');
     textarea.value = '';
+    textarea.required = requireReason;
+    dialog.querySelector('[data-optional-reason]').hidden = requireReason;
     syncMilestoneMoveReason(textarea);
     dialog.showModal();
     requestAnimationFrame(() => textarea.focus());
@@ -765,7 +767,7 @@
   function confirmMilestoneMove() {
     const textarea = document.getElementById('milestone-move-reason');
     const reason = textarea?.value.trim() || '';
-    if (!pendingMilestoneMove || reason.length < 3) return;
+    if (!pendingMilestoneMove || (pendingMilestoneMove.requireReason && reason.length < 3)) return;
     const pending = pendingMilestoneMove;
     pendingMilestoneMove = null;
     const dialog = milestoneMoveDialog();
@@ -806,12 +808,14 @@
     if (requireReasonCheckbox) {
       values.require_move_reason = requireReasonCheckbox.checked;
     }
-    if (requireReason && newDate && originalDate && newDate !== originalDate) {
+    const promptReason = requireReason || milestoneMoveDialog()?.dataset.promptOptionalReason === 'true';
+    if (promptReason && newDate && originalDate && newDate !== originalDate) {
       showMilestoneMovePrompt({
         milestoneId: form.dataset.milestoneId,
         title: values.title || '',
         originalDate,
         newDate,
+        requireReason,
         data: { ...values, _update: true },
         restore: () => { form.elements.date.value = originalDate; },
       });
@@ -859,7 +863,8 @@
       const dxDays = Math.round((ev.clientX - startX) / ppd);
       if (dxDays === 0) return;
       const newDate = fmt(addDays(origDateObj, dxDays));
-      if (target.dataset.requiresMoveReason !== 'true') {
+      const requireReason = target.dataset.requiresMoveReason === 'true';
+      if (!requireReason && milestoneMoveDialog()?.dataset.promptOptionalReason !== 'true') {
         commit(`/milestones/${milestoneId}/move/`, { date: newDate });
         return;
       }
@@ -868,6 +873,7 @@
         title: target.dataset.title || '',
         originalDate: origDate,
         newDate,
+        requireReason,
         data: { date: newDate },
         restore: () => {
           target.style.left = origDiamondLeft + 'px';

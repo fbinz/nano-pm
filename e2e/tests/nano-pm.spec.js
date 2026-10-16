@@ -4429,7 +4429,7 @@ test.describe('project & people management', () => {
     expect(Math.abs(visual.milestoneCenter - visual.taskRight)).toBeLessThan(1);
   });
 
-  test('milestones do not require a move explanation by default', async ({ appPage: page }) => {
+  test('milestones offer an optional move explanation by default', async ({ appPage: page }) => {
     const milestone = page.locator('.milestone[data-task-id]').first();
     const oldDate = await milestone.getAttribute('data-date');
     await milestone.scrollIntoViewIfNeeded();
@@ -4441,7 +4441,73 @@ test.describe('project & people management', () => {
     await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
     await page.mouse.up();
 
+    const dialog = page.locator('#milestone-move-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(milestone).toHaveAttribute('data-date', oldDate);
+    await expect(dialog.locator('textarea[name=reason]')).not.toHaveAttribute('required', '');
+    await expect(dialog.getByRole('button', { name: 'Move milestone' })).toBeEnabled();
+    await dialog.getByRole('button', { name: 'Move milestone' }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(milestone).not.toHaveAttribute('data-date', oldDate);
+
+    // Editor date changes offer the same optional prompt, and retain a supplied reason.
+    await milestone.click();
+    const editor = page.locator('#milestone-popover');
+    await editor.locator('input[name=date]').fill(oldDate);
+    await editor.locator('button[type=submit]').click();
+    await expect(dialog).toBeVisible();
+    await dialog.locator('textarea[name=reason]').fill('Partner is ready earlier');
+    await dialog.getByRole('button', { name: 'Move milestone' }).click();
+    await expect(milestone).toHaveAttribute('data-date', oldDate);
+    await page.goto('/activity/');
+    await expect(page.locator('.activity-event[data-action="milestone.moved"]').first()).toContainText('Partner is ready earlier');
+  });
+
+  test('workspace optional milestone reasons can be disabled without disabling required reasons', async ({ appPage: page }) => {
+    await page.goto('/workspaces/settings/');
+    const setting = page.getByLabel('Offer a reason when moving milestones', { exact: true });
+    await expect(setting).toBeChecked();
+    await setting.uncheck();
+    await page.locator('#workspace-milestone-settings button[type=submit]').click();
+    await expect(setting).not.toBeChecked();
+    await page.reload();
+    await expect(setting).not.toBeChecked();
+    await page.goto('/');
+
+    const milestone = page.locator('.milestone[data-task-id]').first();
+    const oldDate = await milestone.getAttribute('data-date');
+    await milestone.scrollIntoViewIfNeeded();
+    let box = await milestone.boundingBox();
+    const ppd = parseFloat(await page.locator('#grid-scroll').getAttribute('data-px-per-day'));
+    const drag = async () => {
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
+      await page.mouse.up();
+    };
+    await drag();
+    await expect(milestone).not.toHaveAttribute('data-date', oldDate);
     await expect(page.locator('#milestone-move-dialog')).not.toBeVisible();
+
+    await milestone.click();
+    const editor = page.locator('#milestone-popover');
+    await editor.locator('input[name=date]').fill(oldDate);
+    await editor.locator('button[type=submit]').click();
+    await expect(milestone).toHaveAttribute('data-date', oldDate);
+    await expect(editor).toHaveCount(0);
+    await milestone.click();
+    await editor.locator('input[name=require_move_reason]').check();
+    await editor.locator('button[type=submit]').click();
+    await expect(editor).toHaveCount(0);
+    box = await milestone.boundingBox();
+    await drag();
+    const dialog = page.locator('#milestone-move-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Move milestone' })).toBeDisabled();
+    await dialog.locator('textarea[name=reason]').fill('ab');
+    await expect(dialog.getByRole('button', { name: 'Move milestone' })).toBeDisabled();
+    await dialog.locator('textarea[name=reason]').fill('Required even with workspace prompts off');
+    await dialog.getByRole('button', { name: 'Move milestone' }).click();
     await expect(milestone).not.toHaveAttribute('data-date', oldDate);
   });
 
@@ -5242,6 +5308,7 @@ test.describe('project & people management', () => {
       await page.mouse.down();
       await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
       await page.mouse.up();
+      await page.locator('#milestone-move-dialog').getByRole('button', { name: 'Move milestone' }).click();
 
       await page.waitForFunction(
         ([id, before]) => {
@@ -5411,6 +5478,7 @@ test.describe('project & people management', () => {
       await page.mouse.down();
       await page.mouse.move(box.x + box.width / 2 + ppd * 2, box.y + box.height / 2, { steps: 8 });
       await page.mouse.up();
+      await page.locator('#milestone-move-dialog').getByRole('button', { name: 'Move milestone' }).click();
 
       await page.waitForFunction(
         ([id, before]) => {
@@ -5744,14 +5812,21 @@ test.describe('workspace isolation', () => {
     await page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true }).click();
     await page.getByLabel('Enable workload reporting', { exact: true }).check();
     await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'true');
+    const optionalReasons = page.getByLabel('Offer a reason when moving milestones', { exact: true });
+    await expect(optionalReasons).toBeChecked();
+    await optionalReasons.uncheck();
+    await page.locator('#workspace-milestone-settings button[type=submit]').click();
+    await expect(optionalReasons).not.toBeChecked();
     await page.locator('.ws-chevron-btn').click();
     await page.locator('#workspace-menu .workspace-item', { hasText: "demo's workspace" }).click();
     await page.waitForURL('/');
     await page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true }).click();
     await expect(page.getByLabel('Enable workload reporting', { exact: true })).not.toBeChecked();
+    await expect(optionalReasons).toBeChecked();
     await expect(page.getByRole('table', { name: 'Categories', exact: true })).toHaveCount(0);
     await signInAs(page, 'member1');
     await expect(page.getByRole('link', { name: 'Workspace settings', exact: true })).toHaveCount(0);
+    expect(await postForm(page, '/workspaces/settings/', { prompt_milestone_move_reason: 'on' })).toBe(403);
     expect((await page.goto('/workspaces/settings/')).status()).toBe(403);
   });
 

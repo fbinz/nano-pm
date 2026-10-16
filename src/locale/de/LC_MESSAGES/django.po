@@ -2354,3 +2354,21 @@ msgstr ""
 
 #~ msgid "Only the creator or PMs can edit this idea."
 #~ msgstr "Nur der Ersteller oder PMs können diese Idee bearbeiten."
+
+
+#: data/models/activity.py:155
+#: templates/components/screens/workspaces/settings.html:24
+msgid "Offer a reason when moving milestones"
+msgstr "Beim Verschieben von Meilensteinen eine Begründung anbieten"
+
+
+#: templates/components/layouts/app-shell.html:149
+msgid "(optional)"
+msgstr "(optional)"
+
+
+#: templates/components/screens/workspaces/settings.html:26
+msgid ""
+"Reasons are optional unless the milestone requires one. Required reasons are "
+"always requested, even when this setting is off."
+msgstr "Begründungen sind optional, sofern der Meilenstein keine verlangt. Erforderliche Begründungen werden immer abgefragt, auch wenn diese Einstellung deaktiviert ist."

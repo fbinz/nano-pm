@@ -15,6 +15,18 @@
         <button type="submit" class="btn btn-sm btn-neutral">{% trans "Rename" %}</button>
       </div>
     </form>
+    <section id="workspace-milestone-settings" class="space-y-4 border-t border-base-300 pt-6">
+      <h2 class="text-xl font-semibold">{% trans "Milestones" %}</h2>
+      <form method="post" action="{% url 'workspace_settings' %}" class="space-y-3">
+        {% csrf_token %}
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input class="checkbox checkbox-sm" type="checkbox" name="prompt_milestone_move_reason" {% if workspace.prompt_milestone_move_reason %}checked{% endif %}>
+          <span>{% trans "Offer a reason when moving milestones" %}</span>
+        </label>
+        <p class="text-sm text-base-content/60">{% trans "Reasons are optional unless the milestone requires one. Required reasons are always requested, even when this setting is off." %}</p>
+        <button type="submit" class="btn btn-sm btn-neutral">{% trans "Save" %}</button>
+      </form>
+    </section>
     <c-screens.workload.configuration :workspace="workspace" :options="options" :categories="categories" :memberships="memberships" />
     <section id="workspace-roadmap-settings" class="space-y-4 border-t border-base-300 pt-6">
       <h2 class="text-xl font-semibold">{% trans "Public roadmap" %}</h2>

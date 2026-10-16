@@ -132,6 +132,7 @@
   <dialog id="milestone-move-dialog"
           class="milestone-move-dialog"
           aria-labelledby="milestone-move-title"
+          data-prompt-optional-reason="{{ workspace.prompt_milestone_move_reason|yesno:'true,false' }}"
           data-on:cancel__prevent="nano.cancelMilestoneMove()">
     <form data-on:submit__prevent="nano.confirmMilestoneMove()">
       <h2 id="milestone-move-title" class="text-lg font-semibold">{% trans "Why is this milestone moving?" %}</h2>
@@ -145,14 +146,13 @@
       </p>
 
       <fieldset class="fieldset mt-4">
-        <label class="label" for="milestone-move-reason">{% trans "Reason" %}</label>
+        <label class="label" for="milestone-move-reason">{% trans "Reason" %} <span data-optional-reason hidden>{% trans "(optional)" %}</span></label>
         <textarea id="milestone-move-reason"
                   class="textarea w-full"
                   name="reason"
                   rows="3"
                   maxlength="500"
                   placeholder="{% trans 'Briefly explain what changed…' %}"
-                  required
                   data-on:input="nano.syncMilestoneMoveReason(el)"></textarea>
       </fieldset>
 

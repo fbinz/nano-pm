@@ -18,8 +18,23 @@ from .workload import settings_context
 
 @login_required
 @pm_required
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 def workspace_settings(request: HttpRequest):
+    if request.method == "POST":
+        workspace = request.workspace
+        fields = ["prompt_milestone_move_reason"]
+        before = snapshot(workspace, fields)
+        workspace.prompt_milestone_move_reason = request.POST.get("prompt_milestone_move_reason") == "on"
+        workspace.save(update_fields=[*fields, "updated_at"])
+        log_activity(
+            workspace=workspace,
+            actor=request.user,
+            action="workspace.updated",
+            entity=workspace,
+            changes=change_set(before, snapshot(workspace, fields)),
+            skip_empty_changes=True,
+        )
+        return redirect("workspace_settings")
     return render(
         request,
         "components/screens/workspaces/settings.html",

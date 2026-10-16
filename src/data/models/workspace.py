@@ -5,6 +5,7 @@ from data.models.project import default_teams_notify_events
 
 class Workspace(models.Model):
     name = models.CharField(max_length=200)
+    prompt_milestone_move_reason = models.BooleanField(default=True)
     workload_enabled = models.BooleanField(default=False)
     workload_members_included = models.BooleanField(default=True)
     workload_pms_included = models.BooleanField(default=False)
