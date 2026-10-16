@@ -56,8 +56,8 @@ for (const [name, viewport] of Object.entries({
         body: new URLSearchParams({ action: 'enable' }),
       });
     });
-    await page.reload();
-    await page.getByRole('link', { name: 'Open public roadmap', exact: true }).last().click();
+    await page.goto('/workspaces/settings/');
+    await page.goto(await page.locator('#public-roadmap-link').getAttribute('href'));
     const follow = page.locator('[data-project-subscription]', { hasText: 'API Migration' });
     await follow.getByRole('button', { name: 'Follow', exact: true }).click();
     await expect(follow.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();

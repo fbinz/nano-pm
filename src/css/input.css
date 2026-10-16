@@ -239,6 +239,43 @@ html, body { height: 100%; }
   }
   #time-axis { @apply relative h-full; }
 
+  .roadmap-chart {
+    --roadmap-label-width: clamp(176px, 24vw, 300px);
+    --axis-h: 72px;
+    @apply overflow-x-auto bg-base-100;
+  }
+  .roadmap-grid { display: grid; width: max-content; min-width: 100%; }
+  .roadmap-corner {
+    position: sticky; top: 0; left: 0; height: var(--axis-h); z-index: 5;
+    @apply flex items-center px-3 font-semibold bg-base-100 border-b border-r border-base-300;
+  }
+  .roadmap-project-row { display: contents; }
+  .roadmap-project-label {
+    position: sticky; left: 0; z-index: 2;
+    @apply flex items-center px-3 py-1 bg-base-100 border-b border-r border-base-300;
+    border-left: 3px solid var(--project-color);
+  }
+  .roadmap-project-label:has(details[open]) { z-index: 4; }
+  .roadmap-project-track {
+    @apply relative border-b border-base-300 cursor-grab;
+    background: color-mix(in srgb, var(--project-color) 5%, var(--color-base-100));
+  }
+  .roadmap-today-line {
+    @apply absolute top-0 bottom-0 border-l-2 border-primary pointer-events-none;
+  }
+  .roadmap-milestone {
+    @apply absolute flex items-center gap-2 h-8 text-sm font-semibold text-left rounded px-1 bg-base-100 border border-base-300 cursor-pointer;
+    max-width: 240px;
+    transform: translateX(-12px);
+  }
+  .roadmap-milestone:hover { @apply bg-base-200; }
+  .roadmap-milestone:focus-visible { @apply outline-2 outline-offset-2 outline-primary; }
+  .roadmap-diamond {
+    @apply block w-3 h-3 shrink-0;
+    background: var(--project-color);
+    transform: rotate(45deg);
+  }
+
   .axis-major {
     @apply absolute top-1 h-[18px] font-semibold text-base-content px-1.5 whitespace-nowrap border-l border-base-300;
   }
@@ -438,7 +475,8 @@ html, body { height: 100%; }
     cursor: crosshair;
     touch-action: none;
   }
-  .chart-row .weekend-tile {
+  .chart-row .weekend-tile,
+  .roadmap-project-track .weekend-tile {
     @apply absolute top-0 bottom-0 pointer-events-none;
     background: rgba(0,0,0,0.025);
   }

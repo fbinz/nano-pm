@@ -18,8 +18,8 @@ for (const [name, viewport] of Object.entries({
       const visitor = await context.newPage();
       await visitor.goto(roadmap);
       const project = visitor.locator('[data-project-subscription]', { hasText: 'API Migration' });
-      await expect(visitor.locator('#roadmap-project-filter').getByText('API Migration', { exact: true })).toHaveCount(1);
-      await expect(project.locator('[data-project-filter]')).toHaveAttribute('aria-pressed', 'true');
+      await expect(visitor.locator('.roadmap-project-label').getByRole('heading', { name: 'API Migration', exact: true })).toHaveCount(1);
+      await expect(visitor.locator('#roadmap-project-filter')).toHaveCount(0);
       await project.getByRole('button', { name: 'Folgen', exact: true }).click();
       const dialog = visitor.getByRole('dialog', { name: 'Projekt folgen', exact: true });
       await expect(dialog.locator('fieldset.fieldset')).toBeVisible();
@@ -37,12 +37,12 @@ for (const [name, viewport] of Object.entries({
       await dialog.getByLabel('Teams-E-Mail-Adresse', { exact: true }).fill('visitor@mycompany.com');
       await dialog.getByRole('button', { name: 'Folgen', exact: true }).click();
       await expect(project.getByRole('button', { name: 'Abonniert', exact: true })).toBeVisible();
-      await expect(project.locator('[data-project-filter]')).toHaveAttribute('aria-pressed', 'true');
+      await expect(project.getByRole('heading', { name: 'API Migration', exact: true })).toBeVisible();
       const cookie = (await context.cookies()).find(c => c.name === 'nano_roadmap_follower');
       expect(cookie.httpOnly).toBe(true);
       expect(cookie.sameSite).toBe('Lax');
       expect((await visitor.content()).includes(cookie.value)).toBe(false);
-      expect(await visitor.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await expect.poll(() => visitor.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await visitor.screenshot({ path: testInfo.outputPath('public-following.png'), fullPage: true });
       await project.getByRole('button', { name: 'Abonniert', exact: true }).click();
       await expect(project.getByRole('button', { name: 'Nicht mehr folgen', exact: true })).toBeVisible();

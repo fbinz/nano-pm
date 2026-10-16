@@ -1,25 +1,31 @@
 """Public roadmap state loading.
 
 The public roadmap intentionally does not reuse the private chart reader.
-Viewers see workspace, projects and milestones, plus their own subscription
-flags when permitted. Recipient identities and browser capabilities are never exposed.
+Viewers see workspace, projects (including responsible people's display names)
+and milestones, plus their own subscription flags when permitted. Recipient
+addresses and browser capabilities are never exposed.
 """
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 
 from django.db.models import Prefetch
 from django.utils.translation import gettext as _, ngettext
 
-from data.models import Membership, Milestone, Project, PublicProjectSubscription, Workspace
+from data.models import Membership, Milestone, Person, Project, PublicProjectSubscription, Workspace
+from readers.chart import ChartState
+from readers.chart_view import ChartVM, build_chart_vm
 
 
 @dataclass(frozen=True)
 class PublicMilestoneVM:
+    key: str
     title: str
     description: str
     date: date
     relative_date: str
+    x: int
+    y: int
 
 
 @dataclass(frozen=True)
@@ -28,20 +34,11 @@ class PublicProjectVM:
     name: str
     description: str
     color: str
+    responsible_names: list[str] = field(default_factory=list)
     milestones: list[PublicMilestoneVM] = field(default_factory=list)
     subscription_project_id: int | None = None
     following: bool = False
-
-
-@dataclass(frozen=True)
-class PublicTimelineMilestoneVM:
-    title: str
-    description: str
-    date: date
-    relative_date: str
-    project_key: str
-    project_name: str
-    project_color: str
+    row_height: int = 48
 
 
 @dataclass(frozen=True)
@@ -50,7 +47,8 @@ class PublicRoadmapVM:
     description: str
     workspace_name: str
     projects: list[PublicProjectVM]
-    milestones: list[PublicTimelineMilestoneVM]
+    milestones: list[PublicMilestoneVM]
+    chart: ChartVM
     can_follow: bool = False
     has_teams_upn: bool = False
     is_public_subscriber: bool = False
@@ -111,48 +109,63 @@ def get_public_roadmap(token: str, user=None, browser_key_hash=None) -> PublicRo
         .order_by("order", "id")
         .prefetch_related(
             Prefetch(
+                "responsible_people",
+                queryset=Person.objects.filter(workspace=workspace).only("name").order_by("name", "id"),
+                to_attr="public_responsible_people",
+            ),
+            Prefetch(
                 "milestones",
                 queryset=Milestone.objects.select_related("task").filter(date__gte=today).order_by("date", "id"),
             )
         )
     )
+    # Build only shared grid geometry, without private task/people/dependency VMs.
+    chart_start = today - timedelta(days=7)
+    latest = max((m.date for p in projects for m in p.milestones.all()), default=today)
+    chart_end = max(today + timedelta(days=60), latest + timedelta(days=14))
+    chart = build_chart_vm(ChartState(
+        projects=[], people=[], deps=[], today=today, today_fraction=0,
+        chart_start=chart_start, chart_end=chart_end,
+    ), px_per_day=28)
     project_vms = []
     timeline_milestones = []
     for index, project in enumerate(projects, start=1):
         project_key = f"p{index}"
         milestones = []
-        for milestone in project.milestones.all():
+        lane_ends = []
+        for milestone_index, milestone in enumerate(project.milestones.all(), start=1):
             task = milestone.task
             milestone_date = task.end if task is not None else milestone.date
             relative_date = _relative_date_label(milestone_date, today)
             title = milestone.title
+            x = (milestone_date - chart_start).days * chart.px_per_day
+            # Stack nearby markers so labels and hit targets never overlap.
+            lane = next((i for i, end in enumerate(lane_ends) if end <= x - 12), len(lane_ends))
+            if lane == len(lane_ends):
+                lane_ends.append(0)
+            lane_ends[lane] = x + 252
             milestones.append(PublicMilestoneVM(
+                key=f"{project_key}-m{milestone_index}",
                 title=title,
                 description=milestone.description,
                 date=milestone_date,
                 relative_date=relative_date,
+                x=x,
+                y=8 + lane * 44,
             ))
-            timeline_milestones.append(PublicTimelineMilestoneVM(
-                title=title,
-                description=milestone.description,
-                date=milestone_date,
-                relative_date=relative_date,
-                project_key=project_key,
-                project_name=project.name,
-                project_color=project.color,
-            ))
+        timeline_milestones.extend(milestones)
 
         project_vms.append(PublicProjectVM(
             key=project_key,
             name=project.name,
             description=project.description.strip(),
             color=project.color,
+            responsible_names=[person.name for person in project.public_responsible_people],
             milestones=milestones,
             subscription_project_id=project.id,
             following=project.id in followed_ids,
+            row_height=max(48, len(lane_ends) * 44 + 4),
         ))
-
-    timeline_milestones.sort(key=lambda milestone: (milestone.date, milestone.project_name, milestone.title))
 
     return PublicRoadmapVM(
         title=workspace.public_roadmap_display_title,
@@ -160,6 +173,7 @@ def get_public_roadmap(token: str, user=None, browser_key_hash=None) -> PublicRo
         workspace_name=workspace.name,
         projects=project_vms,
         milestones=timeline_milestones,
+        chart=chart,
         can_follow=True,
         has_teams_upn=bool(membership and membership.teams_upn),
         is_public_subscriber=membership is None,

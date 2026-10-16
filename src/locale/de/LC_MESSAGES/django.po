@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-14 09:33+0200\n"
+"POT-Creation-Date: 2026-10-16 23:44+0200\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -323,11 +323,12 @@ msgstr "Projekt"
 #: data/models/activity.py:142 interfaces/web/detail_forms.py:80
 #: templates/components/screens/gantt/project-popover.html:27
 #: templates/components/screens/projects/detail.html:41
+#: templates/public/roadmap.html:56
 msgid "Responsible people"
 msgstr "Verantwortliche"
 
 #: data/models/activity.py:143
-#: templates/components/screens/workspaces/settings.html:30
+#: templates/components/screens/workspaces/settings.html:42
 msgid "Public roadmap description"
 msgstr "Beschreibung der öffentlichen Roadmap"
 
@@ -336,7 +337,7 @@ msgid "Public roadmap enabled"
 msgstr "Öffentliche Roadmap aktiviert"
 
 #: data/models/activity.py:145
-#: templates/components/screens/workspaces/settings.html:26
+#: templates/components/screens/workspaces/settings.html:38
 msgid "Public roadmap title"
 msgstr "Titel der öffentlichen Roadmap"
 
@@ -384,30 +385,35 @@ msgstr "Microsoft-Teams-Webhook-URL"
 msgid "Notify for"
 msgstr "Benachrichtigen bei"
 
-#: data/models/activity.py:155 interfaces/web/public_subscriptions.py:23
+#: data/models/activity.py:155
+#: templates/components/screens/workspaces/settings.html:24
+msgid "Offer a reason when moving milestones"
+msgstr "Beim Verschieben von Meilensteinen eine Begründung anbieten"
+
+#: data/models/activity.py:156 interfaces/web/public_subscriptions.py:23
 msgid "Allowed domains for public followers"
 msgstr "Erlaubte Domains für öffentliche Abonnements"
 
-#: data/models/activity.py:156 interfaces/web/detail_forms.py:31
+#: data/models/activity.py:157 interfaces/web/detail_forms.py:31
 #: templates/components/screens/gantt/milestone-popover.html:17
 #: templates/components/screens/gantt/task-popover.html:21
 msgid "Title"
 msgstr "Titel"
 
-#: data/models/activity.py:157
+#: data/models/activity.py:158
 msgid "Workspace"
 msgstr "Arbeitsbereich"
 
-#: data/models/activity.py:179
+#: data/models/activity.py:180
 msgid "changed"
 msgstr "geändert"
 
-#: data/models/activity.py:183
+#: data/models/activity.py:184
 #, python-format
 msgid "%(before)s → %(after)s"
 msgstr "%(before)s → %(after)s"
 
-#: data/models/activity.py:199
+#: data/models/activity.py:200
 #, python-format
 msgid "%(label)s: %(value)s"
 msgstr "%(label)s: %(value)s"
@@ -462,7 +468,7 @@ msgstr "Einbezogen"
 #: data/models/membership.py:32
 #: templates/components/screens/people/people-list.html:97
 #: templates/components/screens/workload/configuration.html:39
-#: templates/components/screens/workload/overview.html:37
+#: templates/components/screens/workload/overview.html:36
 #: templates/components/screens/workload/participation-row.html:30
 msgid "Exempt"
 msgstr "Ausgenommen"
@@ -495,7 +501,7 @@ msgstr "Geplant"
 msgid "In progress"
 msgstr "In Bearbeitung"
 
-#: data/models/task.py:10 templates/components/screens/gantt/chart.html:97
+#: data/models/task.py:10 templates/components/screens/gantt/chart.html:72
 msgid "Done"
 msgstr "Erledigt"
 
@@ -795,68 +801,68 @@ msgstr "KW"
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
 
-#: readers/public_roadmap.py:63
+#: readers/public_roadmap.py:61
 msgid "today"
 msgstr "heute"
 
-#: readers/public_roadmap.py:65
+#: readers/public_roadmap.py:63
 msgid "tomorrow"
 msgstr "morgen"
 
-#: readers/public_roadmap.py:67
+#: readers/public_roadmap.py:65
 msgid "yesterday"
 msgstr "gestern"
 
-#: readers/public_roadmap.py:72
+#: readers/public_roadmap.py:70
 #, python-format
 msgid "in %(count)d day"
 msgid_plural "in %(count)d days"
 msgstr[0] "in %(count)d Tag"
 msgstr[1] "in %(count)d Tagen"
 
-#: readers/public_roadmap.py:73
+#: readers/public_roadmap.py:71
 #, python-format
 msgid "%(count)d day ago"
 msgid_plural "%(count)d days ago"
 msgstr[0] "vor %(count)d Tag"
 msgstr[1] "vor %(count)d Tagen"
 
-#: readers/public_roadmap.py:76
+#: readers/public_roadmap.py:74
 #, python-format
 msgid "in %(count)d week"
 msgid_plural "in %(count)d weeks"
 msgstr[0] "in %(count)d Woche"
 msgstr[1] "in %(count)d Wochen"
 
-#: readers/public_roadmap.py:77
+#: readers/public_roadmap.py:75
 #, python-format
 msgid "%(count)d week ago"
 msgid_plural "%(count)d weeks ago"
 msgstr[0] "vor %(count)d Woche"
 msgstr[1] "vor %(count)d Wochen"
 
-#: readers/public_roadmap.py:80
+#: readers/public_roadmap.py:78
 #, python-format
 msgid "in %(count)d month"
 msgid_plural "in %(count)d months"
 msgstr[0] "in %(count)d Monat"
 msgstr[1] "in %(count)d Monaten"
 
-#: readers/public_roadmap.py:81
+#: readers/public_roadmap.py:79
 #, python-format
 msgid "%(count)d month ago"
 msgid_plural "%(count)d months ago"
 msgstr[0] "vor %(count)d Monat"
 msgstr[1] "vor %(count)d Monaten"
 
-#: readers/public_roadmap.py:84
+#: readers/public_roadmap.py:82
 #, python-format
 msgid "in %(count)d year"
 msgid_plural "in %(count)d years"
 msgstr[0] "in %(count)d Jahr"
 msgstr[1] "in %(count)d Jahren"
 
-#: readers/public_roadmap.py:85
+#: readers/public_roadmap.py:83
 #, python-format
 msgid "%(count)d year ago"
 msgid_plural "%(count)d years ago"
@@ -918,7 +924,7 @@ msgstr ""
 #: templates/components/screens/gantt/milestone-popover.html:67
 #: templates/components/screens/gantt/task-popover.html:120
 #: templates/components/screens/teams/settings.html:88
-#: templates/public/roadmap.html:237
+#: templates/public/roadmap.html:163
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -960,7 +966,7 @@ msgstr "Erstellen"
 
 #: templates/components/layouts/app-shell.html:54
 #: templates/components/screens/profile/index.html:4
-#: templates/public/roadmap.html:48
+#: templates/public/roadmap.html:31
 msgid "Projects"
 msgstr "Projekte"
 
@@ -1019,20 +1025,26 @@ msgid "Sign out"
 msgstr "Abmelden"
 
 #: templates/components/layouts/app-shell.html:123
+#: templates/public/roadmap.html:174
 msgid "Close"
 msgstr "Schließen"
 
-#: templates/components/layouts/app-shell.html:137
+#: templates/components/layouts/app-shell.html:138
 msgid "Why is this milestone moving?"
 msgstr "Warum wird dieser Meilenstein verschoben?"
 
-#: templates/components/layouts/app-shell.html:148
+#: templates/components/layouts/app-shell.html:149
 #: templates/components/screens/activity/index.html:36
 #: templates/components/screens/activity/index.html:49
+#: templates/components/screens/gantt/milestone-popover.html:87
 msgid "Reason"
 msgstr "Begründung"
 
-#: templates/components/layouts/app-shell.html:154
+#: templates/components/layouts/app-shell.html:149
+msgid "(optional)"
+msgstr "(optional)"
+
+#: templates/components/layouts/app-shell.html:155
 msgid "Briefly explain what changed…"
 msgstr "Kurz erklären, was sich geändert hat…"
 
@@ -1089,10 +1101,12 @@ msgid "Event"
 msgstr "Ereignis"
 
 #: templates/components/screens/activity/index.html:20
+#: templates/public/roadmap.html:172
 msgid "Details"
 msgstr "Details"
 
 #: templates/components/screens/activity/index.html:58
+#: templates/components/screens/gantt/milestone-popover.html:92
 msgid "No activity yet."
 msgstr "Noch keine Aktivität."
 
@@ -1133,42 +1147,42 @@ msgstr "Sortieren beenden"
 msgid "timeline"
 msgstr "Zeitachse"
 
-#: templates/components/screens/gantt/chart.html:65
-#: templates/components/screens/gantt/chart.html:159
+#: templates/components/screens/gantt/chart.html:40
+#: templates/components/screens/gantt/chart.html:134
 msgid "Add Project"
 msgstr "Projekt hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:78
+#: templates/components/screens/gantt/chart.html:53
 msgid "Drag to reorder project"
 msgstr "Ziehen, um das Projekt neu anzuordnen"
 
-#: templates/components/screens/gantt/chart.html:92
-#: templates/components/screens/gantt/chart.html:93
+#: templates/components/screens/gantt/chart.html:67
+#: templates/components/screens/gantt/chart.html:68
 msgid "No future milestone"
 msgstr "Kein zukünftiger Meilenstein"
 
-#: templates/components/screens/gantt/chart.html:100
+#: templates/components/screens/gantt/chart.html:75
 #: templates/components/screens/gantt/project-popover.html:14
 msgid "Open project details"
 msgstr "Projektdetails öffnen"
 
-#: templates/components/screens/gantt/chart.html:106
+#: templates/components/screens/gantt/chart.html:81
 msgid "Add task"
 msgstr "Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:107
+#: templates/components/screens/gantt/chart.html:82
 msgid "Add a highlighted row for a new task"
 msgstr "Hervorgehobene Zeile für eine neue Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:113
+#: templates/components/screens/gantt/chart.html:88
 msgid "Add milestone"
 msgstr "Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:114
+#: templates/components/screens/gantt/chart.html:89
 msgid "Add milestone, then place it on the timeline"
 msgstr "Meilenstein hinzufügen und dann auf der Zeitachse platzieren"
 
-#: templates/components/screens/gantt/chart.html:123
+#: templates/components/screens/gantt/chart.html:98
 msgid ""
 "Choose Milestone beside the project, then place it here. Shift-click and "
 "Shift-drag are shortcuts."
@@ -1176,21 +1190,21 @@ msgstr ""
 "Meilenstein neben dem Projekt auswählen und dann hier platzieren. Umschalt-"
 "Klick und Umschalt-Ziehen sind Kurzbefehle."
 
-#: templates/components/screens/gantt/chart.html:140
+#: templates/components/screens/gantt/chart.html:115
 #: templates/components/screens/gantt/chart_resource.html:70
 #: templates/components/screens/gantt/task-popover.html:16
 msgid "Open task details"
 msgstr "Aufgabendetails öffnen"
 
-#: templates/components/screens/gantt/chart.html:174
+#: templates/components/screens/gantt/chart.html:149
 msgid "Click to remove this dependency"
 msgstr "Klicken, um diese Abhängigkeit zu entfernen"
 
-#: templates/components/screens/gantt/chart.html:187
+#: templates/components/screens/gantt/chart.html:162
 msgid "No projects yet."
 msgstr "Noch keine Projekte."
 
-#: templates/components/screens/gantt/chart.html:188
+#: templates/components/screens/gantt/chart.html:163
 msgid "+ Create your first project"
 msgstr "+ Erstelle dein erstes Projekt"
 
@@ -1272,9 +1286,14 @@ msgstr "Löschen"
 #: templates/components/screens/gantt/milestone-popover.html:72
 #: templates/components/screens/gantt/project-popover.html:111
 #: templates/components/screens/gantt/task-popover.html:125
-#: templates/components/screens/workspaces/settings.html:34
+#: templates/components/screens/workspaces/settings.html:27
+#: templates/components/screens/workspaces/settings.html:46
 msgid "Save"
 msgstr "Speichern"
+
+#: templates/components/screens/gantt/milestone-popover.html:76
+msgid "History"
+msgstr "Verlauf"
 
 #: templates/components/screens/gantt/project-hidden-toast.html:4
 msgid "Project created, but it’s hidden by the active team filter."
@@ -1289,6 +1308,7 @@ msgstr "Teamfilter löschen"
 #: templates/components/screens/projects/detail.html:46
 #: templates/components/screens/projects/detail.html:76
 #: templates/components/screens/tasks/detail.html:62
+#: templates/public/roadmap.html:61
 msgid "Nobody assigned"
 msgstr "Niemand zugewiesen"
 
@@ -1702,6 +1722,7 @@ msgstr "Projektübersicht"
 
 #: templates/components/screens/projects/detail.html:37
 #: templates/components/screens/tasks/detail.html:53
+#: templates/public/roadmap.html:53
 msgid "No description yet."
 msgstr "Noch keine Beschreibung."
 
@@ -1718,6 +1739,7 @@ msgid "No tasks yet."
 msgstr "Noch keine Aufgaben."
 
 #: templates/components/screens/projects/detail.html:88
+#: templates/components/screens/workspaces/settings.html:19
 msgid "Milestones"
 msgstr "Meilensteine"
 
@@ -2037,20 +2059,11 @@ msgstr "Filtern"
 msgid "Average workload mix"
 msgstr "Durchschnittliche Arbeitsverteilung"
 
-#: templates/components/screens/workload/overview.html:29
-msgid ""
-"Averages include respondents only, not missing or exempt members. These "
-"estimates are not absolute team capacity."
-msgstr ""
-"Durchschnitte berücksichtigen nur abgegebene Schätzungen, keine fehlenden "
-"oder ausgenommenen Mitglieder. Sie beschreiben nicht die absolute "
-"Teamkapazität."
-
-#: templates/components/screens/workload/overview.html:38
+#: templates/components/screens/workload/overview.html:37
 msgid "Not reported"
 msgstr "Noch nicht gemeldet"
 
-#: templates/components/screens/workload/overview.html:45
+#: templates/components/screens/workload/overview.html:44
 msgid "Recent workspace estimate history (including former members)"
 msgstr ""
 "Letzte Schätzungen im Arbeitsbereich (einschließlich ehemaliger Mitglieder)"
@@ -2067,40 +2080,49 @@ msgstr "Einstellungen zur Arbeitsverteilung gespeichert."
 msgid "No reports from participating members."
 msgstr "Keine Schätzungen von teilnehmenden Mitgliedern."
 
-#: templates/components/screens/workspaces/settings.html:20
+#: templates/components/screens/workspaces/settings.html:26
+msgid ""
+"Reasons are optional unless the milestone requires one. Required reasons are "
+"always requested, even when this setting is off."
+msgstr ""
+"Begründungen sind optional, sofern der Meilenstein keine verlangt. "
+"Erforderliche Begründungen werden immer abgefragt, auch wenn diese "
+"Einstellung deaktiviert ist."
+
+#: templates/components/screens/workspaces/settings.html:32
 msgid "Public roadmap"
 msgstr "Öffentliche Roadmap"
 
-#: templates/components/screens/workspaces/settings.html:22
+#: templates/components/screens/workspaces/settings.html:34
 msgid "Open public roadmap"
 msgstr "Öffentliche Roadmap öffnen"
 
-#: templates/components/screens/workspaces/settings.html:27
+#: templates/components/screens/workspaces/settings.html:39
 msgid "Roadmap"
 msgstr "Roadmap"
 
-#: templates/components/screens/workspaces/settings.html:31
+#: templates/components/screens/workspaces/settings.html:43
 msgid "Optional public description"
 msgstr "Optionale öffentliche Beschreibung"
 
-#: templates/components/screens/workspaces/settings.html:35
+#: templates/components/screens/workspaces/settings.html:47
 msgid "Disable public roadmap"
 msgstr "Öffentliche Roadmap deaktivieren"
 
-#: templates/components/screens/workspaces/settings.html:40
+#: templates/components/screens/workspaces/settings.html:52
 msgid "Regenerate public link"
 msgstr "Öffentlichen Link neu erzeugen"
 
-#: templates/components/screens/workspaces/settings.html:43
+#: templates/components/screens/workspaces/settings.html:55
 msgid "Share task milestones without exposing people or dependencies."
 msgstr ""
 "Aufgaben-Meilensteine teilen, ohne Personen oder Abhängigkeiten offenzulegen."
 
-#: templates/components/screens/workspaces/settings.html:46
+#: templates/components/screens/workspaces/settings.html:58
 msgid "Enable public roadmap"
 msgstr "Öffentliche Roadmap aktivieren"
 
-#: templates/public/roadmap.html:32
+#: templates/public/roadmap.html:12
 msgid ""
 "Follow projects to receive Teams mentions. You must have access to the "
 "workspace's Teams channel."
@@ -2108,7 +2130,7 @@ msgstr ""
 "Folge Projekten, um in Teams erwähnt zu werden. Du benötigst Zugriff auf den "
 "Teams-Kanal des Arbeitsbereichs."
 
-#: templates/public/roadmap.html:34
+#: templates/public/roadmap.html:14
 msgid ""
 "Set your Teams email address in your profile for this workspace to receive "
 "mentions."
@@ -2116,85 +2138,91 @@ msgstr ""
 "Trage deine Teams-E-Mail-Adresse im Profil für diesen Arbeitsbereich ein, um "
 "Erwähnungen zu erhalten."
 
-#: templates/public/roadmap.html:40
+#: templates/public/roadmap.html:20
 msgid "Email for new follows:"
 msgstr "E-Mail für neue Abonnements:"
 
-#: templates/public/roadmap.html:41
+#: templates/public/roadmap.html:21
 msgid "Use another email address"
 msgstr "Andere E-Mail-Adresse verwenden"
 
-#: templates/public/roadmap.html:53
-msgid "Select all"
-msgstr "Alle auswählen"
-
-#: templates/public/roadmap.html:54
-msgid "Deselect all"
-msgstr "Alle abwählen"
-
-#: templates/public/roadmap.html:77
-msgid "Subscribed"
-msgstr "Abonniert"
-
-#: templates/public/roadmap.html:83
-msgid "Unfollow"
-msgstr "Nicht mehr folgen"
-
-#: templates/public/roadmap.html:90 templates/public/roadmap.html:95
-#: templates/public/roadmap.html:238
-msgid "Follow"
-msgstr "Folgen"
-
-#: templates/public/roadmap.html:106
-msgid "Roadmap views"
-msgstr "Roadmap-Ansichten"
-
-#: templates/public/roadmap.html:113 templates/public/roadmap.html:126
-msgid "Grouped"
-msgstr "Gruppiert"
-
-#: templates/public/roadmap.html:120 templates/public/roadmap.html:164
+#: templates/public/roadmap.html:29
 msgid "Timeline"
 msgstr "Zeitachse"
 
-#: templates/public/roadmap.html:195
-msgid "No milestones match these projects"
-msgstr "Keine Meilensteine passen zu diesen Projekten"
+#: templates/public/roadmap.html:70 templates/public/roadmap.html:72
+msgid "Subscribed"
+msgstr "Abonniert"
 
-#: templates/public/roadmap.html:196
-msgid "Toggle a project on to see its roadmap milestones."
-msgstr "Aktiviere ein Projekt, um seine Roadmap-Meilensteine zu sehen."
+#: templates/public/roadmap.html:78
+msgid "Unfollow"
+msgstr "Nicht mehr folgen"
 
-#: templates/public/roadmap.html:200 templates/public/roadmap.html:208
+#: templates/public/roadmap.html:83 templates/public/roadmap.html:85
+#: templates/public/roadmap.html:88 templates/public/roadmap.html:90
+#: templates/public/roadmap.html:164
+msgid "Follow"
+msgstr "Folgen"
+
+#: templates/public/roadmap.html:126 templates/public/roadmap.html:134
 msgid "No public milestones yet"
 msgstr "Noch keine öffentlichen Meilensteine"
 
-#: templates/public/roadmap.html:201 templates/public/roadmap.html:209
+#: templates/public/roadmap.html:127 templates/public/roadmap.html:135
 msgid "Check back later for roadmap updates."
 msgstr "Schau später wieder vorbei, um Roadmap-Updates zu sehen."
 
-#: templates/public/roadmap.html:218
+#: templates/public/roadmap.html:144
 msgid "Follow project"
 msgstr "Projekt folgen"
 
-#: templates/public/roadmap.html:221
+#: templates/public/roadmap.html:147
 msgid "Allowed domains:"
 msgstr "Erlaubte Domains:"
 
-#: templates/public/roadmap.html:234
+#: templates/public/roadmap.html:160
 msgid ""
 "Your follows are managed in this browser. Keep its cookies to unfollow later."
 msgstr ""
 "Deine Abonnements werden in diesem Browser verwaltet. Behalte dessen "
 "Cookies, um später nicht mehr zu folgen."
 
-#: templates/public/roadmap.html:235
+#: templates/public/roadmap.html:161
 msgid ""
 "Your email will be remembered in this browser for future follows on this "
 "roadmap."
 msgstr ""
 "Deine E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
 "Roadmap gespeichert."
+
+#~ msgid "Read more"
+#~ msgstr "Weiterlesen"
+
+#~ msgid "Select all"
+#~ msgstr "Alle auswählen"
+
+#~ msgid "Deselect all"
+#~ msgstr "Alle abwählen"
+
+#~ msgid "No milestones match these projects"
+#~ msgstr "Keine Meilensteine passen zu diesen Projekten"
+
+#~ msgid "Toggle a project on to see its roadmap milestones."
+#~ msgstr "Aktiviere ein Projekt, um seine Roadmap-Meilensteine zu sehen."
+
+#~ msgid ""
+#~ "Averages include respondents only, not missing or exempt members. These "
+#~ "estimates are not absolute team capacity."
+#~ msgstr ""
+#~ "Durchschnitte berücksichtigen nur abgegebene Schätzungen, keine fehlenden "
+#~ "oder ausgenommenen Mitglieder. Sie beschreiben nicht die absolute "
+#~ "Teamkapazität."
+
+#~ msgid "Roadmap views"
+#~ msgstr "Roadmap-Ansichten"
+
+#~ msgid "Grouped"
+#~ msgstr "Gruppiert"
 
 #~ msgid "Your typical workload"
 #~ msgstr "Deine typische Arbeitsverteilung"
@@ -2354,25 +2382,3 @@ msgstr ""
 
 #~ msgid "Only the creator or PMs can edit this idea."
 #~ msgstr "Nur der Ersteller oder PMs können diese Idee bearbeiten."
-
-
-#: data/models/activity.py:155
-#: templates/components/screens/workspaces/settings.html:24
-msgid "Offer a reason when moving milestones"
-msgstr "Beim Verschieben von Meilensteinen eine Begründung anbieten"
-
-
-#: templates/components/layouts/app-shell.html:149
-msgid "(optional)"
-msgstr "(optional)"
-
-
-#: templates/components/screens/workspaces/settings.html:26
-msgid ""
-"Reasons are optional unless the milestone requires one. Required reasons are "
-"always requested, even when this setting is off."
-msgstr "Begründungen sind optional, sofern der Meilenstein keine verlangt. Erforderliche Begründungen werden immer abgefragt, auch wenn diese Einstellung deaktiviert ist."
-
-#: templates/components/screens/gantt/milestone-popover.html:76
-msgid "History"
-msgstr "Verlauf"

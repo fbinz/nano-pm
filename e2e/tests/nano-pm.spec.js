@@ -1538,24 +1538,28 @@ test.describe('workspace Teams subscriptions', () => {
     } finally { await context.close(); }
   });
 
-  test('roadmap follow controls belong to each project card without changing its filter', async ({ appPage: page }) => {
+  test('roadmap follow controls sit beside each timeline project name', async ({ appPage: page }) => {
     const roadmap = await enableRoadmap(page);
     await page.goto(roadmap);
-    const filters = page.locator('#roadmap-project-filter');
-    await expect(filters.getByText('API Migration', { exact: true })).toHaveCount(1);
-    const card = filters.locator('[data-project-subscription]', { hasText: 'API Migration' });
-    const toggle = card.locator('[data-project-filter]');
-    await expect(toggle).toBeVisible();
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('.roadmap-sidebar, #roadmap-project-filter')).toHaveCount(0);
+    const card = page.locator('.roadmap-project-label [data-project-subscription]', { hasText: 'API Migration' });
+    await expect(card.getByRole('heading', { name: 'API Migration', exact: true })).toBeVisible();
+    await expect(card).not.toContainText('Move public API traffic to the new v2 platform.');
+    const expectSameLine = async (control) => {
+      await expect(card).toHaveCSS('display', 'flex');
+      const nameBox = await card.getByRole('button', { name: 'API Migration', exact: true }).boundingBox();
+      const controlBox = await control.boundingBox();
+      expect(controlBox.x).toBeGreaterThanOrEqual(nameBox.x + nameBox.width);
+      expect(controlBox.y + controlBox.height / 2).toBeCloseTo(nameBox.y + nameBox.height / 2, 0);
+    };
+    await expectSameLine(card.getByRole('button', { name: 'Follow', exact: true }));
     await card.getByRole('button', { name: 'Follow', exact: true }).click();
     const subscribed = card.getByRole('button', { name: 'Subscribed', exact: true });
     await expect(subscribed).toBeVisible();
-    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await expectSameLine(subscribed);
     await expect(card.getByRole('button', { name: 'Unfollow', exact: true })).not.toBeVisible();
     await subscribed.click();
     await expect(card.getByRole('button', { name: 'Unfollow', exact: true })).toBeVisible();
-    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await page.keyboard.press('Escape');
     await expect(card.getByRole('button', { name: 'Unfollow', exact: true })).not.toBeVisible();
     await expect(subscribed).toBeFocused();
@@ -1565,7 +1569,6 @@ test.describe('workspace Teams subscriptions', () => {
     await subscribed.click();
     await card.getByRole('button', { name: 'Unfollow', exact: true }).click();
     await expect(card.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
-    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('anonymous roadmap followers use allowed Teams domains and private browser-owned subscriptions', async ({ appPage: page, browser }) => {
@@ -5923,6 +5926,133 @@ test.describe('workspace isolation', () => {
     expect(revoked.status()).toBe(404);
   });
 
+  test('public roadmap project drawers show responsible people but not task assignees', async ({ appPage: page, browser }) => {
+    await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
+    const responsible = page.locator('#project-responsible-people');
+    for (const name of ['Alex Chen', 'Riley Wong']) {
+      const id = await responsible.locator('option', { hasText: name }).getAttribute('value');
+      await responsible.selectOption(id);
+    }
+    await page.locator('#project-popover button[type=submit]').click();
+    await expect(page.locator('#project-popover')).toHaveCount(0);
+    const href = await enableRoadmap(page);
+    const context = await browser.newContext();
+    const visitor = await context.newPage();
+    try {
+      for (const width of [1280, 390]) {
+        await visitor.setViewportSize({ width, height: 844 });
+        await visitor.goto(href);
+        const project = visitor.locator('.roadmap-project-label').filter({ hasText: 'API Migration' });
+        await expect(project).not.toContainText('Alex Chen');
+        await project.getByRole('button', { name: 'API Migration', exact: true }).click();
+        const drawer = visitor.locator('#drawer');
+        await expect(drawer.getByRole('heading', { name: 'Responsible people', exact: true })).toBeVisible();
+        await expect(drawer.locator('[data-project-responsible]')).toHaveText(['Alex Chen', 'Riley Wong']);
+        await expect(drawer).not.toContainText('Sam Patel');
+        await expect(drawer).not.toContainText('Cutover and deprecation');
+        await expect(drawer.locator('input, select, textarea, form, [data-person-id]')).toHaveCount(0);
+        await visitor.keyboard.press('Escape');
+        await visitor.locator('.roadmap-project-label').getByRole('button', { name: 'Infra hardening', exact: true }).click();
+        await expect(drawer).toContainText('Nobody assigned');
+        await expect(drawer).not.toContainText('Alex Chen');
+        await visitor.keyboard.press('Escape');
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('public roadmap opens project descriptions from compact clickable project names', async ({ appPage: page, browser }) => {
+    const projects = await page.locator('.left-cell.proj').evaluateAll(elements => elements.map(el => el.dataset.projectId));
+    const description = ['Project overview', ...Array.from({ length: 30 }, (_, i) => `Detailed project context ${i + 1}.`), 'End of full project description.'].join('\n');
+    expect(await postForm(page, `/projects/${projects[0]}/update/`, { description })).toBe(200);
+    expect(await postForm(page, `/projects/${projects[1]}/update/`, { description: 'Short summary.' })).toBe(200);
+    expect(await postForm(page, `/projects/${projects[2]}/update/`, { description: '' })).toBe(200);
+    const href = await enableRoadmap(page);
+    const context = await browser.newContext();
+    const visitor = await context.newPage();
+    try {
+      for (const width of [1280, 390]) {
+        await visitor.setViewportSize({ width, height: 844 });
+        await visitor.goto(href);
+        const project = visitor.locator('.roadmap-project-label').first();
+        await expect(visitor.locator('[data-project-description-preview]')).toHaveCount(0);
+        await expect(visitor.getByRole('button', { name: /Read more/ })).toHaveCount(0);
+        await expect(project.locator('p')).toHaveCount(0);
+        await expect(project).not.toContainText('Project overview');
+        const projectName = project.getByRole('button', { name: 'API Migration', exact: true });
+        await expect(projectName).toBeVisible();
+        const rowHeight = (await project.boundingBox()).height;
+        expect(rowHeight).toBeLessThan(120);
+        await projectName.focus();
+        await visitor.keyboard.press('Enter');
+        const drawer = visitor.locator('#drawer');
+        await expect(drawer.getByRole('heading', { name: 'API Migration', exact: true })).toBeVisible();
+        await expect(drawer).toContainText('End of full project description.');
+        await expect(drawer.locator('p')).toHaveText(description);
+        await expect(drawer.locator('form, input, textarea, select')).toHaveCount(0);
+        await expect(projectName).toHaveAttribute('aria-expanded', 'true');
+        await expect(drawer.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+        expect((await project.boundingBox()).height).toBe(rowHeight);
+        await visitor.keyboard.press('Escape');
+        await expect(drawer).not.toBeVisible();
+        await expect(projectName).toBeFocused();
+        await expect(projectName).toHaveAttribute('aria-expanded', 'false');
+        await projectName.click();
+        await drawer.getByRole('button', { name: 'Close', exact: true }).click();
+        await expect(drawer).not.toBeVisible();
+        await expect(projectName).toBeFocused();
+        for (const [index, text] of [[1, 'Short summary.'], [2, 'No description yet.']]) {
+          await visitor.locator('.roadmap-project-label').nth(index).locator('[data-roadmap-project]').click();
+          await expect(drawer.locator('p')).toHaveText(text);
+          await visitor.keyboard.press('Escape');
+        }
+        // Sharing the drawer must not leak project content into milestone details.
+        const milestone = visitor.getByRole('button', { name: /v2 API beta/ });
+        await milestone.scrollIntoViewIfNeeded();
+        await milestone.click();
+        await expect(drawer.getByRole('heading', { name: 'v2 API beta', exact: true })).toBeVisible();
+        await expect(drawer).not.toContainText('End of full project description.');
+        await visitor.keyboard.press('Escape');
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('public roadmap shows a milestone-only project timeline with read-only details', async ({ appPage: page, browser }) => {
+    const href = await enableRoadmap(page);
+    const context = await browser.newContext();
+    const visitor = await context.newPage();
+    try {
+      await visitor.goto(href);
+      await expect(visitor.locator('[data-roadmap-chart]')).toBeVisible();
+      await expect(visitor.locator('[data-roadmap-project-row]')).toHaveCount(3);
+      await expect(visitor.locator('[data-roadmap-milestone]')).toHaveCount(2);
+      await expect(visitor.locator('.axis-day.today')).toHaveCount(1);
+      await expect(visitor.locator('.bar, [data-task-id], [data-creation-type]')).toHaveCount(0);
+      const milestone = visitor.getByRole('button', { name: /v2 API beta/ });
+      await milestone.scrollIntoViewIfNeeded();
+      await milestone.click();
+      const drawer = visitor.locator('#drawer');
+      await expect(drawer).toBeVisible();
+      await expect(drawer.getByRole('heading', { name: 'v2 API beta' })).toBeVisible();
+      await expect(drawer).toContainText('v2 API beta readiness checkpoint.');
+      await expect(drawer.locator('input, textarea, select, form')).toHaveCount(0);
+      await expect(drawer).not.toContainText('History');
+      await expect(drawer).not.toContainText('Alex Chen');
+      await visitor.keyboard.press('Escape');
+      await expect(drawer).not.toBeVisible();
+      await milestone.focus();
+      await visitor.keyboard.press('Enter');
+      await expect(drawer).toBeVisible();
+      await drawer.getByRole('button', { name: 'Close', exact: true }).click();
+      await expect(drawer).not.toBeVisible();
+    } finally {
+      await context.close();
+    }
+  });
+
   test('milestone sidebar shows its own history including movement reasons', async ({ appPage: page }) => {
     const milestone = page.locator('.milestone').first();
     const id = await milestone.getAttribute('data-milestone-id');
@@ -5965,42 +6095,85 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('[data-milestone-history] [data-action="milestone.moved"]')).toHaveCount(1);
   });
 
-  test('public roadmap filters milestones by project and switches grouped/timeline views', async ({ appPage: page }) => {
+  test('dragging empty roadmap timeline space pans dates and the page with grab cursors', async ({ appPage: page }) => {
+    // Ensure page overflow independently of the compact description-free rows.
+    for (let i = 0; i < 4; i++) {
+      expect(await postForm(page, '/projects/', { name: `Extra project ${i + 1}` })).toBe(200);
+    }
+    const href = await enableRoadmap(page);
+
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 360 });
+      await page.goto(href);
+      const chart = page.locator('[data-roadmap-chart]');
+      const track = chart.locator('.roadmap-project-track').first();
+      await expect(track).toHaveCSS('cursor', 'grab');
+      const start = await chart.evaluate(el => {
+        el.scrollLeft = 100;
+        window.scrollTo(0, 180);
+        return { left: el.scrollLeft, top: window.scrollY };
+      });
+      const box = await track.boundingBox();
+      const x = width - 70;
+      const y = Math.min(320, box.y + 60);
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await expect(track).toHaveCSS('cursor', 'grabbing');
+      await page.mouse.move(x - 80, y - 60, { steps: 8 });
+      await expect.poll(() => chart.evaluate(el => el.scrollLeft)).toBe(start.left + 80);
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(start.top + 60);
+      expect(await chart.evaluate(el => el.scrollTop)).toBe(0);
+      await page.mouse.up();
+      await expect(track).toHaveCSS('cursor', 'grab');
+      // An interrupted drag must not leave a grabbing cursor or active listeners.
+      await page.mouse.down();
+      await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+      await expect(track).toHaveCSS('cursor', 'grab');
+      await page.mouse.up();
+    }
+  });
+
+  test('public roadmap scrolls vertically with the page instead of inside the timeline', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj').first().getAttribute('data-project-id');
+    expect(await postForm(page, `/projects/${projectId}/update/`, {
+      description: Array.from({ length: 24 }, (_, i) => `Project detail ${i + 1}`).join('\n'),
+    })).toBe(200);
+    const href = await enableRoadmap(page);
+
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 360 });
+      await page.goto(href);
+      const chart = page.locator('[data-roadmap-chart]');
+      await expect(chart).toBeVisible();
+      // The chart expands to its content rather than capping its height.
+      await expect.poll(() => chart.evaluate(el => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
+      const box = await chart.boundingBox();
+      await page.mouse.move(width - 40, box.y + 80);
+      await page.mouse.wheel(0, 300);
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+      expect(await chart.evaluate(el => el.scrollTop)).toBe(0);
+      // Only the wide date axis retains its own scrolling.
+      await chart.evaluate(el => { el.scrollLeft = 100; });
+      expect(await chart.evaluate(el => el.scrollLeft)).toBe(100);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  });
+
+  test('public roadmap keeps project descriptions and following available without milestones', async ({ appPage: page }) => {
+    const ids = await page.locator('.milestone').evaluateAll(elements => elements.map(el => el.dataset.milestoneId));
+    for (const id of ids) expect(await postForm(page, `/milestones/${id}/delete/`, {})).toBe(200);
     const href = await enableRoadmap(page);
     await page.goto(href);
-
-    const filters = page.locator('#roadmap-project-filter');
-    await expect(filters.getByRole('button', { name: /API Migration/ })).toHaveAttribute('aria-pressed', 'true');
-    await expect(filters.locator('[data-project-filter]')).toHaveCount(3);
-    await expect(filters).toContainText('Move public API traffic to the new v2 platform.');
-
-    await filters.getByRole('button', { name: 'Deselect all' }).click();
-    await expect(filters.locator('[data-project-filter][aria-pressed="true"]')).toHaveCount(0);
-    await expect(page.locator('.roadmap-milestone-card:visible')).toHaveCount(0);
-    await expect(page.locator('[data-roadmap-empty]')).toBeVisible();
-    await expect(filters.getByRole('button', { name: 'Select all' })).toBeVisible();
-
-    await filters.getByRole('button', { name: 'Select all' }).click();
-    await expect(filters.locator('[data-project-filter][aria-pressed="true"]')).toHaveCount(3);
-    await expect(filters.getByRole('button', { name: 'Deselect all' })).toBeVisible();
-
-    await expect(page.getByRole('tabpanel', { name: 'Grouped' })).toBeVisible();
-    await expect(page.locator('.roadmap-group:visible')).toHaveCount(2);
-    await expect(page.locator('.roadmap-milestone-card:visible', { hasText: 'v2 API beta' })).toBeVisible();
-    await expect(page.locator('.roadmap-milestone-card:visible', { hasText: 'Soft launch' })).toBeVisible();
-
-    await filters.getByRole('button', { name: /API Migration/ }).click();
-    await expect(filters.getByRole('button', { name: /API Migration/ })).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.locator('.roadmap-milestone-card:visible', { hasText: 'v2 API beta' })).toHaveCount(0);
-    await expect(page.locator('.roadmap-milestone-card:visible', { hasText: 'Soft launch' })).toBeVisible();
-
-    await page.getByRole('tab', { name: 'Timeline' }).click();
-    await expect(page.getByRole('tabpanel', { name: 'Timeline' })).toBeVisible();
-    await expect(page.locator('.roadmap-timeline-card:visible')).toHaveCount(1);
-    await expect(page.locator('.roadmap-timeline-card:visible')).toContainText('Onboarding revamp');
-
-    await filters.getByRole('button', { name: /API Migration/ }).click();
-    await expect(page.locator('.roadmap-timeline-card:visible')).toHaveCount(2);
+    await expect(page.getByRole('heading', { name: 'No public milestones yet', exact: true })).toBeVisible();
+    const labels = page.locator('.roadmap-project-label');
+    await expect(labels).toHaveCount(3);
+    const project = labels.filter({ hasText: 'API Migration' });
+    await expect(project).not.toContainText('Move public API traffic to the new v2 platform.');
+    await project.getByRole('button', { name: 'API Migration', exact: true }).click();
+    await expect(page.locator('#drawer')).toContainText('Move public API traffic to the new v2 platform.');
+    await page.keyboard.press('Escape');
+    await project.getByRole('button', { name: 'Follow', exact: true }).click();
+    await expect(project.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
   });
 
   test('regenerating the public roadmap link revokes the old URL', async ({ appPage: page, request }) => {
