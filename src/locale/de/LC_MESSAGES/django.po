@@ -2372,3 +2372,7 @@ msgid ""
 "Reasons are optional unless the milestone requires one. Required reasons are "
 "always requested, even when this setting is off."
 msgstr "Begründungen sind optional, sofern der Meilenstein keine verlangt. Erforderliche Begründungen werden immer abgefragt, auch wenn diese Einstellung deaktiviert ist."
+
+#: templates/components/screens/gantt/milestone-popover.html:76
+msgid "History"
+msgstr "Verlauf"

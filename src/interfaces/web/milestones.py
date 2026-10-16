@@ -19,6 +19,7 @@ from actions.manage_milestones import (
 )
 from data.models import Task
 from readers import get_chart_state, get_project, get_milestone
+from readers.activity import get_milestone_history
 
 from .helpers import is_pm, parse_iso, patch_chart, request_data
 
@@ -48,6 +49,7 @@ def milestone_popover(request: HttpRequest, milestone_id: int):
         render_component(
             request, "screens/gantt/milestone-popover",
             m=m, projects=state.projects, task_options=_task_options(m),
+            history=get_milestone_history(request.workspace, m.id),
             is_initial=False, is_pm=is_pm(request),
         )
     )
@@ -160,6 +162,7 @@ def milestone_create(request: HttpRequest, project_id: int):
         render_component(
             request, "screens/gantt/milestone-popover",
             m=m, projects=state.projects, task_options=task_options,
+            history=get_milestone_history(request.workspace, m.id),
             is_initial=True, is_pm=is_pm(request),
         )
     )

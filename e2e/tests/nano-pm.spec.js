@@ -2311,7 +2311,7 @@ test.describe('activity log', () => {
 
     await page.getByRole('link', { name: 'Activity' }).click();
     await page.locator('.lang-btn', { hasText: 'DE' }).click();
-    const event = page.locator('.activity-event').first();
+    const event = page.locator('.activity-event[data-action="task.resized"]').first();
     await expect(page.getByRole('heading', { name: 'Aktivität' })).toBeVisible();
     await expect(event.locator('td').nth(1)).toHaveText('demo');
     await expect(event).toContainText('Dauer der Aufgabe Migrate /users endpoints geändert');
@@ -5921,6 +5921,48 @@ test.describe('workspace isolation', () => {
     await page.waitForURL('/workspaces/settings/');
     const revoked = await request.get(href);
     expect(revoked.status()).toBe(404);
+  });
+
+  test('milestone sidebar shows its own history including movement reasons', async ({ appPage: page }) => {
+    const milestone = page.locator('.milestone').first();
+    const id = await milestone.getAttribute('data-milestone-id');
+    const before = await milestone.getAttribute('data-date');
+    const next = new Date(before);
+    next.setDate(next.getDate() + 3);
+    const after = next.toISOString().slice(0, 10);
+    expect(await postForm(page, `/milestones/${id}/move/`, { date: after, reason: 'Waiting for partner approval' })).toBe(200);
+    await page.reload();
+    await page.locator(`#ms-${id}`).scrollIntoViewIfNeeded();
+    await page.locator(`#ms-${id}`).click();
+    const history = page.locator('[data-milestone-history]');
+    await expect(history).toBeVisible();
+    await expect(history).toContainText('Waiting for partner approval');
+    await expect(history.locator('[data-action="milestone.moved"]')).toHaveCount(1);
+    await expect(history).toContainText(`${before} → ${after}`);
+    await expect(history).toContainText('demo');
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    const other = page.locator(`.milestone:not(#ms-${id})`).first();
+    await other.scrollIntoViewIfNeeded();
+    await other.click();
+    await expect(page.locator('[data-milestone-history]')).not.toContainText('Waiting for partner approval');
+  });
+
+  test('milestone history records date changes driven by its linked task', async ({ appPage: page }) => {
+    const milestone = page.locator('.milestone[data-task-id]').first();
+    const id = await milestone.getAttribute('data-milestone-id');
+    const taskId = await milestone.getAttribute('data-task-id');
+    const before = await milestone.getAttribute('data-date');
+    const next = new Date(before);
+    next.setDate(next.getDate() + 5);
+    const after = next.toISOString().slice(0, 10);
+    expect(await postForm(page, `/tasks/${taskId}/resize/end/`, { end: after })).toBe(200);
+    await page.reload();
+    await expect(page.locator(`#ms-${id}`)).toHaveAttribute('data-date', after);
+    await page.locator(`#ms-${id}`).scrollIntoViewIfNeeded();
+    await page.locator(`#ms-${id}`).click();
+    await expect(page.locator('[data-milestone-history]')).toContainText(`${before} → ${after}`);
+    await expect(page.locator('[data-milestone-history]')).toContainText('demo');
+    await expect(page.locator('[data-milestone-history] [data-action="milestone.moved"]')).toHaveCount(1);
   });
 
   test('public roadmap filters milestones by project and switches grouped/timeline views', async ({ appPage: page }) => {
