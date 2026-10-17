@@ -124,7 +124,37 @@ def report_vm(report):
     }
 
 
-def personal(workspace, user, data=None):
+def checkin_context(request):
+    """Workspace-wide recurring check-in, never during an SSE patch."""
+    membership = getattr(request, "membership", None)
+    if (
+        request.method != "GET"
+        or request.path == "/profile/workload/"
+        or not participates(membership)
+        or not membership.workspace.workload_checkin_enabled
+    ):
+        return None
+    now = timezone.now()
+    if membership.workload_snoozed_until and membership.workload_snoozed_until > now:
+        return None
+    latest = WorkloadReport.objects.filter(
+        workspace=request.workspace, user=request.user
+    ).first()
+    if latest and latest.reviewed_at > now - timedelta(
+        days=membership.workspace.workload_checkin_interval_days
+    ):
+        return None
+    if not WorkloadCategory.objects.filter(workspace=request.workspace, active=True).exists():
+        return None
+    return {
+        **personal(request.workspace, request.user, checkin=True),
+        "dismissal_key": f"workload-checkin:{membership.pk}:{latest.pk if latest else 'new'}:"
+        f"{latest.reviewed_at.isoformat() if latest else ''}:{membership.workload_snoozed_until}:"
+        f"{membership.workspace.workload_checkin_interval_days}",
+    }
+
+
+def personal(workspace, user, data=None, *, checkin=False):
     history = list(reports(workspace).filter(user=user)[:20])
     current = history[0] if history else None
     existing = {a.category_id: a for a in current.allocations.all()} if current else {}
@@ -156,16 +186,18 @@ def personal(workspace, user, data=None):
                 "category": c,
                 "color": PROJECT_COLORS[(c.id - 1) % len(PROJECT_COLORS)],
                 "field": f"category_{c.id}",
-                "value": data.get(f"category_{c.id}", "0")
+                "previous": old.percentage if old else None,
+                "value": data.get(f"category_{c.id}", "" if checkin else "0")
                 if data is not None
-                else (old.percentage if old else 0),
+                else ("" if checkin else (old.percentage if old else 0)),
                 "projects": [
                     {
                         "project": p,
                         "field": f"project_{c.id}_{p.id}",
-                        "value": data.get(f"project_{c.id}_{p.id}", "0")
+                        "previous": old_projects.get(p.id),
+                        "value": data.get(f"project_{c.id}_{p.id}", "" if checkin else "0")
                         if data is not None
-                        else old_projects.get(p.id, 0),
+                        else ("" if checkin else old_projects.get(p.id, 0)),
                     }
                     for p in projects
                 ]
@@ -177,7 +209,9 @@ def personal(workspace, user, data=None):
         for item in row["projects"]:
             # Keep explicitly added zero-valued draft rows after validation
             # errors. Snapshots only restore projects with an actual share.
-            item["selected"] = str(item["value"]) not in {"0", ""} or (
+            item["selected"] = (
+                checkin and data is None and item["previous"] is not None
+            ) or str(item["value"]) not in {"0", ""} or (
                 data is not None and data.get(f"selected_{item['field']}") == "on"
             )
         row["project_open"] = any(item["selected"] for item in row["projects"])
@@ -189,6 +223,7 @@ def personal(workspace, user, data=None):
         and str(row["value"]).isdecimal()
     )
     return {
+        "checkin": checkin,
         "rows": rows,
         "total": total,
         "suggested": [p for p in projects if p.id in suggested_ids],

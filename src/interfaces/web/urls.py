@@ -40,7 +40,7 @@ from .teams_notifications import teams_settings, roadmap_subscription
 from .workload import (
     settings as workload_settings, my_workload, legacy_my_workload, save as workload_save,
     workload_overview, person_participation, category_update, category_create, category_delete,
-    participation_update, setting_update,
+    participation_update, setting_update, checkin_snooze,
 )
 
 urlpatterns = [
@@ -64,6 +64,7 @@ urlpatterns = [
     path("profile/", profile, name="profile"),
     path("profile/workload/", my_workload, name="my_workload"),
     path("profile/workload/save/", workload_save, name="workload_save"),
+    path("profile/workload/check-in/snooze/", checkin_snooze, name="workload_checkin_snooze"),
     path("accounts/password/change/", ProfilePasswordChangeView.as_view(), name="password_change"),
     path("roadmap/<slug:token>/", public_roadmap, name="public_roadmap"),
     path("roadmap/<slug:token>/projects/<int:project_id>/follow/", roadmap_subscription, name="roadmap_subscription"),

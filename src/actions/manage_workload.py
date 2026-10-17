@@ -44,17 +44,32 @@ def configure(*, workspace, actor, data, setting=None):
     require_manager(workspace, actor)
     fields = [
         "workload_enabled",
+        "workload_checkin_enabled",
         "workload_members_included",
         "workload_pms_included",
     ]
-    if setting is not None:
+    interval_field = "workload_checkin_interval_days"
+    if setting == interval_field:
+        fields = [interval_field]
+    elif setting is not None:
         if setting not in fields or data.get(setting) not in {None, "on"}:
             raise ValidationError(_("Invalid workload setting."))
         fields = [setting]
+    elif interval_field in data:
+        fields.append(interval_field)
+    interval = None
+    if interval_field in fields:
+        raw = str(data.get(interval_field, ""))
+        if (
+            not raw.isascii() or not raw.isdecimal() or len(raw) > 3
+            or not 1 <= int(raw) <= 365
+        ):
+            raise ValidationError(_("Choose a whole number of days between 1 and 365."))
+        interval = int(raw)
     workspace = Workspace.objects.select_for_update().get(pk=workspace.pk)
-    # A switch only changes its own field, never another switch's pending draft.
+    # A setting only changes its own field, never another setting's pending draft.
     for field in fields:
-        setattr(workspace, field, data.get(field) == "on")
+        setattr(workspace, field, interval if field == interval_field else data.get(field) == "on")
     workspace.save(update_fields=fields)
     created_categories = []
     if (
@@ -142,7 +157,7 @@ def percentage(value):
 
 
 @transaction.atomic
-def submit(*, workspace, user, data=None, review=False):
+def submit(*, workspace, user, data=None, review=False, checkin=False):
     # Serialize with configuration changes and submissions for this workspace.
     workspace = Workspace.objects.select_for_update().get(pk=workspace.pk)
     membership = (
@@ -218,6 +233,16 @@ def submit(*, workspace, user, data=None, review=False):
                 "Category or project is unavailable in this workspace. Reload and try again."
             )
         )
+    if checkin:
+        if any(data.get(f"category_{c.id}", "") == "" for c in categories):
+            raise ValidationError(_("Enter a percentage for every category."))
+        if any(
+            data.get(f"project_{c.id}_{p.id}", "") == ""
+            for c in categories if c.supports_projects
+            for p in projects
+            if data.get(f"selected_project_{c.id}_{p.id}") == "on"
+        ):
+            raise ValidationError(_("Enter a percentage for each selected project, or remove it."))
     values = {key: percentage(data.get(key)) for key in allowed}
     if sum(values[f"category_{c.id}"] for c in categories) != 100:
         raise ValidationError(_("Category allocations must total 100%."))

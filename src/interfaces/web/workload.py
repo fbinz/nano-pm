@@ -1,11 +1,13 @@
 """Workspace workload settings, personal estimates and PM summaries."""
 
+from datetime import timedelta
 from functools import wraps
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
 from datastar_py.consts import ElementPatchMode
@@ -47,11 +49,20 @@ def identifier(value):
 
 def settings_options(workspace):
     return [
-        {"name": name, "label": label, "enabled": getattr(workspace, name)}
+        {
+            "name": name,
+            "label": label,
+            "enabled": getattr(workspace, name),
+            "help": _(
+                "Show a dialog when an estimate is missing or due for renewal. "
+                "Manual updates remain available."
+            ) if name == "workload_checkin_enabled" else "",
+        }
         for name, label in [
             ("workload_enabled", _("Enable workload reporting")),
             ("workload_members_included", _("Include members by default")),
             ("workload_pms_included", _("Include PMs by default")),
+            ("workload_checkin_enabled", _("Show automatic workload check-in dialogs")),
         ]
     ]
 
@@ -121,17 +132,24 @@ def setting_update(request, setting):
     except ValidationError:
         return HttpResponseBadRequest()
     request.workspace.refresh_from_db()
-    option = next(
-        option
-        for option in settings_options(request.workspace)
-        if option["name"] == setting
-    )
-    if setting == "workload_enabled":
+    if setting == "workload_checkin_interval_days":
+        option = {"label": _("Workload check-in interval")}
+    else:
+        option = next(
+            option
+            for option in settings_options(request.workspace)
+            if option["name"] == setting
+        )
+    if setting in {"workload_enabled", "workload_checkin_enabled"}:
         fragment = render_component(
             request,
             "screens/workload/configuration",
             workspace=request.workspace,
             **settings_context(request.workspace),
+        )
+    elif setting == "workload_checkin_interval_days":
+        fragment = render_component(
+            request, "screens/workload/cadence", workspace=request.workspace
         )
     else:
         fragment = render_component(
@@ -155,6 +173,10 @@ def setting_update(request, setting):
             )
         ),
     ]
+    if setting in {"workload_enabled", "workload_checkin_enabled"} and not option["enabled"]:
+        patches.append(SSE.patch_elements(render_component(
+            request, "screens/workload/checkin-finished"
+        )))
     return DatastarResponse(patches)
 
 
@@ -351,33 +373,57 @@ def legacy_my_workload(request):
 def save(request):
     error = status = ""
     data = None
+    action = request.POST.get("action", "save")
+    checkin = action == "checkin"
     try:
-        action = request.POST.get("action", "save")
-        if action not in {"save", "review"}:
+        if action not in {"save", "review", "checkin"}:
             raise ValidationError(_("Unknown action."))
         submit(
             workspace=request.workspace,
             user=request.user,
             data=request.POST,
             review=action == "review",
+            checkin=checkin,
         )
         status = (
             _("Review date refreshed.") if action == "review" else _("Estimate saved.")
         )
     except ValidationError as exc:
         error = " ".join(exc.messages)
-        data = request.POST if request.POST.get("action") != "review" else None
-    return DatastarResponse(
-        SSE.patch_elements(
-            render_component(
-                request,
-                "screens/workload/content",
-                **personal(request.workspace, request.user, data),
-                error=error,
-                status=status,
-            )
-        )
+        data = request.POST if action != "review" else None
+    if checkin and not error:
+        Membership.objects.filter(pk=request.membership.pk).update(workload_snoozed_until=None)
+        return checkin_finished(request, status)
+    patches = [SSE.patch_elements(render_component(
+        request,
+        "screens/workload/content",
+        **personal(request.workspace, request.user, data, checkin=checkin),
+        error=error,
+    ))]
+    if not error:
+        patches.append(SSE.patch_elements(render_component(
+            request, "screens/workload/saved-toast", message=status
+        )))
+    return DatastarResponse(patches)
+
+
+def checkin_finished(request, message):
+    return DatastarResponse([
+        SSE.patch_elements(render_component(request, "screens/workload/checkin-finished")),
+        SSE.patch_elements(render_component(
+            request, "screens/workload/saved-toast", message=message
+        )),
+    ])
+
+
+@login_required
+@participant_required
+@require_http_methods(["POST"])
+def checkin_snooze(request):
+    Membership.objects.filter(pk=request.membership.pk).update(
+        workload_snoozed_until=timezone.now() + timedelta(days=7)
     )
+    return checkin_finished(request, _("We’ll remind you next week."))
 
 
 @login_required

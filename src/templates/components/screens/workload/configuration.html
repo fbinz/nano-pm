@@ -6,6 +6,7 @@
   {% if workspace.workload_enabled %}
     <div class="space-y-3">
       {% for option in options %}{% if option.name != 'workload_enabled' %}<c-screens.workload.setting-toggle :option="option" />{% endif %}{% endfor %}
+      <c-screens.workload.cadence :workspace="workspace" />
     </div>
     <section class="space-y-3">
       <h3 id="workload-categories-heading" class="text-lg font-semibold">{% trans "Categories" %}</h3>

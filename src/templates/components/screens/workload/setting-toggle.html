@@ -8,7 +8,9 @@
   <label class="flex gap-3 items-center">
     <input id="workload-switch-{{ option.name }}" type="checkbox" role="switch" class="toggle toggle-sm"
            name="{{ option.name }}" value="on" {% if option.enabled %}checked{% endif %}
+           {% if option.help %}aria-describedby="workload-help-{{ option.name }}"{% endif %}
            data-on:change="el.form.requestSubmit()">
     {{ option.label }}
   </label>
+  {% if option.help %}<p id="workload-help-{{ option.name }}" class="text-xs text-base-content/60 mt-1">{{ option.help }}</p>{% endif %}
 </form>

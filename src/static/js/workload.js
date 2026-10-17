@@ -162,6 +162,15 @@ document.addEventListener('input', event => {
 });
 
 document.addEventListener('click', event => {
+  const previous = event.target.closest('[data-workload-previous-for]');
+  if (previous) {
+    const input = document.getElementById(previous.dataset.workloadPreviousFor);
+    if (input && !input.disabled) {
+      input.value = previous.dataset.workloadPrevious;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    }
+  }
   const fill = event.target.closest('[data-workload-fill]');
   if (fill) {
     const form = fill.closest('form');
@@ -224,7 +233,7 @@ document.addEventListener('datastar-fetch', event => {
   // an unchanged value attribute (notably after “Still accurate”). A completed
   // workload response is authoritative, including validation-error drafts.
   document.querySelectorAll('#workload-form input[type="number"]').forEach(input => {
-    input.value = input.getAttribute('value') || '0';
+    input.value = input.getAttribute('value') ?? '';
   });
   preview();
 });

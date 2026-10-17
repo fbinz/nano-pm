@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from data.models.project import default_teams_notify_events
@@ -7,6 +8,10 @@ class Workspace(models.Model):
     name = models.CharField(max_length=200)
     prompt_milestone_move_reason = models.BooleanField(default=True)
     workload_enabled = models.BooleanField(default=False)
+    workload_checkin_enabled = models.BooleanField(default=True)
+    workload_checkin_interval_days = models.PositiveSmallIntegerField(
+        default=7, validators=[MinValueValidator(1), MaxValueValidator(365)]
+    )
     workload_members_included = models.BooleanField(default=True)
     workload_pms_included = models.BooleanField(default=False)
     teams_webhook_url = models.URLField(max_length=2048, blank=True, default="")
@@ -18,6 +23,15 @@ class Workspace(models.Model):
     public_roadmap_description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(workload_checkin_interval_days__gte=1)
+                & models.Q(workload_checkin_interval_days__lte=365),
+                name="workload_checkin_interval_range",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name

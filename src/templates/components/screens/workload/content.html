@@ -1,10 +1,11 @@
 {% load i18n %}
-<c-vars rows suggested current history total error="" status="" />
+<c-vars rows suggested current history total checkin="" error="" />
 <div id="workload-content" class="space-y-6">
   {% if error %}<p role="alert" class="text-error">{{ error }}</p>{% endif %}
-  <p id="workload-status" role="status" class="text-sm text-success empty:hidden">{{ status }}</p>
   <section>
-    {% if current %}
+    {% if checkin %}
+      {% if current %}<p class="text-xs text-base-content/60">{% blocktrans with date=current.reviewed_at|date:"DATE_FORMAT" %}Previous estimate from {{ date }}{% endblocktrans %}</p>{% endif %}
+    {% elif current %}
       <header class="workload-editor-header">
         <p class="text-xs text-base-content/60">{% blocktrans with ago=current.reviewed_at|timesince %}Last reviewed {{ ago }} ago{% endblocktrans %}</p>
         <form data-on:submit__prevent="@post('{% url 'workload_save' %}', { contentType: 'form' })">
@@ -15,6 +16,7 @@
     {% endif %}
     <form id="workload-form" data-on:submit__prevent="@post('{% url 'workload_save' %}', { contentType: 'form' })">
       {% csrf_token %}
+      {% if checkin %}<input type="hidden" name="action" value="checkin">{% endif %}
       <div class="workload-editor">
         <div class="workload-chart-panel">
           <c-screens.workload.donut :rows="rows" :total="total" editable="true" />
@@ -38,13 +40,16 @@
             <fieldset id="workload-row-{{ row.field }}" data-workload-row="{{ row.field }}" data-category-name="{{ row.category.name }}" class="workload-category" style="--allocation-color: {{ row.color }};">
               <legend class="sr-only">{{ row.category.name }}</legend>
               <div class="workload-category-heading">
-                <label for="{{ row.field }}" class="workload-category-label"><span class="workload-color-dot" aria-hidden="true"></span>{{ row.category.name }}</label>
+                <div>
+                  <label for="{{ row.field }}" class="workload-category-label"><span class="workload-color-dot" aria-hidden="true"></span>{{ row.category.name }}</label>
+                </div>
                 <div class="workload-number">
-                  <input id="{{ row.field }}" class="input input-sm" aria-label="{% blocktrans with name=row.category.name %}{{ name }} percentage{% endblocktrans %}" type="number" inputmode="numeric" name="{{ row.field }}" value="{{ row.value }}" min="0" max="100" step="1" required data-workload-percentage aria-describedby="workload-feedback workload-total-hint">
+                  <input id="{{ row.field }}" class="input input-sm" aria-label="{% blocktrans with name=row.category.name %}{{ name }} percentage{% endblocktrans %}" type="number" inputmode="numeric" name="{{ row.field }}" value="{{ row.value }}" min="0" max="100" step="1" required data-workload-percentage aria-describedby="workload-feedback workload-total-hint{% if checkin and row.previous != None %} previous-{{ row.field }}{% endif %}">
                   <span aria-hidden="true">%</span>
+                  {% if checkin and row.previous != None %}<button type="button" id="previous-{{ row.field }}" data-workload-previous="{{ row.previous }}" data-workload-previous-for="{{ row.field }}" class="workload-previous" aria-controls="{{ row.field }}" aria-label="{% blocktrans with name=row.category.name value=row.previous %}Use previous estimate for {{ name }}: {{ value }}%{% endblocktrans %}">{% blocktrans with value=row.previous %}Use previous {{ value }}%{% endblocktrans %}</button>{% endif %}
                 </div>
               </div>
-              <input id="workload-slider-{{ row.field }}" class="workload-slider" type="range" min="0" max="100" step="1" value="{{ row.value }}" data-workload-slider aria-label="{% blocktrans with name=row.category.name %}{{ name }} allocation{% endblocktrans %}" aria-describedby="workload-feedback workload-total-hint">
+              <input id="workload-slider-{{ row.field }}" class="workload-slider" type="range" min="0" max="100" step="1" value="{{ row.value|default_if_none:'0' }}" data-workload-slider aria-label="{% blocktrans with name=row.category.name %}{{ name }} allocation{% endblocktrans %}" aria-describedby="workload-feedback workload-total-hint">
               <div class="workload-fill-slot"><button data-workload-fill type="button" class="workload-fill" hidden></button></div>
               {% if row.category.supports_projects %}
                 <details class="workload-projects" {% if row.project_open %}open{% endif %}>
@@ -61,8 +66,9 @@
                         <div id="workload-project-row-{{ item.field }}" class="workload-project-row" data-workload-project-row data-project-name="{{ item.project.name }}" data-selected="{{ item.selected|yesno:'true,false' }}" {% if not item.selected %}hidden{% endif %}>
                           <label class="workload-project-name" for="{{ item.field }}"><span class="workload-color-dot" style="background: {{ item.project.color }};" aria-hidden="true"></span>{{ item.project.name }}</label>
                           <span class="workload-number">
-                            <input id="{{ item.field }}" class="input input-sm" type="number" inputmode="numeric" name="{{ item.field }}" value="{{ item.value }}" min="0" max="100" step="1" required data-workload-project data-project-id="{{ item.project.id }}" {% if not item.selected %}disabled{% endif %} aria-describedby="workload-project-units-{{ row.field }} workload-project-error-{{ row.field }}" aria-label="{% blocktrans with category=row.category.name project=item.project.name %}{{ category }}: {{ project }} percentage{% endblocktrans %}">
+                            <input id="{{ item.field }}" class="input input-sm" type="number" inputmode="numeric" name="{{ item.field }}" value="{{ item.value }}" min="0" max="100" step="1" required data-workload-project data-project-id="{{ item.project.id }}" {% if not item.selected %}disabled{% endif %} aria-describedby="workload-project-units-{{ row.field }} workload-project-error-{{ row.field }}{% if checkin and item.previous != None %} previous-{{ item.field }}{% endif %}" aria-label="{% blocktrans with category=row.category.name project=item.project.name %}{{ category }}: {{ project }} percentage{% endblocktrans %}">
                             <span aria-hidden="true">%</span>
+                            {% if checkin and item.previous != None %}<button type="button" id="previous-{{ item.field }}" data-workload-previous="{{ item.previous }}" data-workload-previous-for="{{ item.field }}" class="workload-previous" aria-controls="{{ item.field }}" aria-label="{% blocktrans with category=row.category.name project=item.project.name value=item.previous %}Use previous estimate for {{ category }} / {{ project }}: {{ value }}%{% endblocktrans %}">{% blocktrans with value=item.previous %}Use previous {{ value }}%{% endblocktrans %}</button>{% endif %}
                           </span>
                           <input type="hidden" name="selected_{{ item.field }}" value="on" data-workload-project-selected {% if not item.selected %}disabled{% endif %}>
                           <button id="workload-project-remove-{{ item.field }}" type="button" class="workload-project-remove" data-workload-project-remove="{{ item.field }}" aria-label="{% blocktrans with name=item.project.name %}Remove {{ name }}{% endblocktrans %}"><c-lucide name="x" size="16" /></button>
@@ -88,7 +94,7 @@
       </div>
       <footer class="workload-editor-footer">
         <p id="workload-total-hint" class="text-sm text-base-content/60">{% trans "Total" %}: <output id="workload-total" class="font-semibold text-base-content">{{ total }}%</output> / 100%</p>
-        {% if rows %}<button class="btn btn-neutral" type="submit" data-workload-save>{% trans "Save estimate" %}</button>{% endif %}
+        {% if rows %}<button class="btn btn-neutral" type="submit" data-workload-save{% if checkin %} disabled{% endif %}>{% if checkin %}{% trans "Submit estimate" %}{% else %}{% trans "Save estimate" %}{% endif %}</button>{% endif %}
       </footer>
     </form>
   </section>

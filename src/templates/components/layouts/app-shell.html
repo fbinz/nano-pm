@@ -128,6 +128,9 @@
     <div id="drawer-slot"></div>
   </aside>
   <div id="toast-slot"></div>
+  <div id="workload-checkin-slot">
+    {% if request.workload_checkin %}<c-screens.workload.checkin :checkin="request.workload_checkin" />{% endif %}
+  </div>
 
   <dialog id="milestone-move-dialog"
           class="milestone-move-dialog"
@@ -189,4 +192,5 @@
   <script src="{% static 'js/timeline-pan.js' %}"></script>
   <script src="{% static 'js/nano.js' %}"></script>
   <script type="module" src="{% static 'js/milestone-label.js' %}"></script>
+  <script type="module" src="{% static 'js/workload-checkin.js' %}"></script>
 </c-layouts.base>

@@ -140,12 +140,19 @@ async function enableWorkload(page) {
   await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'true');
 }
 
-async function signInAs(page, username) {
+async function signInAs(page, username, { keepCheckin = false } = {}) {
   await page.locator('.sign-out-btn').click();
   await page.fill('input[name=username]', username);
   await page.fill('input[name=password]', username);
   await page.click('button[type=submit]');
   await page.waitForURL('/');
+  // Most tests exercise other features; dismiss the initial, intentionally
+  // blocking check-in just as a user continuing to their work would.
+  const checkin = page.locator('#workload-checkin-dialog');
+  if (!keepCheckin && await checkin.count()) {
+    await expect(checkin).toHaveAttribute('data-initialized', 'true');
+    if (await checkin.isVisible()) await page.keyboard.press('Escape');
+  }
 }
 
 async function submitWorkloadExample(page) {
@@ -160,7 +167,198 @@ async function submitWorkloadExample(page) {
   await expect(page.locator('#workload-status')).toContainText('Estimate saved');
 }
 
+async function ageWorkloadCheckin(days = 31, snoozeDays = 0) {
+  await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
+from datetime import timedelta
+from django.utils import timezone
+from data.models import WorkloadReport, Membership
+WorkloadReport.objects.filter(user__username='member1').update(reviewed_at=timezone.now()-timedelta(days=${days}))
+${snoozeDays ? `Membership.objects.filter(user__username='member1').update(workload_snoozed_until=timezone.now()-timedelta(days=${snoozeDays}))` : ''}
+`], {
+    cwd: path.resolve(__dirname, '../..'),
+    env: { ...process.env, DJANGO_DEBUG: 'true', DJANGO_DB_PATH: 'db.e2e.sqlite3' },
+  });
+}
+
 test.describe('workload estimates', () => {
+  test('workload save confirmation is a dismissible German toast, not inline text', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/profile/workload/');
+    await page.locator('.lang-switch button[value="de"]').click();
+    const inputs = page.locator('[data-workload-percentage]');
+    await inputs.nth(0).fill('30');
+    await inputs.nth(1).fill('60');
+    await inputs.nth(2).fill('10');
+    await page.getByRole('button', { name: 'Schätzung speichern', exact: true }).click();
+    const toast = page.locator('#toast-slot .nano-toast');
+    await expect(toast).toContainText('Schätzung gespeichert.');
+    await expect(page.locator('#workload-content')).not.toContainText('Schätzung gespeichert.');
+    await toast.getByRole('button').click();
+    await expect(toast).toHaveCount(0);
+    await inputs.nth(0).fill('20');
+    await page.locator('#workload-form').evaluate(form => form.requestSubmit());
+    await expect(page.locator('#workload-content [role=alert]')).toBeVisible();
+    await expect(toast).toHaveCount(0);
+  });
+  test('workload check-in opens empty with adjacent previous values and saves a fresh estimate', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await submitWorkloadExample(page);
+    await ageWorkloadCheckin();
+    await page.goto('/');
+    const dialog = page.getByRole('dialog', { name: 'How is your work split right now?' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('Use previous 30%', { exact: true })).toBeVisible();
+    await expect(dialog.getByText('Use previous 40%', { exact: true })).toBeVisible();
+    await expect(dialog.getByLabel('Maintenance percentage', { exact: true })).toHaveValue('');
+    await expect(dialog.getByLabel('Project work: API Migration percentage', { exact: true })).toHaveValue('');
+    await expect(dialog.locator('[data-workload-center-value]')).toHaveText('0%');
+    await expect(dialog.locator('[data-workload-slice]:visible')).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Still accurate' })).toHaveCount(0);
+    const submit = dialog.getByRole('button', { name: 'Submit estimate', exact: true });
+    await expect(submit).toBeDisabled();
+    await dialog.getByLabel('Maintenance percentage', { exact: true }).fill('20');
+    await dialog.getByLabel('Project work percentage', { exact: true }).fill('80');
+    await expect(submit).toBeDisabled(); // Empty is not an explicit zero.
+    await dialog.getByLabel('Meetings percentage', { exact: true }).fill('0');
+    await dialog.getByLabel('Project work: API Migration percentage', { exact: true }).fill('50');
+    await expect(submit).toBeEnabled();
+    await submit.click();
+    await expect(dialog).not.toBeVisible();
+    await expect(page.locator('#toast-slot .nano-toast')).toContainText('Estimate saved.');
+    await page.reload();
+    await expect(page.locator('#workload-checkin-dialog')).toHaveCount(0);
+    await page.goto('/profile/workload/');
+    await expect(page.getByLabel('Maintenance percentage', { exact: true })).toHaveValue('20');
+    await expect(page.getByLabel('Project work: API Migration percentage', { exact: true })).toHaveValue('50');
+    await expect(page.locator('[data-workload-history]')).toHaveCount(2);
+  });
+
+  test('workload check-in previous-value buttons fill only their own input without submitting', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await submitWorkloadExample(page);
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('40');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('0');
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await expect(page.locator('[data-workload-history]')).toHaveCount(2);
+    await ageWorkloadCheckin();
+    await page.goto('/');
+    const dialog = page.locator('#workload-checkin-dialog');
+    await expect(dialog).toBeVisible();
+    for (const language of ['en', 'de']) {
+      if (language === 'de') {
+        await postForm(page, '/i18n/setlang/', { language, next: '/' });
+        await page.reload();
+        await expect(dialog.getByText('Vorherige 60 % übernehmen', { exact: true })).toBeVisible();
+      }
+      for (const width of [1024, 375, 320]) {
+        await page.setViewportSize({ width, height: 900 });
+        const positions = await dialog.locator('[data-workload-previous-for]').evaluateAll(buttons => buttons.map(button => {
+          const input = document.getElementById(button.dataset.workloadPreviousFor);
+          const b = button.getBoundingClientRect(), i = input.getBoundingClientRect();
+          return {
+            beside: b.left >= i.right && Math.min(b.bottom, i.bottom) > Math.max(b.top, i.top),
+            sameGroup: button.parentElement === input.parentElement,
+          };
+        }));
+        expect(positions.every(position => position.beside && position.sameGroup)).toBe(true);
+        expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      }
+    }
+    await postForm(page, '/i18n/setlang/', { language: 'en', next: '/' });
+    await page.reload();
+    await expect(dialog).toBeVisible();
+    let submissions = 0;
+    page.on('request', request => {
+      if (request.url().endsWith('/profile/workload/save/') && request.method() === 'POST') submissions++;
+    });
+    const maintenance = dialog.getByLabel('Maintenance percentage', { exact: true });
+    const projects = dialog.getByLabel('Project work percentage', { exact: true });
+    const meetings = dialog.getByLabel('Meetings percentage', { exact: true });
+    const allocation = dialog.getByLabel('Project work: API Migration percentage', { exact: true });
+    const submit = dialog.getByRole('button', { name: 'Submit estimate', exact: true });
+    await dialog.getByRole('button', { name: 'Use previous estimate for Maintenance: 40%', exact: true }).click();
+    await expect(maintenance).toHaveValue('40');
+    await expect(maintenance).toBeFocused();
+    await expect(projects).toHaveValue('');
+    await expect(meetings).toHaveValue('');
+    await expect(allocation).toHaveValue('');
+    await expect(dialog.locator('[data-workload-center-value]')).toHaveText('40%');
+    await dialog.getByRole('button', { name: 'Use previous estimate for Project work: 60%', exact: true }).click();
+    const zero = dialog.getByRole('button', { name: 'Use previous estimate for Meetings: 0%', exact: true });
+    await zero.focus();
+    await page.keyboard.press('Space');
+    await expect(meetings).toHaveValue('0');
+    await expect(submit).toBeDisabled(); // The project input is still empty.
+    await page.setViewportSize({ width: 375, height: 812 });
+    const previousProject = dialog.getByRole('button', { name: 'Use previous estimate for Project work / API Migration: 40%', exact: true });
+    await previousProject.focus();
+    await page.keyboard.press('Enter');
+    await expect(allocation).toHaveValue('40');
+    await expect(allocation).toBeFocused();
+    await expect(projects).toHaveValue('60');
+    await expect(dialog.locator('[data-workload-project-slice]:visible')).toHaveAttribute('data-percentage', '40');
+    await expect(submit).toBeEnabled();
+    expect(submissions).toBe(0);
+    await submit.click();
+    await expect(dialog).not.toBeVisible();
+    await expect(page.locator('#toast-slot')).toContainText('Estimate saved.');
+    expect(submissions).toBe(1);
+  });
+
+  test('workload check-in allows dismissal, manual reopening and a persistent one-week snooze', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1', { keepCheckin: true });
+    await page.goto('/');
+    const dialog = page.locator('#workload-checkin-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('[data-workload-previous]')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await page.goto('/people/');
+    await expect(dialog).not.toBeVisible();
+    await page.getByRole('button', { name: 'Workload check-in due', exact: true }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Remind me next week', exact: true }).click();
+    await expect(page.locator('#toast-slot .nano-toast')).toContainText('We’ll remind you next week.');
+    await page.evaluate(() => sessionStorage.clear());
+    await page.reload();
+    await expect(dialog).toHaveCount(0);
+    await ageWorkloadCheckin(31, 8);
+    await page.reload();
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.goto('/profile/workload/');
+    await expect(page.locator('[data-workload-history]')).toHaveCount(0);
+  });
+
+  test('workload check-in rejects blank categories and is unavailable to exempt members', async ({ appPage: page }) => {
+    expect(await postForm(page, '/profile/workload/check-in/snooze/', {})).toBe(403);
+    await enableWorkload(page);
+    await signInAs(page, 'member1', { keepCheckin: true });
+    await page.goto('/');
+    await expect(page.locator('#workload-checkin-dialog')).toBeVisible();
+    const fields = await page.locator('#workload-form').evaluate(form => Object.fromEntries(new FormData(form)));
+    const category = Object.keys(fields).find(key => key.startsWith('category_'));
+    fields[category] = '100';
+    // Bypass browser validity: omitted/empty fields must not become implicit zeros.
+    await page.locator('#workload-form').evaluate((form, fields) => {
+      for (const [name, value] of Object.entries(fields)) {
+        const input = form.elements.namedItem(name);
+        if (input) input.value = value;
+      }
+      form.noValidate = true;
+      form.requestSubmit();
+    }, fields);
+    await expect(page.locator('#workload-content [role=alert]')).toContainText('Enter a percentage for every category.');
+    await expect(page.locator('#workload-checkin-dialog')).toBeVisible();
+    await expect(page.getByLabel('Meetings percentage', { exact: true })).toHaveValue('');
+    await page.keyboard.press('Escape');
+    await page.goto('/profile/workload/');
+    await expect(page.locator('[data-workload-history]')).toHaveCount(0);
+  });
   test('workload overview uses the shared average donut and per-user history bars', async ({ appPage: page }) => {
     await enableWorkload(page);
     await signInAs(page, 'member1');
@@ -768,6 +966,119 @@ test.describe('workload estimates', () => {
     await expect(page.locator('main').getByRole('link', { name: 'My workload', exact: true })).toHaveCount(0);
     expect(await postForm(page, '/profile/workload/save/', {})).toBe(403);
     expect((await page.goto('/profile/workload/')).status()).toBe(403);
+  });
+
+  test('disabling workload reminders hides cadence immediately and restores its saved value when enabled', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const automatic = page.getByRole('switch', { name: 'Show automatic workload check-in dialogs', exact: true });
+    const cadence = page.getByLabel('Ask again after (days)', { exact: true });
+    await cadence.fill('9');
+    await cadence.press('Tab');
+    await expect(page.locator('#workload-checkin-cadence')).toHaveAttribute('data-interval-days', '9');
+    await automatic.uncheck();
+    await expect(page.locator('[data-workload-setting="workload_checkin_enabled"]')).toHaveAttribute('data-enabled', 'false');
+    await expect(cadence).toHaveCount(0);
+    await page.reload();
+    await expect(cadence).toHaveCount(0);
+    await automatic.check();
+    await expect(cadence).toHaveValue('9');
+    await expect(page.getByRole('switch', { name: 'Include members by default', exact: true })).toBeChecked();
+    await expect(page.getByRole('switch', { name: 'Include PMs by default', exact: true })).not.toBeChecked();
+  });
+
+  test('disabling workload check-ins without a modal does not patch a missing target', async ({ appPage: page }) => {
+    const errors = [];
+    page.on('console', message => {
+      if (['error', 'warning'].includes(message.type())) errors.push(message.text());
+    });
+    page.on('pageerror', error => errors.push(error.message));
+    await enableWorkload(page);
+    await expect(page.locator('#workload-checkin-dialog')).toHaveCount(0); // PM is exempt.
+    await page.getByRole('switch', { name: 'Show automatic workload check-in dialogs', exact: true }).uncheck();
+    await expect(page.locator('[data-workload-setting="workload_checkin_enabled"]')).toHaveAttribute('data-enabled', 'false');
+    await page.getByRole('switch', { name: 'Enable workload reporting', exact: true }).uncheck();
+    await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'false');
+    await page.reload();
+    expect(errors.filter(error => error.includes('PatchElementsNoTargetsFound'))).toEqual([]);
+  });
+
+  test('workspace workload check-in cadence uses the configured number of days and validates changes', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const cadence = page.getByLabel('Ask again after (days)', { exact: true });
+    await expect(cadence).toHaveValue('7');
+    await signInAs(page, 'member1');
+    await submitWorkloadExample(page);
+    await ageWorkloadCheckin(6);
+    await page.goto('/');
+    await expect(page.locator('#workload-checkin-dialog')).toHaveCount(0);
+    expect(await postForm(page, '/workspaces/workload/settings/workload_checkin_interval_days/', { workload_checkin_interval_days: '7' })).toBe(403);
+    await signInAs(page, 'demo');
+    await page.goto('/workspaces/settings/');
+    await cadence.fill('1');
+    await cadence.press('Tab');
+    const committed = page.locator('#workload-checkin-cadence');
+    await expect(committed).toHaveAttribute('data-interval-days', '1');
+    for (const value of ['', '0', '-1', '366', '1.5', 'abc']) {
+      expect(await postForm(page, '/workspaces/workload/settings/workload_checkin_interval_days/', { workload_checkin_interval_days: value })).toBe(400);
+    }
+    await page.reload();
+    await expect(cadence).toHaveValue('1');
+    await signInAs(page, 'member1', { keepCheckin: true });
+    await expect(page.locator('#workload-checkin-dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await signInAs(page, 'demo');
+    await page.goto('/workspaces/settings/');
+    await cadence.fill('14');
+    await cadence.press('Tab');
+    await expect(committed).toHaveAttribute('data-interval-days', '14');
+    await signInAs(page, 'member1', { keepCheckin: true });
+    await expect(page.locator('#workload-checkin-dialog')).toHaveCount(0);
+    await page.goto('/profile/workload/');
+    await expect(page.getByLabel('Maintenance percentage', { exact: true })).toHaveValue('30');
+    await expect(page.locator('[data-workload-history]')).toHaveCount(1);
+  });
+
+  test('workspace settings control automatic workload check-in dialogs without disabling manual estimates', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const automatic = page.getByRole('switch', { name: 'Show automatic workload check-in dialogs', exact: true });
+    await expect(automatic).toBeChecked();
+    const cadence = page.getByLabel('Ask again after (days)', { exact: true });
+    await cadence.fill('14');
+    await cadence.press('Tab');
+    await expect(page.locator('#workload-checkin-cadence')).toHaveAttribute('data-interval-days', '14');
+    const originalWorkspace = await page.locator('#workspace-menu form', { has: page.locator('.workspace-item.active') }).getAttribute('action');
+    await automatic.uncheck();
+    await expect(page.locator('[data-workload-setting="workload_checkin_enabled"]')).toHaveAttribute('data-enabled', 'false');
+    await page.reload();
+    await expect(automatic).not.toBeChecked();
+    expect(await postForm(page, '/workspaces/workload/settings/workload_checkin_enabled/', { workload_checkin_enabled: 'invalid' })).toBe(400);
+    // The preference belongs to this workspace, not the user's account.
+    expect(await postForm(page, '/workspaces/', { name: 'Another check-in policy' })).toBe(200);
+    await enableWorkload(page);
+    await expect(automatic).toBeChecked();
+    await expect(cadence).toHaveValue('7');
+    expect(await postForm(page, originalWorkspace, {})).toBe(200);
+    await page.goto('/workspaces/settings/');
+    await expect(automatic).not.toBeChecked();
+    await expect(cadence).toHaveCount(0);
+    await signInAs(page, 'member1', { keepCheckin: true });
+    await expect(page.locator('#workload-checkin-dialog')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Workload check-in due', exact: true })).toHaveCount(0);
+    expect(await postForm(page, '/workspaces/workload/settings/workload_checkin_enabled/', { workload_checkin_enabled: 'on' })).toBe(403);
+    await submitWorkloadExample(page);
+    await ageWorkloadCheckin();
+    await page.goto('/');
+    await expect(page.locator('#workload-checkin-dialog')).toHaveCount(0);
+    await signInAs(page, 'demo');
+    expect(await postForm(page, originalWorkspace, {})).toBe(200);
+    await page.goto('/workspaces/settings/');
+    await automatic.check();
+    await expect(page.locator('[data-workload-setting="workload_checkin_enabled"]')).toHaveAttribute('data-enabled', 'true');
+    await expect(cadence).toHaveValue('14');
+    await signInAs(page, 'member1', { keepCheckin: true });
+    await expect(page.locator('#workload-checkin-dialog')).toBeVisible();
+    await expect(page.locator('[data-workload-percentage]').first()).toHaveValue('');
+    await expect(page.locator('[data-workload-previous]').first()).toHaveText('Use previous 30%');
   });
 
   test('workload settings switches save independently and refresh categories and navigation without reload', async ({ appPage: page }) => {

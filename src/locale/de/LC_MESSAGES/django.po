@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-16 23:44+0200\n"
+"POT-Creation-Date: 2026-10-17 22:09+0200\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -39,55 +39,68 @@ msgstr "Ungültige Teilnahme-Einstellung."
 msgid "Member not found in this workspace."
 msgstr "Mitglied in diesem Arbeitsbereich nicht gefunden."
 
-#: actions/manage_workload.py:52
+#: actions/manage_workload.py:56
 msgid "Invalid workload setting."
 msgstr "Ungültige Einstellung zur Arbeitsverteilung."
 
-#: actions/manage_workload.py:66
+#: actions/manage_workload.py:67
+msgid "Choose a whole number of days between 1 and 365."
+msgstr "Wähle eine ganze Zahl zwischen 1 und 365 Tagen."
+
+#: actions/manage_workload.py:81
 msgid "Maintenance"
 msgstr "Wartung"
 
-#: actions/manage_workload.py:67
+#: actions/manage_workload.py:82
 msgid "Project work"
 msgstr "Projektarbeit"
 
-#: actions/manage_workload.py:68
+#: actions/manage_workload.py:83
 msgid "Meetings"
 msgstr "Besprechungen"
 
-#: actions/manage_workload.py:88
+#: actions/manage_workload.py:103
 msgid "Category name must contain 1 to 100 characters."
 msgstr "Der Kategoriename muss 1 bis 100 Zeichen enthalten."
 
-#: actions/manage_workload.py:96
+#: actions/manage_workload.py:111
 msgid "Category not found in this workspace."
 msgstr "Kategorie in diesem Arbeitsbereich nicht gefunden."
 
-#: actions/manage_workload.py:101
+#: actions/manage_workload.py:116
 msgid "A category with this name already exists."
 msgstr "Eine Kategorie mit diesem Namen existiert bereits."
 
-#: actions/manage_workload.py:140
+#: actions/manage_workload.py:155
 msgid "Percentages must be whole numbers between 0 and 100."
 msgstr "Prozentwerte müssen ganze Zahlen zwischen 0 und 100 sein."
 
-#: actions/manage_workload.py:162
+#: actions/manage_workload.py:177
 msgid "Submit an estimate before reviewing it."
 msgstr "Speichere zunächst eine Schätzung, bevor du sie bestätigst."
 
-#: actions/manage_workload.py:218
+#: actions/manage_workload.py:233
 msgid ""
 "Category or project is unavailable in this workspace. Reload and try again."
 msgstr ""
 "Kategorie oder Projekt ist in diesem Arbeitsbereich nicht verfügbar. Lade "
 "die Seite neu und versuche es erneut."
 
-#: actions/manage_workload.py:223
+#: actions/manage_workload.py:238
+msgid "Enter a percentage for every category."
+msgstr "Gib für jede Kategorie einen Prozentanteil ein."
+
+#: actions/manage_workload.py:245
+msgid "Enter a percentage for each selected project, or remove it."
+msgstr ""
+"Gib für jedes ausgewählte Projekt einen Prozentanteil ein oder entferne es."
+
+#: actions/manage_workload.py:248
 msgid "Category allocations must total 100%."
 msgstr "Die Kategorieanteile müssen insgesamt 100% ergeben."
 
-#: actions/manage_workload.py:231
-#: templates/components/screens/workload/content.html:57
+#: actions/manage_workload.py:256
+#: templates/components/screens/workload/content.html:62
 msgid "Project allocations cannot exceed their category percentage."
 msgstr "Projektanteile dürfen den Anteil ihrer Kategorie nicht überschreiten."
 
@@ -453,21 +466,21 @@ msgstr "Mitglied"
 
 #: data/models/membership.py:30
 #: templates/components/screens/people/people-list.html:95
-#: templates/components/screens/workload/configuration.html:37
+#: templates/components/screens/workload/configuration.html:38
 #: templates/components/screens/workload/participation-row.html:18
 msgid "Inherit"
 msgstr "Standard übernehmen"
 
 #: data/models/membership.py:31
 #: templates/components/screens/people/people-list.html:96
-#: templates/components/screens/workload/configuration.html:38
+#: templates/components/screens/workload/configuration.html:39
 #: templates/components/screens/workload/participation-row.html:24
 msgid "Included"
 msgstr "Einbezogen"
 
 #: data/models/membership.py:32
 #: templates/components/screens/people/people-list.html:97
-#: templates/components/screens/workload/configuration.html:39
+#: templates/components/screens/workload/configuration.html:40
 #: templates/components/screens/workload/overview.html:36
 #: templates/components/screens/workload/participation-row.html:30
 msgid "Exempt"
@@ -665,37 +678,55 @@ msgstr ""
 "Füge die URL aus deinem Teams-Workflow ein. Behandle sie wie ein Passwort; "
 "gespeicherte URLs werden nicht angezeigt."
 
-#: interfaces/web/workload.py:44
+#: interfaces/web/workload.py:46
 msgid "Invalid identifier."
 msgstr "Ungültige Kennung."
 
-#: interfaces/web/workload.py:52
+#: interfaces/web/workload.py:57
+msgid ""
+"Show a dialog when an estimate is missing or due for renewal. Manual updates "
+"remain available."
+msgstr "Zeige einen Dialog, wenn eine Schätzung fehlt oder erneut abgefragt werden soll. Du kannst deine Schätzung weiterhin jederzeit selbst aktualisieren."
+
+#: interfaces/web/workload.py:62
 msgid "Enable workload reporting"
 msgstr "Meldung der Arbeitsverteilung aktivieren"
 
-#: interfaces/web/workload.py:53
+#: interfaces/web/workload.py:63
 msgid "Include members by default"
 msgstr "Mitglieder standardmäßig einbeziehen"
 
-#: interfaces/web/workload.py:54
+#: interfaces/web/workload.py:64
 msgid "Include PMs by default"
 msgstr "PMs standardmäßig einbeziehen"
 
-#: interfaces/web/workload.py:98
+#: interfaces/web/workload.py:65
+msgid "Show automatic workload check-in dialogs"
+msgstr "Automatisch zur Aktualisierung der Arbeitsverteilung auffordern"
+
+#: interfaces/web/workload.py:109
 msgid "Unknown setting."
 msgstr "Unbekannte Einstellung."
 
-#: interfaces/web/workload.py:357
+#: interfaces/web/workload.py:136
+msgid "Workload check-in interval"
+msgstr "Abfrageintervall der Arbeitsverteilung"
+
+#: interfaces/web/workload.py:380
 msgid "Unknown action."
 msgstr "Unbekannte Aktion."
 
-#: interfaces/web/workload.py:365
+#: interfaces/web/workload.py:389
 msgid "Review date refreshed."
 msgstr "Überprüfungsdatum aktualisiert."
 
-#: interfaces/web/workload.py:365
+#: interfaces/web/workload.py:389
 msgid "Estimate saved."
 msgstr "Schätzung gespeichert."
+
+#: interfaces/web/workload.py:426
+msgid "We’ll remind you next week."
+msgstr "Wir erinnern dich nächste Woche."
 
 #: readers/chart_view.py:26
 msgctxt "Gantt axis month abbreviation"
@@ -1025,58 +1056,59 @@ msgid "Sign out"
 msgstr "Abmelden"
 
 #: templates/components/layouts/app-shell.html:123
+#: templates/components/screens/workload/checkin.html:8
 #: templates/public/roadmap.html:174
 msgid "Close"
 msgstr "Schließen"
 
-#: templates/components/layouts/app-shell.html:138
+#: templates/components/layouts/app-shell.html:139
 msgid "Why is this milestone moving?"
 msgstr "Warum wird dieser Meilenstein verschoben?"
 
-#: templates/components/layouts/app-shell.html:149
+#: templates/components/layouts/app-shell.html:150
 #: templates/components/screens/activity/index.html:36
 #: templates/components/screens/activity/index.html:49
 #: templates/components/screens/gantt/milestone-popover.html:87
 msgid "Reason"
 msgstr "Begründung"
 
-#: templates/components/layouts/app-shell.html:149
+#: templates/components/layouts/app-shell.html:150
 msgid "(optional)"
 msgstr "(optional)"
 
-#: templates/components/layouts/app-shell.html:155
+#: templates/components/layouts/app-shell.html:156
 msgid "Briefly explain what changed…"
 msgstr "Kurz erklären, was sich geändert hat…"
 
-#: templates/components/layouts/app-shell.html:159
+#: templates/components/layouts/app-shell.html:160
 msgid "Common reasons"
 msgstr "Häufige Gründe"
 
-#: templates/components/layouts/app-shell.html:160
+#: templates/components/layouts/app-shell.html:161
 msgid "Dependency delayed"
 msgstr "Abhängigkeit verzögert"
 
-#: templates/components/layouts/app-shell.html:161
+#: templates/components/layouts/app-shell.html:162
 msgid "Scope changed"
 msgstr "Umfang geändert"
 
-#: templates/components/layouts/app-shell.html:162
+#: templates/components/layouts/app-shell.html:163
 msgid "Resource availability"
 msgstr "Ressourcenverfügbarkeit"
 
-#: templates/components/layouts/app-shell.html:163
+#: templates/components/layouts/app-shell.html:164
 msgid "External commitment"
 msgstr "Externe Verpflichtung"
 
-#: templates/components/layouts/app-shell.html:164
+#: templates/components/layouts/app-shell.html:165
 msgid "Waiting for feedback"
 msgstr "Rückmeldung ausstehend"
 
-#: templates/components/layouts/app-shell.html:168
+#: templates/components/layouts/app-shell.html:169
 msgid "Keep original date"
 msgstr "Ursprüngliches Datum behalten"
 
-#: templates/components/layouts/app-shell.html:169
+#: templates/components/layouts/app-shell.html:170
 msgid "Move milestone"
 msgstr "Meilenstein verschieben"
 
@@ -1244,6 +1276,7 @@ msgstr "verschoben auf"
 #: templates/components/screens/workload/category-deleted-toast.html:7
 #: templates/components/screens/workload/category-saved-toast.html:7
 #: templates/components/screens/workload/participation-saved-toast.html:7
+#: templates/components/screens/workload/saved-toast.html:7
 #: templates/components/screens/workload/settings-saved-toast.html:7
 msgid "Dismiss"
 msgstr "Ausblenden"
@@ -1314,7 +1347,7 @@ msgstr "Niemand zugewiesen"
 
 #: templates/components/screens/gantt/project-popover.html:35
 #: templates/components/screens/gantt/task-popover.html:68
-#: templates/components/screens/workload/content.html:68
+#: templates/components/screens/workload/content.html:74
 #, python-format
 msgid "Remove %(name)s"
 msgstr "%(name)s entfernen"
@@ -1712,7 +1745,7 @@ msgstr "Abgeschlossen"
 #: templates/components/screens/projects/detail.html:22
 #: templates/components/screens/workload/category-new-row.html:15
 #: templates/components/screens/workload/category-row.html:28
-#: templates/components/screens/workload/configuration.html:18
+#: templates/components/screens/workload/configuration.html:19
 msgid "Active"
 msgstr "Aktiv"
 
@@ -1850,6 +1883,16 @@ msgstr "Arbeitsverteilung"
 msgid "Unspecified project work"
 msgstr "Projektarbeit ohne Zuordnung"
 
+#: templates/components/screens/workload/cadence.html:8
+msgid "Ask again after (days)"
+msgstr "Erneut nachfragen nach (Tagen)"
+
+#: templates/components/screens/workload/cadence.html:13
+msgid ""
+"1–365 days after the last saved or confirmed estimate. Changes save "
+"automatically; snoozing still postpones the prompt for one week."
+msgstr "1–365 Tage nach der letzten gespeicherten oder bestätigten Schätzung. Änderungen werden automatisch gespeichert. Mit „Nächste Woche erinnern“ verschiebst du die Abfrage weiterhin um eine Woche."
+
 #: templates/components/screens/workload/category-deleted-toast.html:5
 msgid "Category deleted."
 msgstr "Kategorie gelöscht."
@@ -1864,12 +1907,12 @@ msgstr "Kategorie hinzufügen"
 
 #: templates/components/screens/workload/category-new-row.html:19
 #: templates/components/screens/workload/category-row.html:33
-#: templates/components/screens/workload/configuration.html:19
+#: templates/components/screens/workload/configuration.html:20
 msgid "Allow project breakdown"
 msgstr "Aufteilung nach Projekten erlauben"
 
 #: templates/components/screens/workload/category-row.html:11
-#: templates/components/screens/workload/configuration.html:17
+#: templates/components/screens/workload/configuration.html:18
 msgid "Category name"
 msgstr "Kategoriename"
 
@@ -1890,103 +1933,150 @@ msgstr "Kategorie löschen"
 msgid "Category saved."
 msgstr "Kategorie gespeichert."
 
+#: templates/components/screens/workload/checkin.html:4
+msgid "Workload check-in due"
+msgstr "Arbeitsverteilung neu einschätzen"
+
+#: templates/components/screens/workload/checkin.html:7
+msgid "How is your work split right now?"
+msgstr "Wie verteilt sich deine Arbeit aktuell?"
+
+#: templates/components/screens/workload/checkin.html:10
+msgid ""
+"Enter your current estimate. Previous values are shown for reference. Shares "
+"of your work, not hours—a rough estimate is enough."
+msgstr ""
+"Gib deine aktuelle Einschätzung ein. Die bisherigen Werte dienen dir als "
+"Orientierung. Es geht um Anteile deiner Arbeit, nicht um Stunden – eine "
+"grobe Schätzung reicht."
+
+#: templates/components/screens/workload/checkin.html:14
+msgid "Remind me next week"
+msgstr "Nächste Woche erinnern"
+
 #: templates/components/screens/workload/configuration.html:4
 msgid "Workload settings"
 msgstr "Arbeitsverteilung – Einstellungen"
 
-#: templates/components/screens/workload/configuration.html:11
+#: templates/components/screens/workload/configuration.html:12
 msgid "Categories"
 msgstr "Kategorien"
 
-#: templates/components/screens/workload/configuration.html:12
-#: templates/components/screens/workload/configuration.html:31
+#: templates/components/screens/workload/configuration.html:13
+#: templates/components/screens/workload/configuration.html:32
 msgid "Changes save automatically."
 msgstr "Änderungen werden automatisch gespeichert."
 
-#: templates/components/screens/workload/configuration.html:30
+#: templates/components/screens/workload/configuration.html:31
 msgid "Participation overrides"
 msgstr "Individuelle Teilnahme-Einstellungen"
 
-#: templates/components/screens/workload/configuration.html:36
+#: templates/components/screens/workload/configuration.html:37
 #: templates/components/screens/workload/overview.html:19
 msgid "Person"
 msgstr "Person"
 
-#: templates/components/screens/workload/content.html:9
+#: templates/components/screens/workload/content.html:7
+#, python-format
+msgid "Previous estimate from %(date)s"
+msgstr "Letzte Schätzung vom %(date)s"
+
+#: templates/components/screens/workload/content.html:10
 #, python-format
 msgid "Last reviewed %(ago)s ago"
 msgstr "Zuletzt vor %(ago)s überprüft"
 
-#: templates/components/screens/workload/content.html:12
+#: templates/components/screens/workload/content.html:13
 msgid "Still accurate"
 msgstr "Weiterhin zutreffend"
 
-#: templates/components/screens/workload/content.html:22
+#: templates/components/screens/workload/content.html:24
 msgid "Shares of your workload, not hours."
 msgstr "Anteile deiner Arbeit, keine Stunden."
 
-#: templates/components/screens/workload/content.html:24
+#: templates/components/screens/workload/content.html:26
 #: templates/components/screens/workload/summary.html:19
 msgid "Projects · outer ring"
 msgstr "Projekte · äußerer Ring"
 
-#: templates/components/screens/workload/content.html:43
+#: templates/components/screens/workload/content.html:47
 #, python-format
 msgid "%(name)s percentage"
 msgstr "%(name)s – Prozentanteil"
 
-#: templates/components/screens/workload/content.html:47
+#: templates/components/screens/workload/content.html:49
+#, python-format
+msgid "Use previous estimate for %(name)s: %(value)s%%"
+msgstr "Bisherigen Anteil für %(name)s übernehmen: %(value)s %%"
+
+#: templates/components/screens/workload/content.html:49
+#: templates/components/screens/workload/content.html:71
+#, python-format
+msgid "Use previous %(value)s%%"
+msgstr "Vorherige %(value)s %% übernehmen"
+
+#: templates/components/screens/workload/content.html:52
 #, python-format
 msgid "%(name)s allocation"
 msgstr "%(name)s – Anteil"
 
-#: templates/components/screens/workload/content.html:51
+#: templates/components/screens/workload/content.html:56
 msgid "Optional project breakdown"
 msgstr "Optionale Aufteilung nach Projekten"
 
-#: templates/components/screens/workload/content.html:53
+#: templates/components/screens/workload/content.html:58
 msgid "Percentages of your total workload"
 msgstr "Anteile deiner gesamten Arbeit in Prozent"
 
-#: templates/components/screens/workload/content.html:58
+#: templates/components/screens/workload/content.html:63
 msgid "Leave any remainder unspecified, or assign a project below."
 msgstr "Lass den Rest ohne Zuordnung oder wähle unten ein Projekt."
 
-#: templates/components/screens/workload/content.html:64
+#: templates/components/screens/workload/content.html:69
 #, python-format
 msgid "%(category)s: %(project)s percentage"
 msgstr "%(category)s: %(project)s – Prozentanteil"
 
-#: templates/components/screens/workload/content.html:74
+#: templates/components/screens/workload/content.html:71
+#, python-format
+msgid "Use previous estimate for %(category)s / %(project)s: %(value)s%%"
+msgstr ""
+"Bisherigen Anteil für %(category)s / %(project)s übernehmen: %(value)s %%"
+
+#: templates/components/screens/workload/content.html:80
 msgid "Assign a project"
 msgstr "Projekt zuordnen"
 
-#: templates/components/screens/workload/content.html:77
+#: templates/components/screens/workload/content.html:83
 #, python-format
 msgid "Add %(name)s"
 msgstr "%(name)s hinzufügen"
 
-#: templates/components/screens/workload/content.html:81
+#: templates/components/screens/workload/content.html:87
 msgid "No unfinished projects available."
 msgstr "Keine offenen Projekte verfügbar."
 
-#: templates/components/screens/workload/content.html:86
+#: templates/components/screens/workload/content.html:92
 msgid "Ask a PM to configure workload categories."
 msgstr "Bitte einen PM, Kategorien für die Arbeitsverteilung einzurichten."
 
-#: templates/components/screens/workload/content.html:90
+#: templates/components/screens/workload/content.html:96
 msgid "Total"
 msgstr "Summe"
 
-#: templates/components/screens/workload/content.html:91
+#: templates/components/screens/workload/content.html:97
+msgid "Submit estimate"
+msgstr "Schätzung speichern"
+
+#: templates/components/screens/workload/content.html:97
 msgid "Save estimate"
 msgstr "Schätzung speichern"
 
-#: templates/components/screens/workload/content.html:96
+#: templates/components/screens/workload/content.html:102
 msgid "Your active projects"
 msgstr "Deine aktiven Projekte"
 
-#: templates/components/screens/workload/content.html:97
+#: templates/components/screens/workload/content.html:103
 msgid ""
 "Based on current task assignments and project responsibility. Use these as "
 "guidance; they do not determine your percentages."
@@ -1994,11 +2084,11 @@ msgstr ""
 "Basierend auf aktuellen Aufgabenzuweisungen und Projektverantwortung. Diese "
 "dienen als Orientierung und legen deine Prozentanteile nicht fest."
 
-#: templates/components/screens/workload/content.html:98
+#: templates/components/screens/workload/content.html:104
 msgid "No active projects assigned."
 msgstr "Keine aktiven Projekte zugewiesen."
 
-#: templates/components/screens/workload/content.html:101
+#: templates/components/screens/workload/content.html:107
 #: templates/components/screens/workload/history.html:3
 msgid "Recent estimate history"
 msgstr "Letzte Schätzungen"
@@ -2194,6 +2284,9 @@ msgid ""
 msgstr ""
 "Deine E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
 "Roadmap gespeichert."
+
+#~ msgid "Your workload split is up to date."
+#~ msgstr "Deine Arbeitsverteilung ist auf dem aktuellen Stand."
 
 #~ msgid "Read more"
 #~ msgstr "Weiterlesen"

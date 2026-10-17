@@ -171,6 +171,10 @@ def pm_required(view_func):
 
 
 def workspace_context(request: HttpRequest) -> dict:
+    from readers.workload import checkin_context
+
+    if not hasattr(request, "workload_checkin"):
+        request.workload_checkin = checkin_context(request)
     workspaces = list(
         Membership.objects.filter(user=request.user)
         .select_related("workspace")

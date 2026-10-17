@@ -1,0 +1,15 @@
+{% load i18n %}
+<c-vars checkin />
+  <button type="button" class="btn btn-sm btn-soft workload-checkin-entry" data-workload-checkin-open>{% trans "Workload check-in due" %}</button>
+  <dialog id="workload-checkin-dialog" class="workload-checkin-dialog" aria-labelledby="workload-checkin-title" aria-describedby="workload-checkin-description" data-dismissal-key="{{ checkin.dismissal_key }}">
+    <header class="workload-editor-header">
+      <h2 id="workload-checkin-title" tabindex="-1" class="text-xl font-semibold">{% trans "How is your work split right now?" %}</h2>
+      <button type="button" class="btn btn-sm btn-ghost" data-workload-checkin-close aria-label="{% trans 'Close' %}"><c-lucide name="x" size="18" /></button>
+    </header>
+    <p id="workload-checkin-description" class="text-sm text-base-content/70 mt-2 mb-4">{% trans "Enter your current estimate. Previous values are shown for reference. Shares of your work, not hours—a rough estimate is enough." %}</p>
+    <c-screens.workload.content :rows="checkin.rows" :suggested="checkin.suggested" :current="checkin.current" :history="checkin.history" :total="checkin.total" :checkin="True" />
+    <form class="mt-4" data-on:submit__prevent="@post('{% url 'workload_checkin_snooze' %}', { contentType: 'form' })">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-ghost">{% trans "Remind me next week" %}</button>
+    </form>
+  </dialog>

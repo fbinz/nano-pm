@@ -1,0 +1,16 @@
+{% load i18n %}
+<c-vars workspace />
+<form id="workload-checkin-cadence" method="post"
+      action="{% url 'workload_setting_update' setting='workload_checkin_interval_days' %}"
+      data-interval-days="{{ workspace.workload_checkin_interval_days }}"
+      data-on:submit__prevent="@post('{% url 'workload_setting_update' setting='workload_checkin_interval_days' %}', { contentType: 'form' })">
+  {% if workspace.workload_checkin_enabled %}
+  {% csrf_token %}
+  <label for="workload-checkin-interval" class="block text-sm mb-1">{% trans "Ask again after (days)" %}</label>
+  <input id="workload-checkin-interval" type="number" class="input input-sm w-24"
+         name="workload_checkin_interval_days" min="1" max="365" step="1" required
+         value="{{ workspace.workload_checkin_interval_days }}" aria-describedby="workload-cadence-help"
+         data-on:change="el.form.requestSubmit()">
+  <p id="workload-cadence-help" class="text-xs text-base-content/60 mt-1">{% trans "1–365 days after the last saved or confirmed estimate. Changes save automatically; snoozing still postpones the prompt for one week." %}</p>
+  {% endif %}
+</form>

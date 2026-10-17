@@ -33,6 +33,7 @@ class Membership(models.Model):
         ],
         default="inherit",
     )
+    workload_snoozed_until = models.DateTimeField(null=True, blank=True)
     # Self-declared Microsoft sign-in address, scoped to this workspace/tenant.
     teams_upn = models.EmailField(max_length=254, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)

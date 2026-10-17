@@ -1045,6 +1045,15 @@ html, body { height: 100%; }
     .workload-overview-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
     .workload-summary { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
   }
+  .workload-checkin-dialog {
+    @apply bg-base-100 text-base-content rounded-2xl border border-base-300 shadow-xl p-4 sm:p-6;
+    margin: auto;
+    width: min(960px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+  }
+  .workload-checkin-dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+  .workload-checkin-entry { position: fixed; bottom: 16px; right: 16px; z-index: 50; }
   .workload-editor-header { @apply flex flex-wrap items-start justify-between gap-3; }
   .workload-editor { @apply grid gap-6 py-6; grid-template-columns: minmax(0, 1fr); }
   .workload-chart-panel { @apply flex flex-col items-center justify-center text-center gap-2; }
@@ -1080,6 +1089,12 @@ html, body { height: 100%; }
   .workload-category-heading { @apply flex items-center justify-between gap-3 mb-2; }
   .workload-category-label { @apply flex items-center gap-2 text-sm font-semibold min-w-0; overflow-wrap: anywhere; }
   .workload-color-dot { @apply shrink-0 rounded-full w-2.5 h-2.5; background: var(--allocation-color); }
+  .workload-previous { @apply min-w-0 rounded-md border border-base-300 px-2 py-1 text-xs text-left text-base-content/60 hover:bg-base-200 hover:text-base-content cursor-pointer; }
+  .workload-category-heading:has(.workload-previous) { flex-wrap: wrap; }
+  .workload-number:has(.workload-previous) { flex-shrink: 1; min-width: 0; max-width: 100%; margin-left: auto; }
+  .workload-project-row:has(.workload-previous) { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .workload-project-row:has(.workload-previous) > .workload-project-name { grid-column: 1 / -1; }
+  .workload-previous:focus-visible { outline: 2px solid var(--allocation-color); outline-offset: 2px; }
   .workload-number { @apply flex items-center gap-1.5 shrink-0 text-sm text-base-content/60 tabular-nums; }
   .workload-slider {
     display: block;
