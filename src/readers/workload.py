@@ -193,6 +193,7 @@ def personal(workspace, user, data=None, *, checkin=False):
                 "projects": [
                     {
                         "project": p,
+                        "assigned": p.id in suggested_ids,
                         "field": f"project_{c.id}_{p.id}",
                         "previous": old_projects.get(p.id),
                         "value": data.get(f"project_{c.id}_{p.id}", "" if checkin else "0")

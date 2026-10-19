@@ -137,7 +137,7 @@ for (const [name, viewport] of Object.entries({
     await expect(page.locator('#workload-total')).toHaveText('100%');
     await page.getByText('Optional project breakdown', { exact: true }).click();
     await expect(page.locator('[data-workload-project-row]:visible')).toHaveCount(0);
-    await expect(page.locator('[data-workload-project-add]:visible')).toHaveCount(3);
+    await expect(page.locator('[data-workload-project-add]:visible')).toHaveCount(2);
     await page.screenshot({ path: testInfo.outputPath('my-workload-project-chips.png'), fullPage: true });
     await page.locator('.workload-projects').getByRole('button', { name: 'Add API Migration', exact: true }).click();
     await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('40');
@@ -146,7 +146,7 @@ for (const [name, viewport] of Object.entries({
     await expect(page.locator('[data-workload-history]').first().locator('span[title^="Project work:"]')).toHaveAttribute('title', /Unspecified project work: 20%/);
     await expect(page.locator('#workload-total')).toHaveText('100%');
     await expect(page.locator('[data-workload-project-row]:visible')).toHaveCount(1);
-    await expect(page.locator('[data-workload-project-add]:visible')).toHaveCount(2);
+    await expect(page.locator('[data-workload-project-add]:visible')).toHaveCount(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await expect(donut.getByRole('button', { name: 'Project work: API Migration: 40%', exact: true })).toBeVisible();
     await expect(page.locator('[data-workload-project-legend]')).toContainText('Unspecified: 20%');

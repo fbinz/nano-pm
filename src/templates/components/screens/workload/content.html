@@ -78,9 +78,14 @@
                     {% if row.projects %}
                       <div data-workload-project-picker>
                         <p class="text-xs text-base-content/60 mb-2">{% trans "Assign a project" %}</p>
+                        <label class="flex items-center gap-2 text-sm mb-2">
+                          <input type="checkbox" class="checkbox checkbox-sm" data-workload-project-show-all>
+                          {% trans "Show all projects" %}
+                        </label>
+                        {% if not suggested %}<p data-workload-project-no-assignments class="text-xs text-base-content/60 mb-2">{% trans "No active projects assigned." %}</p>{% endif %}
                         <div class="workload-project-chips">
                           {% for item in row.projects %}
-                            <button id="workload-project-add-{{ item.field }}" type="button" class="workload-project-chip" data-workload-project-add="{{ item.field }}" aria-label="{% blocktrans with name=item.project.name %}Add {{ name }}{% endblocktrans %}" {% if item.selected %}hidden{% endif %}><c-lucide name="plus" size="14" /><span>{{ item.project.name }}</span></button>
+                            <button id="workload-project-add-{{ item.field }}" type="button" class="workload-project-chip" data-workload-project-add="{{ item.field }}" data-assigned="{{ item.assigned|yesno:'true,false' }}" aria-label="{% blocktrans with name=item.project.name %}Add {{ name }}{% endblocktrans %}" {% if item.selected or not item.assigned %}hidden{% endif %}><c-lucide name="plus" size="14" /><span>{{ item.project.name }}</span></button>
                           {% endfor %}
                         </div>
                       </div>

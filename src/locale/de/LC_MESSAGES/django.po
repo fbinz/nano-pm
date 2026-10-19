@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 22:09+0200\n"
+"POT-Creation-Date: 2026-10-19 21:58+0200\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -686,7 +686,9 @@ msgstr "Ungültige Kennung."
 msgid ""
 "Show a dialog when an estimate is missing or due for renewal. Manual updates "
 "remain available."
-msgstr "Zeige einen Dialog, wenn eine Schätzung fehlt oder erneut abgefragt werden soll. Du kannst deine Schätzung weiterhin jederzeit selbst aktualisieren."
+msgstr ""
+"Zeige einen Dialog, wenn eine Schätzung fehlt oder erneut abgefragt werden "
+"soll. Du kannst deine Schätzung weiterhin jederzeit selbst aktualisieren."
 
 #: interfaces/web/workload.py:62
 msgid "Enable workload reporting"
@@ -1056,59 +1058,59 @@ msgid "Sign out"
 msgstr "Abmelden"
 
 #: templates/components/layouts/app-shell.html:123
-#: templates/components/screens/workload/checkin.html:8
+#: templates/components/screens/workload/checkin.html:7
 #: templates/public/roadmap.html:174
 msgid "Close"
 msgstr "Schließen"
 
-#: templates/components/layouts/app-shell.html:139
+#: templates/components/layouts/app-shell.html:141
 msgid "Why is this milestone moving?"
 msgstr "Warum wird dieser Meilenstein verschoben?"
 
-#: templates/components/layouts/app-shell.html:150
+#: templates/components/layouts/app-shell.html:152
 #: templates/components/screens/activity/index.html:36
 #: templates/components/screens/activity/index.html:49
 #: templates/components/screens/gantt/milestone-popover.html:87
 msgid "Reason"
 msgstr "Begründung"
 
-#: templates/components/layouts/app-shell.html:150
+#: templates/components/layouts/app-shell.html:152
 msgid "(optional)"
 msgstr "(optional)"
 
-#: templates/components/layouts/app-shell.html:156
+#: templates/components/layouts/app-shell.html:158
 msgid "Briefly explain what changed…"
 msgstr "Kurz erklären, was sich geändert hat…"
 
-#: templates/components/layouts/app-shell.html:160
+#: templates/components/layouts/app-shell.html:162
 msgid "Common reasons"
 msgstr "Häufige Gründe"
 
-#: templates/components/layouts/app-shell.html:161
+#: templates/components/layouts/app-shell.html:163
 msgid "Dependency delayed"
 msgstr "Abhängigkeit verzögert"
 
-#: templates/components/layouts/app-shell.html:162
+#: templates/components/layouts/app-shell.html:164
 msgid "Scope changed"
 msgstr "Umfang geändert"
 
-#: templates/components/layouts/app-shell.html:163
+#: templates/components/layouts/app-shell.html:165
 msgid "Resource availability"
 msgstr "Ressourcenverfügbarkeit"
 
-#: templates/components/layouts/app-shell.html:164
+#: templates/components/layouts/app-shell.html:166
 msgid "External commitment"
 msgstr "Externe Verpflichtung"
 
-#: templates/components/layouts/app-shell.html:165
+#: templates/components/layouts/app-shell.html:167
 msgid "Waiting for feedback"
 msgstr "Rückmeldung ausstehend"
 
-#: templates/components/layouts/app-shell.html:169
+#: templates/components/layouts/app-shell.html:171
 msgid "Keep original date"
 msgstr "Ursprüngliches Datum behalten"
 
-#: templates/components/layouts/app-shell.html:170
+#: templates/components/layouts/app-shell.html:172
 msgid "Move milestone"
 msgstr "Meilenstein verschieben"
 
@@ -1883,15 +1885,18 @@ msgstr "Arbeitsverteilung"
 msgid "Unspecified project work"
 msgstr "Projektarbeit ohne Zuordnung"
 
-#: templates/components/screens/workload/cadence.html:8
+#: templates/components/screens/workload/cadence.html:9
 msgid "Ask again after (days)"
 msgstr "Erneut nachfragen nach (Tagen)"
 
-#: templates/components/screens/workload/cadence.html:13
+#: templates/components/screens/workload/cadence.html:14
 msgid ""
 "1–365 days after the last saved or confirmed estimate. Changes save "
 "automatically; snoozing still postpones the prompt for one week."
-msgstr "1–365 Tage nach der letzten gespeicherten oder bestätigten Schätzung. Änderungen werden automatisch gespeichert. Mit „Nächste Woche erinnern“ verschiebst du die Abfrage weiterhin um eine Woche."
+msgstr ""
+"1–365 Tage nach der letzten gespeicherten oder bestätigten Schätzung. "
+"Änderungen werden automatisch gespeichert. Mit „Nächste Woche erinnern“ "
+"verschiebst du die Abfrage weiterhin um eine Woche."
 
 #: templates/components/screens/workload/category-deleted-toast.html:5
 msgid "Category deleted."
@@ -1933,15 +1938,15 @@ msgstr "Kategorie löschen"
 msgid "Category saved."
 msgstr "Kategorie gespeichert."
 
-#: templates/components/screens/workload/checkin.html:4
+#: templates/components/screens/workload/checkin.html:3
 msgid "Workload check-in due"
 msgstr "Arbeitsverteilung neu einschätzen"
 
-#: templates/components/screens/workload/checkin.html:7
+#: templates/components/screens/workload/checkin.html:6
 msgid "How is your work split right now?"
 msgstr "Wie verteilt sich deine Arbeit aktuell?"
 
-#: templates/components/screens/workload/checkin.html:10
+#: templates/components/screens/workload/checkin.html:9
 msgid ""
 "Enter your current estimate. Previous values are shown for reference. Shares "
 "of your work, not hours—a rough estimate is enough."
@@ -1950,7 +1955,7 @@ msgstr ""
 "Orientierung. Es geht um Anteile deiner Arbeit, nicht um Stunden – eine "
 "grobe Schätzung reicht."
 
-#: templates/components/screens/workload/checkin.html:14
+#: templates/components/screens/workload/checkin.html:13
 msgid "Remind me next week"
 msgstr "Nächste Woche erinnern"
 
@@ -2048,35 +2053,44 @@ msgid "Assign a project"
 msgstr "Projekt zuordnen"
 
 #: templates/components/screens/workload/content.html:83
+msgid "Show all projects"
+msgstr "Alle Projekte anzeigen"
+
+#: templates/components/screens/workload/content.html:85
+#: templates/components/screens/workload/content.html:109
+msgid "No active projects assigned."
+msgstr "Keine aktiven Projekte zugewiesen."
+
+#: templates/components/screens/workload/content.html:88
 #, python-format
 msgid "Add %(name)s"
 msgstr "%(name)s hinzufügen"
 
-#: templates/components/screens/workload/content.html:87
+#: templates/components/screens/workload/content.html:92
 msgid "No unfinished projects available."
 msgstr "Keine offenen Projekte verfügbar."
 
-#: templates/components/screens/workload/content.html:92
+#: templates/components/screens/workload/content.html:97
 msgid "Ask a PM to configure workload categories."
 msgstr "Bitte einen PM, Kategorien für die Arbeitsverteilung einzurichten."
 
-#: templates/components/screens/workload/content.html:96
+#: templates/components/screens/workload/content.html:101
 msgid "Total"
 msgstr "Summe"
 
-#: templates/components/screens/workload/content.html:97
+#: templates/components/screens/workload/content.html:102
 msgid "Submit estimate"
 msgstr "Schätzung speichern"
 
-#: templates/components/screens/workload/content.html:97
+#: templates/components/screens/workload/content.html:102
 msgid "Save estimate"
 msgstr "Schätzung speichern"
 
-#: templates/components/screens/workload/content.html:102
+#: templates/components/screens/workload/content.html:107
 msgid "Your active projects"
 msgstr "Deine aktiven Projekte"
 
-#: templates/components/screens/workload/content.html:103
+#: templates/components/screens/workload/content.html:108
 msgid ""
 "Based on current task assignments and project responsibility. Use these as "
 "guidance; they do not determine your percentages."
@@ -2084,11 +2098,7 @@ msgstr ""
 "Basierend auf aktuellen Aufgabenzuweisungen und Projektverantwortung. Diese "
 "dienen als Orientierung und legen deine Prozentanteile nicht fest."
 
-#: templates/components/screens/workload/content.html:104
-msgid "No active projects assigned."
-msgstr "Keine aktiven Projekte zugewiesen."
-
-#: templates/components/screens/workload/content.html:107
+#: templates/components/screens/workload/content.html:112
 #: templates/components/screens/workload/history.html:3
 msgid "Recent estimate history"
 msgstr "Letzte Schätzungen"

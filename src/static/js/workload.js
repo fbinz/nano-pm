@@ -79,13 +79,17 @@ function preview() {
       setText(row.querySelector('[data-workload-project-summary]'), assigned > value
         ? message(gettext('%(amount)s% over category'), { amount: assigned - value })
         : message(gettext('%(assigned)s% assigned · %(unspecified)s% unspecified'), { assigned, unspecified: value - assigned }));
+      const showAll = row.querySelector('[data-workload-project-show-all]')?.checked;
+      const noAssignments = row.querySelector('[data-workload-project-no-assignments]');
+      if (noAssignments) noAssignments.hidden = showAll;
       for (const project of allProjects) {
         const projectRow = project.closest('[data-workload-project-row]');
         const selected = projectRow.dataset.selected === 'true';
         projectRow.hidden = !selected;
         project.disabled = !selected;
         projectRow.querySelector('[data-workload-project-selected]').disabled = !selected;
-        row.querySelector(`[data-workload-project-add="${project.name}"]`).hidden = selected;
+        const chip = row.querySelector(`[data-workload-project-add="${project.name}"]`);
+        chip.hidden = selected || (!showAll && chip.dataset.assigned !== 'true');
         const segment = row.querySelector(`[data-workload-project-segment="${project.name}"]`);
         project.setAttribute('aria-invalid', selected && (!valid(project) || assigned > value));
         segment.dataset.percentage = selected ? percentage(project) : 0;
@@ -149,7 +153,11 @@ function selectProject(input, selected) {
   input.closest('details').open = true;
   preview();
   if (selected) input.focus();
-  else document.getElementById(`workload-project-add-${input.name}`)?.focus();
+  else {
+    const chip = document.getElementById(`workload-project-add-${input.name}`);
+    if (chip && !chip.hidden) chip.focus();
+    else input.closest('[data-workload-row]').querySelector('[data-workload-project-show-all]')?.focus();
+  }
 }
 
 document.addEventListener('input', event => {

@@ -161,6 +161,7 @@ async function submitWorkloadExample(page) {
   await page.getByLabel('Project work percentage', { exact: true }).fill('60');
   await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
   await page.getByText('Optional project breakdown', { exact: true }).click();
+  await page.locator('.workload-projects').getByLabel('Show all projects', { exact: true }).check();
   await page.locator('.workload-projects').getByRole('button', { name: 'Add API Migration', exact: true }).click();
   await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('40');
   await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
@@ -449,6 +450,7 @@ test.describe('workload estimates', () => {
     await expect(page.getByRole('heading', { name: 'Deine aktiven Projekte', exact: true })).toBeVisible();
     await page.getByText('Optionale Aufteilung nach Projekten', { exact: true }).click();
     await expect(page.locator('.workload-project-body')).toContainText('Anteile deiner gesamten Arbeit in Prozent');
+    await expect(page.getByLabel('Alle Projekte anzeigen', { exact: true })).not.toBeChecked();
     await expect(page.locator('.workload-project-body')).toContainText('Lass den Rest ohne Zuordnung oder wähle unten ein Projekt.');
     await expect(page.locator('body')).not.toContainText(/\b(?:Sie|Ihnen|Ihr(?:e|en|em|er|es)?)\b/);
 
@@ -554,6 +556,7 @@ test.describe('workload estimates', () => {
     await arc.press('Enter');
     await expect(api).toBeFocused();
     await expect(arc).toHaveClass(/is-highlighted/);
+    await body.getByLabel('Show all projects', { exact: true }).check();
     await body.getByRole('button', { name: 'Add Onboarding revamp', exact: true }).click();
     await page.getByLabel('Project work: Onboarding revamp percentage', { exact: true }).fill('15');
     await expect(donut.getByRole('button', { name: 'Project work: Onboarding revamp: 15%', exact: true })).toBeVisible();
@@ -594,6 +597,8 @@ test.describe('workload estimates', () => {
       const addApi = body.getByRole('button', { name: 'Add API Migration', exact: true });
       await expect(rows).toHaveCount(0);
       await expect(body.getByText('Percentages of your total workload', { exact: true })).toBeVisible();
+      await expect(body.locator('[data-workload-project-add]:visible')).toHaveCount(2);
+      await body.getByLabel('Show all projects', { exact: true }).check();
       await expect(body.locator('[data-workload-project-add]:visible')).toHaveCount(3);
       await addApi.click();
       await expect(rows).toHaveCount(1);
@@ -631,7 +636,7 @@ test.describe('workload estimates', () => {
       await page.reload();
       await page.getByText('Optional project breakdown', { exact: true }).click();
       await expect(rows).toHaveCount(0);
-      await expect(body.locator('[data-workload-project-add]:visible')).toHaveCount(3);
+      await expect(body.locator('[data-workload-project-add]:visible')).toHaveCount(2);
       await expect(page.locator('[data-workload-history]').first().locator('span[title^="Project work:"]')).not.toHaveAttribute('title', /API Migration:/);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     });
@@ -719,6 +724,7 @@ test.describe('workload estimates', () => {
     await page.getByText('Optional project breakdown', { exact: true }).click();
     const body = page.locator('.workload-project-body');
     await body.getByRole('button', { name: 'Add API Migration', exact: true }).click();
+    await body.getByLabel('Show all projects', { exact: true }).check();
     await body.getByRole('button', { name: 'Add Onboarding revamp', exact: true }).click();
     const onboarding = page.getByLabel('Project work: Onboarding revamp percentage', { exact: true });
     await onboarding.fill('65');
@@ -1545,6 +1551,61 @@ test.describe('workload estimates', () => {
     await expect(page.locator('#workload-current')).toHaveCount(0);
   });
 
+  test('workload project picker defaults to assigned projects and keeps saved allocations visible', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'member1');
+    await page.goto('/workload/');
+    await page.getByText('Optional project breakdown', { exact: true }).click();
+    const body = page.locator('.workload-projects');
+    const onboarding = body.getByRole('button', { name: 'Add Onboarding revamp', exact: true });
+    await expect(body.getByRole('button', { name: 'Add API Migration', exact: true })).toBeVisible();
+    await expect(body.getByRole('button', { name: 'Add Infra hardening', exact: true })).toBeVisible();
+    await expect(onboarding).toBeHidden();
+    const showAll = body.getByLabel('Show all projects', { exact: true });
+    await expect(showAll).not.toBeChecked();
+    await showAll.check();
+    await onboarding.click();
+    const allocation = page.getByLabel('Project work: Onboarding revamp percentage', { exact: true });
+    await allocation.fill('20');
+    await showAll.uncheck();
+    await expect(allocation).toBeVisible();
+    await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+    await page.getByLabel('Project work percentage', { exact: true }).fill('60');
+    await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
+    await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    await page.reload();
+    await expect(showAll).not.toBeChecked();
+    await expect(allocation).toBeVisible();
+    await expect(allocation).toHaveValue('20');
+    await body.getByRole('button', { name: 'Remove Onboarding revamp', exact: true }).click();
+    await expect(allocation).toBeHidden();
+    await expect(onboarding).toBeHidden();
+    await expect(showAll).toBeFocused();
+    await showAll.check();
+    await expect(onboarding).toBeVisible();
+  });
+
+  test('workload check-in with no assignments defaults to an empty project picker with an all-projects option', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await signInAs(page, 'ideaeditor', { keepCheckin: true });
+    const dialog = page.locator('#workload-checkin-dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByText('Optional project breakdown', { exact: true }).click();
+    const body = dialog.locator('.workload-projects');
+    await expect(body.locator('[data-workload-project-add]:visible')).toHaveCount(0);
+    await expect(body.getByText('No active projects assigned.', { exact: true })).toBeVisible();
+    const showAll = body.getByLabel('Show all projects', { exact: true });
+    await expect(showAll).not.toBeChecked();
+    await showAll.check();
+    await expect(body.locator('[data-workload-project-add]:visible')).toHaveCount(3);
+    await body.getByRole('button', { name: 'Add API Migration', exact: true }).click();
+    await showAll.uncheck();
+    await expect(dialog.getByLabel('Project work: API Migration percentage', { exact: true })).toBeVisible();
+    await expect(body.locator('[data-workload-project-add]:visible')).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Submit estimate', exact: true })).toBeDisabled();
+  });
+
   test('workload guidance includes explicit project responsibility but excludes completed projects', async ({ appPage: page }) => {
     await enableWorkload(page);
     await page.goto('/people/');
@@ -1564,6 +1625,10 @@ test.describe('workload estimates', () => {
     await expect(page.locator('#workload-guidance')).toContainText('Onboarding revamp');
     await expect(page.locator('#workload-guidance')).not.toContainText('Infra hardening');
     await expect(page.getByLabel('Project work: Infra hardening percentage', { exact: true })).toHaveCount(0);
+    await page.getByText('Optional project breakdown', { exact: true }).click();
+    await expect(page.locator('.workload-projects').getByRole('button', { name: 'Add Onboarding revamp', exact: true })).toBeVisible();
+    await page.locator('.workload-projects').getByLabel('Show all projects', { exact: true }).check();
+    await expect(page.getByRole('button', { name: 'Add Infra hardening', exact: true })).toHaveCount(0);
   });
 
   test('workload configuration is workspace scoped and PMs are exempt by default', async ({ appPage: page }) => {
@@ -1611,6 +1676,7 @@ test.describe('workload estimates', () => {
     await expect(page.getByRole('button', { name: 'Save estimate', exact: true })).toBeDisabled();
     await expect(page.locator('[data-workload-project-error]')).toContainText('exceed');
     await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('40');
+    await page.locator('.workload-projects').getByLabel('Show all projects', { exact: true }).check();
     await page.locator('.workload-projects').getByRole('button', { name: 'Add Onboarding revamp', exact: true }).click();
     await page.getByLabel('Project work: Onboarding revamp percentage', { exact: true }).fill('15');
     await page.getByRole('button', { name: 'Save estimate', exact: true }).click();

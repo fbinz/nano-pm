@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-10 00:05+0200\n"
+"POT-Creation-Date: 2026-10-19 21:58+0200\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -104,7 +104,7 @@ msgstr "%(amount)s% über dem Kategorieanteil"
 msgid "%(assigned)s% assigned · %(unspecified)s% unspecified"
 msgstr "%(assigned)s% zugewiesen · %(unspecified)s% ohne Zuordnung"
 
-#: static/js/workload.js:108
+#: static/js/workload.js:112
 msgid "Unspecified: %(amount)s%"
 msgstr "Ohne Zuordnung: %(amount)s%"
 
