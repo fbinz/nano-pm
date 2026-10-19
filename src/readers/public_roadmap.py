@@ -115,13 +115,18 @@ def get_public_roadmap(token: str, user=None, browser_key_hash=None) -> PublicRo
             ),
             Prefetch(
                 "milestones",
-                queryset=Milestone.objects.select_related("task").filter(date__gte=today).order_by("date", "id"),
+                queryset=Milestone.objects.select_related("task").order_by("date", "id"),
             )
         )
     )
     # Build only shared grid geometry, without private task/people/dependency VMs.
-    chart_start = today - timedelta(days=7)
-    latest = max((m.date for p in projects for m in p.milestones.all()), default=today)
+    milestone_dates = [
+        m.task.end if m.task is not None else m.date
+        for p in projects for m in p.milestones.all()
+    ]
+    earliest = min(milestone_dates, default=today)
+    latest = max(milestone_dates, default=today)
+    chart_start = min(today, earliest) - timedelta(days=7)
     chart_end = max(today + timedelta(days=60), latest + timedelta(days=14))
     chart = build_chart_vm(ChartState(
         projects=[], people=[], deps=[], today=today, today_fraction=0,

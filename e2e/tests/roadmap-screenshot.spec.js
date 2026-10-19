@@ -30,15 +30,12 @@ for (const [name, viewport] of Object.entries({
       expect(geometry.labelBottom).toBeCloseTo(geometry.trackBottom, 0);
       expect(geometry.labelTop).toBeCloseTo(geometry.trackTop, 0);
       expect(await visitor.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      // On arrival the timeline must not look empty just because every marker
-      // is in the future and outside the initial horizontal viewport.
+      // Start around today, even when all milestones lie in the future.
       expect(await chart.evaluate(el => {
         const chartBox = el.getBoundingClientRect();
         const label = el.querySelector('.roadmap-project-label').getBoundingClientRect();
-        return Array.from(el.querySelectorAll('[data-roadmap-milestone]')).some(marker => {
-          const box = marker.getBoundingClientRect();
-          return box.left >= label.right && box.right <= chartBox.right;
-        });
+        const today = el.querySelector('.roadmap-today-line').getBoundingClientRect();
+        return today.left > label.right && today.right < chartBox.right;
       })).toBe(true);
       await visitor.screenshot({ path: testInfo.outputPath('roadmap.png'), fullPage: true, animations: 'disabled' });
       const projectName = label.getByRole('button', { name: 'API Migration', exact: true });

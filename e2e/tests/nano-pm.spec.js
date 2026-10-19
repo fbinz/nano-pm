@@ -6346,7 +6346,6 @@ test.describe('workspace isolation', () => {
     expect(body).toContain('v2 API beta');
     expect(body).toContain('Soft launch');
     expect(body).toContain('in 3 weeks');
-    expect(body).not.toContain('Already shipped checkpoint');
     expect(body).not.toContain('Migrate /users endpoints');
     expect(body).not.toContain('Alex Chen');
 
@@ -6444,6 +6443,104 @@ test.describe('workspace isolation', () => {
         await expect(drawer.getByRole('heading', { name: 'v2 API beta', exact: true })).toBeVisible();
         await expect(drawer).not.toContainText('End of full project description.');
         await visitor.keyboard.press('Escape');
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('public roadmap initially scrolls around today regardless of milestone dates', async ({ appPage: page, browser }) => {
+    const ids = await page.locator('.milestone').evaluateAll(elements => elements.map(el => el.dataset.milestoneId));
+    const past = new Date();
+    past.setUTCDate(past.getUTCDate() - 90);
+    const href = await enableRoadmap(page);
+    const context = await browser.newContext();
+    const visitor = await context.newPage();
+    try {
+      for (const state of ['future-only', 'mixed', 'past-only', 'empty']) {
+        if (state === 'mixed') {
+          expect(await postForm(page, `/milestones/${ids[0]}/update/`, { task_id: '0' })).toBe(200);
+          expect(await postForm(page, `/milestones/${ids[0]}/update/`, { date: past.toISOString().slice(0, 10) })).toBe(200);
+        }
+        if (state === 'past-only') expect(await postForm(page, `/milestones/${ids[1]}/delete/`, {})).toBe(200);
+        if (state === 'empty') expect(await postForm(page, `/milestones/${ids[0]}/delete/`, {})).toBe(200);
+        for (const width of [1280, 390]) {
+          await visitor.setViewportSize({ width, height: 844 });
+          await visitor.goto(href);
+          const chart = visitor.locator('[data-roadmap-chart]');
+          await expect(chart).toBeVisible();
+          const position = await chart.evaluate(el => {
+            const label = el.querySelector('.roadmap-project-label').getBoundingClientRect();
+            const today = el.querySelector('.roadmap-today-line');
+            const available = el.clientWidth - label.width;
+            const expected = Math.max(0, Math.min(el.scrollWidth - el.clientWidth, today.offsetLeft - available / 2));
+            return { actual: el.scrollLeft, expected, todayX: today.getBoundingClientRect().left,
+              left: label.right, right: el.getBoundingClientRect().right };
+          });
+          expect(Math.abs(position.actual - position.expected), `${state} at ${width}px`).toBeLessThanOrEqual(1);
+          expect(position.todayX).toBeGreaterThan(position.left);
+          expect(position.todayX).toBeLessThan(position.right);
+        }
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('public roadmap includes past standalone and task-linked milestones within the timeline', async ({ appPage: page, browser }) => {
+    const spike = page.locator('.bar', { hasText: 'Spike on auth changes' });
+    const taskId = await spike.getAttribute('data-task-id');
+    const linkedDate = await spike.getAttribute('data-end');
+    const linkedId = await page.locator('.milestone[data-title="v2 API beta"]').getAttribute('data-milestone-id');
+    const futureId = await page.locator('.milestone[data-title="Soft launch"]').getAttribute('data-milestone-id');
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'Infra hardening' }).getAttribute('data-project-id');
+    const past = new Date(`${linkedDate}T12:00:00Z`);
+    past.setUTCDate(past.getUTCDate() - 90);
+    const pastDate = past.toISOString().slice(0, 10);
+    expect(await postForm(page, `/milestones/${linkedId}/update/`, { task_id: '0', title: 'Past linked checkpoint' })).toBe(200);
+    expect(await postForm(page, `/milestones/${linkedId}/update/`, { date: linkedDate, task_id: taskId })).toBe(200);
+    expect(await postForm(page, `/projects/${projectId}/milestones/`, { date: pastDate })).toBe(200);
+    await page.reload();
+    await expect(page.locator(`#ms-${linkedId}`)).toHaveAttribute('data-date', linkedDate);
+    await expect(page.locator(`#ms-${linkedId}`)).toHaveAttribute('data-task-id', taskId);
+    const standaloneId = await page.locator('.milestone[data-title="New milestone"]').getAttribute('data-milestone-id');
+    expect(await postForm(page, `/milestones/${standaloneId}/update/`, {
+      title: 'Already shipped checkpoint', description: 'Historical release details.',
+    })).toBe(200);
+    const href = await enableRoadmap(page);
+    const context = await browser.newContext();
+    const visitor = await context.newPage();
+    try {
+      for (const pastOnly of [false, true]) {
+        if (pastOnly) expect(await postForm(page, `/milestones/${futureId}/delete/`, {})).toBe(200);
+        for (const width of [1280, 390]) {
+          await visitor.setViewportSize({ width, height: 844 });
+          await visitor.goto(href);
+          const markers = visitor.locator('[data-roadmap-milestone]');
+          await expect(markers).toHaveCount(pastOnly ? 2 : 3);
+          await expect(visitor.getByRole('heading', { name: 'No public milestones yet', exact: true })).toHaveCount(0);
+          const linked = visitor.getByRole('button', { name: /Past linked checkpoint/ });
+          await expect(linked).toHaveAttribute('data-date', linkedDate);
+          await expect(linked).toHaveAttribute('title', /2 days ago/);
+          const historical = visitor.getByRole('button', { name: /Already shipped checkpoint/ });
+          await expect(historical).toHaveAttribute('data-date', pastDate);
+          // Historical markers must lie inside the scrollable track, not at
+          // negative coordinates hidden behind the sticky project labels.
+          expect(await markers.evaluateAll(elements => elements.every(el =>
+            el.offsetLeft >= 12 && el.offsetLeft + el.offsetWidth <= el.parentElement.clientWidth
+          ))).toBe(true);
+          await historical.scrollIntoViewIfNeeded();
+          await historical.click();
+          const drawer = visitor.locator('#drawer');
+          await expect(drawer.getByRole('heading', { name: 'Already shipped checkpoint', exact: true })).toBeVisible();
+          await expect(drawer).toContainText('Historical release details.');
+          await expect(drawer.locator('form, input, textarea, select')).toHaveCount(0);
+          await visitor.keyboard.press('Escape');
+          await linked.scrollIntoViewIfNeeded();
+          await linked.click();
+          await expect(drawer.getByRole('heading', { name: 'Past linked checkpoint', exact: true })).toBeVisible();
+          await visitor.keyboard.press('Escape');
+        }
       }
     } finally {
       await context.close();

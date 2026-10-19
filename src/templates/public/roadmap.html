@@ -262,23 +262,18 @@
           });
         });
 
-        function revealMilestone() {
+        function revealToday() {
           const chart = root.querySelector('[data-roadmap-chart]');
-          if (!chart) return;
-          const markers = Array.from(chart.querySelectorAll('[data-roadmap-project-row]:not([hidden]) [data-roadmap-milestone]'));
-          if (!markers.length) return;
-          const viewport = chart.getBoundingClientRect();
-          const label = chart.querySelector('[data-roadmap-project-row]:not([hidden]) .roadmap-project-label').getBoundingClientRect();
-          if (markers.some(marker => {
-            const box = marker.getBoundingClientRect();
-            return box.left >= label.right && box.right <= viewport.right;
-          })) return;
-          const first = markers.reduce((a, b) => a.offsetLeft < b.offsetLeft ? a : b);
-          const available = chart.clientWidth - label.width;
-          chart.scrollLeft = first.offsetLeft - 12 - Math.max(12, (available - first.offsetWidth) / 2);
+          const today = chart?.querySelector('.roadmap-today-line');
+          const label = chart?.querySelector('.roadmap-project-label');
+          if (!today || !label) return;
+          const available = chart.clientWidth - label.getBoundingClientRect().width;
+          // Center today in the date area, excluding the sticky project column.
+          // Native scroll bounds keep short timelines at their starting edge.
+          chart.scrollLeft = Math.max(0, today.offsetLeft - available / 2);
         }
 
-        revealMilestone();
+        revealToday();
       }
 
       function initAllRoadmaps() {
