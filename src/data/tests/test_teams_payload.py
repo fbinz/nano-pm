@@ -12,6 +12,28 @@ from data.models import Project, Workspace
 
 
 class TeamsPayloadTests(SimpleTestCase):
+    def test_actor_footer_uses_full_partial_or_fallback_name(self):
+        # Deterministic serialization: no database, browser, or delivery worker.
+        for first, last, expected in [
+            ("Philipp", "Eichhorn", "Philipp Eichhorn"),
+            ("Philipp", "", "Philipp"),
+            ("", "Eichhorn", "Eichhorn"),
+            ("", "", "demo"),
+            (" ", "\t", "demo"),
+        ]:
+            with self.subTest(first=first, last=last):
+                payload = _teams_payload(
+                    project=Project(name="API Migration"),
+                    milestone_title="Release",
+                    event_names={MILESTONE_UPDATED},
+                    actor=User(username="demo", first_name=first, last_name=last),
+                )
+                footer = payload["attachments"][0]["content"]["body"][-1]
+                self.assertEqual(footer["id"], "notification-footer")
+                self.assertEqual(footer["text"], expected)
+                self.assertEqual(footer["size"], "Small")
+                self.assertTrue(footer["isSubtle"])
+
     def test_compact_move_dates_and_direction(self):
         cases = [
             ("2026-10-06", "2026-10-05", "Jetzt **5. Okt. 2026** — 1 Tag früher"),

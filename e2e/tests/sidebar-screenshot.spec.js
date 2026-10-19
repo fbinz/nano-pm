@@ -9,7 +9,7 @@ async function loginAs(page, who) {
   await page.waitForURL('/');
 }
 
-test('sidebar after horizontal scroll', async ({ page }) => {
+test('sidebar after horizontal scroll', async ({ personaPage: page }) => {
   await loginAs(page, 'alice');
   await page.setViewportSize({ width: 1400, height: 800 });
   await page.waitForSelector('.bar');
@@ -20,7 +20,7 @@ test('sidebar after horizontal scroll', async ({ page }) => {
   await page.screenshot({ path: 'screenshots/sidebar-scrolled-h.png' });
 });
 
-test('sidebar after vertical scroll', async ({ page }) => {
+test('sidebar after vertical scroll', async ({ personaPage: page }) => {
   await loginAs(page, 'alice');
   await page.setViewportSize({ width: 1400, height: 600 });
   await page.waitForSelector('.bar');
@@ -31,7 +31,7 @@ test('sidebar after vertical scroll', async ({ page }) => {
   await page.screenshot({ path: 'screenshots/sidebar-scrolled-v.png' });
 });
 
-test('sidebar after extreme horizontal scroll', async ({ page }) => {
+test('sidebar after extreme horizontal scroll', async ({ personaPage: page }) => {
   await loginAs(page, 'alice');
   await page.setViewportSize({ width: 1400, height: 800 });
   await page.waitForSelector('.bar');
@@ -43,7 +43,7 @@ test('sidebar after extreme horizontal scroll', async ({ page }) => {
   await page.screenshot({ path: 'screenshots/sidebar-scrolled-h-far.png' });
 });
 
-test('sidebar at day zoom + scrolled', async ({ page }) => {
+test('sidebar at day zoom + scrolled', async ({ personaPage: page }) => {
   await loginAs(page, 'alice');
   await page.goto('/?zoom=day');
   await page.setViewportSize({ width: 1400, height: 800 });

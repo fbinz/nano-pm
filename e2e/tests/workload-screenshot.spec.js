@@ -24,7 +24,7 @@ for (const [name, viewport] of Object.entries({
     await expect(page.getByRole('link', { name: 'View workload overview and history', exact: true })).toHaveCount(0);
     await page.getByLabel('Enable workload reporting', { exact: true }).check();
     await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'true');
-    await expect(page.getByRole('switch')).toHaveCount(3);
+    await expect(page.getByRole('switch')).toHaveCount(4);
     await expect(page.getByRole('button', { name: 'Save workload settings', exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'View workload overview and history', exact: true })).toHaveCount(0);
     const categories = page.getByRole('table', { name: 'Categories', exact: true });
@@ -110,6 +110,10 @@ for (const [name, viewport] of Object.entries({
     await page.screenshot({ path: testInfo.outputPath('workload-category-deleted-toast.png'), fullPage: true });
     await toast.getByRole('button', { name: 'Dismiss' }).click();
     await expect(toast).toHaveCount(0);
+    // This diagnostic captures manual editing; reminder dialogs have their own
+    // behavioral coverage and should not cover the profile-link screenshot.
+    await page.getByRole('switch', { name: 'Show automatic workload check-in dialogs', exact: true }).uncheck();
+    await expect(page.locator('[data-workload-setting="workload_checkin_enabled"]')).toHaveAttribute('data-enabled', 'false');
     await signIn(page, 'member1');
     await page.goto('/profile/');
     const personalWorkload = page.locator('main').getByRole('link', { name: 'My workload', exact: true });
@@ -142,7 +146,7 @@ for (const [name, viewport] of Object.entries({
     await page.locator('.workload-projects').getByRole('button', { name: 'Add API Migration', exact: true }).click();
     await page.getByLabel('Project work: API Migration percentage', { exact: true }).fill('40');
     await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
-    await expect(page.locator('#workload-current')).toHaveCount(0);
+    await expect(page.locator('[data-workload-history]')).toHaveCount(1);
     await expect(page.locator('[data-workload-history]').first().locator('span[title^="Project work:"]')).toHaveAttribute('title', /Unspecified project work: 20%/);
     await expect(page.locator('#workload-total')).toHaveText('100%');
     await expect(page.locator('[data-workload-project-row]:visible')).toHaveCount(1);

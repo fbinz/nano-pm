@@ -42,11 +42,16 @@ just e2e --grep "<title>"                          # same via just
 uv run ruff check .                                 # Python lint
 ```
 
-The Playwright config (`e2e/playwright.config.js`) starts Django on port **8766**,
-runs migrations, and seeds `db.e2e.sqlite3` before the suite. It sets
-`reuseExistingServer: false`, so do not rely on an already-running dev server.
-The config also enables the test-only `/__reset__/` endpoint and insecure seed
-passwords via environment variables.
+Playwright runs up to **4 parallel workers** by default (capped by available
+CPUs). Each worker starts its own threaded Django server on an OS-assigned port,
+runs migrations, and seeds a fresh temporary `worker.e2e.sqlite3` database.
+Servers and temporary databases are cleaned up when the worker exits; do not
+rely on an already-running dev server. Use `--workers=1` for serial debugging.
+
+`e2e/server.js` and `e2e/serve.py` manage those servers. They select
+`config.settings_e2e`, which uses fast hashing only for throwaway accounts and
+requires explicit debug/reset/seed opt-ins and a database path ending in
+`.e2e.sqlite3`. Normal development and production retain secure hashing.
 
 ### Fixtures
 
@@ -55,6 +60,20 @@ logged-in chart at the seeded state. It resets the DB via the
 `DJANGO_ENABLE_TEST_RESET`-gated `/__reset__/` endpoint and logs in as
 `demo` / `demo` before each test. The seeded state is documented in the fixture
 comment (currently 3 projects, 8 tasks, 6 dependencies, 2 milestones).
+
+Routine fixture login uses the real, CSRF-protected login endpoint through
+`page.request`, sharing its session cookies with the browser, then navigates
+directly to the chart. Use `loginThroughUI` from the same fixture module when
+the test specifically needs to exercise the browser login form. Do not skip
+resets or share mutable browser/database state to improve runtime.
+
+For management-command subprocesses, use `djangoEnv()` from the fixture module
+so they target the current worker's database. Raw SQLite helpers must use
+`os.environ['DJANGO_DB_PATH']`, not a hardcoded filename. Additional servers must
+also bind an OS-assigned port; the production-asset test uses `startServer()`
+with `initialize: false` so it cannot reseed its worker's live database.
+
+See `docs/e2e-testing.md` for performance measurements and runner details.
 
 ### Writing a good Playwright test
 
@@ -69,8 +88,9 @@ comment (currently 3 projects, 8 tasks, 6 dependencies, 2 milestones).
 - Prefer assertions on data attributes (`data-px-per-day`, `data-start`,
   `data-end`, `data-date`, `data-status`) over visual properties where possible
   — they are stable across SSE re-renders and read directly from the view-model.
-- Tests run serially with one Django process and reset between tests. Keep tests
-  isolated; do not depend on mutations made by an earlier test.
+- Tests run in parallel with a separate Django process/database per worker and
+  reset between tests. Keep tests isolated; do not depend on mutations made by
+  an earlier test or on another worker's data.
 
 ## German UI tone
 

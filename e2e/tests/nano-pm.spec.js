@@ -1,14 +1,15 @@
 const http = require('http');
-const { execFile, spawn } = require('child_process');
+const { execFile } = require('child_process');
 const { mkdtemp, rm } = require('fs/promises');
 const { tmpdir } = require('os');
 const { promisify } = require('util');
 const path = require('path');
+const { startServer } = require('../server');
 
 async function deliverTeamsNotifications() {
   await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'deliver_teams_notifications', '--once'], {
     cwd: path.resolve(__dirname, '../..'),
-    env: { ...process.env, DJANGO_DEBUG: 'true', DJANGO_DB_PATH: 'db.e2e.sqlite3', DJANGO_ENABLE_TEST_RESET: 'true' },
+    env: djangoEnv(),
   });
 }
 
@@ -17,13 +18,13 @@ async function holdSQLiteWriteLock() {
   let child;
   const done = new Promise((resolve, reject) => {
     child = execFile('uv', ['run', 'python', '-u', '-c', `
-import sqlite3, time
-with sqlite3.connect('db.e2e.sqlite3', timeout=10) as connection:
+import os, sqlite3, time
+with sqlite3.connect(os.environ['DJANGO_DB_PATH'], timeout=10) as connection:
     connection.execute('BEGIN IMMEDIATE')
     print('locked', flush=True)
     time.sleep(7)
     connection.rollback()
-`], { cwd: path.resolve(__dirname, '../..'), timeout: 15000 }, (error) => error ? reject(error) : resolve());
+`], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv(), timeout: 15000 }, (error) => error ? reject(error) : resolve());
   });
   await Promise.race([
     new Promise(resolve => child.stdout.once('data', resolve)),
@@ -76,7 +77,7 @@ async function enableRoadmap(page) {
   return page.locator('#public-roadmap-link').getAttribute('href');
 }
 
-const { test, expect, login, reset } = require('./fixtures');
+const { test, expect, login, loginThroughUI, reset, djangoEnv } = require('./fixtures');
 
 function germanDate(iso) {
   const months = [
@@ -155,11 +156,11 @@ async function signInAs(page, username, { keepCheckin = false } = {}) {
   }
 }
 
-async function submitWorkloadExample(page) {
+async function submitWorkloadExample(page, { maintenance = 30, meetings = 10 } = {}) {
   await page.goto('/workload/');
-  await page.getByLabel('Maintenance percentage', { exact: true }).fill('30');
+  await page.getByLabel('Maintenance percentage', { exact: true }).fill(String(maintenance));
   await page.getByLabel('Project work percentage', { exact: true }).fill('60');
-  await page.getByLabel('Meetings percentage', { exact: true }).fill('10');
+  await page.getByLabel('Meetings percentage', { exact: true }).fill(String(meetings));
   await page.getByText('Optional project breakdown', { exact: true }).click();
   await page.locator('.workload-projects').getByLabel('Show all projects', { exact: true }).check();
   await page.locator('.workload-projects').getByRole('button', { name: 'Add API Migration', exact: true }).click();
@@ -177,9 +178,125 @@ WorkloadReport.objects.filter(user__username='member1').update(reviewed_at=timez
 ${snoozeDays ? `Membership.objects.filter(user__username='member1').update(workload_snoozed_until=timezone.now()-timedelta(days=${snoozeDays}))` : ''}
 `], {
     cwd: path.resolve(__dirname, '../..'),
-    env: { ...process.env, DJANGO_DEBUG: 'true', DJANGO_DB_PATH: 'db.e2e.sqlite3' },
+    env: djangoEnv(),
   });
 }
+
+test.describe('e2e setup', () => {
+  test('worker databases and subprocesses are isolated from other Django servers', async ({ appPage: page, browser }) => {
+    const { stdout } = await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
+import json
+from django.conf import settings
+from pathlib import Path
+print(json.dumps({'database': str(Path(settings.DATABASES['default']['NAME']).resolve())}))
+`], {
+      cwd: path.resolve(__dirname, '../..'),
+      env: djangoEnv({ DJANGO_SETTINGS_MODULE: 'config.settings' }),
+    });
+    const database = JSON.parse(stdout.trim().split('\n').at(-1)).database;
+    expect(path.resolve(database)).not.toBe(path.resolve(__dirname, '../../db.e2e.sqlite3'));
+    expect(database.startsWith(tmpdir() + path.sep)).toBe(true);
+    const { startWorkerServer } = require('../server');
+    const otherServer = await startWorkerServer();
+    const otherContext = await browser.newContext({ baseURL: otherServer.url });
+    try {
+      expect(otherServer.env.DJANGO_DB_PATH).not.toBe(database);
+      expect(new URL(otherServer.url).port).not.toBe(new URL(page.url()).port);
+      const other = await otherContext.newPage();
+      await login(other);
+      await page.goto('/profile/');
+      await page.getByLabel('First name', { exact: true }).fill('Primary worker');
+      await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+      await reset(other.request);
+      await page.reload();
+      await expect(page.getByLabel('First name', { exact: true })).toHaveValue('Primary worker');
+      await login(other);
+      await other.goto('/profile/');
+      await other.getByLabel('First name', { exact: true }).fill('Other worker');
+      await other.getByRole('button', { name: 'Save profile', exact: true }).click();
+      await reset(page.request);
+      await other.reload();
+      await expect(other.getByLabel('First name', { exact: true })).toHaveValue('Other worker');
+    } finally {
+      await otherContext.close();
+      await otherServer.stop();
+    }
+  });
+
+  test('e2e seed uses fast password hashing while normal settings remain secure', async ({ appPage: page }) => {
+    const { stdout } = await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
+import json
+from django.conf import settings
+from django.contrib.auth import get_user_model
+print(json.dumps({'default_hasher': settings.PASSWORD_HASHERS[0], 'seed_algorithm': get_user_model().objects.get(username='demo').password.split('$', 1)[0]}))
+`], {
+      cwd: path.resolve(__dirname, '../..'),
+      env: djangoEnv({ DJANGO_SETTINGS_MODULE: 'config.settings' }),
+    });
+    const result = JSON.parse(stdout.trim().split('\n').at(-1));
+    expect(result.default_hasher).toBe('django.contrib.auth.hashers.PBKDF2PasswordHasher');
+    expect(result.seed_algorithm).toBe('md5');
+    await expect(page.locator('.sidebar-user .user-name')).toHaveText('demo');
+  });
+
+  test('fast e2e settings refuse normal databases and missing safety opt-ins', async () => {
+    const safe = {
+      ...process.env,
+      PYTHONPATH: 'src',
+      DJANGO_SECRET_KEY: 'settings-safety-test-only',
+      DJANGO_DEBUG: 'true',
+      DJANGO_ENABLE_TEST_RESET: 'true',
+      DJANGO_ALLOW_INSECURE_SEED: 'true',
+      DJANGO_DB_PATH: 'db.e2e.sqlite3',
+    };
+    for (const override of [
+      { DJANGO_DEBUG: 'false' },
+      { DJANGO_ENABLE_TEST_RESET: 'false' },
+      { DJANGO_ALLOW_INSECURE_SEED: 'false' },
+      { DJANGO_DB_PATH: 'db.sqlite3' },
+      { DJANGO_DB_PATH: '' },
+    ]) {
+      await expect(promisify(execFile)('uv', ['run', 'python', '-c', 'import config.settings_e2e'], {
+        cwd: path.resolve(__dirname, '../..'), env: { ...safe, ...override },
+      })).rejects.toMatchObject({ stderr: expect.stringContaining('config.settings_e2e requires') });
+    }
+  });
+
+  test('routine fixture login still requires a valid password and CSRF token', async ({ page, request }) => {
+    await reset(request);
+    const form = await page.request.get('/accounts/login/');
+    const csrf = (await form.text()).match(/name="csrfmiddlewaretoken"[^>]*value="([^"]+)"/)[1];
+    const missingToken = await page.request.post('/accounts/login/', {
+      form: { username: 'demo', password: 'demo' }, maxRedirects: 0,
+    });
+    expect(missingToken.status()).toBe(403);
+    const wrongPassword = await page.request.post('/accounts/login/', {
+      form: { username: 'demo', password: 'wrong', csrfmiddlewaretoken: csrf },
+      headers: { Referer: form.url() }, maxRedirects: 0,
+    });
+    expect(wrongPassword.status()).toBe(200);
+    expect((await page.request.get('/', { maxRedirects: 0 })).status()).toBe(302);
+    await login(page);
+    await expect(page.locator('.sidebar-user .user-name')).toHaveText('demo');
+  });
+
+  test('routine fixture login uses the real session without navigating through the login form', async ({ page, request }) => {
+    await reset(request);
+    const navigations = [];
+    page.on('request', request => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
+        navigations.push(new URL(request.url()).pathname);
+      }
+    });
+    await login(page);
+    await expect(page.locator('#grid-scroll')).toBeVisible();
+    await expect(page.locator('.sidebar-user .user-name')).toHaveText('demo');
+    expect(navigations).toEqual(['/']);
+    expect((await page.context().cookies()).find(cookie => cookie.name === 'nano_pm_sessionid')?.httpOnly).toBe(true);
+    await page.reload();
+    await expect(page.locator('.sidebar-user .user-name')).toHaveText('demo');
+  });
+});
 
 test.describe('workload estimates', () => {
   test('workload save confirmation is a dismissible German toast, not inline text', async ({ appPage: page }) => {
@@ -239,11 +356,8 @@ test.describe('workload estimates', () => {
   test('workload check-in previous-value buttons fill only their own input without submitting', async ({ appPage: page }) => {
     await enableWorkload(page);
     await signInAs(page, 'member1');
-    await submitWorkloadExample(page);
-    await page.getByLabel('Maintenance percentage', { exact: true }).fill('40');
-    await page.getByLabel('Meetings percentage', { exact: true }).fill('0');
-    await page.getByRole('button', { name: 'Save estimate', exact: true }).click();
-    await expect(page.locator('[data-workload-history]')).toHaveCount(2);
+    await submitWorkloadExample(page, { maintenance: 40, meetings: 0 });
+    await expect(page.locator('[data-workload-history]')).toHaveCount(1);
     await ageWorkloadCheckin();
     await page.goto('/');
     const dialog = page.locator('#workload-checkin-dialog');
@@ -840,10 +954,11 @@ test.describe('workload estimates', () => {
     await expect(save).toBeDisabled();
     await expect(maintenance).toHaveValue('25');
     await expect(page.getByLabel('Project work percentage', { exact: true })).toHaveValue('60');
-    await expect(page.locator('#workload-current')).toHaveCount(0);
+    await expect(page.locator('[data-workload-history]')).toHaveCount(0);
     await page.getByLabel('Meetings percentage', { exact: true }).fill('15');
     await save.click();
     await expect(page.locator('#workload-status')).toContainText('Estimate saved');
+    await expect(page.locator('[data-workload-history]')).toHaveCount(1);
     await expect(page.locator('[data-workload-feedback]')).toHaveText('100% allocated');
     await expect(slider).toHaveValue('25');
     await slider.focus();
@@ -1432,7 +1547,7 @@ test.describe('workload estimates', () => {
     }, fields);
     expect(responseText).toContain('unavailable in this workspace');
     await page.reload();
-    await expect(page.locator('#workload-current')).toHaveCount(0);
+    await expect(page.locator('[data-workload-history]')).toHaveCount(0);
     expect(await postForm(page, '/workspaces/workload/', { workload_enabled: 'on' })).toBe(403);
     await submitWorkloadExample(page);
     await page.getByLabel('Maintenance percentage', { exact: true }).fill('40');
@@ -1445,7 +1560,7 @@ test.describe('workload estimates', () => {
     await signInAs(page, 'multi1');
     await page.goto('/workload/');
     await expect(page.getByLabel('Maintenance percentage', { exact: true })).toHaveValue('0');
-    await expect(page.locator('#workload-current')).toHaveCount(0);
+    await expect(page.locator('[data-workload-history]')).toHaveCount(0);
   });
 
   test('workload retains snapshots through category archival and disabling, and filters coverage', async ({ appPage: page }) => {
@@ -1548,7 +1663,7 @@ test.describe('workload estimates', () => {
       expect(response.text).toContain('Percentages must be whole numbers');
     }
     await page.reload();
-    await expect(page.locator('#workload-current')).toHaveCount(0);
+    await expect(page.locator('[data-workload-history]')).toHaveCount(0);
   });
 
   test('workload project picker defaults to assigned projects and keeps saved allocations visible', async ({ appPage: page }) => {
@@ -1735,8 +1850,15 @@ test.describe('self-service profile', () => {
     await page.reload();
     await expect(page.getByLabel('First name', { exact: true })).toHaveValue('Demo');
     await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('demo@teams.example.com');
+    // Clearing optional names belongs to profile persistence coverage, not
+    // four repeated profile-edit cycles in the Teams actor-formatting test.
+    await page.getByLabel('First name', { exact: true }).fill('');
+    await page.getByLabel('Last name', { exact: true }).fill('');
     await page.getByLabel('Teams email address', { exact: true }).fill('');
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+    await page.reload();
+    await expect(page.getByLabel('First name', { exact: true })).toHaveValue('');
+    await expect(page.getByLabel('Last name', { exact: true })).toHaveValue('');
     await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('');
     await page.goto('/workspaces/teams/');
     await expect(page.getByLabel('Teams email address', { exact: true })).toHaveCount(0);
@@ -1948,16 +2070,14 @@ test.describe('workspace Teams subscriptions', () => {
     await expect(card.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
   });
 
-  test('anonymous roadmap followers use allowed Teams domains and private browser-owned subscriptions', async ({ appPage: page, browser }) => {
-    const webhook = await startWebhookServer();
+  test('anonymous subscriptions are browser-owned even after login', async ({ appPage: page, browser }) => {
     const context = await browser.newContext();
     const otherContext = await browser.newContext();
     const visitor = await context.newPage();
     const other = await otherContext.newPage();
     try {
-      const milestoneId = await page.locator('.milestone[data-title="v2 API beta"]').first().getAttribute('data-milestone-id');
-      await configureTeams(page, webhook.url, ['milestone.updated']);
-      await page.getByLabel('Allowed domains for public followers').fill('MYCOMPANY.COM, mycompany.com');
+      await page.goto('/workspaces/teams/');
+      await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
       await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
       await expect(page.getByLabel('Allowed domains for public followers')).toHaveValue('mycompany.com');
       const roadmap = await enableRoadmap(page);
@@ -1966,11 +2086,6 @@ test.describe('workspace Teams subscriptions', () => {
       const action = await project.getAttribute('action');
       await project.getByRole('button', { name: 'Follow', exact: true }).click();
       const dialog = visitor.getByRole('dialog', { name: 'Follow project', exact: true });
-      for (const address of ['visitor@evilmycompany.com', 'visitor@sub.mycompany.com', 'visitor@mycompany.com.evil.net']) {
-        await dialog.getByLabel('Teams email address', { exact: true }).fill(address);
-        await dialog.getByRole('button', { name: 'Follow', exact: true }).click();
-        await expect(dialog.getByRole('alert')).toContainText('Use a Teams email address from an allowed domain.');
-      }
       await dialog.getByLabel('Teams email address', { exact: true }).fill('VISITOR@MYCOMPANY.COM');
       await dialog.getByRole('button', { name: 'Follow', exact: true }).click();
       await visitor.waitForURL(roadmap);
@@ -1984,30 +2099,13 @@ test.describe('workspace Teams subscriptions', () => {
       await visitor.goto(roadmap);
       await expect(project.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
       expect((await visitor.request.post(action, { form: { action: 'unfollow' } })).status()).toBe(403);
-      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Anonymous follower notified' })).toBe(200);
-      await deliverTeamsNotifications();
-      expect(webhook.requests).toHaveLength(1);
-      expect(webhook.requests[0].json.attachments[0].content.msteams.entities.map(e => e.mentioned.id)).toEqual(['visitor@mycompany.com']);
-      // An authenticated follower with the same address must not cause duplicate mentions.
-      await saveTeamsIdentity(page, 'visitor@mycompany.com');
-      await page.goto(roadmap);
-      await page.locator('[data-project-subscription]', { hasText: 'API Migration' }).getByRole('button', { name: 'Follow', exact: true }).click();
-      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Public followers notified' })).toBe(200);
-      await deliverTeamsNotifications();
-      expect(webhook.requests).toHaveLength(2);
-      expect(webhook.requests[1].json.attachments[0].content.msteams.entities.map(e => e.mentioned.id)).toEqual(['visitor@mycompany.com']);
-      await page.goto(roadmap);
-      await unfollowProject(page.locator('[data-project-subscription]', { hasText: 'API Migration' }));
       // Logging in must not hide or strand the subscription owned by this browser.
       await login(visitor);
       await visitor.goto(roadmap);
       await expect(project.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
       await unfollowProject(project);
       await expect(project.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
-      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Public followers removed' })).toBe(200);
-      await deliverTeamsNotifications();
-      expect(webhook.requests.at(-1).json.attachments[0].content.msteams).toBeUndefined();
-    } finally { await context.close(); await otherContext.close(); await webhook.close(); }
+    } finally { await context.close(); await otherContext.close(); }
   });
 
   test('anonymous following works by default and optional domains restrict new mentions', async ({ appPage: page, browser }) => {
@@ -2037,11 +2135,13 @@ test.describe('workspace Teams subscriptions', () => {
         await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
         await expect(page.locator('#teams-public-followers-form .errorlist')).toBeVisible();
       }
-      await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
+      await page.getByLabel('Allowed domains for public followers').fill('MYCOMPANY.COM, mycompany.com');
       await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
       await expect(page.getByLabel('Allowed domains for public followers')).toHaveValue('mycompany.com');
       await visitor.goto(roadmap);
-      expect(await postForm(visitor, action, { action: 'follow', teams_email: 'visitor@othercompany.com' })).toBe(400);
+      for (const address of ['visitor@othercompany.com', 'visitor@evilmycompany.com', 'visitor@sub.mycompany.com', 'visitor@mycompany.com.evil.net']) {
+        expect(await postForm(visitor, action, { action: 'follow', teams_email: address })).toBe(400);
+      }
       expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Restricted public follow' })).toBe(200);
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(2);
@@ -2162,7 +2262,7 @@ test.describe('workspace Teams subscriptions', () => {
       await expect(dialog).toBeVisible();
       await dialog.getByLabel('Microsoft Teams webhook URL').fill('https://example.com/?sig=invalid-secret');
       await dialog.getByRole('button', { name: 'Save webhook', exact: true }).click();
-      await expect(dialog.locator('.errorlist')).toBeVisible();
+      await expect(dialog.locator('.errorlist')).toContainText('Use an HTTPS Microsoft Teams or Power Automate webhook URL.');
       await expect(dialog).toBeVisible();
       await expect(dialog.getByLabel('Microsoft Teams webhook URL')).toHaveValue('');
       expect(await page.content()).not.toContain('invalid-secret');
@@ -2200,11 +2300,11 @@ test.describe('workspace Teams subscriptions', () => {
     const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
     // Simulate an existing installation with a retained project-level secret.
     await promisify(execFile)('uv', ['run', 'python', '-c', `
-import sqlite3, sys
-with sqlite3.connect('db.e2e.sqlite3') as connection:
+import os, sqlite3, sys
+with sqlite3.connect(os.environ['DJANGO_DB_PATH']) as connection:
     connection.execute('UPDATE data_project SET teams_webhook_url = ? WHERE id = ?',
                        ('https://legacy.logic.azure.com/workflows/test?sig=legacy-test-secret', sys.argv[1]))
-`, projectId], { cwd: path.resolve(__dirname, '../..') });
+`, projectId], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv() });
     await page.goto('/workspaces/teams/');
     expect(await postForm(page, '/workspaces/teams/', { action: 'workspace', legacy_project: projectId })).toBe(200);
     await page.reload();
@@ -2215,8 +2315,9 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
     await expect(page.locator('#teams-connection-status')).toHaveText('Webhook configured');
   });
 
-  test('workspace Teams webhook mentions roadmap followers for direct and task-driven changes', async ({ appPage: page }) => {
+  test('workspace Teams webhook mentions roadmap followers for direct and task-driven changes', async ({ appPage: page, browser }) => {
     const webhook = await startWebhookServer();
+    const visitorContext = await browser.newContext();
     try {
       await configureTeams(page, webhook.url);
       await saveTeamsIdentity(page, 'demo@example.com');
@@ -2244,6 +2345,16 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
       expect(card.body.at(-1)).toMatchObject({
         text: 'demo · <at>demo@example.com</at>', size: 'Small', wrap: true,
       });
+      // The next delivery has both an authenticated and anonymous subscription
+      // for the same address. It must still contain exactly one mention.
+      const visitor = await visitorContext.newPage();
+      await visitor.goto(roadmap);
+      const anonymousFollow = visitor.locator('[data-project-subscription]', { hasText: 'API Migration' });
+      await anonymousFollow.getByRole('button', { name: 'Follow', exact: true }).click();
+      const dialog = visitor.getByRole('dialog', { name: 'Follow project', exact: true });
+      await dialog.getByLabel('Teams email address', { exact: true }).fill('demo@example.com');
+      await dialog.getByRole('button', { name: 'Follow', exact: true }).click();
+      await expect(anonymousFollow.getByRole('button', { name: 'Subscribed', exact: true })).toBeVisible();
       await page.reload();
       const oldDate = await page.locator(`#ms-${milestoneId}`).getAttribute('data-date');
       const nextDate = new Date(`${oldDate}T00:00:00Z`);
@@ -2254,7 +2365,9 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
       await deliverTeamsNotifications();
       const linkedChanges = webhook.requests.slice(1).filter(r => r.json.summary.includes('Subscribed milestone'));
       expect(linkedChanges).toHaveLength(1);
-      expect(linkedChanges[0].json.attachments[0].content.msteams.entities).toHaveLength(1);
+      expect(linkedChanges[0].json.attachments[0].content.msteams.entities.map(entity => entity.mentioned.id)).toEqual(['demo@example.com']);
+      await unfollowProject(anonymousFollow);
+      await expect(anonymousFollow.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
       await page.goto(roadmap);
       await unfollowProject(follow);
       await expect(follow.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
@@ -2264,7 +2377,7 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
       expect(webhook.requests.at(-1).json.attachments[0].content.msteams).toBeUndefined();
       await page.goto('/activity/');
       await expect(page.locator('body')).not.toContainText(webhook.url);
-    } finally { await webhook.close(); }
+    } finally { await visitorContext.close(); await webhook.close(); }
   });
 
   test('Teams subscriptions are self-service and scoped to roadmap workspace membership', async ({ appPage: page, browser }) => {
@@ -2307,13 +2420,14 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
   test('Teams creation notifications wait for a real milestone title and deletion notifies once', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
-      await configureTeams(page, webhook.url, ['milestone.created', 'milestone.deleted']);
+      await configureTeams(page, webhook.url, ['milestone.created', 'milestone.updated', 'milestone.deleted']);
       await page.goto('/');
       const project = page.locator('.project-group').filter({ hasText: 'API Migration' });
       await project.locator('.left-cell.proj').click();
       await page.locator('#pp-add-milestone').click();
       await placeMilestoneGhost(page, project);
       const id = await page.locator('#milestone-popover').getAttribute('data-milestone-id');
+      await expect(page.locator('#milestone-popover input[name=title]')).toHaveValue('New milestone');
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(0);
       await page.locator('#milestone-popover input[name=title]').fill('New customer launch');
@@ -2403,14 +2517,10 @@ with sqlite3.connect('db.e2e.sqlite3') as connection:
     }
   });
 
-  test('Teams settings validate destinations and cancel pending delivery when disconnected', async ({ appPage: page }) => {
+  test('disconnecting the Teams webhook cancels pending delivery', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
       await configureTeams(page, webhook.url);
-      await page.getByRole('button', { name: 'Set up new webhook', exact: true }).click();
-      await page.getByLabel('Microsoft Teams webhook URL').fill('https://example.com/not-teams?sig=secret');
-      await page.getByRole('button', { name: 'Save webhook', exact: true }).click();
-      await expect(page.locator('#teams-webhook-dialog')).toContainText('Use an HTTPS Microsoft Teams or Power Automate webhook URL.');
       await page.goto('/');
       const id = await page.locator('.milestone').first().getAttribute('data-milestone-id');
       expect(await postForm(page, `/milestones/${id}/update/`, { title: 'Never send this' })).toBe(200);
@@ -2497,32 +2607,18 @@ test.describe('auth + page render', () => {
     expect(cookies.find(cookie => cookie.name === 'sessionid')?.value).toBe('another-django-app-session');
   });
 
-  test('login page renders the form', async ({ page, request }) => {
+  test('login form renders readable labeled daisyUI fields', async ({ page, request }) => {
     await reset(request);
     await page.goto('/accounts/login/');
-    await expect(page.locator('.login-card .fieldset-legend')).toHaveText('Login');
-    await expect(page.locator('input[name=username]')).toBeVisible();
-    await expect(page.locator('input[name=password]')).toBeVisible();
-  });
-
-  test('login inputs use readable text size', async ({ page, request }) => {
-    await reset(request);
-    await page.goto('/accounts/login/');
-
-    for (const name of ['username', 'password']) {
-      await expect(page.locator(`input[name=${name}]`)).toHaveCSS('font-size', '16px');
-    }
-  });
-
-  test('login form uses daisyUI fieldset labels', async ({ page, request }) => {
-    await reset(request);
-    await page.goto('/accounts/login/');
-
     await expect(page.locator('.login-card fieldset.fieldset')).toHaveClass(/\bbg-base-200\b/);
     await expect(page.locator('.login-card .fieldset-legend')).toHaveText('Login');
     await expect(page.locator('.login-card label.label')).toHaveText(['Username', 'Password']);
-    await expect(page.locator('input[name=username]')).toHaveClass(/\binput\b/);
-    await expect(page.locator('input[name=password]')).toHaveClass(/\binput\b/);
+    for (const name of ['username', 'password']) {
+      const input = page.locator(`input[name=${name}]`);
+      await expect(input).toBeVisible();
+      await expect(input).toHaveCSS('font-size', '16px');
+      await expect(input).toHaveClass(/\binput\b/);
+    }
   });
 
   test('an unauthenticated request to / redirects to login', async ({ page, request }) => {
@@ -2533,7 +2629,7 @@ test.describe('auth + page render', () => {
 
   test('demo / demo logs in and lands on the chart', async ({ page, request }) => {
     await reset(request);
-    await login(page);
+    await loginThroughUI(page);
     await expect(page.locator('.sidebar-brand')).toHaveText('nano-pm');
     await expect(page.locator('#grid-scroll')).toBeVisible();
   });
@@ -4978,29 +5074,20 @@ test.describe('project & people management', () => {
     test.setTimeout(60000);
     const staticRoot = await mkdtemp(path.join(tmpdir(), 'nano-pm-static-'));
     const cwd = path.resolve(__dirname, '../..');
-    const env = {
-      ...process.env,
+    const env = djangoEnv({
+      DJANGO_SETTINGS_MODULE: 'config.settings',
       DJANGO_DEBUG: 'false',
       DJANGO_SECRET_KEY: 'django-insecure-dev-only-DO-NOT-USE-IN-PROD',
       DJANGO_ALLOWED_HOSTS: 'localhost,127.0.0.1',
-      DJANGO_DB_PATH: 'db.e2e.sqlite3',
       DJANGO_STATIC_ROOT: staticRoot,
-    };
-    const url = 'http://localhost:8767';
+    });
     let server;
     try {
       await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'collectstatic', '--noinput', '--verbosity', '0'], { cwd, env });
-      // --nostatic ensures WhiteNoise serves the collected production assets,
-      // rather than runserver's unhashed source files.
-      server = spawn('uv', ['run', 'python', 'src/manage.py', 'runserver', '8767', '--noreload', '--nostatic'], { cwd, env });
-      let logs = '';
-      server.stdout.on('data', chunk => { logs += chunk; });
-      server.stderr.on('data', chunk => { logs += chunk; });
-      await expect.poll(async () => {
-        if (server.exitCode !== null) throw new Error(logs);
-        try { return (await page.request.get(`${url}/accounts/login/`, { timeout: 1000 })).status(); }
-        catch (_) { return 0; }
-      }, { timeout: 15000 }).toBe(200);
+      // DEBUG=False uses WhiteNoise, not the development StaticFilesHandler.
+      // Share only this worker's DB; never migrate or reseed its live state.
+      server = await startServer(env, { initialize: false });
+      const url = server.url;
 
       // Check module identity before executing it, so a duplicate-runtime
       // regression fails as a URL mismatch, not a browser freeze/timeout.
@@ -5026,11 +5113,7 @@ test.describe('project & people management', () => {
       expect([...modules]).toEqual([new URL(runtime, url).href]);
       expect(errors).toEqual([]);
     } finally {
-      if (server && server.exitCode === null) {
-        const stopped = new Promise(resolve => server.once('close', resolve));
-        server.kill();
-        await stopped;
-      }
+      if (server) await server.stop();
       await rm(staticRoot, { recursive: true, force: true });
     }
   });
@@ -5652,25 +5735,6 @@ test.describe('project & people management', () => {
     await expect(page.locator('#project-popover input[name=teams_webhook_url]')).toHaveCount(0);
   });
 
-  test('Teams notifications skip placeholder milestone creation', async ({ appPage: page }) => {
-    const webhook = await startWebhookServer();
-    try {
-      await configureTeams(page, webhook.url, ['milestone.created', 'milestone.updated']);
-      await page.goto('/');
-
-      const project = page.locator('.project-group').filter({ hasText: 'API Migration' });
-      await project.locator('.left-cell.proj').click();
-      await expect(page.locator('#project-popover')).toBeVisible();
-      await page.locator('#project-popover #pp-add-milestone').click();
-      await placeMilestoneGhost(page, project);
-      await expect(page.locator('#milestone-popover input[name=title]')).toHaveValue('New milestone');
-      await deliverTeamsNotifications();
-      expect(webhook.requests).toHaveLength(0);
-    } finally {
-      await webhook.close();
-    }
-  });
-
   test('Teams notifications respect selected milestone events', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
@@ -5725,38 +5789,27 @@ test.describe('project & people management', () => {
     }
   });
 
-  test('Teams cards prefer the actors full name and fall back to username', async ({ appPage: page }) => {
+  test('Teams cards snapshot the actors full name when the event is queued', async ({ appPage: page }) => {
     const webhook = await startWebhookServer();
     try {
+      const milestoneId = await page.locator('.milestone').first().getAttribute('data-milestone-id');
       await configureTeams(page, webhook.url, ['milestone.updated']);
-      await page.goto('/');
-      const milestoneId = await page.locator('.chart-row.proj .milestone').first().getAttribute('data-milestone-id');
-      const names = [
-        ['Philipp', 'Eichhorn', 'Philipp Eichhorn'],
-        ['Philipp', '', 'Philipp'],
-        ['', 'Eichhorn', 'Eichhorn'],
-        ['', '', 'demo'],
-      ];
-      for (const [index, [first, last, expected]] of names.entries()) {
-        await page.goto('/profile/');
-        await page.getByLabel('First name', { exact: true }).fill(first);
-        await page.getByLabel('Last name', { exact: true }).fill(last);
-        await Promise.all([
-          page.waitForResponse(response => response.url().endsWith('/profile/') && response.request().method() === 'POST'),
-          page.getByRole('button', { name: 'Save profile', exact: true }).click(),
-        ]);
-        await page.reload();
-        await expect(page.getByLabel('First name', { exact: true })).toHaveValue(first);
-        await expect(page.getByLabel('Last name', { exact: true })).toHaveValue(last);
-        expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: `Actor display ${index}` })).toBe(200);
-        await deliverTeamsNotifications();
-        expect(webhook.requests).toHaveLength(index + 1);
-        const card = webhook.requests.at(-1).json.attachments[0].content;
-        expect(card.body.at(-1)).toMatchObject({ text: expected, size: 'Small', isSubtle: true });
-      }
-    } finally {
-      await webhook.close();
-    }
+      await page.goto('/profile/');
+      await page.getByLabel('First name', { exact: true }).fill('Philipp');
+      await page.getByLabel('Last name', { exact: true }).fill('Eichhorn');
+      await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+      expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Actor name snapshot' })).toBe(200);
+      // Delivery must use the event's actor snapshot, not a later profile edit.
+      const workspace = await page.locator('#profile-form input[name=workspace_id]').inputValue();
+      expect(await postForm(page, '/profile/', {
+        workspace_id: workspace, first_name: 'Changed', last_name: 'After enqueue',
+        email: '', teams_upn: '',
+      })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      const card = webhook.requests[0].json.attachments[0].content;
+      expect(card.body.at(-1)).toMatchObject({ text: 'Philipp Eichhorn', size: 'Small', isSubtle: true });
+    } finally { await webhook.close(); }
   });
 
   test('Teams description notifications include the new milestone description', async ({ appPage: page }) => {

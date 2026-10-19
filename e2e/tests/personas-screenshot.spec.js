@@ -9,14 +9,14 @@ async function loginAs(page, who) {
   await page.waitForURL('/');
 }
 
-test('alice persona renders', async ({ page }) => {
+test('alice persona renders', async ({ personaPage: page }) => {
   await loginAs(page, 'alice');
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.waitForSelector('.bar');
   await page.screenshot({ path: 'screenshots/persona-alice.png' });
 });
 
-test('bob persona renders', async ({ page }) => {
+test('bob persona renders', async ({ personaPage: page }) => {
   await loginAs(page, 'bob');
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.waitForSelector('.bar');
