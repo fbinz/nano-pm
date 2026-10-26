@@ -37,13 +37,19 @@
                         <form method="post" action="{% url 'roadmap_subscription' token=token project_id=project.subscription_project_id %}"
                               class="flex w-full items-center justify-between gap-2 min-w-0" data-project-subscription>
                           {% csrf_token %}
-                          <h2 class="font-semibold min-w-0 flex-1">
-                            <button type="button" class="flex w-full min-w-0 items-center gap-2 text-left cursor-pointer hover:underline"
-                                    data-roadmap-project="{{ project.key }}" aria-controls="drawer" aria-expanded="false" title="{{ project.name }}">
-                              <span class="inline-block h-3 w-3 rounded-full shrink-0" style="background:{{ project.color }}"></span>
-                              <span class="truncate">{{ project.name }}</span>
-                            </button>
-                          </h2>
+                          <div class="min-w-0 flex-1">
+                            <h2 class="font-semibold min-w-0">
+                              <button type="button" class="flex w-full min-w-0 items-center gap-2 text-left cursor-pointer hover:underline"
+                                      data-roadmap-project="{{ project.key }}" aria-controls="drawer" aria-expanded="false" title="{{ project.name }}">
+                                <span class="inline-block h-3 w-3 rounded-full shrink-0" style="background:{{ project.color }}"></span>
+                                <span class="truncate">{{ project.name }}</span>
+                              </button>
+                            </h2>
+                            {% if project.responsible_names %}
+                              <span class="block truncate text-xs opacity-60" data-project-responsible-summary
+                                    title="{{ project.responsible_names|join:', ' }}">{{ project.responsible_summary }}</span>
+                            {% endif %}
+                          </div>
                           <template id="details-{{ project.key }}">
                             <article class="space-y-4 break-words" aria-labelledby="project-title-{{ project.key }}">
                               <h2 id="project-title-{{ project.key }}" class="text-xl font-semibold">{{ project.name }}</h2>

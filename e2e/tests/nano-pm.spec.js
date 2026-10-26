@@ -6624,7 +6624,7 @@ test.describe('workspace isolation', () => {
     expect(revoked.status()).toBe(404);
   });
 
-  test('public roadmap project drawers show responsible people but not task assignees', async ({ appPage: page, browser }) => {
+  test('public roadmap shows project responsible people inline and in drawers but not task assignees', async ({ appPage: page, browser }) => {
     await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
     const responsible = page.locator('#project-responsible-people');
     for (const name of ['Alex Chen', 'Riley Wong']) {
@@ -6641,7 +6641,13 @@ test.describe('workspace isolation', () => {
         await visitor.setViewportSize({ width, height: 844 });
         await visitor.goto(href);
         const project = visitor.locator('.roadmap-project-label').filter({ hasText: 'API Migration' });
-        await expect(project).not.toContainText('Alex Chen');
+        const summary = project.locator('[data-project-responsible-summary]');
+        await expect(summary).toBeVisible();
+        await expect(summary).toHaveText('Alex, Riley');
+        await expect(summary).toHaveAttribute('title', 'Alex Chen, Riley Wong');
+        await expect(project).not.toContainText('Sam');
+        const unassignedProject = visitor.locator('.roadmap-project-label').filter({ hasText: 'Infra hardening' });
+        await expect(unassignedProject.locator('[data-project-responsible-summary]')).toHaveCount(0);
         await project.getByRole('button', { name: 'API Migration', exact: true }).click();
         const drawer = visitor.locator('#drawer');
         await expect(drawer.getByRole('heading', { name: 'Responsible people', exact: true })).toBeVisible();

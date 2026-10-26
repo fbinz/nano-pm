@@ -40,6 +40,10 @@ class PublicProjectVM:
     following: bool = False
     row_height: int = 48
 
+    @property
+    def responsible_summary(self) -> str:
+        return ", ".join(name.split(" ")[0] for name in self.responsible_names)
+
 
 @dataclass(frozen=True)
 class PublicRoadmapVM:
