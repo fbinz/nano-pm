@@ -35,7 +35,7 @@
                          style="--project-color: {{ project.color }};">
                       <div class="roadmap-project-label" style="min-height:{{ project.row_height }}px;">
                         <form method="post" action="{% url 'roadmap_subscription' token=token project_id=project.subscription_project_id %}"
-                              class="flex w-full items-center justify-between gap-2 min-w-0" data-project-subscription>
+                              class="flex w-full items-start justify-between gap-2 min-w-0" data-project-subscription>
                           {% csrf_token %}
                           <div class="min-w-0 flex-1">
                             <h2 class="font-semibold min-w-0">
@@ -118,6 +118,7 @@
                             <article class="space-y-4 break-words" aria-labelledby="milestone-title-{{ milestone.key }}">
                               <h2 id="milestone-title-{{ milestone.key }}" class="text-xl font-semibold">{{ milestone.title }}</h2>
                               <p>{{ milestone.description|linebreaksbr }}</p>
+                              <c-screens.gantt.milestone-history :history="milestone.history" />
                             </article>
                           </template>
                         {% endfor %}

@@ -6841,7 +6841,8 @@ test.describe('workspace isolation', () => {
       await expect(drawer.getByRole('heading', { name: 'v2 API beta' })).toBeVisible();
       await expect(drawer).toContainText('v2 API beta readiness checkpoint.');
       await expect(drawer.locator('input, textarea, select, form')).toHaveCount(0);
-      await expect(drawer).not.toContainText('History');
+      await expect(drawer.getByRole('heading', { name: 'History', exact: true })).toBeVisible();
+      await expect(drawer.locator('[data-milestone-history]')).toContainText('No activity yet.');
       await expect(drawer).not.toContainText('Alex Chen');
       await visitor.keyboard.press('Escape');
       await expect(drawer).not.toBeVisible();
@@ -6850,6 +6851,79 @@ test.describe('workspace isolation', () => {
       await expect(drawer).toBeVisible();
       await drawer.getByRole('button', { name: 'Close', exact: true }).click();
       await expect(drawer).not.toBeVisible();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('public milestone sidebar shows ordered history and movement reasons without private task details', async ({ appPage: page, browser }) => {
+    const milestone = page.locator('.milestone[data-task-id]').first();
+    const id = await milestone.getAttribute('data-milestone-id');
+    const before = await milestone.getAttribute('data-date');
+    const next = new Date(before);
+    next.setUTCDate(next.getUTCDate() + 3);
+    const after = next.toISOString().slice(0, 10);
+    expect(await postForm(page, `/milestones/${id}/move/`, { date: after, reason: 'Waiting for partner approval' })).toBe(200);
+    // Disconnecting also records the private linked-task title in the audit log.
+    expect(await postForm(page, `/milestones/${id}/update/`, {
+      title: 'Public beta checkpoint', description: 'Updated public description.', task_id: '0', require_move_reason: 'on',
+    })).toBe(200);
+    const href = await enableRoadmap(page);
+    const context = await browser.newContext();
+    const visitor = await context.newPage();
+    try {
+      for (const width of [1280, 390]) {
+        await visitor.setViewportSize({ width, height: 844 });
+        await visitor.goto(href);
+        const marker = visitor.getByRole('button', { name: /Public beta checkpoint/ });
+        await marker.scrollIntoViewIfNeeded();
+        await marker.click();
+        const history = visitor.locator('#drawer [data-milestone-history]');
+        await expect(history).toBeVisible();
+        await expect(history.locator('li[data-action]')).toHaveCount(2);
+        await expect(history.locator('li[data-action]').first()).toHaveAttribute('data-action', 'milestone.updated');
+        await expect(history.locator('li[data-action]').last()).toHaveAttribute('data-action', 'milestone.moved');
+        await expect(history).toContainText('v2 API beta → Public beta checkpoint');
+        await expect(history).toContainText('Description');
+        await expect(history).toContainText('Waiting for partner approval');
+        await expect(history).toContainText(`${before} → ${after}`);
+        await expect(history.locator('time')).toHaveCount(2);
+        await expect(history).not.toContainText('Cutover and deprecation');
+        await expect(history).not.toContainText('Require move reason');
+        await expect(history).not.toContainText('demo');
+        await expect(visitor.locator('#drawer input, #drawer textarea, #drawer select, #drawer form')).toHaveCount(0);
+        await visitor.keyboard.press('Escape');
+        const other = visitor.getByRole('button', { name: /Soft launch/ });
+        await other.scrollIntoViewIfNeeded();
+        await other.click();
+        await expect(history).toContainText('No activity yet.');
+        await expect(history).not.toContainText('Waiting for partner approval');
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('public milestone history includes task-driven date changes', async ({ appPage: page, browser }) => {
+    const milestone = page.locator('.milestone[data-task-id]').first();
+    const taskId = await milestone.getAttribute('data-task-id');
+    const before = await milestone.getAttribute('data-date');
+    const next = new Date(before);
+    next.setUTCDate(next.getUTCDate() + 5);
+    const after = next.toISOString().slice(0, 10);
+    expect(await postForm(page, `/tasks/${taskId}/resize/end/`, { end: after })).toBe(200);
+    const href = await enableRoadmap(page);
+    const context = await browser.newContext();
+    const visitor = await context.newPage();
+    try {
+      await visitor.goto(href);
+      const marker = visitor.getByRole('button', { name: /v2 API beta/ });
+      await marker.scrollIntoViewIfNeeded();
+      await marker.click();
+      const history = visitor.locator('#drawer [data-milestone-history]');
+      await expect(history).toContainText(`${before} → ${after}`);
+      await expect(history.locator('[data-action="milestone.moved"]')).toHaveCount(1);
+      await expect(history).not.toContainText('Cutover and deprecation');
     } finally {
       await context.close();
     }

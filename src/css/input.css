@@ -252,7 +252,7 @@ html, body { height: 100%; }
   .roadmap-project-row { display: contents; }
   .roadmap-project-label {
     position: sticky; left: 0; z-index: 2;
-    @apply flex items-center px-3 py-1 bg-base-100 border-b border-r border-base-300;
+    @apply flex items-start px-3 py-1 bg-base-100 border-b border-r border-base-300;
     border-left: 3px solid var(--project-color);
   }
   .roadmap-project-label:has(details[open]) { z-index: 4; }

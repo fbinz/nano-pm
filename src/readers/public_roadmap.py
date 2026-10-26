@@ -2,19 +2,29 @@
 
 The public roadmap intentionally does not reuse the private chart reader.
 Viewers see workspace, projects (including responsible people's display names)
-and milestones, plus their own subscription flags when permitted. Recipient
-addresses and browser capabilities are never exposed.
+and milestone history, plus their own subscription flags when permitted. Private
+task details, account identifiers, recipient addresses and browser capabilities
+are never exposed.
 """
 
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from django.db.models import Prefetch
 from django.utils.translation import gettext as _, ngettext
 
-from data.models import Membership, Milestone, Person, Project, PublicProjectSubscription, Workspace
+from data.models import ActivityEvent, Membership, Milestone, Person, Project, PublicProjectSubscription, Workspace
 from readers.chart import ChartState
 from readers.chart_view import ChartVM, build_chart_vm
+
+
+@dataclass(frozen=True)
+class PublicMilestoneHistoryVM:
+    action: str
+    created_at: datetime
+    summary: str
+    change_items: list[dict[str, str]]
+    move_reason: str
 
 
 @dataclass(frozen=True)
@@ -26,6 +36,7 @@ class PublicMilestoneVM:
     relative_date: str
     x: int
     y: int
+    history: list[PublicMilestoneHistoryVM] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -89,6 +100,34 @@ def _relative_date_label(target: date, today: date) -> str:
     return (future if days > 0 else past) % {"count": value}
 
 
+def _public_milestone_histories(workspace, milestone_ids):
+    """Batch-load only public milestone changes, never linked-task/account data."""
+    histories = {}
+    events = ActivityEvent.objects.filter(
+        workspace=workspace,
+        entity_type="milestone",
+        entity_id__in=milestone_ids,
+        action__in=("milestone.created", "milestone.updated", "milestone.moved"),
+    ).order_by("-created_at", "-id")
+    for event in events:
+        # The private audit trail also contains task titles and internal settings.
+        # Restrict it before using the shared change formatter and public VM.
+        event.changes = {
+            key: value for key, value in event.changes.items()
+            if key in {"title", "description", "date", "project"}
+        }
+        if not event.changes:
+            continue
+        histories.setdefault(event.entity_id, []).append(PublicMilestoneHistoryVM(
+            action=event.action,
+            created_at=event.created_at,
+            summary=event.summary_without_actor,
+            change_items=event.change_items,
+            move_reason=event.move_reason,
+        ))
+    return histories
+
+
 def get_public_roadmap(token: str, user=None, browser_key_hash=None) -> PublicRoadmapVM | None:
     """Return a sanitized roadmap for an enabled public token, else None."""
     try:
@@ -136,6 +175,9 @@ def get_public_roadmap(token: str, user=None, browser_key_hash=None) -> PublicRo
         projects=[], people=[], deps=[], today=today, today_fraction=0,
         chart_start=chart_start, chart_end=chart_end,
     ), px_per_day=28)
+    histories = _public_milestone_histories(workspace, [
+        m.id for project in projects for m in project.milestones.all()
+    ])
     project_vms = []
     timeline_milestones = []
     for index, project in enumerate(projects, start=1):
@@ -161,6 +203,7 @@ def get_public_roadmap(token: str, user=None, browser_key_hash=None) -> PublicRo
                 relative_date=relative_date,
                 x=x,
                 y=8 + lane * 44,
+                history=histories.get(milestone.id, []),
             ))
         timeline_milestones.extend(milestones)
 

@@ -72,25 +72,5 @@
       <button type="submit" class="btn btn-sm btn-neutral primary">{% trans "Save" %}</button>
     </div>
   </form>
-  <section class="mt-6 border-t border-base-300 pt-4 break-words" data-milestone-history aria-labelledby="milestone-history-title">
-    <h2 id="milestone-history-title" class="font-semibold">{% trans "History" %}</h2>
-    <ol class="mt-3 space-y-4 text-sm">
-      {% for event in history %}
-        <li data-action="{{ event.action }}">
-          <time class="text-xs opacity-60" datetime="{{ event.created_at|date:'c' }}">{{ event.created_at|date:"Y-m-d H:i" }}</time>
-          <p>{{ event.summary }}</p>
-          <dl class="mt-1 space-y-1 opacity-75">
-            {% for item in event.change_items %}
-              <div><dt class="font-semibold">{{ item.label }}</dt><dd>{{ item.detail }}</dd></div>
-            {% endfor %}
-            {% if event.move_reason %}
-              <div><dt class="font-semibold">{% trans "Reason" %}</dt><dd class="whitespace-pre-wrap">{{ event.move_reason }}</dd></div>
-            {% endif %}
-          </dl>
-        </li>
-      {% empty %}
-        <li class="opacity-60">{% trans "No activity yet." %}</li>
-      {% endfor %}
-    </ol>
-  </section>
+  <c-screens.gantt.milestone-history :history="history" />
 </div>
