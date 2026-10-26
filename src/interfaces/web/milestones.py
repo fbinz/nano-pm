@@ -4,7 +4,8 @@ from datetime import date
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import HttpRequest
+from django.http import HttpRequest, JsonResponse
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
 from datastar_py.django import (
@@ -20,6 +21,7 @@ from actions.manage_milestones import (
 from data.models import Task
 from readers import get_chart_state, get_project, get_milestone
 from readers.activity import get_milestone_history
+from readers.notifications import pending_move_reason
 
 from .helpers import is_pm, parse_iso, patch_chart, request_data
 
@@ -53,6 +55,15 @@ def milestone_popover(request: HttpRequest, milestone_id: int):
             is_initial=False, is_pm=is_pm(request),
         )
     )
+
+
+@require_http_methods(["GET"])
+@login_required
+@never_cache
+def milestone_pending_reason(request: HttpRequest, milestone_id: int):
+    if get_milestone(request.workspace, milestone_id) is None:
+        return JsonResponse({"reason": ""}, status=404)
+    return JsonResponse({"reason": pending_move_reason(request.workspace, milestone_id)})
 
 
 @require_http_methods(["POST"])

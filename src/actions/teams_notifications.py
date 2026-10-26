@@ -2,11 +2,19 @@
 
 import json
 from datetime import date
+from types import SimpleNamespace
 from html import escape
 
-from actions.teams_delivery import destination_hash
+from django.db import transaction
+from django.utils import timezone
+
+from actions.activity import change_set, created_changes, deleted_changes
+from actions.notifications import record_change
+from actions.teams_delivery import destination_hash, retry_sqlite_contention
 from actions.public_subscriptions import public_email_allowed
-from data.models import Membership, Milestone, Project, PublicProjectSubscription, TeamsDelivery
+from data.models import (
+    Membership, Milestone, NotificationBatch, Project, PublicProjectSubscription, TeamsDelivery,
+)
 from data.models.project import TEAMS_NOTIFY_EVENT_KEYS
 
 MILESTONE_CREATED = "milestone.created"
@@ -34,13 +42,6 @@ def normalize_notify_events(events: object) -> list[str]:
 
 def event_slug(event: str) -> str:
     return event.replace(".", "-").replace("_", "-")
-
-
-def project_wants_event(project: Project, event_names: set[str]) -> bool:
-    if not project.workspace.teams_webhook_url:
-        return False
-    enabled = set(normalize_notify_events(project.workspace.teams_notify_events))
-    return bool(enabled & event_names)
 
 
 def _actor_label(actor) -> str:
@@ -188,6 +189,7 @@ def _teams_payload(
     actor=None,
     milestone_description: str = "",
     move_reason: str = "",
+    actor_label: str | None = None,
 ) -> dict:
     """Build an Adaptive Card payload for a Teams incoming webhook."""
     event_label = _event_label(event_names)
@@ -235,7 +237,7 @@ def _teams_payload(
             "spacing": "Medium",
             "wrap": True,
         })
-    actor_label = _actor_label(actor)
+    actor_label = _actor_label(actor) if actor_label is None else actor_label
     if actor_label:
         card_body.append({
             "type": "TextBlock",
@@ -319,40 +321,32 @@ def _with_mentions(payload: dict, upns: list[str]):
     yield card_payload
 
 
+def milestone_snapshot(milestone: Milestone) -> dict:
+    """Full notification snapshot; unlike the audit log, retain text for diffing."""
+    return {
+        "title": milestone.title, "description": milestone.description,
+        "date": milestone.date.isoformat(), "project": milestone.project.name,
+        "project_key": milestone.project_id,
+        "task": milestone.task.title if milestone.task_id else "",
+    }
+
+
 def queue_project_notification(
-    *,
-    project: Project,
-    milestone_title: str,
-    event_names: set[str],
-    changes: dict | None = None,
-    actor=None,
-    milestone_id: int | None = None,
-    milestone_description: str = "",
-    move_reason: str = "",
+    *, project: Project, milestone_id: int, event_names: set[str],
+    before: dict | None, after: dict | None, actor=None, move_reason: str = "",
     related_project_ids: tuple[int, ...] = (),
 ) -> None:
-    """Persist an outbox entry in the same transaction as the milestone mutation."""
-    event_names = set(normalize_notify_events(event_names))
-    if not event_names or not project_wants_event(project, event_names):
+    """Merge into the editable summary in the mutation's transaction."""
+    if not project.workspace.teams_webhook_url:
         return
-
-    webhook_url = project.workspace.teams_webhook_url
-    payload = _teams_payload(
-        project=project,
-        milestone_title=milestone_title,
-        event_names=event_names,
-        changes=changes,
-        actor=actor,
-        milestone_description=milestone_description,
-        move_reason=move_reason,
+    enabled = set(normalize_notify_events(project.workspace.teams_notify_events))
+    record_change(
+        project=project, milestone_id=milestone_id, before=before, after=after,
+        events=set(normalize_notify_events(event_names)) & enabled,
+        actor_label=_actor_label(actor), reason=move_reason,
+        recipients=_subscribers(project, related_project_ids),
+        destination_hash=destination_hash(project.workspace.teams_webhook_url),
     )
-    upns = _subscribers(project, related_project_ids)
-    for card_payload in _with_mentions(payload, upns):
-        TeamsDelivery.objects.create(
-            workspace_id=project.workspace_id,
-            destination_hash=destination_hash(webhook_url),
-            payload=card_payload,
-        )
 
 
 def milestone_event_names_from_changes(changes: dict) -> set[str]:
@@ -371,19 +365,126 @@ def queue_milestone_notification(
     project: Project,
     milestone: Milestone,
     event_names: set[str],
-    changes: dict | None = None,
     actor=None,
     move_reason: str = "",
     related_project_ids: tuple[int, ...] = (),
+    before: dict | None = None,
 ) -> None:
     queue_project_notification(
-        project=project,
-        milestone_title=milestone.title,
-        event_names=event_names,
-        changes=changes,
-        actor=actor,
-        milestone_id=milestone.id,
-        milestone_description=milestone.description,
-        move_reason=move_reason,
-        related_project_ids=related_project_ids,
+        project=project, milestone_id=milestone.id,
+        event_names=event_names, before=before, after=milestone_snapshot(milestone),
+        actor=actor, move_reason=move_reason, related_project_ids=related_project_ids,
     )
+
+
+def _net_change(change):
+    before, after = change.before, change.after
+    if before is None and after is None:
+        return None
+    if before is None:
+        events, changes = {MILESTONE_CREATED}, created_changes(after)
+    elif after is None:
+        events, changes = {MILESTONE_DELETED}, deleted_changes(before)
+    else:
+        changes = change_set(before, after)
+        changes.pop("project_key", None)
+        if before["project_key"] != after["project_key"]:
+            changes["project"] = {"from": before["project"], "to": after["project"]}
+        events = milestone_event_names_from_changes(changes)
+    changes.pop("project_key", None)
+    if not events.intersection(change.events):
+        return None
+    return events, changes
+
+
+def _summary_payloads(batch):
+    """Group milestones, splitting content before adding size-bounded mentions."""
+    entries = []
+    for change in batch.changes.all():
+        net = _net_change(change)
+        if net is not None:
+            events, changes = net
+            values = change.after or change.before
+            payload = _teams_payload(
+                project=SimpleNamespace(name=batch.project_name),
+                milestone_title=values["title"], milestone_description=values["description"],
+                event_names=events, changes=changes, move_reason=change.latest_move_reason,
+                actor_label=" · ".join(change.contributors)[:500],
+            )
+            entries.append((payload, change))
+    if len(entries) == 1:
+        payload, change = entries[0]
+        yield from _with_mentions(payload, change.recipients)
+        return
+
+    payload = None
+    recipients = set()
+    contributors = set()
+
+    def finish():
+        card = payload["attachments"][0]["content"]
+        if contributors:
+            card["body"].append({
+                "type": "TextBlock", "id": "notification-footer",
+                "text": " · ".join(sorted(contributors))[:500], "size": "Small",
+                "isSubtle": True, "spacing": "Medium", "wrap": True,
+            })
+        return _with_mentions(payload, sorted(recipients))
+
+    for entry, change in entries:
+        body = entry["attachments"][0]["content"]["body"]
+        if body[-1].get("id") == "notification-footer":
+            body.pop()
+        # Reserve room for the footer and mentions under Teams' 28 KB limit.
+        if payload is not None and len(json.dumps(payload, ensure_ascii=False).encode()) + len(json.dumps(body, ensure_ascii=False).encode()) > 20000:
+            yield from finish()
+            payload, recipients, contributors = None, set(), set()
+        if payload is None:
+            payload = entry
+            payload["summary"] = f"{batch.project_name[:200]} · Meilensteine aktualisiert"
+        else:
+            payload["attachments"][0]["content"]["body"].extend(body[1:])
+        recipients.update(change.recipients)
+        contributors.update(change.contributors)
+    if payload is not None:
+        yield from finish()
+
+
+@retry_sqlite_contention
+@transaction.atomic
+def materialize_next() -> bool:
+    """Freeze one due summary and its HTTP outbox entries atomically.
+
+    SQLite's configured BEGIN IMMEDIATE serializes this with mutation writes;
+    row locks provide the same boundary on databases supporting them.
+    """
+    now = timezone.now()
+    batch = NotificationBatch.objects.select_for_update().select_related("workspace").filter(
+        status=NotificationBatch.Status.OPEN, send_after__lte=now,
+    ).order_by("send_after", "id").first()
+    if batch is None:
+        return False
+    valid_destination = (
+        batch.workspace.teams_webhook_url
+        and destination_hash(batch.workspace.teams_webhook_url) == batch.destination_hash
+    )
+    count = 0
+    if valid_destination:
+        for payload in _summary_payloads(batch):
+            TeamsDelivery.objects.create(
+                batch=batch, workspace=batch.workspace, destination_hash=batch.destination_hash, payload=payload,
+            )
+            count += 1
+    elif batch.changes.exists():
+        # Retain the existing delivery-status visibility for invalid destinations.
+        TeamsDelivery.objects.create(
+            batch=batch, workspace=batch.workspace, destination_hash=batch.destination_hash,
+            payload={}, status=TeamsDelivery.Status.CANCELLED,
+        )
+    batch.status = NotificationBatch.Status.MATERIALIZED if count else NotificationBatch.Status.CANCELLED
+    batch.materialized_at = now
+    batch.save(update_fields=["status", "materialized_at"])
+    # The frozen payload is now authoritative; do not retain extra descriptions
+    # or recipient snapshots after the handoff.
+    batch.changes.all().delete()
+    return True

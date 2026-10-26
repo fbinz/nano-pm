@@ -9,7 +9,7 @@ from .tasks import (
 )
 from .milestones import (
     milestone_popover, milestone_update_view, milestone_delete_view,
-    milestone_move, milestone_create,
+    milestone_move, milestone_create, milestone_pending_reason,
 )
 from .dependencies import dep_add, dep_delete
 from .projects import (
@@ -86,6 +86,7 @@ urlpatterns = [
     path("milestones/<int:milestone_id>/update/",  milestone_update_view, name="milestone_update"),
     path("milestones/<int:milestone_id>/delete/",  milestone_delete_view, name="milestone_delete"),
     path("milestones/<int:milestone_id>/move/",    milestone_move,        name="milestone_move"),
+    path("milestones/<int:milestone_id>/pending-reason/", milestone_pending_reason, name="milestone_pending_reason"),
     path("projects/<int:project_id>/milestones/",  milestone_create,      name="milestone_create"),
     # Dependencies
     path("dependencies/",                                            dep_add,    name="dep_add"),

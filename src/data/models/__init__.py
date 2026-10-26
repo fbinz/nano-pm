@@ -10,6 +10,7 @@ from data.models.milestone import Milestone
 from data.models.invitation import Invitation
 from data.models.activity import ActivityEvent
 from data.models.teams import ProjectSubscription, PublicProjectSubscription, TeamsDelivery
+from data.models.notification import NotificationBatch, NotificationChange
 
 from data.models.workload import (
     WorkloadCategory, WorkloadReport, WorkloadAllocation, WorkloadProjectAllocation,
@@ -38,4 +39,6 @@ __all__ = [
     "ProjectSubscription",
     "PublicProjectSubscription",
     "TeamsDelivery",
+    "NotificationBatch",
+    "NotificationChange",
 ]

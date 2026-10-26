@@ -39,6 +39,9 @@ class TeamsDelivery(models.Model):
         CANCELLED = "cancelled", _("Cancelled")
 
     workspace = models.ForeignKey("data.Workspace", on_delete=models.CASCADE, related_name="teams_deliveries")
+    batch = models.ForeignKey(
+        "data.NotificationBatch", on_delete=models.SET_NULL, null=True, blank=True, related_name="deliveries",
+    )
     destination_hash = models.CharField(max_length=64)
     payload = models.JSONField()
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)

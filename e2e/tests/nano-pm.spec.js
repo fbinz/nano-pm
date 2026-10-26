@@ -6,7 +6,25 @@ const { promisify } = require('util');
 const path = require('path');
 const { startServer } = require('../server');
 
-async function deliverTeamsNotifications() {
+async function notificationDB(code) {
+  const { stdout } = await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
+import json
+from datetime import timedelta
+from django.utils import timezone
+from data.models import NotificationBatch, NotificationChange, TeamsDelivery
+${code}
+`], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv() });
+  return stdout.trim().split('\n').at(-1);
+}
+
+async function ageNotificationBatches() {
+  // Age only editable batches, never HTTP retry schedules. A separate process
+  // also proves pending notifications survive web/worker process boundaries.
+  await notificationDB("NotificationBatch.objects.filter(status='open').update(send_after=timezone.now())");
+}
+
+async function deliverTeamsNotifications({ advance = true } = {}) {
+  if (advance) await ageNotificationBatches();
   await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'deliver_teams_notifications', '--once'], {
     cwd: path.resolve(__dirname, '../..'),
     env: djangoEnv(),
@@ -1971,6 +1989,256 @@ test.describe('self-service profile', () => {
 });
 
 test.describe('workspace Teams subscriptions', () => {
+  test('Teams summaries debounce until 15 minutes after the last change and merge milestones', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await configureTeams(page, webhook.url);
+      await page.goto('/');
+      const milestone = page.locator('.milestone[data-title="v2 API beta"]');
+      const id = await milestone.getAttribute('data-milestone-id');
+      const projectId = await milestone.getAttribute('data-project-id');
+      expect(await postForm(page, `/milestones/${id}/update/`, { title: 'First pending title' })).toBe(200);
+      await deliverTeamsNotifications({ advance: false });
+      expect(webhook.requests).toHaveLength(0);
+      const first = JSON.parse(await notificationDB(`
+b = NotificationBatch.objects.get(status='open')
+assert (b.send_after - b.last_changed_at).total_seconds() == 900
+print(json.dumps({'id': b.id, 'send_after': b.send_after.isoformat()}))`));
+      // No-op saves do not restart the timer.
+      expect(await postForm(page, `/milestones/${id}/update/`, { title: 'First pending title' })).toBe(200);
+      await notificationDB(`assert NotificationBatch.objects.get(status='open').send_after.isoformat() == '${first.send_after}'`);
+      // No maximum wait, even beyond normal delivery retention.
+      await notificationDB("NotificationBatch.objects.update(created_at=timezone.now()-timedelta(days=45), send_after=timezone.now()-timedelta(seconds=1))");
+      expect(await postForm(page, `/milestones/${id}/update/`, { title: 'Final pending title' })).toBe(200);
+      await deliverTeamsNotifications({ advance: false });
+      expect(webhook.requests).toHaveLength(0);
+      await notificationDB(`
+b = NotificationBatch.objects.get(status='open')
+assert b.id == ${first.id}
+assert b.send_after.isoformat() > '${first.send_after}'
+assert (b.send_after - b.last_changed_at).total_seconds() == 900
+assert TeamsDelivery.objects.count() == 0`);
+      // A second milestone in the same project belongs to the same summary.
+      expect(await postForm(page, `/projects/${projectId}/milestones/`, { date: '2027-02-01' })).toBe(200);
+      await page.reload();
+      const secondId = await page.locator('.milestone[data-title="New milestone"]').getAttribute('data-milestone-id');
+      expect(await postForm(page, `/milestones/${secondId}/update/`, { title: 'Second milestone', description: 'Details' })).toBe(200);
+      // Creation is disabled, but subsequent detail edits are enabled.
+      expect(await postForm(page, `/milestones/${secondId}/update/`, { title: 'Second final title' })).toBe(200);
+      await page.goto('/workspaces/teams/');
+      await expect(page.locator('#notification-batches')).toContainText('API Migration');
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      const text = JSON.stringify(webhook.requests[0].json);
+      expect(text).toContain('Final pending title');
+      expect(text).toContain('Second final title');
+      expect(text).not.toContain('First pending title');
+      await deliverTeamsNotifications({ advance: false });
+      expect(webhook.requests).toHaveLength(1);
+    } finally { await webhook.close(); }
+  });
+
+  for (const moveVia of ['editor', 'drag']) {
+    test(`Teams pending move reason is prefilled and replaced via ${moveVia}`, async ({ appPage: page }) => {
+      const webhook = await startWebhookServer();
+      try {
+        await configureTeams(page, webhook.url);
+        await page.goto('/');
+        const milestone = page.locator('.milestone[data-title="v2 API beta"]');
+        const id = await milestone.getAttribute('data-milestone-id');
+        const original = await milestone.getAttribute('data-date');
+        const shift = days => {
+          const date = new Date(`${original}T00:00:00Z`);
+          date.setUTCDate(date.getUTCDate() + days);
+          return date.toISOString().slice(0, 10);
+        };
+        expect(await postForm(page, `/milestones/${id}/move/`, { date: shift(2), reason: 'Initial reason' })).toBe(200);
+        expect(await postForm(page, `/milestones/${id}/update/`, { description: 'Unrelated detail edit' })).toBe(200);
+        await page.reload();
+        const openMove = async () => {
+          await milestone.scrollIntoViewIfNeeded();
+          const box = await milestone.boundingBox();
+          if (moveVia === 'editor') {
+            await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+            const next = new Date(`${await milestone.getAttribute('data-date')}T00:00:00Z`);
+            next.setUTCDate(next.getUTCDate() + 2);
+            await page.locator('#milestone-popover input[name=date]').fill(next.toISOString().slice(0, 10));
+            await page.locator('#milestone-popover button[type=submit]').click();
+          } else {
+            const ppd = Number(await page.locator('#grid-scroll').getAttribute('data-px-per-day'));
+            await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+            await page.mouse.down();
+            await page.mouse.move(box.x + box.width / 2 + 2 * ppd, box.y + box.height / 2, { steps: 8 });
+            await page.mouse.up();
+          }
+          await expect(page.locator('#milestone-move-dialog')).toBeVisible();
+        };
+        await openMove();
+        const dialog = page.locator('#milestone-move-dialog');
+        await expect(dialog.locator('textarea[name=reason]')).toHaveValue('Initial reason');
+        await dialog.locator('textarea[name=reason]').fill('Cancelled draft');
+        await dialog.getByRole('button', { name: 'Keep original date', exact: true }).click();
+        await expect(milestone).toHaveAttribute('data-date', shift(2));
+        await openMove();
+        await expect(dialog.locator('textarea[name=reason]')).toHaveValue('Initial reason');
+        await dialog.locator('textarea[name=reason]').fill('Final reason');
+        await dialog.getByRole('button', { name: 'Move milestone' }).click();
+        await expect(milestone).toHaveAttribute('data-date', shift(4));
+        await deliverTeamsNotifications({ advance: false });
+        expect(webhook.requests).toHaveLength(0);
+        await deliverTeamsNotifications();
+        expect(webhook.requests).toHaveLength(1);
+        const card = JSON.stringify(webhook.requests[0].json);
+        expect(card).toContain('Final reason');
+        expect(card).toContain('4 Tage später');
+        expect(card).not.toContain('Initial reason');
+        expect(card).not.toContain('Cancelled draft');
+        // No reload: opening must recheck whether a worker froze the reason.
+        await openMove();
+        await expect(dialog.locator('textarea[name=reason]')).toHaveValue('');
+      } finally { await webhook.close(); }
+    });
+  }
+
+  test('Teams pending reason lookup is workspace and destination scoped', async ({ appPage: page, browser }) => {
+    await configureTeams(page, 'http://127.0.0.1:54321/first');
+    await page.goto('/');
+    const milestone = page.locator('.milestone[data-title="v2 API beta"]');
+    const id = await milestone.getAttribute('data-milestone-id');
+    const date = new Date(`${await milestone.getAttribute('data-date')}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + 2);
+    expect(await postForm(page, `/milestones/${id}/move/`, { date: date.toISOString().slice(0, 10), reason: 'Private pending reason' })).toBe(200);
+    const endpoint = `/milestones/${id}/pending-reason/`;
+    const own = await page.request.get(endpoint);
+    expect(await own.json()).toEqual({ reason: 'Private pending reason' });
+    expect(own.headers()['cache-control']).toContain('no-store');
+    const context = await browser.newContext();
+    try {
+      const other = await context.newPage();
+      await other.goto('/accounts/login/');
+      await other.locator('input[name=username]').fill('pm2');
+      await other.locator('input[name=password]').fill('pm2');
+      await other.locator('button[type=submit]').click();
+      await other.waitForURL('/');
+      const outside = await other.request.get(endpoint);
+      expect(outside.status()).toBe(404);
+      expect(await outside.json()).toEqual({ reason: '' });
+    } finally { await context.close(); }
+    await configureTeams(page, 'http://127.0.0.1:54321/second');
+    expect(await (await page.request.get(endpoint)).json()).toEqual({ reason: '' });
+  });
+
+  test('Teams frozen deliveries stay immutable while subsequent moves form a new batch', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer([429, 200]);
+    try {
+      await configureTeams(page, webhook.url);
+      await page.goto('/');
+      const milestone = page.locator('.milestone[data-title="v2 API beta"]');
+      const id = await milestone.getAttribute('data-milestone-id');
+      const original = await milestone.getAttribute('data-date');
+      const shift = days => {
+        const date = new Date(`${original}T00:00:00Z`);
+        date.setUTCDate(date.getUTCDate() + days);
+        return date.toISOString().slice(0, 10);
+      };
+      expect(await postForm(page, `/milestones/${id}/move/`, { date: shift(2), reason: 'Frozen reason' })).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      await notificationDB("TeamsDelivery.objects.filter(status='pending').update(available_at=timezone.now()+timedelta(hours=1))");
+      expect(await postForm(page, `/milestones/${id}/move/`, { date: shift(4), reason: 'New batch reason' })).toBe(200);
+      await notificationDB(`
+assert NotificationBatch.objects.filter(status='open').count() == 1
+c = NotificationChange.objects.get()
+assert c.before['date'] == '${shift(2)}'
+assert c.latest_move_reason == 'New batch reason'
+assert 'Frozen reason' in json.dumps(TeamsDelivery.objects.get().payload)
+assert 'New batch reason' not in json.dumps(TeamsDelivery.objects.get().payload)
+TeamsDelivery.objects.filter(status='pending').update(available_at=timezone.now())`);
+      await deliverTeamsNotifications({ advance: false });
+      expect(webhook.requests).toHaveLength(2);
+      expect(webhook.requests[1].json).toEqual(webhook.requests[0].json);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(3);
+      const last = JSON.stringify(webhook.requests[2].json);
+      expect(last).toContain('New batch reason');
+      expect(last).toContain('2 Tage später');
+      expect(last).not.toContain('Frozen reason');
+    } finally { await webhook.close(); }
+  });
+
+  test('Teams pending transfers preserve the original baseline and move into the target project summary', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await configureTeams(page, webhook.url, ['milestone.updated', 'milestone.project_changed']);
+      await page.goto('/');
+      const milestone = page.locator('.milestone[data-title="v2 API beta"]');
+      const id = await milestone.getAttribute('data-milestone-id');
+      const taskId = await milestone.getAttribute('data-task-id');
+      const target = await page.locator('.left-cell.proj', { hasText: 'Onboarding revamp' }).getAttribute('data-project-id');
+      expect(await postForm(page, `/milestones/${id}/update/`, { title: 'Renamed before transfer' })).toBe(200);
+      expect(await postForm(page, `/tasks/${taskId}/update/`, { project_id: target })).toBe(200);
+      await notificationDB(`
+c = NotificationChange.objects.get()
+assert c.before['title'] == 'v2 API beta'
+assert c.before['project'] == 'API Migration'
+assert c.after['project'] == 'Onboarding revamp'
+assert c.batch.project_key == ${target}
+assert NotificationBatch.objects.filter(status='open').count() == 1`);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      const text = JSON.stringify(webhook.requests[0].json);
+      expect(text).toContain('Projekt: API Migration → Onboarding revamp');
+      expect(text).toContain('Bisheriger Titel: v2 API beta');
+      expect(text).toContain('Renamed before transfer');
+    } finally { await webhook.close(); }
+  });
+
+  test('Teams pending deletion summaries survive deleting the entire project', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await configureTeams(page, webhook.url, ['milestone.updated', 'milestone.deleted']);
+      await page.goto('/');
+      const milestone = page.locator('.milestone[data-title="v2 API beta"]');
+      const projectId = await milestone.getAttribute('data-project-id');
+      expect(await postForm(page, `/projects/${projectId}/delete/`, {})).toBe(200);
+      await deliverTeamsNotifications({ advance: false });
+      expect(webhook.requests).toHaveLength(0);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(1);
+      expect(webhook.requests[0].json.summary).toBe('API Migration · Meilenstein gelöscht · v2 API beta');
+    } finally { await webhook.close(); }
+  });
+
+  test('Teams summaries discard reverted changes and milestones created then deleted', async ({ appPage: page }) => {
+    const webhook = await startWebhookServer();
+    try {
+      await configureTeams(page, webhook.url, ['milestone.created', 'milestone.deleted', 'milestone.updated', 'milestone.moved']);
+      await page.goto('/');
+      const milestone = page.locator('.milestone[data-title="v2 API beta"]');
+      const id = await milestone.getAttribute('data-milestone-id');
+      const projectId = await milestone.getAttribute('data-project-id');
+      const date = await milestone.getAttribute('data-date');
+      expect(await postForm(page, `/milestones/${id}/update/`, { title: 'Temporary title', description: 'Temporary description' })).toBe(200);
+      // Load original description from the baseline snapshot rather than seed assumptions.
+      const before = JSON.parse(await notificationDB('print(json.dumps(NotificationChange.objects.get().before))'));
+      expect(await postForm(page, `/milestones/${id}/update/`, { title: before.title, description: before.description })).toBe(200);
+      const moved = new Date(`${date}T00:00:00Z`);
+      moved.setUTCDate(moved.getUTCDate() + 2);
+      expect(await postForm(page, `/milestones/${id}/move/`, { date: moved.toISOString().slice(0, 10), reason: 'Temporary reason' })).toBe(200);
+      expect(await postForm(page, `/milestones/${id}/move/`, { date, reason: 'Reverted' })).toBe(200);
+      await page.reload();
+      const pendingReason = await page.request.get(`/milestones/${id}/pending-reason/`);
+      expect(await pendingReason.json()).toEqual({ reason: '' });
+      expect(await postForm(page, `/projects/${projectId}/milestones/`, { date })).toBe(200);
+      await page.reload();
+      const createdId = await page.locator('.milestone[data-title="New milestone"]').getAttribute('data-milestone-id');
+      expect(await postForm(page, `/milestones/${createdId}/update/`, { title: 'Temporary creation' })).toBe(200);
+      expect(await postForm(page, `/milestones/${createdId}/delete/`, {})).toBe(200);
+      await deliverTeamsNotifications();
+      expect(webhook.requests).toHaveLength(0);
+      await notificationDB("assert NotificationBatch.objects.filter(status='open').count() == 0\nassert TeamsDelivery.objects.count() == 0");
+    } finally { await webhook.close(); }
+  });
   test('anonymous followers remember a validated email for subsequent follows in the same roadmap', async ({ appPage: page, browser }) => {
     await page.goto('/workspaces/teams/');
     await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
@@ -2546,8 +2814,9 @@ with sqlite3.connect(os.environ['DJANGO_DB_PATH']) as connection:
         await page.goto('/');
         const id = await page.locator('.milestone').first().getAttribute('data-milestone-id');
         expect(await postForm(page, `/milestones/${id}/update/`, { title: 'Concurrent SQLite writer' })).toBe(200);
+        await ageNotificationBatches();
         if (lockStage === 'before delivery') lock = await holdSQLiteWriteLock();
-        const result = await deliverTeamsNotifications().then(
+        const result = await deliverTeamsNotifications({ advance: false }).then(
           () => ({ code: 0 }), error => ({ code: error.code, stderr: error.stderr }),
         );
         expect(result.code, result.stderr).toBe(0);

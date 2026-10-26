@@ -48,6 +48,17 @@
           <button class="btn btn-sm btn-neutral" type="submit">{% trans "Save workspace notifications" %}</button>
         </form>
       </section>
+      <section class="mt-6" id="notification-batches">
+        <h2 class="text-xl font-semibold">{% trans "Pending summaries" %}</h2>
+        <p>{% trans "One project summary is sent 15 minutes after its last milestone change. Further changes restart the timer." %}</p>
+        <ul class="mt-2">
+          {% for batch in notification_batches %}
+            <li data-batch-id="{{ batch.id }}" data-send-after="{{ batch.send_after|date:'c' }}">{{ batch.project_name }} — {% trans "Scheduled for" %} {{ batch.send_after }}</li>
+          {% empty %}
+            <li>{% trans "No pending summaries." %}</li>
+          {% endfor %}
+        </ul>
+      </section>
       <section class="mt-6" id="teams-deliveries">
         <h2 class="text-xl font-semibold">{% trans "Recent deliveries" %}</h2>
         <p>{% trans "Sent means the webhook accepted the message; it does not confirm delivery in Teams. Transient failures retry automatically." %}</p>

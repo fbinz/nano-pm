@@ -1,13 +1,14 @@
 """Pure serialization/security checks; browser flows live in Playwright."""
 
 import json
+from types import SimpleNamespace
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase, override_settings
 
 from actions.teams_delivery import validate_webhook_url
-from actions.teams_notifications import MILESTONE_MOVED, MILESTONE_UPDATED, _teams_payload, _with_mentions
+from actions.teams_notifications import MILESTONE_MOVED, MILESTONE_UPDATED, _summary_payloads, _teams_payload, _with_mentions
 from data.models import Project, Workspace
 
 
@@ -108,6 +109,37 @@ class TeamsPayloadTests(SimpleTestCase):
         self.assertEqual(received, upns)
         self.assertNotIn("msteams", payload["attachments"][0]["content"])
         self.assertEqual(payload["attachments"][0]["content"]["body"][-1]["text"], "Philipp")
+
+    def test_large_project_summaries_split_content_and_mentions_without_losing_changes(self):
+        recipients = [f'user-{index}@example.com' for index in range(150)]
+        changes = []
+        for index in range(12):
+            before = {
+                'title': f'Milestone {index}', 'description': '', 'date': '2026-10-05',
+                'project': '😀' * 200, 'project_key': 1, 'task': '',
+            }
+            changes.append(SimpleNamespace(
+                before=before, after={**before, 'date': '2026-10-07', 'description': '😀' * 5000},
+                events=[MILESTONE_MOVED, MILESTONE_UPDATED], latest_move_reason='😀' * 500,
+                contributors=['Philipp'], recipients=recipients,
+            ))
+        batch = SimpleNamespace(project_name='😀' * 200, changes=SimpleNamespace(all=lambda: changes))
+        cards = list(_summary_payloads(batch))
+        self.assertGreater(len(cards), 1)
+        for item in cards:
+            self.assertLessEqual(len(json.dumps(item, ensure_ascii=False).encode()), 28000)
+            body = item['attachments'][0]['content']['body']
+            self.assertEqual(body[0]['text'], batch.project_name)
+            self.assertTrue(body[-1]['text'].startswith('Philipp · <at>'))
+        for index in range(12):
+            matching = [item for item in cards if any(
+                block['text'] == f'Milestone {index}'
+                for block in item['attachments'][0]['content']['body']
+            )]
+            self.assertTrue(matching)
+            mentioned = [entity['mentioned']['id'] for item in matching
+                         for entity in item['attachments'][0]['content']['msteams']['entities']]
+            self.assertCountEqual(mentioned, recipients)
 
     @override_settings(ENABLE_TEST_RESET=False)
     def test_only_https_microsoft_webhook_hosts_are_allowed(self):

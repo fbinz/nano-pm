@@ -71,17 +71,33 @@ management yet.
 
 Domain restrictions apply to public followers, not authenticated workspace
 members' profile addresses. A non-empty allowlist excludes public followers
-outside those domains from **newly queued** messages; clearing the list removes
+outside those domains from **newly recorded** changes; clearing the list removes
 the restriction. Disabling the public roadmap excludes all public followers
-from newly queued messages. Existing outbox messages retain their recipient snapshot.
+from newly recorded changes. Pending summaries and frozen outbox messages retain
+previously captured recipient snapshots.
 Owners can still unfollow after domain restrictions change. Moving a project to
 another workspace clears both member and public subscriptions; public tokens
 and project IDs cannot be mixed across workspaces.
 
 ## Behaviour
 
-- One channel message per selected milestone event, mentioning the project's
-  subscribed, active users with non-empty UPNs. Duplicate UPNs are mentioned once.
+- One project summary **15 minutes after its last notification-relevant milestone
+  change**, mentioning subscribed, active users with non-empty UPNs. Further
+  changes restart the timer; there is **no maximum wait**. No-op saves do not
+  restart it. Different projects have independent timers. Duplicate UPNs are
+  mentioned once per card.
+- Repeated edits merge into net changes from the first captured state to the
+  latest state. Reverted edits disappear. Creation plus edits becomes one
+  creation entry; creation followed by deletion within the same batch is silent.
+  Event preferences determine which changes start a summary and which net
+  changes may be sent; later edits to an already pending milestone update its
+  final snapshot even if their event type is disabled.
+- A date change includes only the **latest date change's reason**, not a history
+  of intermediate explanations. Both dragging and the editor prefill the current
+  pending reason when opening the move dialog. Saving replaces it, cancelling
+  leaves it alone, and unrelated detail edits preserve it. Returning to the
+  baseline date clears it. Task-driven moves without a reason replace any older
+  reason with an empty one. All individual edits remain in activity history.
 - Date/detail changes are enabled by default. Creation, deletion, and project
   transfers can also be enabled. No subscribers still means a channel post,
   just without mentions.
@@ -92,10 +108,18 @@ and project IDs cannot be mixed across workspaces.
 - A milestone transfer within a workspace sends one message mentioning the
   union of both projects' followers. Moving a whole project to another workspace
   clears its subscriptions rather than carrying identities across workspaces.
-- Cards retain the existing German wording. Long text is truncated; unusually
-  large follower lists are split into multiple cards below Teams' size limit.
-- The message and recipient list are snapshots taken when the event occurs.
-  Unfollowing/changing your UPN affects future events, not already queued cards.
+- Cards retain German wording and identify contributors. Long text is truncated;
+  large summaries and follower lists are split into multiple cards below Teams'
+  size limit.
+- Recipients and contributor names are captured when changes occur. A summary
+  deduplicates the union of recipients for its included changes. Unfollowing or
+  changing your UPN affects future captures, not already captured changes.
+- **Pending summaries** on the Teams settings page shows project names and
+  scheduled send times. Empty/net-reverted batches produce no channel post.
+- Once a due summary is frozen into delivery records, subsequent edits start a
+  new batch, even while earlier HTTP requests are retrying. Frozen reasons are
+  no longer prefilled or editable. The move dialog checks current pending state
+  when opening, so it does not reuse stale reasons from an older chart render.
 
 ## Running delivery
 
@@ -121,8 +145,21 @@ uv run python src/manage.py deliver_teams_notifications
 uv run python src/manage.py deliver_teams_notifications --once
 ```
 
-Events are written to a durable DB outbox in the mutation transaction. Workers
-claim jobs with a lease and do network I/O **outside** DB transactions. Network
+Changes are merged into durable `NotificationBatch` / `NotificationChange` rows
+in the mutation transaction. One open batch is allowed per workspace, project
+identity, and destination fingerprint; one change row per milestone in a batch.
+Before/after snapshots retain text for net-change comparison and survive deletion
+of their source project or milestone. A milestone transfer moves its pending
+change into the destination project's batch while retaining its original baseline
+and recipient union; it never merges across workspaces or destinations.
+
+The existing worker freezes due batches and creates immutable `TeamsDelivery`
+rows in **one transaction**, so a crash cannot lose the handoff. SQLite's configured
+`BEGIN IMMEDIATE` serializes this handoff with editing transactions. Snapshot rows
+are cleared at handoff, leaving only the frozen delivery payload. Open batches
+are not expired by delivery retention, even during continuous editing. Existing
+pre-upgrade outbox records are delivered unchanged, without retroactive batching.
+Workers claim delivery jobs with a lease and do network I/O **outside** DB transactions. Network
 errors, HTTP 408/429 and 5xx responses retry with backoff (up to five attempts;
 numeric Retry-After is respected for 429). Other HTTP errors stop retrying.
 Abandoned jobs become available again after five minutes. Records expire after
@@ -173,7 +210,11 @@ Playwright uses local HTTP receivers; it never posts to a real Teams channel.
 cd e2e && npx playwright test tests/nano-pm.spec.js --grep 'Teams'
 ```
 
-The new flows cover workspace settings, authenticated/scoped subscriptions,
+The flows cover the 15-minute trailing debounce (including no maximum wait),
+net-change merging, pending move-reason prefill/replacement/cancellation for both
+dragging and the editor, create/delete cancellation, project deletion and pending
+transfers, process persistence, frozen-payload retries while later edits form a
+new batch, workspace settings, authenticated/scoped subscriptions,
 UPN mentions, direct and task-driven changes, creation/deletion, project transfer
 recipient unions, duplicate/missing UPNs, event filtering, redaction, disconnect,
 HTTP 429 retry, and real cross-process SQLite locks both before delivery and while

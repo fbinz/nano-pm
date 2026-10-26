@@ -1,7 +1,7 @@
 """Keep task-linked milestones in sync, including history and notifications."""
 
 from actions.activity import log_activity
-from actions.teams_notifications import milestone_event_names_from_changes, queue_milestone_notification
+from actions.teams_notifications import milestone_event_names_from_changes, milestone_snapshot, queue_milestone_notification
 from data.models import Milestone
 
 
@@ -12,6 +12,7 @@ def sync_linked_milestones(workspace, *, actor=None, exclude_notifications=()):
     for milestone in milestones:
         task = milestone.task
         previous_project_id = milestone.project_id
+        before = milestone_snapshot(milestone)
         changes = {}
         if milestone.project_id != task.project_id:
             changes["project"] = {"from": milestone.project.name, "to": task.project.name}
@@ -34,5 +35,5 @@ def sync_linked_milestones(workspace, *, actor=None, exclude_notifications=()):
             queue_milestone_notification(
                 project=milestone.project, milestone=milestone,
                 event_names=milestone_event_names_from_changes(changes),
-                changes=changes, actor=actor, related_project_ids=(previous_project_id,),
+                actor=actor, related_project_ids=(previous_project_id,), before=before,
             )

@@ -20,7 +20,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-from data.models import TeamsDelivery
+from data.models import NotificationBatch, TeamsDelivery
 
 logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 5
@@ -61,7 +61,10 @@ def retry_sqlite_contention(operation):
 @retry_sqlite_contention
 def prune_deliveries() -> None:
     # Bound retention, including failed payloads containing descriptions/UPNs.
-    TeamsDelivery.objects.filter(created_at__lt=timezone.now() - timedelta(days=30)).delete()
+    cutoff = timezone.now() - timedelta(days=30)
+    TeamsDelivery.objects.filter(created_at__lt=cutoff).delete()
+    # Never expire an open summary: continuous editing has no maximum wait.
+    NotificationBatch.objects.exclude(status=NotificationBatch.Status.OPEN).filter(materialized_at__lt=cutoff).delete()
 
 
 @retry_sqlite_contention
@@ -144,10 +147,13 @@ def _claim() -> TeamsDelivery | None:
 
 
 def deliver_next() -> bool:
-    """Claim one due job, release the DB lock, then do network I/O."""
+    """Freeze due summaries, claim a job, then do network I/O outside locks."""
+    from actions.teams_notifications import materialize_next
+
+    materialized = materialize_next()
     delivery = _claim()
     if delivery is None:
-        return False
+        return materialized
     url = _webhook_url(delivery)
     if not url or destination_hash(url) != delivery.destination_hash:
         _record_result(delivery,

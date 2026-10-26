@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-19 21:58+0200\n"
+"POT-Creation-Date: 2026-10-26 09:15+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -122,7 +122,7 @@ msgstr "Gib eine gültige Microsoft-Anmeldeadresse ein."
 msgid "Use a Teams email address from an allowed domain."
 msgstr "Verwende eine Teams-E-Mail-Adresse mit einer erlaubten Domain."
 
-#: actions/teams_delivery.py:102
+#: actions/teams_delivery.py:105
 msgid "Use an HTTPS Microsoft Teams or Power Automate webhook URL."
 msgstr ""
 "Verwende eine HTTPS-Webhook-URL von Microsoft Teams oder Power Automate."
@@ -956,7 +956,7 @@ msgstr ""
 #: templates/components/detail-editor.html:36
 #: templates/components/screens/gantt/milestone-popover.html:67
 #: templates/components/screens/gantt/task-popover.html:120
-#: templates/components/screens/teams/settings.html:88
+#: templates/components/screens/teams/settings.html:99
 #: templates/public/roadmap.html:163
 msgid "Cancel"
 msgstr "Abbrechen"
@@ -1826,7 +1826,7 @@ msgid "No webhook configured"
 msgstr "Kein Webhook eingerichtet"
 
 #: templates/components/screens/teams/settings.html:17
-#: templates/components/screens/teams/settings.html:65
+#: templates/components/screens/teams/settings.html:76
 msgid "Set up new webhook"
 msgstr "Neuen Webhook einrichten"
 
@@ -1847,10 +1847,30 @@ msgid "Save workspace notifications"
 msgstr "Arbeitsbereich-Benachrichtigungen speichern"
 
 #: templates/components/screens/teams/settings.html:52
+msgid "Pending summaries"
+msgstr "Ausstehende Zusammenfassungen"
+
+#: templates/components/screens/teams/settings.html:53
+msgid ""
+"One project summary is sent 15 minutes after its last milestone change. "
+"Further changes restart the timer."
+msgstr ""
+"Eine Projektzusammenfassung wird 15 Minuten nach der letzten "
+"Meilensteinänderung gesendet. Weitere Änderungen starten die Wartezeit neu."
+
+#: templates/components/screens/teams/settings.html:56
+msgid "Scheduled for"
+msgstr "Geplant für"
+
+#: templates/components/screens/teams/settings.html:58
+msgid "No pending summaries."
+msgstr "Keine ausstehenden Zusammenfassungen."
+
+#: templates/components/screens/teams/settings.html:63
 msgid "Recent deliveries"
 msgstr "Letzte Zustellungen"
 
-#: templates/components/screens/teams/settings.html:53
+#: templates/components/screens/teams/settings.html:64
 msgid ""
 "Sent means the webhook accepted the message; it does not confirm delivery in "
 "Teams. Transient failures retry automatically."
@@ -1859,17 +1879,17 @@ msgstr ""
 "Zustellung in Teams wird damit nicht bestätigt. Vorübergehende Fehler werden "
 "automatisch erneut versucht."
 
-#: templates/components/screens/teams/settings.html:58
+#: templates/components/screens/teams/settings.html:69
 msgid "No deliveries yet."
 msgstr "Noch keine Zustellungen."
 
-#: templates/components/screens/teams/settings.html:67
+#: templates/components/screens/teams/settings.html:78
 msgid "Saving a new webhook replaces the current connection."
 msgstr ""
 "Wenn du einen neuen Webhook speicherst, wird die bisherige Verbindung "
 "ersetzt."
 
-#: templates/components/screens/teams/settings.html:89
+#: templates/components/screens/teams/settings.html:100
 msgid "Save webhook"
 msgstr "Webhook speichern"
 

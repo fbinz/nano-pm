@@ -89,6 +89,7 @@ def teams_settings(request):
         "workspace_form": workspace_form, "webhook_form": webhook_form,
         "public_followers_form": public_followers_form,
         "deliveries": workspace.teams_deliveries.order_by("-created_at", "-id")[:20],
+        "notification_batches": workspace.notification_batches.filter(status="open").order_by("send_after", "id"),
     })
 
 

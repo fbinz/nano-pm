@@ -731,7 +731,7 @@
     textarea.focus();
   }
 
-  function showMilestoneMovePrompt({ milestoneId, title, originalDate, newDate, requireReason, data, restore }) {
+  async function showMilestoneMovePrompt({ milestoneId, title, originalDate, newDate, requireReason, data, restore }) {
     const dialog = milestoneMoveDialog();
     if (!dialog) return;
     const [oy, om, od] = originalDate.split('-').map(Number);
@@ -751,6 +751,16 @@
     textarea.value = '';
     textarea.required = requireReason;
     dialog.querySelector('[data-optional-reason]').hidden = requireReason;
+    // Fetch at opening time: a worker may have frozen the batch since the last
+    // chart patch. Never prefill a stale reason from an already queued card.
+    const pending = pendingMilestoneMove;
+    let reason = '';
+    try {
+      const response = await fetch(`/milestones/${milestoneId}/pending-reason/`, { cache: 'no-store' });
+      if (response.ok) reason = (await response.json()).reason || '';
+    } catch (_) { /* Optional prefill must not prevent moving a milestone. */ }
+    if (pendingMilestoneMove !== pending) return;
+    textarea.value = reason;
     syncMilestoneMoveReason(textarea);
     dialog.showModal();
     requestAnimationFrame(() => textarea.focus());

@@ -9,6 +9,7 @@ from actions.teams_notifications import (
     MILESTONE_CREATED,
     MILESTONE_DELETED,
     milestone_event_names_from_changes,
+    milestone_snapshot,
     queue_milestone_notification,
     queue_project_notification,
 )
@@ -57,7 +58,6 @@ def create_milestone(
             project=proj,
             milestone=milestone,
             event_names={MILESTONE_CREATED},
-            changes=changes,
             actor=actor,
         )
     return milestone
@@ -84,6 +84,7 @@ def update_milestone(
     except Milestone.DoesNotExist:
         return None
     before_project = m.project
+    notification_before = milestone_snapshot(m)
     before = _milestone_values(m)
     if require_move_reason is not None:
         m.require_move_reason = require_move_reason
@@ -161,10 +162,10 @@ def update_milestone(
             project=m.project,
             milestone=m,
             event_names=event_names,
-            changes=changes,
             actor=actor,
             move_reason=reason if moved else "",
             related_project_ids=(before_project.id,),
+            before=None if MILESTONE_CREATED in event_names else notification_before,
         )
     return m
 
@@ -183,9 +184,8 @@ def delete_milestone(*, workspace, milestone_id: int, actor=None) -> bool:
     if not milestone.is_placeholder:
         queue_project_notification(
             project=milestone.project,
-            milestone_title=label,
             event_names={MILESTONE_DELETED},
-            changes=changes,
+            before=milestone_snapshot(milestone), after=None,
             actor=actor,
             milestone_id=entity_id,
         )
