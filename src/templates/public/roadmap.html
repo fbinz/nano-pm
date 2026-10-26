@@ -109,10 +109,10 @@
                                   data-project-id="{{ project.key }}" data-date="{{ milestone.date|date:'Y-m-d' }}"
                                   aria-controls="drawer" aria-expanded="false"
                                   style="left:{{ milestone.x }}px;top:{{ milestone.y }}px;"
-                                  title="{{ milestone.title }} · {{ milestone.date|date:'Y-m-d' }} · {{ milestone.relative_date }}">
+                                  title="{{ milestone.title }} · {{ milestone.date|date:'d.m.Y' }} · {{ milestone.relative_date }}">
                             <span class="roadmap-diamond" aria-hidden="true"></span>
                             <span class="truncate">{{ milestone.title }}</span>
-                            <span class="sr-only">{{ milestone.date|date:'Y-m-d' }} · {{ milestone.relative_date }}</span>
+                            <span class="sr-only">{{ milestone.date|date:'d.m.Y' }} · {{ milestone.relative_date }}</span>
                           </button>
                           <template id="details-{{ milestone.key }}">
                             <article class="space-y-4 break-words" aria-labelledby="milestone-title-{{ milestone.key }}">

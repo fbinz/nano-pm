@@ -97,6 +97,10 @@ async function enableRoadmap(page) {
 
 const { test, expect, login, loginThroughUI, reset, djangoEnv } = require('./fixtures');
 
+function germanNumericDate(iso) {
+  return iso.split('-').reverse().join('.');
+}
+
 function germanDate(iso) {
   const months = [
     'Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni',
@@ -2317,7 +2321,7 @@ assert NotificationBatch.objects.filter(status='open').count() == 1`);
       const nameBox = await card.getByRole('button', { name: 'API Migration', exact: true }).boundingBox();
       const controlBox = await control.boundingBox();
       expect(controlBox.x).toBeGreaterThanOrEqual(nameBox.x + nameBox.width);
-      expect(controlBox.y + controlBox.height / 2).toBeCloseTo(nameBox.y + nameBox.height / 2, 0);
+      expect(controlBox.y).toBeCloseTo(nameBox.y, 0);
     };
     await expectSameLine(card.getByRole('button', { name: 'Follow', exact: true }));
     await card.getByRole('button', { name: 'Follow', exact: true }).click();
@@ -5286,8 +5290,8 @@ test.describe('project & people management', () => {
     const dialog = page.locator('#milestone-move-dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText(title);
-    await expect(dialog.locator('[data-original-date]')).toHaveText(beforeEnd);
-    await expect(dialog.locator('[data-new-date]')).toHaveText(afterDate);
+    await expect(dialog.locator('[data-original-date]')).toHaveText(germanNumericDate(beforeEnd));
+    await expect(dialog.locator('[data-new-date]')).toHaveText(germanNumericDate(afterDate));
     await expect(dialog.getByRole('button', { name: 'Waiting for feedback' })).toBeVisible();
     await expect(bar).toHaveAttribute('data-end', beforeEnd);
 
@@ -5300,7 +5304,7 @@ test.describe('project & people management', () => {
     await expect(dialog).not.toBeVisible();
     await expect(bar).toHaveAttribute('data-end', afterDate);
     await expect(page.locator(`.milestone[data-task-id="${taskId}"]`)).toHaveAttribute('data-date', afterDate);
-    await expect(page.locator('#toast-slot')).toContainText(`moved to ${afterDate}`);
+    await expect(page.locator('#toast-slot')).toContainText(`moved to ${germanNumericDate(afterDate)}`);
 
     await page.goto('/activity/');
     const event = page.locator('.activity-event[data-action="milestone.moved"]').first();
@@ -5708,7 +5712,7 @@ test.describe('project & people management', () => {
     await expect(page.locator('#creation-hint')).toContainText('preview a date');
     const milestoneGhost = projectRow.locator('.creation-milestone-preview');
     await expect(milestoneGhost).toBeVisible();
-    await expect(milestoneGhost.locator('.creation-date-tooltip')).toHaveText(/\d{4}-\d{2}-\d{2}/);
+    await expect(milestoneGhost.locator('.creation-date-tooltip')).toHaveText(/\d{2}\.\d{2}\.\d{4}/);
     const initialGhostLeft = await milestoneGhost.evaluate(el => el.style.left);
 
     const chartXForMilestone = sidebar.x + sidebar.width + 180;
@@ -5717,7 +5721,7 @@ test.describe('project & people management', () => {
     await expect.poll(() => milestoneGhost.evaluate(el => el.style.left)).not.toBe(initialGhostLeft);
     await page.mouse.down();
     await expect(page.locator('.creation-milestone-preview')).toBeVisible();
-    await expect(page.locator('.creation-milestone-preview .creation-date-tooltip')).toHaveText(/\d{4}-\d{2}-\d{2}/);
+    await expect(page.locator('.creation-milestone-preview .creation-date-tooltip')).toHaveText(/\d{2}\.\d{2}\.\d{4}/);
     await page.mouse.up();
 
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(milestonesBefore + 1);
@@ -6886,8 +6890,11 @@ test.describe('workspace isolation', () => {
         await expect(history).toContainText('v2 API beta → Public beta checkpoint');
         await expect(history).toContainText('Description');
         await expect(history).toContainText('Waiting for partner approval');
-        await expect(history).toContainText(`${before} → ${after}`);
+        await expect(history).toContainText(`${germanNumericDate(before)} → ${germanNumericDate(after)}`);
         await expect(history.locator('time')).toHaveCount(2);
+        await expect(history.locator('time').first()).toHaveText(/\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}/);
+        await expect(marker).toHaveAttribute('data-date', after);
+        await expect(marker).toHaveAttribute('title', new RegExp(germanNumericDate(after).replaceAll('.', '\\.')));
         await expect(history).not.toContainText('Cutover and deprecation');
         await expect(history).not.toContainText('Require move reason');
         await expect(history).not.toContainText('demo');
@@ -6921,7 +6928,7 @@ test.describe('workspace isolation', () => {
       await marker.scrollIntoViewIfNeeded();
       await marker.click();
       const history = visitor.locator('#drawer [data-milestone-history]');
-      await expect(history).toContainText(`${before} → ${after}`);
+      await expect(history).toContainText(`${germanNumericDate(before)} → ${germanNumericDate(after)}`);
       await expect(history.locator('[data-action="milestone.moved"]')).toHaveCount(1);
       await expect(history).not.toContainText('Cutover and deprecation');
     } finally {
@@ -6944,7 +6951,7 @@ test.describe('workspace isolation', () => {
     await expect(history).toBeVisible();
     await expect(history).toContainText('Waiting for partner approval');
     await expect(history.locator('[data-action="milestone.moved"]')).toHaveCount(1);
-    await expect(history).toContainText(`${before} → ${after}`);
+    await expect(history).toContainText(`${germanNumericDate(before)} → ${germanNumericDate(after)}`);
     await expect(history).toContainText('demo');
     await page.getByRole('button', { name: 'Close', exact: true }).click();
     const other = page.locator(`.milestone:not(#ms-${id})`).first();
@@ -6966,7 +6973,7 @@ test.describe('workspace isolation', () => {
     await expect(page.locator(`#ms-${id}`)).toHaveAttribute('data-date', after);
     await page.locator(`#ms-${id}`).scrollIntoViewIfNeeded();
     await page.locator(`#ms-${id}`).click();
-    await expect(page.locator('[data-milestone-history]')).toContainText(`${before} → ${after}`);
+    await expect(page.locator('[data-milestone-history]')).toContainText(`${germanNumericDate(before)} → ${germanNumericDate(after)}`);
     await expect(page.locator('[data-milestone-history]')).toContainText('demo');
     await expect(page.locator('[data-milestone-history] [data-action="milestone.moved"]')).toHaveCount(1);
   });

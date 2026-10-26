@@ -4,7 +4,7 @@
   {% if error %}<p role="alert" class="text-error">{{ error }}</p>{% endif %}
   <section>
     {% if checkin %}
-      {% if current %}<p class="text-xs text-base-content/60">{% blocktrans with date=current.reviewed_at|date:"DATE_FORMAT" %}Previous estimate from {{ date }}{% endblocktrans %}</p>{% endif %}
+      {% if current %}<p class="text-xs text-base-content/60">{% blocktrans with date=current.reviewed_at|date:"d.m.Y" %}Previous estimate from {{ date }}{% endblocktrans %}</p>{% endif %}
     {% elif current %}
       <header class="workload-editor-header">
         <p class="text-xs text-base-content/60">{% blocktrans with ago=current.reviewed_at|timesince %}Last reviewed {{ ago }} ago{% endblocktrans %}</p>

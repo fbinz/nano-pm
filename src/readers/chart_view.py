@@ -80,6 +80,10 @@ class MilestoneVM:
     overdue: bool
     require_move_reason: bool
 
+    @property
+    def date_display(self) -> str:
+        return date.fromisoformat(self.date_iso).strftime("%d.%m.%Y")
+
 
 @dataclass
 class ProjectRowVM:

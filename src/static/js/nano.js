@@ -19,6 +19,9 @@
     const dd = String(d.getDate()).padStart(2, '0');
     return `${d.getFullYear()}-${m}-${dd}`;
   }
+  function displayDate(iso) {
+    return iso.split('-').reverse().join('.');
+  }
   function addDays(d, n) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
   }
@@ -455,7 +458,7 @@
     ghost.style.left = `${loDay * ppd}px`;
     ghost.style.width = `${(hiDay - loDay) * ppd}px`;
     ghost.querySelector('.creation-date-tooltip').textContent =
-      `${fmt(addDays(cs, loDay))} – ${fmt(addDays(cs, hiDay))}`;
+      `${displayDate(fmt(addDays(cs, loDay)))} – ${displayDate(fmt(addDays(cs, hiDay)))}`;
     if (creationMode?.type === 'task') creationMode.previewStartDay = loDay;
   }
 
@@ -467,7 +470,7 @@
     if (!preview) return;
     preview.style.left = `${clampedDay * ppd}px`;
     preview.querySelector('.creation-date-tooltip').textContent =
-      fmt(addDays(chartStartDate(), clampedDay));
+      displayDate(fmt(addDays(chartStartDate(), clampedDay)));
     if (creationMode?.type === 'milestone') creationMode.previewDay = clampedDay;
   }
 
@@ -601,7 +604,7 @@
         const day = Math.round(x / ppd);
         const date = dateAtX(x, ppd, cs);
         preview.style.left = `${day * ppd}px`;
-        tooltip.textContent = fmt(date);
+        tooltip.textContent = displayDate(fmt(date));
         creationMode.previewDay = day;
         return date;
       }
@@ -661,7 +664,7 @@
       const shownEndDay = moved ? Math.max(loDay + 1, hiDay) : loDay + DEFAULT_TASK_DAYS;
       rb.style.left = `${loDay * ppd}px`;
       rb.style.width = `${(shownEndDay - loDay) * ppd}px`;
-      tooltip.textContent = `${fmt(addDays(cs, loDay))} – ${fmt(addDays(cs, shownEndDay))}`;
+      tooltip.textContent = `${displayDate(fmt(addDays(cs, loDay)))} – ${displayDate(fmt(addDays(cs, shownEndDay)))}`;
       return { loDay, hiDay: shownEndDay };
     }
     rangeAt(evt.clientX);
@@ -744,8 +747,8 @@
 
     pendingMilestoneMove = { milestoneId, data, restore, requireReason };
     dialog.querySelector('[data-milestone-title]').textContent = title;
-    dialog.querySelector('[data-original-date]').textContent = originalDate;
-    dialog.querySelector('[data-new-date]').textContent = newDate;
+    dialog.querySelector('[data-original-date]').textContent = displayDate(originalDate);
+    dialog.querySelector('[data-new-date]').textContent = displayDate(newDate);
     dialog.querySelector('[data-date-delta]').textContent = `(${absDays} ${unit} ${direction})`;
     const textarea = dialog.querySelector('textarea[name="reason"]');
     textarea.value = '';

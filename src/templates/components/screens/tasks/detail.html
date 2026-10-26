@@ -34,11 +34,11 @@
       <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <dt class="text-sm text-base-content/60">{% trans "Start" %}</dt>
-          <dd class="mt-1 font-medium"><time data-task-start datetime="{{ task.start|date:'Y-m-d' }}">{{ task.start|date:"DATE_FORMAT" }}</time></dd>
+          <dd class="mt-1 font-medium"><time data-task-start datetime="{{ task.start|date:'Y-m-d' }}">{{ task.start|date:"d.m.Y" }}</time></dd>
         </div>
         <div>
           <dt class="text-sm text-base-content/60">{% trans "End (exclusive)" %}</dt>
-          <dd class="mt-1 font-medium"><time data-task-end datetime="{{ task.end|date:'Y-m-d' }}">{{ task.end|date:"DATE_FORMAT" }}</time></dd>
+          <dd class="mt-1 font-medium"><time data-task-end datetime="{{ task.end|date:'Y-m-d' }}">{{ task.end|date:"d.m.Y" }}</time></dd>
         </div>
         <div>
           <dt class="text-sm text-base-content/60">{% trans "Duration" %}</dt>
@@ -72,7 +72,7 @@
           <c-lucide name="diamond" size="18" class="mt-1 shrink-0 text-base-content/60" />
           <div class="min-w-0">
             <h3 class="font-medium break-words">{{ milestone.title }}</h3>
-            <time class="text-sm text-base-content/60" datetime="{{ milestone.date|date:'Y-m-d' }}">{{ milestone.date|date:"DATE_FORMAT" }}</time>
+            <time class="text-sm text-base-content/60" datetime="{{ milestone.date|date:'Y-m-d' }}">{{ milestone.date|date:"d.m.Y" }}</time>
             {% if milestone.description %}<p class="mt-1 text-sm text-base-content/70 whitespace-pre-wrap break-words">{{ milestone.description }}</p>{% endif %}
           </div>
         </div>

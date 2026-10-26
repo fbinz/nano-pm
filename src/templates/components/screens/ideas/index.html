@@ -29,7 +29,7 @@
                 <strong>{{ idea.title }}</strong>
                 <div class="idea-card-meta">
                   {% for tag in idea.tag_list %}<span class="badge badge-ghost badge-sm">{{ tag }}</span>{% endfor %}
-                  <time datetime="{{ idea.updated_at|date:'c' }}">{{ idea.updated_at|date:"M j" }}</time>
+                  <time datetime="{{ idea.updated_at|date:'c' }}">{{ idea.updated_at|date:"d.m.Y" }}</time>
                 </div>
               </a>
             {% empty %}

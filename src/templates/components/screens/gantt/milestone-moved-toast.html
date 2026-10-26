@@ -1,7 +1,7 @@
 {% load i18n %}
 <div id="toast-slot">
   <div class="nano-toast success milestone-moved-toast" role="status">
-    <span><strong>{{ milestone.title }}</strong> {% trans "moved to" %} {{ milestone.date|date:"Y-m-d" }}.</span>
+    <span><strong>{{ milestone.title }}</strong> {% trans "moved to" %} {{ milestone.date|date:"d.m.Y" }}.</span>
     <button type="button" class="toast-action"
             data-on:click="el.closest('.nano-toast').remove()">{% trans "Dismiss" %}</button>
   </div>

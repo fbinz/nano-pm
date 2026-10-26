@@ -24,8 +24,8 @@
             {% for event in events %}
               <tr class="activity-event border-base-300" data-action="{{ event.action }}">
                 <td class="whitespace-nowrap tabular-nums opacity-60">
-                  <time datetime="{{ event.created_at|date:'c' }}" title="{{ event.created_at|date:'Y-m-d H:i' }}">
-                    {{ event.created_at|date:"m-d H:i" }}
+                  <time datetime="{{ event.created_at|date:'c' }}" title="{{ event.created_at|date:'d.m.Y H:i' }}">
+                    {{ event.created_at|date:"d.m.Y H:i" }}
                   </time>
                 </td>
                 <td class="max-w-0 truncate font-medium">{{ event.actor_name }}</td>

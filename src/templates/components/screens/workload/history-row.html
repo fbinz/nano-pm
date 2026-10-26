@@ -2,7 +2,7 @@
 <c-vars report show_people="false" />
 <tr data-workload-history="{{ report.id }}">
   <td>
-    <time datetime="{{ report.reviewed_at|date:'c' }}">{{ report.reviewed_at|date:'SHORT_DATETIME_FORMAT' }}</time>
+    <time datetime="{{ report.reviewed_at|date:'c' }}">{{ report.reviewed_at|date:'d.m.Y H:i' }}</time>
     {% if show_people == 'true' %}<span class="block text-base-content/60 break-words">{{ report.user_label }}</span>{% endif %}
     {% if report.outdated %}<span class="block text-warning" title="{% trans 'Outdated estimate (over 90 days)' %}">{% trans "Outdated estimate (over 90 days)" %}</span>{% endif %}
   </td>

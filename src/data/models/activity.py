@@ -1,5 +1,8 @@
+from datetime import date, datetime
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext as _
 
 
@@ -117,9 +120,20 @@ class ActivityEvent(models.Model):
             "label": self.entity_display,
         }
 
-    def _format_change_value(self, value) -> str:
+    def _format_change_value(self, value, field: str = "") -> str:
         if value is None or value == "":
             return "—"
+        if isinstance(value, str):
+            try:
+                if field in {"date", "start", "end"}:
+                    return date.fromisoformat(value).strftime("%d.%m.%Y")
+                if field == "completed_at":
+                    timestamp = datetime.fromisoformat(value)
+                    if timezone.is_aware(timestamp):
+                        timestamp = timezone.localtime(timestamp)
+                    return timestamp.strftime("%d.%m.%Y %H:%M")
+            except ValueError:
+                pass
         if isinstance(value, (list, tuple, set)):
             return ", ".join(str(item) for item in value) or "—"
         return str(value)
@@ -179,18 +193,18 @@ class ActivityEvent(models.Model):
             if self._is_long_text_field(field) or (isinstance(change, dict) and change.get("changed")):
                 detail = _("changed")
             elif isinstance(change, dict) and "from" in change and "to" in change:
-                before = self._format_change_value(change.get("from"))
-                after = self._format_change_value(change.get("to"))
+                before = self._format_change_value(change.get("from"), field)
+                after = self._format_change_value(change.get("to"), field)
                 detail = _("%(before)s → %(after)s") % {
                     "before": before,
                     "after": after,
                 }
             elif isinstance(change, dict) and "to" in change:
-                detail = self._format_change_value(change.get("to"))
+                detail = self._format_change_value(change.get("to"), field)
             elif isinstance(change, dict) and "deleted" in change:
-                detail = self._format_change_value(change.get("deleted"))
+                detail = self._format_change_value(change.get("deleted"), field)
             else:
-                detail = self._format_change_value(change)
+                detail = self._format_change_value(change, field)
             items.append({"label": label, "detail": detail})
         return items
 

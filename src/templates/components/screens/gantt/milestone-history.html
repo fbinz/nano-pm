@@ -5,7 +5,7 @@
   <ol class="mt-3 space-y-4 text-sm">
     {% for event in history %}
       <li data-action="{{ event.action }}">
-        <time class="text-xs opacity-60" datetime="{{ event.created_at|date:'c' }}">{{ event.created_at|date:"Y-m-d H:i" }}</time>
+        <time class="text-xs opacity-60" datetime="{{ event.created_at|date:'c' }}">{{ event.created_at|date:"d.m.Y H:i" }}</time>
         <p>{{ event.summary }}</p>
         <dl class="mt-1 space-y-1 opacity-75">
           {% for item in event.change_items %}
