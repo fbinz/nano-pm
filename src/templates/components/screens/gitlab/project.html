@@ -1,13 +1,20 @@
 {% load i18n %}
 <c-vars project connection form issues destinations done_count can_edit />
 {% if connection %}
-<section class="rounded-box border border-base-300 p-5 space-y-4" id="gitlab-project">
-  <h2 class="text-lg font-semibold">{% trans "GitLab issues" %}</h2>
+<section class="rounded-box border border-base-300 p-5 space-y-5 text-base" id="gitlab-project">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h2 class="text-xl font-semibold">{% trans "GitLab issues" %}</h2>
+      <p class="mt-1 font-medium">{{ done_count }} / {{ issues|length }} {% trans "issues done" %}</p>
+    </div>
+    <a class="btn btn-ghost text-base font-normal" href="{% url 'project_detail' project.id %}">{% trans "Refresh GitLab issues" %}</a>
+  </header>
+  {% if connection.last_success %}<p class="text-base-content/75">{% trans "Last successful sync" %}: {{ connection.last_success|date:"d.m.Y H:i" }}</p>{% endif %}
   {% if not connection.enabled %}<p role="status">{% trans "GitLab is disconnected. Cached issues are retained." %}</p>{% endif %}
   {% if connection.is_stale %}<p role="status">{% trans "GitLab data may be stale." %} {{ connection.last_error }}</p>{% endif %}
   {% if can_edit %}
     <details>
-      <summary class="btn btn-sm btn-outline">{% trans "GitLab project settings" %}</summary>
+      <summary class="btn btn-outline text-base font-normal">{% trans "GitLab project settings" %}</summary>
       <form method="post" action="{% url 'gitlab_project_settings' project.id %}" class="space-y-3 mt-3"
             data-on:input="el.querySelector('[data-prefix-preview]').textContent = el.querySelector('[name=prefix]').value + ': …'">
         {% csrf_token %}
@@ -19,32 +26,70 @@
       </form>
     </details>
   {% endif %}
-  {% if connection.last_success %}<p>{% trans "Last successful sync" %}: {{ connection.last_success }}</p>{% endif %}
-  <p>{{ done_count }}/{{ issues|length }} {% trans "issues done (not an effort estimate)" %}</p>
-  <a class="btn btn-sm btn-ghost" href="{% url 'project_detail' project.id %}">{% trans "Refresh GitLab issues" %}</a>
   <div class="overflow-x-auto" id="gitlab-issues">
-    <table class="table table-sm">
-      <thead><tr><th>{% trans "Issue" %}</th><th>{% trans "State" %}</th><th>{% trans "Execution history" %}</th>{% if can_edit %}<th>{% trans "Ownership" %}</th>{% endif %}</tr></thead>
+    <table class="table gitlab-issues-table">
+      <thead>
+        <tr>
+          <th scope="col" class="gitlab-title-column">{% trans "Issue" %}</th>
+          <th scope="col" class="gitlab-state-column">{% trans "State" %}</th>
+          <th scope="col" class="gitlab-history-column">{% trans "Execution history" %}</th>
+          {% if can_edit %}<th scope="col" class="gitlab-actions-column gitlab-actions-cell"><span class="sr-only">{% trans "Actions" %}</span></th>{% endif %}
+        </tr>
+      </thead>
       <tbody>
       {% for issue in issues %}
         <tr data-gitlab-issue-id="{{ issue.id }}" data-state="{{ issue.state }}">
-          <td><a class="link" href="{{ issue.web_url }}" target="_blank" rel="noopener noreferrer">{{ issue.reference }} {{ issue.title }}</a>
-            {% if issue.prefix_changed %}<span class="badge">{% trans "Prefix changed" %}</span>{% endif %}
-            {% if issue.unavailable %}<span class="badge">{% trans "Source unavailable" %}</span>{% endif %}
+          <td>
+            <a class="gitlab-issue-link" href="{{ issue.web_url }}" target="_blank" rel="noopener noreferrer">
+              <span class="gitlab-issue-reference">{{ issue.reference }}</span>
+              <span id="gitlab-issue-title-{{ issue.id }}">{{ issue.title }}</span>
+            </a>
+            {% if issue.prefix_changed %}<span class="badge badge-outline mt-2">{% trans "Prefix changed" %}</span>{% endif %}
+            {% if issue.unavailable %}<span class="badge badge-outline mt-2">{% trans "Source unavailable" %}</span>{% endif %}
           </td>
-          <td>{{ issue.get_state_display }}</td>
-          <td>{% for interval in issue.intervals %}<div data-start="{{ interval.start|default:'' }}" data-end="{{ interval.end|default:'' }}">{{ interval.start|default:'?' }} — {{ interval.end|default:'…' }}</div>{% empty %}{% trans "Timing unknown" %}{% endfor %}</td>
-          {% if can_edit %}<td>{% if destinations %}<form method="post" action="{% url 'gitlab_issue_transfer' issue.id %}">
-            {% csrf_token %}
-            <select name="project_id" aria-label="{% trans 'Move GitLab issue to project' %}" class="select select-sm">
-              {% for destination in destinations %}<option value="{{ destination.id }}">{{ destination.name }}</option>{% endfor %}
-            </select>
-            <button type="submit" class="btn btn-sm">{% trans "Move issue" %}</button>
-          </form>{% endif %}</td>{% endif %}
+          <td><span class="gitlab-issue-state {{ issue.state }}">{{ issue.get_state_display }}</span></td>
+          <td>
+            {% if issue.execution_periods %}
+              <ol class="gitlab-history">
+                {% for period in issue.execution_periods %}
+                  <li data-start="{{ period.start }}" data-end="{{ period.end }}">
+                    {% if period.start_at and period.end_at %}
+                      <time datetime="{{ period.start }}">{{ period.start_at|date:"d.m.Y" }}</time>{% if not period.same_day %} – <time datetime="{{ period.end }}">{{ period.end_at|date:"d.m.Y" }}</time>{% endif %}
+                    {% elif period.end_at %}
+                      {% trans "Finished on" %} <time datetime="{{ period.end }}">{{ period.end_at|date:"d.m.Y" }}</time>
+                    {% elif issue.state == "in-progress" %}
+                      <time datetime="{{ period.start }}">{{ period.start_at|date:"d.m.Y" }}</time> – {% trans "Ongoing" %}
+                    {% else %}
+                      {% trans "Started on" %} <time datetime="{{ period.start }}">{{ period.start_at|date:"d.m.Y" }}</time>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ol>
+            {% else %}
+              <span class="text-base-content/75">{% trans "Timing unknown" %}</span>
+            {% endif %}
+          </td>
+          {% if can_edit %}
+            <td class="gitlab-actions-cell">
+              {% if destinations %}
+                <button type="button" id="gitlab-actions-trigger-{{ issue.id }}" class="gitlab-issue-actions"
+                        aria-label="{% trans 'Issue actions' %}" aria-describedby="gitlab-issue-title-{{ issue.id }}"
+                        title="{% trans 'Issue actions' %}" aria-haspopup="menu" aria-expanded="false"
+                        popovertarget="gitlab-actions-menu-{{ issue.id }}">
+                  <c-lucide name="ellipsis" size="20" />
+                </button>
+              {% endif %}
+            </td>
+          {% endif %}
         </tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
+  {% if can_edit and destinations %}
+    {% for issue in issues %}
+      <c-screens.gitlab.issue-actions :issue="issue" :project="project" :destinations="destinations" />
+    {% endfor %}
+  {% endif %}
 </section>
 {% endif %}

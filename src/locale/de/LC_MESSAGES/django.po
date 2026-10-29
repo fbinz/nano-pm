@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 18:40+0100\n"
+"POT-Creation-Date: 2026-10-29 21:45+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -20,7 +20,7 @@ msgid "Another active project already collects this GitLab prefix."
 msgstr ""
 "Ein anderes aktives Projekt sammelt bereits Issues mit diesem GitLab-Präfix."
 
-#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:90
+#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:91
 msgid "Enter a project prefix without a colon."
 msgstr "Gib ein Projektpräfix ohne Doppelpunkt ein."
 
@@ -615,60 +615,60 @@ msgstr "Das Ende muss nach dem Start liegen."
 msgid "Choose a milestone from the selected project."
 msgstr "Wähle einen Meilenstein aus dem ausgewählten Projekt."
 
-#: interfaces/web/gitlab.py:24
+#: interfaces/web/gitlab.py:25
 msgid "GitLab instance URL"
 msgstr "URL der GitLab-Instanz"
 
-#: interfaces/web/gitlab.py:25
+#: interfaces/web/gitlab.py:26
 msgid "GitLab API token"
 msgstr "GitLab-API-Token"
 
-#: interfaces/web/gitlab.py:27
+#: interfaces/web/gitlab.py:28
 msgid "GitLab project IDs"
 msgstr "GitLab-Projekt-IDs"
 
-#: interfaces/web/gitlab.py:28
+#: interfaces/web/gitlab.py:29
 msgid "GitLab group IDs"
 msgstr "GitLab-Gruppen-IDs"
 
-#: interfaces/web/gitlab.py:36
+#: interfaces/web/gitlab.py:37
 msgid "Enter numeric GitLab IDs separated by commas."
 msgstr "Gib numerische GitLab-IDs durch Kommas getrennt ein."
 
-#: interfaces/web/gitlab.py:48
+#: interfaces/web/gitlab.py:49
 msgid "Choose at least one GitLab project or group to search."
 msgstr ""
 "Wähle mindestens ein GitLab-Projekt oder eine Gruppe für die Suche aus."
 
-#: interfaces/web/gitlab.py:53
+#: interfaces/web/gitlab.py:54
 msgid "In-progress labels"
 msgstr "Labels für „In Bearbeitung“"
 
-#: interfaces/web/gitlab.py:54
+#: interfaces/web/gitlab.py:55
 msgid "Done labels"
 msgstr "Labels für „Erledigt“"
 
-#: interfaces/web/gitlab.py:55
+#: interfaces/web/gitlab.py:56
 msgid "Not-started labels"
 msgstr "Labels für „Noch nicht begonnen“"
 
-#: interfaces/web/gitlab.py:56
+#: interfaces/web/gitlab.py:57
 msgid "Unmatched issue state"
 msgstr "Status ohne passendes Label"
 
-#: interfaces/web/gitlab.py:83
+#: interfaces/web/gitlab.py:84
 msgid "GitLab title prefix"
 msgstr "GitLab-Titelpräfix"
 
-#: interfaces/web/gitlab.py:84
+#: interfaces/web/gitlab.py:85
 msgid "Collect matching GitLab issues"
 msgstr "Passende GitLab-Issues sammeln"
 
-#: interfaces/web/gitlab.py:85
+#: interfaces/web/gitlab.py:86
 msgid "Override workspace workflow"
 msgstr "Workflow des Arbeitsbereichs überschreiben"
 
-#: interfaces/web/gitlab.py:135
+#: interfaces/web/gitlab.py:136
 msgid ""
 "Disconnecting does not reset ownership. Use a new workspace for a different "
 "GitLab instance."
@@ -676,7 +676,7 @@ msgstr ""
 "Das Trennen setzt die Zuordnungen nicht zurück. Verwende für eine andere "
 "GitLab-Instanz einen neuen Arbeitsbereich."
 
-#: interfaces/web/gitlab.py:137
+#: interfaces/web/gitlab.py:138
 msgid "Enter a GitLab API token."
 msgstr "Gib ein GitLab-API-Token ein."
 
@@ -1081,6 +1081,7 @@ msgstr ""
 #: templates/components/detail-editor.html:36
 #: templates/components/screens/gantt/milestone-popover.html:67
 #: templates/components/screens/gantt/task-popover.html:120
+#: templates/components/screens/gitlab/issue-actions.html:33
 #: templates/components/screens/teams/settings.html:99
 #: templates/public/roadmap.html:170
 msgid "Cancel"
@@ -1376,12 +1377,12 @@ msgid "Outside chart range"
 msgstr "Außerhalb des sichtbaren Zeitraums"
 
 #: templates/components/screens/gantt/gitlab.html:24
-#: templates/components/screens/gitlab/project.html:36
+#: templates/components/screens/gitlab/project.html:69
 msgid "Timing unknown"
 msgstr "Zeitpunkte unbekannt"
 
 #: templates/components/screens/gantt/gitlab.html:26
-#: templates/components/screens/gitlab/project.html:33
+#: templates/components/screens/gitlab/project.html:48
 msgid "Source unavailable"
 msgstr "Quelle nicht verfügbar"
 
@@ -1648,12 +1649,12 @@ msgid "No teams yet."
 msgstr "Noch keine Teams."
 
 #: templates/components/screens/gitlab/binding-errors.html:4
-#: templates/components/screens/gitlab/project.html:10
+#: templates/components/screens/gitlab/project.html:17
 msgid "GitLab project settings"
 msgstr "GitLab-Projekteinstellungen"
 
 #: templates/components/screens/gitlab/binding-errors.html:9
-#: templates/components/screens/gitlab/project.html:18
+#: templates/components/screens/gitlab/project.html:25
 msgid "Save GitLab project settings"
 msgstr "GitLab-Projekteinstellungen speichern"
 
@@ -1662,20 +1663,54 @@ msgstr "GitLab-Projekteinstellungen speichern"
 msgid "Back to project"
 msgstr "Zurück zum Projekt"
 
-#: templates/components/screens/gitlab/project.html:5
+#: templates/components/screens/gitlab/issue-actions.html:11
+msgid "Move to another project…"
+msgstr "In anderes Projekt verschieben …"
+
+#: templates/components/screens/gitlab/issue-actions.html:18
+#: templates/components/screens/gitlab/issue-actions.html:34
+msgid "Move issue"
+msgstr "Issue verschieben"
+
+#: templates/components/screens/gitlab/issue-actions.html:21
+msgid "Current project"
+msgstr "Aktuelles Projekt"
+
+#: templates/components/screens/gitlab/issue-actions.html:27
+msgid "Destination project"
+msgstr "Zielprojekt"
+
+#: templates/components/screens/gitlab/issue-actions.html:29
+msgid "Choose project…"
+msgstr "Projekt wählen …"
+
+#: templates/components/screens/gitlab/project.html:7
 msgid "GitLab issues"
 msgstr "GitLab-Issues"
 
-#: templates/components/screens/gitlab/project.html:6
+#: templates/components/screens/gitlab/project.html:8
+msgid "issues done"
+msgstr "Issues erledigt"
+
+#: templates/components/screens/gitlab/project.html:10
+msgid "Refresh GitLab issues"
+msgstr "GitLab-Issues neu laden"
+
+#: templates/components/screens/gitlab/project.html:12
+#: templates/components/screens/gitlab/settings.html:18
+msgid "Last successful sync"
+msgstr "Letzte erfolgreiche Synchronisierung"
+
+#: templates/components/screens/gitlab/project.html:13
 msgid "GitLab is disconnected. Cached issues are retained."
 msgstr "GitLab ist getrennt. Gespeicherte Issues bleiben erhalten."
 
-#: templates/components/screens/gitlab/project.html:7
+#: templates/components/screens/gitlab/project.html:14
 #: templates/components/screens/gitlab/settings.html:17
 msgid "GitLab data may be stale."
 msgstr "Die GitLab-Daten sind möglicherweise veraltet."
 
-#: templates/components/screens/gitlab/project.html:15
+#: templates/components/screens/gitlab/project.html:22
 msgid ""
 "A prefix matches the text before the first colon, ignoring case and "
 "surrounding spaces. Existing issue ownership is preserved when the prefix "
@@ -1685,55 +1720,51 @@ msgstr ""
 "Kleinschreibung und umgebende Leerzeichen werden ignoriert. Bestehende Issue-"
 "Zuordnungen bleiben bei einer Präfixänderung erhalten."
 
-#: templates/components/screens/gitlab/project.html:16
+#: templates/components/screens/gitlab/project.html:23
 msgid "Completed projects keep their issues but do not collect new ones."
 msgstr ""
 "Abgeschlossene Projekte behalten ihre Issues, sammeln aber keine neuen."
 
-#: templates/components/screens/gitlab/project.html:17
+#: templates/components/screens/gitlab/project.html:24
 msgid "Example matching title"
 msgstr "Beispiel für einen passenden Titel"
 
-#: templates/components/screens/gitlab/project.html:22
-#: templates/components/screens/gitlab/settings.html:18
-msgid "Last successful sync"
-msgstr "Letzte erfolgreiche Synchronisierung"
-
-#: templates/components/screens/gitlab/project.html:23
-msgid "issues done (not an effort estimate)"
-msgstr "Issues erledigt (keine Aufwandsschätzung)"
-
-#: templates/components/screens/gitlab/project.html:24
-msgid "Refresh GitLab issues"
-msgstr "GitLab-Issues neu laden"
-
-#: templates/components/screens/gitlab/project.html:27
+#: templates/components/screens/gitlab/project.html:33
 msgid "Issue"
 msgstr "Issue"
 
-#: templates/components/screens/gitlab/project.html:27
+#: templates/components/screens/gitlab/project.html:34
 msgid "State"
 msgstr "Status"
 
-#: templates/components/screens/gitlab/project.html:27
+#: templates/components/screens/gitlab/project.html:35
 msgid "Execution history"
 msgstr "Umsetzungsverlauf"
 
-#: templates/components/screens/gitlab/project.html:27
-msgid "Ownership"
-msgstr "Zuordnung"
+#: templates/components/screens/gitlab/project.html:36
+msgid "Actions"
+msgstr "Aktionen"
 
-#: templates/components/screens/gitlab/project.html:32
+#: templates/components/screens/gitlab/project.html:47
 msgid "Prefix changed"
 msgstr "Präfix geändert"
 
-#: templates/components/screens/gitlab/project.html:39
-msgid "Move GitLab issue to project"
-msgstr "GitLab-Issue in Projekt verschieben"
+#: templates/components/screens/gitlab/project.html:59
+msgid "Finished on"
+msgstr "Erledigt am"
 
-#: templates/components/screens/gitlab/project.html:42
-msgid "Move issue"
-msgstr "Issue verschieben"
+#: templates/components/screens/gitlab/project.html:61
+msgid "Ongoing"
+msgstr "Laufend"
+
+#: templates/components/screens/gitlab/project.html:63
+msgid "Started on"
+msgstr "Begonnen am"
+
+#: templates/components/screens/gitlab/project.html:76
+#: templates/components/screens/gitlab/project.html:77
+msgid "Issue actions"
+msgstr "Issue-Aktionen"
 
 #: templates/components/screens/gitlab/settings.html:4
 msgid "GitLab integration"
@@ -2620,6 +2651,15 @@ msgid ""
 msgstr ""
 "Deine E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
 "Roadmap gespeichert."
+
+#~ msgid "Move GitLab issue to project"
+#~ msgstr "GitLab-Issue in Projekt verschieben"
+
+#~ msgid "issues done (not an effort estimate)"
+#~ msgstr "Issues erledigt (keine Aufwandsschätzung)"
+
+#~ msgid "Ownership"
+#~ msgstr "Zuordnung"
 
 #~ msgid "Your workload split is up to date."
 #~ msgstr "Deine Arbeitsverteilung ist auf dem aktuellen Stand."

@@ -1,6 +1,7 @@
 """Cached execution view models; rendering never calls the GitLab API."""
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -12,6 +13,33 @@ class ExecutionSegment:
     w: float
     start: str
     end: str
+
+
+@dataclass
+class ExecutionPeriod:
+    start: str
+    end: str
+    start_at: datetime | None
+    end_at: datetime | None
+
+    @property
+    def same_day(self):
+        return bool(self.start_at and self.end_at and self.start_at.date() == self.end_at.date())
+
+
+def execution_periods(intervals):
+    """Readable local dates without changing the cached source timestamps."""
+    periods = []
+    for interval in intervals:
+        start, end = interval.get("start") or "", interval.get("end") or ""
+        if not start and not end:
+            continue
+        periods.append(ExecutionPeriod(
+            start, end,
+            timezone.localtime(parse_datetime(start)) if start else None,
+            timezone.localtime(parse_datetime(end)) if end else None,
+        ))
+    return periods
 
 
 @dataclass

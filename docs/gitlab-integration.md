@@ -50,8 +50,12 @@ The prefix discovers an issue; the stored owner determines its subsequent projec
   issues**, including issues with old creation dates. No dated handover is needed.
 - Renaming issues, changing a prefix, closing/reopening an issue, and repeated syncs
   never automatically transfer ownership. Changed-prefix issues carry a badge.
-- Use **Move issue** for an explicit transfer within the workspace. The user must
-  be authorized to manage both projects; that choice survives later syncs.
+- Open an issue’s **⋯** menu → **Move to another project…** for an explicit transfer
+  within the workspace. A dialog shows the issue and current project; choose a
+  destination, then confirm with **Move issue**. Moving stays disabled until a
+  destination is chosen. Cancel or Escape closes the dialog without changes and
+  clears the selection. The user must be authorized to manage both projects;
+  a confirmed transfer survives later syncs.
 - Removing a source stops discovery/collection from that source. Existing owned
   issues are retained and refreshed directly while the credential still permits it.
 - Deleting a project or moving it to another workspace retires its associations.
@@ -85,6 +89,10 @@ Ongoing work extends through the end of today. Undated issues remain in the issu
 list. The chart clips execution to the existing planning range rather than
 stretching it for historical issues. Expansion survives page refreshes and Datastar
 patches.
+
+Project details display local dates as DD.MM.YYYY, with each work period on its
+own line. Same-day periods show one date; finish-only and ongoing periods have
+explicit labels rather than raw timestamps or question marks.
 
 Execution is read-only: it never changes task dates, date-derived task status,
 milestones, dependencies, or nano-pm project completion. Issue counts measure issues,

@@ -460,6 +460,30 @@ html, body { height: 100%; }
   .gitlab-interval.done { @apply bg-success/50 border-success; }
   .gitlab-timing { position: sticky; left: calc(var(--left-w) + 8px); @apply text-xs text-base-content/50 leading-8; }
 
+  .gitlab-issues-table { table-layout: fixed; min-width: 48rem; @apply w-full text-base; }
+  .gitlab-issues-table th { @apply px-4 py-3 text-base font-semibold text-base-content/80; }
+  .gitlab-issues-table td { @apply px-4 py-5 align-top text-base leading-relaxed; }
+  .gitlab-title-column { width: 45%; }
+  .gitlab-state-column { width: 16%; }
+  .gitlab-history-column { width: auto; }
+  .gitlab-actions-column { width: 3.5rem; }
+  .gitlab-issues-table .gitlab-actions-cell { @apply px-2; }
+  .gitlab-issue-link { @apply block text-base font-medium break-words hover:underline; }
+  .gitlab-issue-reference { @apply block mb-1 text-base text-base-content/70 font-normal; }
+  .gitlab-issue-state { @apply inline-flex rounded-md border border-base-300 bg-base-200 px-2 py-1 text-base font-medium; }
+  .gitlab-issue-state.done { @apply border-success/30 bg-success/10; }
+  .gitlab-history { @apply space-y-2 text-base; font-variant-numeric: tabular-nums; }
+  .gitlab-history li { @apply border-l-2 border-base-300 pl-3; }
+  .gitlab-issue-actions { @apply btn btn-ghost btn-square text-base text-base-content/60 hover:text-base-content; }
+  .gitlab-issue-menu[popover] {
+    position: fixed; inset: auto; margin: 0; width: max-content;
+    min-width: 14rem; max-width: calc(100vw - 16px);
+    @apply rounded-box border border-base-300 bg-base-100 p-1 shadow-lg;
+  }
+  .gitlab-issue-menu [role=menuitem] {
+    @apply block w-full rounded-md px-3 py-2 text-left text-base hover:bg-base-200 focus-visible:bg-base-200;
+  }
+
   .chart-row.proj {
     height: var(--proj-row-h);
     position: sticky;

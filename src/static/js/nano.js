@@ -1239,6 +1239,23 @@
     menu.style.left = `12px`;
   }
 
+  // Native popovers escape the issue table's horizontal-scroll clipping.
+  // Keep the single-item menu inside the viewport, including near its edges.
+  function positionGitLabIssueMenu(menu) {
+    const trigger = document.getElementById(menu.dataset.triggerId);
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const margin = 8;
+    const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
+    const viewportWidth = document.documentElement.clientWidth;
+    const below = rect.bottom + 4;
+    const top = below + height <= window.innerHeight - margin ? below : rect.top - height - 4;
+    menu.style.left = `${Math.max(margin, Math.min(rect.right - width, viewportWidth - width - margin))}px`;
+    menu.style.top = `${Math.max(margin, Math.min(top, window.innerHeight - height - margin))}px`;
+    menu.querySelector('[role=menuitem]')?.focus({ preventScroll: true });
+  }
+
   function scrollToToday() {
     const sc = chartScroll();
     const line = document.getElementById('today-line');
@@ -1259,7 +1276,7 @@
     setCreationMode, cancelCreationMode,
     toggleProjectSortMode, projectSortModeActive,
     closeDrawer, discardDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
-    scrollToToday, positionWorkspaceMenu,
+    scrollToToday, positionWorkspaceMenu, positionGitLabIssueMenu,
     addProjectResponsible, removeProjectResponsible, assignProjectToMe,
     addTaskAssignee, removeTaskAssignee, assignTaskToMe,
   };

@@ -479,6 +479,75 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
     } finally { await api.close(); }
   });
 
+  test('GitLab project issues show readable dates and full-size text', async ({ appPage: page }, testInfo) => {
+    const api = await fakeGitLab();
+    try {
+      const id = await page.locator('.project-group').first().getAttribute('data-project-id');
+      api.issues = [
+        api.issue(1, 'Portal: Several work cycles with a longer issue title that should remain readable', { labels: ['In Development', 'Next Deployment'] }),
+        api.issue(2, 'Portal: Same-day work', { labels: ['In Development', 'Next Deployment'] }),
+        api.issue(3, 'Portal: Finish only', { state: 'closed', closed_at: '2025-08-04T23:30:00Z' }),
+        api.issue(4, 'Portal: Ongoing work', { labels: ['In Development'] }),
+        api.issue(5, 'Portal: Unknown dates', { labels: ['In Development'] }),
+      ];
+      api.events['101:1:resource_label_events'] = [
+        { id: 1, action: 'add', label: { name: 'In Development' }, created_at: '2025-07-23T23:30:00Z' },
+        { id: 2, action: 'add', label: { name: 'Next Deployment' }, created_at: '2025-07-25T01:00:00Z' },
+        { id: 3, action: 'remove', label: { name: 'Next Deployment' }, created_at: '2025-07-26T08:00:00Z' },
+        { id: 4, action: 'add', label: { name: 'Next Deployment' }, created_at: '2025-07-27T12:00:00Z' },
+      ];
+      api.events['101:2:resource_label_events'] = [
+        { id: 1, action: 'add', label: { name: 'In Development' }, created_at: '2025-08-01T08:00:00Z' },
+        { id: 2, action: 'add', label: { name: 'Next Deployment' }, created_at: '2025-08-01T11:00:00Z' },
+      ];
+      api.events['101:4:resource_label_events'] = [
+        { id: 1, action: 'add', label: { name: 'In Development' }, created_at: '2025-08-06T08:00:00Z' },
+      ];
+      await connectGitLab(page, api); await bindGitLab(page, id, 'Portal'); await syncGitLab(); await page.reload();
+      await page.locator('.lang-switch button[value="de"]').click();
+      const section = page.locator('#gitlab-project');
+      const cycles = gitlabRows(page).filter({ hasText: 'Several work cycles' });
+      await expect(cycles).toContainText('24.07.2025 – 25.07.2025');
+      await expect(cycles).toContainText('26.07.2025 – 27.07.2025');
+      await expect(gitlabRows(page).filter({ hasText: 'Same-day work' }).locator('[data-start]')).toHaveText('01.08.2025');
+      await expect(gitlabRows(page).filter({ hasText: 'Finish only' })).toContainText('Erledigt am 05.08.2025');
+      await expect(gitlabRows(page).filter({ hasText: 'Ongoing work' })).toContainText('06.08.2025 – Laufend');
+      await expect(gitlabRows(page).filter({ hasText: 'Unknown dates' })).toContainText('Zeitpunkte unbekannt');
+      await expect(section).toContainText('3 / 5 Issues erledigt');
+      await expect(section).not.toContainText('keine Aufwandsschätzung');
+      expect(await section.innerText()).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:/);
+      await expect(section.getByRole('columnheader', { name: 'In Projekt verschieben', exact: true })).toHaveCount(0);
+      await expect(page.locator('#gitlab-issues select')).toHaveCount(0);
+      for (const locator of [cycles.locator('a'), cycles.locator('[data-start]').first(), cycles.getByRole('button', { name: 'Issue-Aktionen', exact: true })]) {
+        expect(await locator.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
+      }
+      await section.screenshot({ path: testInfo.outputPath('gitlab-issues-readable-desktop.png') });
+      await page.setViewportSize({ width: 390, height: 844 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+      const actions = cycles.getByRole('button', { name: 'Issue-Aktionen', exact: true });
+      await actions.scrollIntoViewIfNeeded();
+      await expect(actions).toBeVisible();
+      await actions.click();
+      const menu = page.getByRole('menu');
+      await expect(menu).toBeVisible();
+      const box = await menu.boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(390);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.y + box.height).toBeLessThanOrEqual(844);
+      await menu.getByRole('menuitem', { name: 'In anderes Projekt verschieben …', exact: true }).click();
+      const dialog = page.getByRole('dialog', { name: 'Issue verschieben', exact: true });
+      await expect(dialog).toBeVisible();
+      await expect(dialog).toContainText('Several work cycles');
+      expect(await dialog.getByLabel('Zielprojekt', { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
+      expect(await dialog.locator('.modal-box').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      await dialog.screenshot({ path: testInfo.outputPath('gitlab-move-dialog-mobile.png'), animations: 'disabled' });
+      await dialog.getByRole('button', { name: 'Abbrechen', exact: true }).click();
+      await expect(dialog).not.toBeVisible();
+      await expect(actions).toBeFocused();
+    } finally { await api.close(); }
+  });
+
   test('GitLab execution spans inclusive local day cells including short and finish-only work', async ({ appPage: page }) => {
     const api = await fakeGitLab();
     try {
@@ -630,7 +699,7 @@ print('true')
     const api = await fakeGitLab();
     try {
       const ids = await page.locator('.project-group').evaluateAll(groups => groups.map(g => Number(g.dataset.projectId)));
-      api.issues = [api.issue(1, 'Portal: Transfer')];
+      api.issues = [api.issue(1, 'Portal: Transfer'), api.issue(2, 'Portal: Leave this issue here')];
       await connectGitLab(page, api); await bindGitLab(page, ids[0], 'Portal'); await syncGitLab();
       await page.goto(`/projects/${ids[1]}/`);
       await page.getByText('GitLab project settings', { exact: true }).click();
@@ -638,11 +707,58 @@ print('true')
       await page.getByRole('button', { name: 'Save GitLab project settings', exact: true }).click();
       await expect(page.getByRole('alert')).toContainText('Another active project');
       await page.goto(`/projects/${ids[0]}/`);
-      await page.getByLabel('Move GitLab issue to project').selectOption(String(ids[1]));
-      await page.getByRole('button', { name: 'Move issue', exact: true }).click();
+      await expect(page.locator('#gitlab-issues select')).toHaveCount(0);
+      const actions = gitlabRows(page).filter({ hasText: 'Portal: Transfer' }).getByRole('button', { name: 'Issue actions', exact: true });
+      await expect(actions).toBeVisible();
+      await actions.focus(); await actions.press('Enter');
+      const menu = page.getByRole('menu');
+      await expect(menu).toBeVisible();
+      await expect(menu.getByRole('menuitem')).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(menu).not.toBeVisible();
+      await expect(actions).toBeFocused();
+      await actions.press('Enter');
+      await expect(menu).toBeVisible();
+      await page.keyboard.press('Tab');
+      await expect(menu).not.toBeVisible();
+      const openMoveDialog = async () => {
+        await actions.click();
+        await menu.getByRole('menuitem', { name: 'Move to another project…', exact: true }).click();
+      };
+      await openMoveDialog();
+      const dialog = page.getByRole('dialog', { name: 'Move issue', exact: true });
+      await expect(dialog).toBeVisible();
+      await expect(dialog).toContainText('Portal: Transfer');
+      await expect(dialog).toContainText('API Migration');
+      const destination = dialog.getByLabel('Destination project', { exact: true });
+      const move = dialog.getByRole('button', { name: 'Move issue', exact: true });
+      await expect(destination).toHaveValue('');
+      await expect(move).toBeDisabled();
+      await destination.selectOption(String(ids[1]));
+      await expect(move).toBeEnabled();
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(dialog).not.toBeVisible();
+      await expect(actions).toBeFocused();
+      await expect(gitlabRows(page)).toHaveCount(2);
+      await openMoveDialog();
+      await expect(destination).toHaveValue('');
+      await expect(move).toBeDisabled();
+      await destination.selectOption(String(ids[1]));
+      await page.keyboard.press('Escape');
+      await expect(dialog).not.toBeVisible();
+      await openMoveDialog();
+      await expect(destination).toHaveValue('');
+      await expect(move).toBeDisabled();
+      await destination.selectOption(String(ids[1]));
+      await expect(move).toBeEnabled();
+      await destination.selectOption('');
+      await expect(move).toBeDisabled();
+      await destination.selectOption(String(ids[1]));
+      await move.click();
       await expect(page).toHaveURL(`/projects/${ids[1]}/`);
       await syncGitLab(); await page.reload(); await expect(gitlabRows(page)).toHaveCount(1);
-      await page.goto(`/projects/${ids[0]}/`); await expect(gitlabRows(page)).toHaveCount(0);
+      await page.goto(`/projects/${ids[0]}/`); await expect(gitlabRows(page)).toHaveCount(1);
+      await expect(gitlabRows(page)).toContainText('Leave this issue here');
     } finally { await api.close(); }
   });
 

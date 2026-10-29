@@ -15,6 +15,7 @@ from actions.gitlab_matching import queue_sync, save_binding, transfer_issue
 from data.models import GitLabConnection, GitLabIssue, Project
 from data.models.gitlab import default_workflow
 from interfaces.gitlab.client import encrypt_token, validate_origin
+from readers.gitlab import execution_periods
 
 from .helpers import can_manage_project, is_pm, workspace_context
 from .detail_forms import DetailForm
@@ -187,6 +188,8 @@ def project_context(project, workspace):
     })
     issues = list(GitLabIssue.objects.filter(owner=project, connection__workspace=workspace)
                   .select_related("owner__gitlab_binding", "connection"))
+    for issue in issues:
+        issue.execution_periods = execution_periods(issue.intervals)
     return {
         "gitlab_connection": connection, "gitlab_binding_form": form, "gitlab_issues": issues,
         "gitlab_done_count": sum(issue.state == "done" for issue in issues),

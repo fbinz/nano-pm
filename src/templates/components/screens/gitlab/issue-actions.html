@@ -1,0 +1,38 @@
+{% load i18n %}
+<c-vars issue project destinations />
+<div id="gitlab-actions-menu-{{ issue.id }}" class="gitlab-issue-menu" popover="auto" role="menu"
+     aria-labelledby="gitlab-actions-trigger-{{ issue.id }}" data-trigger-id="gitlab-actions-trigger-{{ issue.id }}"
+     data-on:toggle="document.getElementById(el.dataset.triggerId).setAttribute('aria-expanded', evt.newState === 'open'); evt.newState === 'open' && nano.positionGitLabIssueMenu(el)"
+     data-on:keydown="evt.key === 'Tab' ? el.hidePopover() : ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(evt.key) && (evt.preventDefault(), el.querySelector('[role=menuitem]').focus())"
+     data-on:scroll__window__capture="el.matches(':popover-open') && el.hidePopover()"
+     data-on:resize__window="el.matches(':popover-open') && el.hidePopover()">
+  <button type="button" role="menuitem"
+          data-on:click="el.closest('[popover]').hidePopover(); document.getElementById('gitlab-move-dialog-{{ issue.id }}').showModal()">
+    {% trans "Move to another project…" %}
+  </button>
+</div>
+<dialog id="gitlab-move-dialog-{{ issue.id }}" class="modal" aria-labelledby="gitlab-move-title-{{ issue.id }}"
+        aria-describedby="gitlab-move-issue-{{ issue.id }}"
+        data-on:close="el.querySelector('form').reset(); el.querySelector('button[type=submit]').disabled = true; document.getElementById('gitlab-actions-trigger-{{ issue.id }}')?.focus({ preventScroll: true })">
+  <div class="modal-box text-base">
+    <h3 id="gitlab-move-title-{{ issue.id }}" class="text-xl font-semibold">{% trans "Move issue" %}</h3>
+    <p id="gitlab-move-issue-{{ issue.id }}" class="mt-3 font-medium break-words">{{ issue.reference }} {{ issue.title }}</p>
+    <dl class="mt-4">
+      <dt class="text-base-content/70">{% trans "Current project" %}</dt>
+      <dd class="font-medium break-words">{{ project.name }}</dd>
+    </dl>
+    <form method="post" action="{% url 'gitlab_issue_transfer' issue.id %}" class="mt-5"
+          data-on:change="el.querySelector('button[type=submit]').disabled = !el.elements.project_id.value">
+      {% csrf_token %}
+      <label for="gitlab-destination-{{ issue.id }}" class="block mb-2 font-medium">{% trans "Destination project" %}</label>
+      <select id="gitlab-destination-{{ issue.id }}" name="project_id" class="select w-full text-base" required autofocus>
+        <option value="" selected>{% trans "Choose project…" %}</option>
+        {% for destination in destinations %}<option value="{{ destination.id }}">{{ destination.name }}</option>{% endfor %}
+      </select>
+      <div class="modal-action flex-wrap">
+        <button type="button" class="btn btn-ghost text-base font-normal" data-on:click="el.closest('dialog').close()">{% trans "Cancel" %}</button>
+        <button type="submit" class="btn btn-neutral text-base font-normal" disabled>{% trans "Move issue" %}</button>
+      </div>
+    </form>
+  </div>
+</dialog>
