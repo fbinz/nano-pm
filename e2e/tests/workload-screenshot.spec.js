@@ -14,7 +14,7 @@ for (const [name, viewport] of Object.entries({
 })) {
   test(`workload estimates and settings fit ${name} screens`, async ({ appPage: page }, testInfo) => {
     await page.setViewportSize(viewport);
-    await page.goto('/workspaces/settings/');
+    await page.goto('/workspaces/settings/workload/');
     await expect(page.getByRole('heading', { name: 'Workspace settings', exact: true })).toBeVisible();
     await expect(page.getByRole('switch')).toHaveCount(1);
     await expect(page.getByRole('table', { name: 'Categories', exact: true })).toHaveCount(0);

@@ -56,7 +56,7 @@ for (const [name, viewport] of Object.entries({
         body: new URLSearchParams({ action: 'enable' }),
       });
     });
-    await page.goto('/workspaces/settings/');
+    await page.goto('/workspaces/settings/sharing/');
     await page.goto(await page.locator('#public-roadmap-link').getAttribute('href'));
     const follow = page.locator('[data-project-subscription]', { hasText: 'API Migration' });
     await follow.getByRole('button', { name: 'Follow', exact: true }).click();

@@ -9,10 +9,14 @@ from Gantt task durations. Estimates remain current until replaced or reviewed.
 Run `just migrate` after deploying. Existing and new workspaces start with the
 feature disabled. A workspace PM can open **Workspace settings** at
 `/workspaces/settings/` using the cog beside the workspace name or the settings
-link in the workspace picker. The page also contains workspace renaming and
-public roadmap configuration (enable/disable, title, description, and public-link
-regeneration). Roadmap changes return to the settings page. The old
-`/workspaces/workload/` page redirects here.
+link in the workspace picker. Settings have four sections: **General** (workspace
+name and milestone behavior), **Workload**, **Integrations** (GitLab), and
+**Sharing** (public roadmap). Use the horizontal tabs on desktop or the section
+selector on mobile. Each section has its own URL; saves return to that section.
+Workload configuration lives at `/workspaces/settings/workload/`, and the old
+`/workspaces/workload/` page redirects there. Public roadmap configuration
+(enable/disable, title, description, and public-link regeneration) lives at
+`/workspaces/settings/sharing/`.
 
 **Workload settings** shows only the reporting toggle while disabled. Enabling it
 reveals participation defaults, categories, and membership overrides immediately;

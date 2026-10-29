@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
@@ -105,7 +104,7 @@ def settings_context(workspace):
 
 
 def settings_redirect():
-    return redirect(reverse("workspace_settings") + "#workspace-gitlab-settings")
+    return redirect("workspace_settings_integrations")
 
 
 @require_http_methods(["GET", "POST"])
@@ -165,13 +164,13 @@ def settings(request):
 
 
 def render_settings(request, connection, form, workflow_form, status=200):
-    from .workload import settings_context as workload_settings_context
+    from .workspaces import render_workspace_settings
 
-    return render(request, "components/screens/workspaces/settings.html", {
-        **workspace_context(request), **workload_settings_context(request.workspace),
-        "is_pm": True, "gitlab_connection": connection,
-        "gitlab_connection_form": form, "gitlab_workflow_form": workflow_form,
-    }, status=status)
+    return render_workspace_settings(
+        request, "integrations", status=status,
+        gitlab_connection=connection,
+        gitlab_connection_form=form, gitlab_workflow_form=workflow_form,
+    )
 
 
 def project_context(project, workspace):

@@ -3,8 +3,9 @@
 import secrets
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import redirect, render
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.cache import never_cache
 
@@ -20,8 +21,10 @@ from .gitlab import settings_context as gitlab_settings_context
 @login_required
 @pm_required
 @require_http_methods(["GET", "POST"])
-def workspace_settings(request: HttpRequest):
+def workspace_settings(request: HttpRequest, section: str = "general"):
     if request.method == "POST":
+        if section != "general":
+            return HttpResponseNotAllowed(["GET"])
         workspace = request.workspace
         fields = ["prompt_milestone_move_reason"]
         before = snapshot(workspace, fields)
@@ -36,16 +39,33 @@ def workspace_settings(request: HttpRequest):
             skip_empty_changes=True,
         )
         return redirect("workspace_settings")
+    return render_workspace_settings(request, section)
+
+
+def render_workspace_settings(request, section, *, status=200, **extra):
+    sections = [
+        {"key": "general", "label": _("General"), "url": "workspace_settings"},
+        {"key": "workload", "label": _("Workload"), "url": "workspace_settings_workload"},
+        {"key": "integrations", "label": _("Integrations"), "url": "workspace_settings_integrations"},
+        {"key": "sharing", "label": _("Sharing"), "url": "workspace_settings_sharing"},
+    ]
+    context = {
+        "user": request.user,
+        "is_pm": True,
+        **workspace_context(request),
+        "settings_section": section,
+        "settings_sections": sections,
+        "settings_section_label": next(item["label"] for item in sections if item["key"] == section),
+    }
+    if section == "workload":
+        context.update(settings_context(request.workspace))
+    elif section == "integrations":
+        context.update(gitlab_settings_context(request.workspace))
     return render(
         request,
         "components/screens/workspaces/settings.html",
-        {
-            "user": request.user,
-            "is_pm": True,
-            **workspace_context(request),
-            **settings_context(request.workspace),
-            **gitlab_settings_context(request.workspace),
-        },
+        {**context, **extra},
+        status=status,
     )
 
 
@@ -166,7 +186,7 @@ def public_roadmap_update(request: HttpRequest):
         ])),
         skip_empty_changes=True,
     )
-    return redirect("workspace_settings")
+    return redirect("workspace_settings_sharing")
 
 
 @require_http_methods(["POST"])
@@ -191,7 +211,7 @@ def public_roadmap_regenerate(request: HttpRequest):
         entity_label=workspace.name,
         changes=changes,
     )
-    return redirect("workspace_settings")
+    return redirect("workspace_settings_sharing")
 
 
 @never_cache

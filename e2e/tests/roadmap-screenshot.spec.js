@@ -5,7 +5,7 @@ for (const [name, viewport] of Object.entries({
   mobile: { width: 390, height: 844 },
 })) {
   test(`milestone roadmap and read-only sidebar at ${name} width`, async ({ appPage: page, browser }, testInfo) => {
-    await page.goto('/workspaces/settings/');
+    await page.goto('/workspaces/settings/sharing/');
     await page.getByRole('button', { name: 'Enable public roadmap' }).click();
     const roadmap = await page.locator('#public-roadmap-link').getAttribute('href');
     const context = await browser.newContext({ viewport });

@@ -1,64 +1,39 @@
 {% load i18n %}
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" :can_view_ideas="can_view_ideas" active_nav="workspace-settings">
-  <main class="p-4 sm:p-6 max-w-4xl space-y-8">
+  <main class="p-4 sm:p-6 w-full max-w-4xl space-y-6">
     <header class="flex items-center gap-3">
       <label for="app-drawer" class="btn btn-sm btn-ghost lg:hidden" aria-label="{% trans 'Open menu' %}"><c-lucide name="menu" size="20" /></label>
       <h1 class="text-2xl font-bold">{% trans "Workspace settings" %}</h1>
     </header>
-    {% if error %}<p role="alert" class="text-error">{{ error }}</p>{% endif %}
-    <form method="post" action="{% url 'workspace_rename' %}" class="space-y-2">
-      {% csrf_token %}
-      <input type="hidden" name="next" value="workspace_settings">
-      <label for="workspace-settings-name" class="block text-sm font-semibold">{% trans "Workspace name" %}</label>
-      <div class="flex gap-2">
-        <input id="workspace-settings-name" class="input input-sm min-w-0 flex-1" type="text" name="name" value="{{ workspace.name }}" maxlength="200" required>
-        <button type="submit" class="btn btn-sm btn-neutral">{% trans "Rename" %}</button>
-      </div>
-    </form>
-    <section id="workspace-milestone-settings" class="space-y-4 border-t border-base-300 pt-6">
-      <h2 class="text-xl font-semibold">{% trans "Milestones" %}</h2>
-      <form method="post" action="{% url 'workspace_settings' %}" class="space-y-3">
-        {% csrf_token %}
-        <label class="flex items-center gap-3 cursor-pointer">
-          <input class="checkbox checkbox-sm" type="checkbox" name="prompt_milestone_move_reason" {% if workspace.prompt_milestone_move_reason %}checked{% endif %}>
-          <span>{% trans "Offer a reason when moving milestones" %}</span>
-        </label>
-        <p class="text-sm text-base-content/60">{% trans "Reasons are optional unless the milestone requires one. Required reasons are always requested, even when this setting is off." %}</p>
-        <button type="submit" class="btn btn-sm btn-neutral">{% trans "Save" %}</button>
-      </form>
-    </section>
-    <c-screens.workload.configuration :workspace="workspace" :options="options" :categories="categories" :memberships="memberships" />
-    <c-screens.gitlab.settings :connection="gitlab_connection" :connection_form="gitlab_connection_form" :workflow_form="gitlab_workflow_form" />
-    <section id="workspace-roadmap-settings" class="space-y-4 border-t border-base-300 pt-6">
-      <h2 class="text-xl font-semibold">{% trans "Public roadmap" %}</h2>
-      {% if workspace.public_roadmap_enabled and workspace.public_roadmap_token %}
-        <a id="public-roadmap-link" class="link link-primary break-all" href="{% url 'public_roadmap' token=workspace.public_roadmap_token %}" target="_blank" rel="noopener">{% trans "Open public roadmap" %}</a>
-        <form method="post" action="{% url 'public_roadmap_update' %}" class="space-y-3">
-          {% csrf_token %}
-          <div class="space-y-1">
-            <label for="workspace-roadmap-title" class="block text-sm font-semibold">{% trans "Public roadmap title" %}</label>
-            <input id="workspace-roadmap-title" class="input w-full" type="text" name="title" value="{{ workspace.public_roadmap_title }}" placeholder="{{ workspace.name }} {% trans 'Roadmap' %}" maxlength="200">
-          </div>
-          <div class="space-y-1">
-            <label for="workspace-roadmap-description" class="block text-sm font-semibold">{% trans "Public roadmap description" %}</label>
-            <textarea id="workspace-roadmap-description" class="textarea w-full" name="description" placeholder="{% trans 'Optional public description' %}">{{ workspace.public_roadmap_description }}</textarea>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button type="submit" name="action" value="save" class="btn btn-sm btn-neutral">{% trans "Save" %}</button>
-            <button type="submit" name="action" value="disable" class="btn btn-sm btn-ghost">{% trans "Disable public roadmap" %}</button>
-          </div>
-        </form>
-        <form method="post" action="{% url 'public_roadmap_regenerate' %}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-ghost">{% trans "Regenerate public link" %}</button>
-        </form>
-      {% else %}
-        <p class="text-sm text-base-content/60">{% trans "Share task milestones without exposing people or dependencies." %}</p>
-        <form method="post" action="{% url 'public_roadmap_update' %}">
-          {% csrf_token %}
-          <button type="submit" name="action" value="enable" class="btn btn-sm btn-neutral">{% trans "Enable public roadmap" %}</button>
-        </form>
+
+    <div class="md:hidden">
+      <label for="workspace-settings-section" class="block text-sm font-semibold mb-2">{% trans "Settings section" %}</label>
+      {# Reset before leaving so browser Back restores the section matching the URL. #}
+      <select id="workspace-settings-section" class="select w-full" data-on:change="const url = el.value; el.value = el.querySelector('option[selected]').value; window.location.assign(url)">
+        {% for item in settings_sections %}
+          <option value="{% url item.url %}"{% if settings_section == item.key %} selected{% endif %}>{{ item.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <nav class="tabs tabs-border hidden md:flex max-w-3xl" aria-label="{% trans 'Settings sections' %}">
+      {% for item in settings_sections %}
+        <a href="{% url item.url %}" class="tab{% if settings_section == item.key %} tab-active{% endif %}"{% if settings_section == item.key %} aria-current="page"{% endif %}>{{ item.label }}</a>
+      {% endfor %}
+    </nav>
+
+    <div class="min-w-0 max-w-3xl space-y-6">
+      <h2 class="text-xl font-semibold">{{ settings_section_label }}</h2>
+      {% if error %}<p role="alert" class="text-error">{{ error }}</p>{% endif %}
+      {% if settings_section == "general" %}
+        {% include "components/screens/workspaces/settings-general.html" %}
+      {% elif settings_section == "workload" %}
+        <c-screens.workload.configuration :workspace="workspace" :options="options" :categories="categories" :memberships="memberships" />
+      {% elif settings_section == "integrations" %}
+        <c-screens.gitlab.settings :connection="gitlab_connection" :connection_form="gitlab_connection_form" :workflow_form="gitlab_workflow_form" />
+      {% elif settings_section == "sharing" %}
+        {% include "components/screens/workspaces/settings-sharing.html" %}
       {% endif %}
-    </section>
+    </div>
   </main>
 </c-layouts.app-shell>

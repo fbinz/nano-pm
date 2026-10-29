@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 22:00+0100\n"
+"POT-Creation-Date: 2026-10-29 22:20+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -20,7 +20,7 @@ msgid "Another active project already collects this GitLab prefix."
 msgstr ""
 "Ein anderes aktives Projekt sammelt bereits Issues mit diesem GitLab-Präfix."
 
-#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:88
+#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:87
 msgid "Enter a project prefix without a colon."
 msgstr "Gib ein Projektpräfix ohne Doppelpunkt ein."
 
@@ -350,7 +350,7 @@ msgid "Responsible people"
 msgstr "Verantwortliche"
 
 #: data/models/activity.py:157
-#: templates/components/screens/workspaces/settings.html:43
+#: templates/components/screens/workspaces/settings-sharing.html:13
 msgid "Public roadmap description"
 msgstr "Beschreibung der öffentlichen Roadmap"
 
@@ -359,7 +359,7 @@ msgid "Public roadmap enabled"
 msgstr "Öffentliche Roadmap aktiviert"
 
 #: data/models/activity.py:159
-#: templates/components/screens/workspaces/settings.html:39
+#: templates/components/screens/workspaces/settings-sharing.html:9
 msgid "Public roadmap title"
 msgstr "Titel der öffentlichen Roadmap"
 
@@ -408,7 +408,7 @@ msgid "Notify for"
 msgstr "Benachrichtigen bei"
 
 #: data/models/activity.py:169
-#: templates/components/screens/workspaces/settings.html:24
+#: templates/components/screens/workspaces/settings-general.html:17
 msgid "Offer a reason when moving milestones"
 msgstr "Beim Verschieben von Meilensteinen eine Begründung anbieten"
 
@@ -615,56 +615,56 @@ msgstr "Das Ende muss nach dem Start liegen."
 msgid "Choose a milestone from the selected project."
 msgstr "Wähle einen Meilenstein aus dem ausgewählten Projekt."
 
-#: interfaces/web/gitlab.py:25
+#: interfaces/web/gitlab.py:24
 msgid "GitLab instance URL"
 msgstr "URL der GitLab-Instanz"
 
-#: interfaces/web/gitlab.py:26
+#: interfaces/web/gitlab.py:25
 msgid "GitLab API token"
 msgstr "GitLab-API-Token"
 
-#: interfaces/web/gitlab.py:28
+#: interfaces/web/gitlab.py:27
 msgid "GitLab project IDs"
 msgstr "GitLab-Projekt-IDs"
 
-#: interfaces/web/gitlab.py:29
+#: interfaces/web/gitlab.py:28
 msgid "GitLab group IDs"
 msgstr "GitLab-Gruppen-IDs"
 
-#: interfaces/web/gitlab.py:37
+#: interfaces/web/gitlab.py:36
 msgid "Enter numeric GitLab IDs separated by commas."
 msgstr "Gib numerische GitLab-IDs durch Kommas getrennt ein."
 
-#: interfaces/web/gitlab.py:49
+#: interfaces/web/gitlab.py:48
 msgid "Choose at least one GitLab project or group to search."
 msgstr ""
 "Wähle mindestens ein GitLab-Projekt oder eine Gruppe für die Suche aus."
 
-#: interfaces/web/gitlab.py:54
+#: interfaces/web/gitlab.py:53
 msgid "In-progress labels"
 msgstr "Labels für „In Bearbeitung“"
 
-#: interfaces/web/gitlab.py:55
+#: interfaces/web/gitlab.py:54
 msgid "Done labels"
 msgstr "Labels für „Erledigt“"
 
-#: interfaces/web/gitlab.py:56
+#: interfaces/web/gitlab.py:55
 msgid "Not-started labels"
 msgstr "Labels für „Noch nicht begonnen“"
 
-#: interfaces/web/gitlab.py:57
+#: interfaces/web/gitlab.py:56
 msgid "Unmatched issue state"
 msgstr "Status ohne passendes Label"
 
-#: interfaces/web/gitlab.py:82
+#: interfaces/web/gitlab.py:81
 msgid "GitLab title prefix"
 msgstr "GitLab-Titelpräfix"
 
-#: interfaces/web/gitlab.py:83
+#: interfaces/web/gitlab.py:82
 msgid "Collect matching GitLab issues"
 msgstr "Passende GitLab-Issues sammeln"
 
-#: interfaces/web/gitlab.py:133
+#: interfaces/web/gitlab.py:132
 msgid ""
 "Disconnecting does not reset ownership. Use a new workspace for a different "
 "GitLab instance."
@@ -672,7 +672,7 @@ msgstr ""
 "Das Trennen setzt die Zuordnungen nicht zurück. Verwende für eine andere "
 "GitLab-Instanz einen neuen Arbeitsbereich."
 
-#: interfaces/web/gitlab.py:135
+#: interfaces/web/gitlab.py:134
 msgid "Enter a GitLab API token."
 msgstr "Gib ein GitLab-API-Token ein."
 
@@ -831,25 +831,42 @@ msgstr "Automatisch zur Aktualisierung der Arbeitsverteilung auffordern"
 msgid "Unknown setting."
 msgstr "Unbekannte Einstellung."
 
-#: interfaces/web/workload.py:139
+#: interfaces/web/workload.py:134
 msgid "Workload check-in interval"
 msgstr "Abfrageintervall der Arbeitsverteilung"
 
-#: interfaces/web/workload.py:383
+#: interfaces/web/workload.py:378
 msgid "Unknown action."
 msgstr "Unbekannte Aktion."
 
-#: interfaces/web/workload.py:392
+#: interfaces/web/workload.py:387
 msgid "Review date refreshed."
 msgstr "Überprüfungsdatum aktualisiert."
 
-#: interfaces/web/workload.py:392
+#: interfaces/web/workload.py:387
 msgid "Estimate saved."
 msgstr "Schätzung gespeichert."
 
-#: interfaces/web/workload.py:429
+#: interfaces/web/workload.py:424
 msgid "We’ll remind you next week."
 msgstr "Wir erinnern dich nächste Woche."
+
+#: interfaces/web/workspaces.py:47
+msgid "General"
+msgstr "Allgemein"
+
+#: interfaces/web/workspaces.py:48
+#: templates/components/screens/people/people-list.html:89
+msgid "Workload"
+msgstr "Arbeitsverteilung"
+
+#: interfaces/web/workspaces.py:49
+msgid "Integrations"
+msgstr "Integrationen"
+
+#: interfaces/web/workspaces.py:50
+msgid "Sharing"
+msgstr "Freigaben"
 
 #: readers/chart_view.py:26
 msgctxt "Gantt axis month abbreviation"
@@ -1102,12 +1119,12 @@ msgid "Workspaces"
 msgstr "Arbeitsbereiche"
 
 #: templates/components/layouts/app-shell.html:40
-#: templates/components/screens/workspaces/settings.html:12
+#: templates/components/screens/workspaces/settings-general.html:5
 msgid "Workspace name"
 msgstr "Arbeitsbereichsname"
 
 #: templates/components/layouts/app-shell.html:41
-#: templates/components/screens/workspaces/settings.html:15
+#: templates/components/screens/workspaces/settings-general.html:8
 msgid "Rename"
 msgstr "Umbenennen"
 
@@ -1466,8 +1483,8 @@ msgstr "Löschen"
 #: templates/components/screens/gantt/milestone-popover.html:72
 #: templates/components/screens/gantt/project-popover.html:115
 #: templates/components/screens/gantt/task-popover.html:125
-#: templates/components/screens/workspaces/settings.html:27
-#: templates/components/screens/workspaces/settings.html:47
+#: templates/components/screens/workspaces/settings-general.html:20
+#: templates/components/screens/workspaces/settings-sharing.html:17
 msgid "Save"
 msgstr "Speichern"
 
@@ -2015,10 +2032,6 @@ msgstr "Manager"
 msgid "Invite"
 msgstr "Einladen"
 
-#: templates/components/screens/people/people-list.html:89
-msgid "Workload"
-msgstr "Arbeitsverteilung"
-
 #: templates/components/screens/people/people-list.html:93
 msgid "Workload participation"
 msgstr "Teilnahme an der Arbeitsverteilung"
@@ -2117,7 +2130,7 @@ msgid "No tasks yet."
 msgstr "Noch keine Aufgaben."
 
 #: templates/components/screens/projects/detail.html:90
-#: templates/components/screens/workspaces/settings.html:19
+#: templates/components/screens/workspaces/settings-general.html:12
 msgid "Milestones"
 msgstr "Meilensteine"
 
@@ -2539,7 +2552,7 @@ msgstr "Einstellungen zur Arbeitsverteilung gespeichert."
 msgid "No reports from participating members."
 msgstr "Keine Schätzungen von teilnehmenden Mitgliedern."
 
-#: templates/components/screens/workspaces/settings.html:26
+#: templates/components/screens/workspaces/settings-general.html:19
 msgid ""
 "Reasons are optional unless the milestone requires one. Required reasons are "
 "always requested, even when this setting is off."
@@ -2548,38 +2561,46 @@ msgstr ""
 "Erforderliche Begründungen werden immer abgefragt, auch wenn diese "
 "Einstellung deaktiviert ist."
 
-#: templates/components/screens/workspaces/settings.html:33
+#: templates/components/screens/workspaces/settings-sharing.html:3
 msgid "Public roadmap"
 msgstr "Öffentliche Roadmap"
 
-#: templates/components/screens/workspaces/settings.html:35
+#: templates/components/screens/workspaces/settings-sharing.html:5
 msgid "Open public roadmap"
 msgstr "Öffentliche Roadmap öffnen"
 
-#: templates/components/screens/workspaces/settings.html:40
+#: templates/components/screens/workspaces/settings-sharing.html:10
 msgid "Roadmap"
 msgstr "Roadmap"
 
-#: templates/components/screens/workspaces/settings.html:44
+#: templates/components/screens/workspaces/settings-sharing.html:14
 msgid "Optional public description"
 msgstr "Optionale öffentliche Beschreibung"
 
-#: templates/components/screens/workspaces/settings.html:48
+#: templates/components/screens/workspaces/settings-sharing.html:18
 msgid "Disable public roadmap"
 msgstr "Öffentliche Roadmap deaktivieren"
 
-#: templates/components/screens/workspaces/settings.html:53
+#: templates/components/screens/workspaces/settings-sharing.html:23
 msgid "Regenerate public link"
 msgstr "Öffentlichen Link neu erzeugen"
 
-#: templates/components/screens/workspaces/settings.html:56
+#: templates/components/screens/workspaces/settings-sharing.html:26
 msgid "Share task milestones without exposing people or dependencies."
 msgstr ""
 "Aufgaben-Meilensteine teilen, ohne Personen oder Abhängigkeiten offenzulegen."
 
-#: templates/components/screens/workspaces/settings.html:59
+#: templates/components/screens/workspaces/settings-sharing.html:29
 msgid "Enable public roadmap"
 msgstr "Öffentliche Roadmap aktivieren"
+
+#: templates/components/screens/workspaces/settings.html:10
+msgid "Settings section"
+msgstr "Einstellungsbereich"
+
+#: templates/components/screens/workspaces/settings.html:19
+msgid "Settings sections"
+msgstr "Einstellungsbereiche"
 
 #: templates/public/roadmap.html:12
 msgid ""

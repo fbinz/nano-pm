@@ -1,0 +1,32 @@
+{% load i18n %}
+<section id="workspace-roadmap-settings" class="space-y-4 border-t border-base-300 pt-6">
+  <h2 class="text-xl font-semibold">{% trans "Public roadmap" %}</h2>
+  {% if workspace.public_roadmap_enabled and workspace.public_roadmap_token %}
+    <a id="public-roadmap-link" class="link link-primary break-all" href="{% url 'public_roadmap' token=workspace.public_roadmap_token %}" target="_blank" rel="noopener">{% trans "Open public roadmap" %}</a>
+    <form method="post" action="{% url 'public_roadmap_update' %}" class="space-y-3">
+      {% csrf_token %}
+      <div class="space-y-1">
+        <label for="workspace-roadmap-title" class="block text-sm font-semibold">{% trans "Public roadmap title" %}</label>
+        <input id="workspace-roadmap-title" class="input w-full" type="text" name="title" value="{{ workspace.public_roadmap_title }}" placeholder="{{ workspace.name }} {% trans 'Roadmap' %}" maxlength="200">
+      </div>
+      <div class="space-y-1">
+        <label for="workspace-roadmap-description" class="block text-sm font-semibold">{% trans "Public roadmap description" %}</label>
+        <textarea id="workspace-roadmap-description" class="textarea w-full" name="description" placeholder="{% trans 'Optional public description' %}">{{ workspace.public_roadmap_description }}</textarea>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="submit" name="action" value="save" class="btn btn-sm btn-neutral">{% trans "Save" %}</button>
+        <button type="submit" name="action" value="disable" class="btn btn-sm btn-ghost">{% trans "Disable public roadmap" %}</button>
+      </div>
+    </form>
+    <form method="post" action="{% url 'public_roadmap_regenerate' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-ghost">{% trans "Regenerate public link" %}</button>
+    </form>
+  {% else %}
+    <p class="text-sm text-base-content/60">{% trans "Share task milestones without exposing people or dependencies." %}</p>
+    <form method="post" action="{% url 'public_roadmap_update' %}">
+      {% csrf_token %}
+      <button type="submit" name="action" value="enable" class="btn btn-sm btn-neutral">{% trans "Enable public roadmap" %}</button>
+    </form>
+  {% endif %}
+</section>

@@ -9,7 +9,7 @@ for (const [name, viewport] of Object.entries({
     await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
     await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
     await expect(page.getByLabel('Allowed domains for public followers')).toHaveValue('mycompany.com');
-    await page.goto('/workspaces/settings/');
+    await page.goto('/workspaces/settings/sharing/');
     await page.getByRole('button', { name: 'Enable public roadmap' }).click();
     const roadmap = await page.locator('#public-roadmap-link').getAttribute('href');
     const context = await browser.newContext({ viewport });

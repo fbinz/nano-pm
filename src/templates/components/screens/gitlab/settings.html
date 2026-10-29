@@ -21,7 +21,7 @@
           <form method="post" action="{% url 'gitlab_settings' %}">{% csrf_token %}<input type="hidden" name="action" value="sync"><button class="btn btn-sm" type="submit">{% trans "Sync GitLab now" %}</button></form>
           <form method="post" action="{% url 'gitlab_settings' %}">{% csrf_token %}<input type="hidden" name="action" value="disconnect"><button class="btn btn-sm btn-outline" type="submit">{% trans "Disconnect GitLab" %}</button></form>
         {% endif %}
-        <a class="btn btn-sm btn-ghost" href="{% url 'workspace_settings' %}#workspace-gitlab-settings">{% trans "Refresh sync status" %}</a>
+        <a class="btn btn-sm btn-ghost" href="{% url 'workspace_settings_integrations' %}">{% trans "Refresh sync status" %}</a>
       </div>
     </section>
     <section class="space-y-3">

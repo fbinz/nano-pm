@@ -82,7 +82,7 @@ def settings_context(workspace):
 @require_http_methods(["GET", "POST"])
 def settings(request):
     if request.method == "GET":
-        return redirect("workspace_settings")
+        return redirect("workspace_settings_workload")
     error = ""
     if request.method == "POST":
         try:
@@ -110,15 +110,10 @@ def settings(request):
         except ValidationError as exc:
             error = " ".join(exc.messages)
         else:
-            return redirect("workspace_settings")
-    from .gitlab import settings_context as gitlab_settings_context
+            return redirect("workspace_settings_workload")
+    from .workspaces import render_workspace_settings
 
-    return render(
-        request,
-        "components/screens/workspaces/settings.html",
-        {**context(request), **settings_context(request.workspace),
-         **gitlab_settings_context(request.workspace), "error": error},
-    )
+    return render_workspace_settings(request, "workload", error=error)
 
 
 @login_required

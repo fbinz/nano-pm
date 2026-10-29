@@ -90,7 +90,7 @@ async function postForm(page, url, fields) {
 }
 
 async function enableRoadmap(page) {
-  await page.goto('/workspaces/settings/');
+  await page.goto('/workspaces/settings/sharing/');
   await page.getByRole('button', { name: 'Enable public roadmap' }).click();
   return page.locator('#public-roadmap-link').getAttribute('href');
 }
@@ -261,7 +261,7 @@ async function syncGitLab() {
 }
 
 async function connectGitLab(page, api) {
-  const response = await page.goto('/workspaces/settings/');
+  const response = await page.goto('/workspaces/settings/integrations/');
   expect(response.status()).toBe(200);
   await page.getByLabel('GitLab instance URL').fill(api.url);
   await page.getByLabel('GitLab API token').fill('test-private-token');
@@ -289,38 +289,40 @@ test.describe('GitLab integration', () => {
       await expect(page.locator('.drawer-side').getByRole('link', { name: 'GitLab integration', exact: true })).toHaveCount(0);
       await page.locator('.ws-settings-link').click();
       await expect(page.getByRole('heading', { name: 'Workspace settings', exact: true })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'GitLab integration', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'GitLab integration', exact: true })).toHaveCount(0);
       const workspaceName = await page.locator('#workspace-settings-name').inputValue();
+      await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Integrations', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'GitLab integration', exact: true })).toBeVisible();
       await connectGitLab(page, api);
-      await expect(page).toHaveURL('/workspaces/settings/#workspace-gitlab-settings');
-      await expect(page.locator('#workspace-settings-name')).toHaveValue(workspaceName);
-      await expect(page.getByLabel('Offer a reason when moving milestones')).toBeChecked();
+      await expect(page).toHaveURL('/workspaces/settings/integrations/');
       await page.getByLabel('Done labels').fill('Ready to deploy');
       await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
-      await expect(page).toHaveURL('/workspaces/settings/#workspace-gitlab-settings');
+      await expect(page).toHaveURL('/workspaces/settings/integrations/');
       await expect(page.getByLabel('Done labels')).toHaveValue('Ready to deploy');
-      await expect(page.getByLabel('Offer a reason when moving milestones')).toBeChecked();
       await page.locator('#workspace-gitlab-settings').screenshot({ path: testInfo.outputPath('workspace-gitlab-settings.png') });
       await page.getByLabel('GitLab instance URL').fill('http://example.com');
       await page.getByRole('button', { name: 'Save GitLab connection', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Workspace settings', exact: true })).toBeVisible();
       await expect(page.locator('#workspace-gitlab-settings')).toContainText('Enter an HTTPS GitLab origin');
       await expect(page.getByLabel('GitLab instance URL')).toHaveValue('http://example.com');
-      // Errors from other workspace sections must retain the GitLab section too.
       const workloadError = await page.request.post('/workspaces/workload/', {
         form: { action: 'category', name: '', csrfmiddlewaretoken: await page.locator('[name=csrfmiddlewaretoken]').first().inputValue() },
         headers: { Referer: page.url() },
       });
       expect(workloadError.status()).toBe(200);
-      expect(await workloadError.text()).toMatch(/id="gitlab-connection-status"[^>]*>\s*Connected/);
+      expect(await workloadError.text()).toContain('class="tab tab-active" aria-current="page">Workload');
+      expect(await workloadError.text()).not.toContain('id="workspace-gitlab-settings"');
       await page.goto('/workspaces/gitlab/');
-      await expect(page).toHaveURL('/workspaces/settings/#workspace-gitlab-settings');
+      await expect(page).toHaveURL('/workspaces/settings/integrations/');
       await expect(page.locator('#gitlab-connection-status')).toContainText('Connected');
+      await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'General', exact: true }).click();
+      await expect(page.locator('#workspace-settings-name')).toHaveValue(workspaceName);
+      await expect(page.getByLabel('Offer a reason when moving milestones')).toBeChecked();
     } finally { await api.close(); }
   });
 
   test('GitLab deployment reads DJANGO-prefixed environment variables', async ({ appPage: page }) => {
-    await page.goto('/workspaces/settings/');
+    await page.goto('/workspaces/settings/integrations/');
     await expect(page.getByRole('heading', { name: 'GitLab integration', exact: true })).toBeVisible();
     const key = Buffer.alloc(32, 42).toString('base64');
     const { stdout } = await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
@@ -422,7 +424,7 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
       await expect(page.getByLabel('Unmatched issue state')).toHaveCount(0);
       await page.getByText('GitLab project settings', { exact: true }).click();
       await page.getByRole('link', { name: 'GitLab workflow', exact: true }).click();
-      await expect(page).toHaveURL('/workspaces/settings/#workspace-gitlab-settings');
+      await expect(page).toHaveURL('/workspaces/settings/integrations/');
       await expect(page.getByLabel('Done labels')).toHaveValue('Ready');
       await bindGitLab(page, ids[1], 'Reports');
       // Old clients must not be able to persist a project-specific mapping.
@@ -435,7 +437,7 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'in-progress');
       await page.goto(`/projects/${ids[1]}/`);
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'done');
-      await page.goto('/workspaces/settings/');
+      await page.goto('/workspaces/settings/integrations/');
       await expect(page.getByLabel('Done labels')).toHaveValue('Ready');
       await page.getByLabel('Done labels').fill('Developing');
       await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
@@ -449,7 +451,7 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
       await expect(page.getByLabel('In-progress labels')).toHaveValue('In Development');
       await expect(page.getByLabel('Done labels')).toHaveValue('Next Deployment');
       expect(await postForm(page, `/workspaces/${workspaceId}/switch/`, {})).toBe(200);
-      await page.goto('/workspaces/settings/');
+      await page.goto('/workspaces/settings/integrations/');
       await expect(page.getByLabel('Done labels')).toHaveValue('Developing');
     } finally { await api.close(); }
   });
@@ -485,7 +487,7 @@ print(json.dumps({
 }))
 `);
       expect(result).toEqual({ queued: true, workspace_mapping_preserved: true, owner: Number(id) });
-      await page.goto('/workspaces/settings/');
+      await page.goto('/workspaces/settings/integrations/');
       await expect(page.locator('#gitlab-sync-status')).toContainText('Queued');
       await syncGitLab(); await page.goto(`/projects/${id}/`);
       await expect(page.getByLabel('GitLab title prefix')).toHaveValue('Portal');
@@ -563,7 +565,7 @@ print(json.dumps({
       api.events['101:1:resource_state_events'].push({ id: 4, state: 'reopened', created_at: date(0) });
       await syncGitLab(); await page.reload();
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'done');
-      await page.goto('/workspaces/settings/');
+      await page.goto('/workspaces/settings/integrations/');
       await page.getByLabel('Done labels').fill('Something else');
       await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
       await syncGitLab(); await page.goto(`/projects/${id}/`);
@@ -1985,7 +1987,7 @@ test.describe('workload estimates', () => {
     await expect(page.locator('#workload-checkin-dialog')).toHaveCount(0);
     expect(await postForm(page, '/workspaces/workload/settings/workload_checkin_interval_days/', { workload_checkin_interval_days: '7' })).toBe(403);
     await signInAs(page, 'demo');
-    await page.goto('/workspaces/settings/');
+    await page.goto('/workspaces/settings/workload/');
     await cadence.fill('1');
     await cadence.press('Tab');
     const committed = page.locator('#workload-checkin-cadence');
@@ -1999,7 +2001,7 @@ test.describe('workload estimates', () => {
     await expect(page.locator('#workload-checkin-dialog')).toBeVisible();
     await page.keyboard.press('Escape');
     await signInAs(page, 'demo');
-    await page.goto('/workspaces/settings/');
+    await page.goto('/workspaces/settings/workload/');
     await cadence.fill('14');
     await cadence.press('Tab');
     await expect(committed).toHaveAttribute('data-interval-days', '14');
@@ -2030,7 +2032,7 @@ test.describe('workload estimates', () => {
     await expect(automatic).toBeChecked();
     await expect(cadence).toHaveValue('7');
     expect(await postForm(page, originalWorkspace, {})).toBe(200);
-    await page.goto('/workspaces/settings/');
+    await page.goto('/workspaces/settings/workload/');
     await expect(automatic).not.toBeChecked();
     await expect(cadence).toHaveCount(0);
     await signInAs(page, 'member1', { keepCheckin: true });
@@ -2043,7 +2045,7 @@ test.describe('workload estimates', () => {
     await expect(page.locator('#workload-checkin-dialog')).toHaveCount(0);
     await signInAs(page, 'demo');
     expect(await postForm(page, originalWorkspace, {})).toBe(200);
-    await page.goto('/workspaces/settings/');
+    await page.goto('/workspaces/settings/workload/');
     await automatic.check();
     await expect(page.locator('[data-workload-setting="workload_checkin_enabled"]')).toHaveAttribute('data-enabled', 'true');
     await expect(cadence).toHaveValue('14');
@@ -2055,7 +2057,7 @@ test.describe('workload estimates', () => {
 
   test('workload settings switches save independently and refresh categories and navigation without reload', async ({ appPage: page }) => {
     await page.goto('/workspaces/workload/');
-    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await expect(page).toHaveURL(/\/workspaces\/settings\/workload\/$/);
     await expect(page.getByRole('switch')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Save workload settings' })).toHaveCount(0);
     const enabled = page.getByRole('switch', { name: 'Enable workload reporting', exact: true });
@@ -7270,6 +7272,58 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('.bar')).toHaveCount(0);
   });
 
+  test('workspace settings sub-navigation isolates sections and preserves the selected section', async ({ appPage: page }) => {
+    await page.locator('.ws-settings-link').click();
+    const nav = page.getByRole('navigation', { name: 'Settings sections', exact: true });
+    await expect(nav.getByRole('link', { name: 'General', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#workspace-settings-name')).toBeVisible();
+    await expect(page.locator('#workspace-workload-settings, #workspace-gitlab-settings, #workspace-roadmap-settings')).toHaveCount(0);
+    await nav.getByRole('link', { name: 'Workload', exact: true }).click();
+    await expect(page).toHaveURL('/workspaces/settings/workload/');
+    await page.getByRole('switch', { name: 'Enable workload reporting', exact: true }).check();
+    await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'true');
+    await page.reload();
+    await expect(nav.getByRole('link', { name: 'Workload', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('switch', { name: 'Enable workload reporting', exact: true })).toBeChecked();
+    await expect(page.locator('#workspace-settings-name, #workspace-gitlab-settings, #workspace-roadmap-settings')).toHaveCount(0);
+    await nav.getByRole('link', { name: 'Integrations', exact: true }).click();
+    await expect(page).toHaveURL('/workspaces/settings/integrations/');
+    await expect(page.locator('#workspace-gitlab-settings')).toBeVisible();
+    await page.getByLabel('GitLab instance URL').fill('http://example.com');
+    await page.getByRole('button', { name: 'Save GitLab connection', exact: true }).click();
+    await expect(nav.getByRole('link', { name: 'Integrations', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#workspace-gitlab-settings')).toContainText('Enter an HTTPS GitLab origin');
+    await expect(page.locator('#workspace-settings-name, #workspace-workload-settings, #workspace-roadmap-settings')).toHaveCount(0);
+    await nav.getByRole('link', { name: 'Sharing', exact: true }).click();
+    await expect(page).toHaveURL('/workspaces/settings/sharing/');
+    await page.getByRole('button', { name: 'Enable public roadmap', exact: true }).click();
+    await expect(page).toHaveURL('/workspaces/settings/sharing/');
+    await expect(nav.getByRole('link', { name: 'Sharing', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#public-roadmap-link')).toBeVisible();
+    await nav.getByRole('link', { name: 'General', exact: true }).click();
+    await page.locator('main').getByLabel('Workspace name', { exact: true }).fill('Focused settings');
+    await page.locator('main').getByRole('button', { name: 'Rename', exact: true }).click();
+    await expect(page).toHaveURL('/workspaces/settings/');
+    await expect(page.locator('main').getByLabel('Workspace name', { exact: true })).toHaveValue('Focused settings');
+  });
+
+  test('workspace settings mobile selector navigates to bookmarkable sections', async ({ appPage: page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/workspaces/settings/');
+    const selector = page.getByLabel('Settings section', { exact: true });
+    await expect(selector).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Settings sections', exact: true })).not.toBeVisible();
+    for (const section of ['workload', 'integrations', 'sharing']) {
+      await selector.selectOption(`/workspaces/settings/${section}/`);
+      await expect(page).toHaveURL(`/workspaces/settings/${section}/`);
+      await page.reload();
+      await expect(selector).toHaveValue(`/workspaces/settings/${section}/`);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+    await page.goBack();
+    await expect(selector).toHaveValue('/workspaces/settings/integrations/');
+  });
+
   test('workspace settings are reachable from the name cog and picker and gate workload configuration', async ({ appPage: page }) => {
     const cog = page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true });
     await expect(cog).toBeVisible();
@@ -7284,6 +7338,7 @@ test.describe('workspace isolation', () => {
     await page.locator('main').getByRole('button', { name: 'Rename', exact: true }).click();
     await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
     await expect(page.locator('#workspace-name')).toHaveText('Planning');
+    await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Workload', exact: true }).click();
     const enabled = page.getByRole('switch', { name: 'Enable workload reporting', exact: true });
     const categories = page.getByRole('table', { name: 'Categories', exact: true });
     await expect(enabled).not.toBeChecked();
@@ -7315,27 +7370,29 @@ test.describe('workspace isolation', () => {
 
   test('workspace settings configure the public roadmap and keep changes on the settings page', async ({ appPage: page, request }) => {
     await page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Sharing', exact: true }).click();
     await page.getByRole('button', { name: 'Enable public roadmap', exact: true }).click();
-    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await expect(page).toHaveURL(/\/workspaces\/settings\/sharing\/$/);
     await page.getByLabel('Public roadmap title', { exact: true }).fill('Product roadmap');
     await page.getByLabel('Public roadmap description', { exact: true }).fill('Upcoming releases');
     await page.locator('#workspace-roadmap-settings').getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await expect(page).toHaveURL(/\/workspaces\/settings\/sharing\/$/);
     await expect(page.getByLabel('Public roadmap title', { exact: true })).toHaveValue('Product roadmap');
     const oldHref = await page.locator('#public-roadmap-link').getAttribute('href');
     const roadmap = await request.get(oldHref);
     expect(roadmap.status()).toBe(200);
     expect(await roadmap.text()).toContain('Upcoming releases');
     await page.getByRole('button', { name: 'Regenerate public link', exact: true }).click();
-    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await expect(page).toHaveURL(/\/workspaces\/settings\/sharing\/$/);
     const newHref = await page.locator('#public-roadmap-link').getAttribute('href');
     expect(newHref).not.toBe(oldHref);
     expect((await request.get(oldHref)).status()).toBe(404);
     expect((await request.get(newHref)).status()).toBe(200);
     await page.getByRole('button', { name: 'Disable public roadmap', exact: true }).click();
-    await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
+    await expect(page).toHaveURL(/\/workspaces\/settings\/sharing\/$/);
     await expect(page.getByLabel('Public roadmap title', { exact: true })).toHaveCount(0);
     expect((await request.get(newHref)).status()).toBe(404);
+    await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Workload', exact: true }).click();
     await expect(page.getByLabel('Enable workload reporting', { exact: true })).not.toBeChecked();
   });
 
@@ -7344,25 +7401,28 @@ test.describe('workspace isolation', () => {
     await page.fill('#workspace-create-name', 'Settings sandbox');
     await page.locator('#workspace-create-name').press('Enter');
     await page.waitForURL('/');
-    await page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true }).click();
+    await page.goto('/workspaces/settings/workload/');
     await page.getByLabel('Enable workload reporting', { exact: true }).check();
     await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'true');
+    await page.goto('/workspaces/settings/');
     const optionalReasons = page.getByLabel('Offer a reason when moving milestones', { exact: true });
-    await expect(optionalReasons).toBeChecked();
     await optionalReasons.uncheck();
     await page.locator('#workspace-milestone-settings button[type=submit]').click();
     await expect(optionalReasons).not.toBeChecked();
     await page.locator('.ws-chevron-btn').click();
     await page.locator('#workspace-menu .workspace-item', { hasText: "demo's workspace" }).click();
     await page.waitForURL('/');
-    await page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true }).click();
+    await page.goto('/workspaces/settings/workload/');
     await expect(page.getByLabel('Enable workload reporting', { exact: true })).not.toBeChecked();
-    await expect(optionalReasons).toBeChecked();
     await expect(page.getByRole('table', { name: 'Categories', exact: true })).toHaveCount(0);
+    await page.goto('/workspaces/settings/');
+    await expect(optionalReasons).toBeChecked();
     await signInAs(page, 'member1');
     await expect(page.getByRole('link', { name: 'Workspace settings', exact: true })).toHaveCount(0);
     expect(await postForm(page, '/workspaces/settings/', { prompt_milestone_move_reason: 'on' })).toBe(403);
-    expect((await page.goto('/workspaces/settings/')).status()).toBe(403);
+    for (const section of ['', 'workload/', 'integrations/', 'sharing/']) {
+      expect((await page.goto('/workspaces/settings/' + section)).status()).toBe(403);
+    }
   });
 
   test('topbar shows the current workspace name', async ({ appPage: page }) => {
@@ -7432,10 +7492,10 @@ test.describe('workspace isolation', () => {
   });
 
   test('PM can enable and revoke a public roadmap generated from milestones', async ({ appPage: page, request }) => {
-    await page.goto('/workspaces/settings/');
+    await page.goto('/workspaces/settings/sharing/');
     await expect(page.locator('#public-roadmap-link')).toHaveCount(0);
     await page.getByRole('button', { name: 'Enable public roadmap' }).click();
-    await page.waitForURL('/workspaces/settings/');
+    await page.waitForURL('/workspaces/settings/sharing/');
 
     const href = await page.locator('#public-roadmap-link').getAttribute('href');
     expect(href).toMatch(/^\/roadmap\/[\w-]+\/$/);
@@ -7452,7 +7512,7 @@ test.describe('workspace isolation', () => {
     expect(body).not.toContain('Alex Chen');
 
     await page.getByRole('button', { name: 'Disable public roadmap' }).click();
-    await page.waitForURL('/workspaces/settings/');
+    await page.waitForURL('/workspaces/settings/sharing/');
     const revoked = await request.get(href);
     expect(revoked.status()).toBe(404);
   });
@@ -7891,7 +7951,7 @@ test.describe('workspace isolation', () => {
   test('regenerating the public roadmap link revokes the old URL', async ({ appPage: page, request }) => {
     const oldHref = await enableRoadmap(page);
     await page.getByRole('button', { name: 'Regenerate public link' }).click();
-    await page.waitForURL('/workspaces/settings/');
+    await page.waitForURL('/workspaces/settings/sharing/');
 
     const newHref = await page.locator('#public-roadmap-link').getAttribute('href');
     expect(newHref).toMatch(/^\/roadmap\/[\w-]+\/$/);
