@@ -7870,7 +7870,10 @@ test.describe('workspace isolation', () => {
   test('dragging empty roadmap timeline space pans dates and the page with grab cursors', async ({ appPage: page }) => {
     // Ensure page overflow independently of the compact description-free rows.
     for (let i = 0; i < 4; i++) {
-      expect(await postForm(page, '/projects/', { name: `Extra project ${i + 1}` })).toBe(200);
+      await page.locator('.add-project-row').last().click();
+      await expect(page.locator('.left-cell.proj')).toHaveCount(4 + i);
+      const projectId = await page.locator('.left-cell.proj').last().getAttribute('data-project-id');
+      expect(await postForm(page, `/projects/${projectId}/update/`, { name: `Extra project ${i + 1}` })).toBe(200);
     }
     const href = await enableRoadmap(page);
 
@@ -7928,6 +7931,46 @@ test.describe('workspace isolation', () => {
       await chart.evaluate(el => { el.scrollLeft = 100; });
       expect(await chart.evaluate(el => el.scrollLeft)).toBe(100);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  });
+
+  test('public roadmap hides default-named projects and their milestones until renamed', async ({ appPage: page, browser }) => {
+    const milestone = page.locator('.chart-row.proj .milestone').first();
+    const projectId = await milestone.getAttribute('data-project-id');
+    const milestoneTitle = await milestone.getAttribute('data-title');
+    await page.locator('.add-project-row').last().click();
+    await expect(page.locator('.left-cell.proj')).toHaveCount(4);
+    const emptyProjectId = await page.locator('.left-cell.proj').last().getAttribute('data-project-id');
+    expect(await postForm(page, `/projects/${projectId}/update/`, {
+      name: 'New project', description: 'Unpublished placeholder description',
+    })).toBe(200);
+    const href = await enableRoadmap(page);
+    const context = await browser.newContext();
+    try {
+      const visitor = await context.newPage();
+      await visitor.goto(href);
+      await expect(visitor.locator('.roadmap-project-label')).toHaveCount(2);
+      await expect(visitor.getByRole('heading', { name: 'New project', exact: true })).toHaveCount(0);
+      expect(await visitor.content()).not.toContain(milestoneTitle);
+      expect(await visitor.content()).not.toContain('Unpublished placeholder description');
+
+      // Named projects without milestones remain public; similarly named projects are not filtered.
+      expect(await postForm(page, `/projects/${emptyProjectId}/update/`, { name: 'Published empty project' })).toBe(200);
+      expect(await postForm(page, `/projects/${projectId}/update/`, { name: 'New project launch' })).toBe(200);
+      await visitor.reload();
+      await expect(visitor.locator('.roadmap-project-label')).toHaveCount(4);
+      await expect(visitor.getByRole('heading', { name: 'Published empty project', exact: true })).toBeVisible();
+      await expect(visitor.getByRole('heading', { name: 'New project launch', exact: true })).toBeVisible();
+      expect(await visitor.content()).toContain(milestoneTitle);
+
+      expect(await postForm(page, `/projects/${projectId}/update/`, { name: 'New project' })).toBe(200);
+      await visitor.reload();
+      await expect(visitor.locator('.roadmap-project-label')).toHaveCount(3);
+      expect(await visitor.content()).not.toContain(milestoneTitle);
+      await page.goto('/');
+      await expect(page.locator(`.left-cell.proj[data-project-id="${projectId}"]`)).toContainText('New project');
+    } finally {
+      await context.close();
     }
   });
 
