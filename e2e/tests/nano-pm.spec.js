@@ -204,6 +204,567 @@ ${snoozeDays ? `Membership.objects.filter(user__username='member1').update(workl
   });
 }
 
+// GitLab uses a real local API receiver, never a live GitLab account.
+async function fakeGitLab() {
+  const api = { issues: [], events: {}, status: 200, requests: [], groups: {}, failures: {}, omitFromList: false, retryAfter: '', redirectTo: '', beforeRequest: async () => {} };
+  const server = http.createServer(async (req, res) => {
+    const url = new URL(req.url, 'http://localhost');
+    api.requests.push({ path: url.pathname, query: url.search, token: req.headers['private-token'] });
+    await api.beforeRequest(url);
+    res.setHeader('Content-Type', 'application/json');
+    if (api.retryAfter) res.setHeader('Retry-After', api.retryAfter);
+    if (api.redirectTo) res.setHeader('Location', api.redirectTo);
+    const status = api.failures[url.pathname] || api.status;
+    if (status !== 200) { res.writeHead(status); res.end('{}'); return; }
+    const group = url.pathname.match(/\/groups\/(\d+)\/projects$/);
+    if (group) { res.end(JSON.stringify((api.groups[group[1]] || []).map(id => ({ id })))); return; }
+    const match = url.pathname.match(/\/projects\/(\d+)\/issues(?:\/(\d+)(?:\/(resource_label_events|resource_state_events))?)?$/);
+    if (!match) { res.writeHead(404); res.end('{}'); return; }
+    const [, project, iid, kind] = match;
+    if (kind) {
+      res.end(JSON.stringify(api.events[`${project}:${iid}:${kind}`] || []));
+    } else if (iid) {
+      const issue = api.issues.find(i => i.project_id === Number(project) && i.iid === Number(iid));
+      res.writeHead(issue ? 200 : 404); res.end(JSON.stringify(issue || {}));
+    } else {
+      // Force pagination even for small fixtures.
+      const items = api.omitFromList ? [] : api.issues.filter(i => i.project_id === Number(project));
+      const page = Number(url.searchParams.get('page') || 1);
+      res.setHeader('X-Next-Page', page < items.length ? String(page + 1) : '');
+      res.end(JSON.stringify(items.slice(page - 1, page)));
+    }
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  api.url = `http://127.0.0.1:${server.address().port}`;
+  api.issue = (iid, title, extra = {}) => ({
+    id: iid, iid, project_id: 101, title, labels: [], state: 'opened',
+    created_at: '2025-01-01T10:00:00Z', updated_at: new Date().toISOString(),
+    ...extra,
+  });
+  api.close = () => new Promise(resolve => server.close(resolve));
+  return api;
+}
+
+async function gitlabDB(code) {
+  const { stdout } = await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
+import json
+from data.models import GitLabConnection, GitLabIssue, GitLabIssueEvent, Membership, Workspace, Project
+${code}
+`], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv() });
+  return JSON.parse(stdout.trim().split('\n').at(-1));
+}
+
+async function syncGitLab() {
+  await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'sync_gitlab', '--once'], {
+    cwd: path.resolve(__dirname, '../..'), env: djangoEnv(),
+  });
+}
+
+async function connectGitLab(page, api) {
+  const response = await page.goto('/workspaces/settings/');
+  expect(response.status()).toBe(200);
+  await page.getByLabel('GitLab instance URL').fill(api.url);
+  await page.getByLabel('GitLab API token').fill('test-private-token');
+  await page.getByLabel('GitLab project IDs').fill('101, 102');
+  await page.getByRole('button', { name: 'Save GitLab connection', exact: true }).click();
+  await expect(page.locator('#gitlab-connection-status')).toContainText('Connected');
+}
+
+async function bindGitLab(page, projectId, prefix) {
+  await page.goto(`/projects/${projectId}/`);
+  await page.getByText('GitLab project settings', { exact: true }).click();
+  await page.getByLabel('GitLab title prefix').fill(prefix);
+  await expect(page.locator('[data-prefix-preview]')).toHaveText(`${prefix}: …`);
+  await page.getByLabel('Collect matching GitLab issues').check();
+  await page.getByRole('button', { name: 'Save GitLab project settings', exact: true }).click();
+  await expect(page.getByLabel('GitLab title prefix')).toHaveValue(prefix);
+}
+
+function gitlabRows(page) { return page.locator('#gitlab-issues tbody tr'); }
+
+test.describe('GitLab integration', () => {
+  test('GitLab configuration lives inside workspace settings rather than the main navigation', async ({ appPage: page }, testInfo) => {
+    const api = await fakeGitLab();
+    try {
+      await expect(page.locator('.drawer-side').getByRole('link', { name: 'GitLab integration', exact: true })).toHaveCount(0);
+      await page.locator('.ws-settings-link').click();
+      await expect(page.getByRole('heading', { name: 'Workspace settings', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'GitLab integration', exact: true })).toBeVisible();
+      const workspaceName = await page.locator('#workspace-settings-name').inputValue();
+      await connectGitLab(page, api);
+      await expect(page).toHaveURL('/workspaces/settings/#workspace-gitlab-settings');
+      await expect(page.locator('#workspace-settings-name')).toHaveValue(workspaceName);
+      await expect(page.getByLabel('Offer a reason when moving milestones')).toBeChecked();
+      await page.getByLabel('Done labels').fill('Ready to deploy');
+      await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
+      await expect(page).toHaveURL('/workspaces/settings/#workspace-gitlab-settings');
+      await expect(page.getByLabel('Done labels')).toHaveValue('Ready to deploy');
+      await expect(page.getByLabel('Offer a reason when moving milestones')).toBeChecked();
+      await page.locator('#workspace-gitlab-settings').screenshot({ path: testInfo.outputPath('workspace-gitlab-settings.png') });
+      await page.getByLabel('GitLab instance URL').fill('http://example.com');
+      await page.getByRole('button', { name: 'Save GitLab connection', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Workspace settings', exact: true })).toBeVisible();
+      await expect(page.locator('#workspace-gitlab-settings')).toContainText('Enter an HTTPS GitLab origin');
+      await expect(page.getByLabel('GitLab instance URL')).toHaveValue('http://example.com');
+      // Errors from other workspace sections must retain the GitLab section too.
+      const workloadError = await page.request.post('/workspaces/workload/', {
+        form: { action: 'category', name: '', csrfmiddlewaretoken: await page.locator('[name=csrfmiddlewaretoken]').first().inputValue() },
+        headers: { Referer: page.url() },
+      });
+      expect(workloadError.status()).toBe(200);
+      expect(await workloadError.text()).toMatch(/id="gitlab-connection-status"[^>]*>\s*Connected/);
+      await page.goto('/workspaces/gitlab/');
+      await expect(page).toHaveURL('/workspaces/settings/#workspace-gitlab-settings');
+      await expect(page.locator('#gitlab-connection-status')).toContainText('Connected');
+    } finally { await api.close(); }
+  });
+
+  test('GitLab deployment reads DJANGO-prefixed environment variables', async ({ appPage: page }) => {
+    await page.goto('/workspaces/settings/');
+    await expect(page.getByRole('heading', { name: 'GitLab integration', exact: true })).toBeVisible();
+    const key = Buffer.alloc(32, 42).toString('base64');
+    const { stdout } = await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
+import json, os
+from django.conf import settings
+print(json.dumps({
+    'key_from_environment': settings.GITLAB_ENCRYPTION_KEY == os.environ['DJANGO_GITLAB_ENCRYPTION_KEY'],
+    'private_hosts_from_environment': settings.GITLAB_PRIVATE_HOSTS == ['gitlab.internal.example', 'gitlab.other.example'],
+}))
+`], {
+      cwd: path.resolve(__dirname, '../..'),
+      env: djangoEnv({
+        DJANGO_SETTINGS_MODULE: 'config.settings',
+        DJANGO_GITLAB_ENCRYPTION_KEY: key,
+        DJANGO_GITLAB_PRIVATE_HOSTS: 'gitlab.internal.example, gitlab.other.example',
+      }),
+    });
+    expect(JSON.parse(stdout.trim().split('\n').at(-1))).toEqual({
+      key_from_environment: true, private_hosts_from_environment: true,
+    });
+  });
+
+  test('GitLab connection protects credentials and queues synchronization', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      await connectGitLab(page, api);
+      await expect(page.getByLabel('GitLab API token')).toHaveValue('');
+      expect(await page.content()).not.toContain('test-private-token');
+      expect(await gitlabDB(`
+from interfaces.gitlab.client import decrypt_token
+connection = GitLabConnection.objects.get()
+print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt_token(connection.token_ciphertext) == 'test-private-token'))
+`)).toBe(true);
+      await page.getByRole('button', { name: 'Sync GitLab now', exact: true }).click();
+      await expect(page.locator('#gitlab-sync-status')).toContainText('Queued');
+      await syncGitLab();
+      await page.reload();
+      await expect(page.locator('#gitlab-sync-status')).toContainText('Up to date');
+      expect(api.requests.every(r => r.token === 'test-private-token')).toBe(true);
+      await page.getByRole('button', { name: 'Disconnect GitLab', exact: true }).click();
+      await expect(page.locator('#gitlab-connection-status')).toContainText('Disconnected');
+    } finally { await api.close(); }
+  });
+
+  test('GitLab prefixes collect once and preserve ownership when a completed prefix is reused', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const [oldId, newId] = await page.locator('.project-group').evaluateAll(groups => groups.map(g => Number(g.dataset.projectId)));
+      api.issues = [api.issue(1, ' Portal : Login'), api.issue(2, 'Portal Admin: Not a match'),
+        api.issue(3, 'Portal: Closed work', { state: 'closed' }),
+        api.issue(1, 'Portal: Other repository', { project_id: 102 })];
+      await connectGitLab(page, api);
+      await bindGitLab(page, oldId, 'portal');
+      await syncGitLab();
+      await page.reload();
+      await expect(gitlabRows(page)).toHaveCount(3);
+      await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveCount(3);
+      api.issues[0].title = 'Different title';
+      await postForm(page, `/projects/${oldId}/set-completed/`, {});
+      await bindGitLab(page, newId, 'portal');
+      // Old creation date deliberately: no dated handover.
+      api.issues.push(api.issue(4, 'Portal: Previously undiscovered'));
+      await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveCount(1);
+      await expect(gitlabRows(page)).toContainText('Previously undiscovered');
+      await page.goto(`/projects/${oldId}/`);
+      await expect(gitlabRows(page)).toHaveCount(3);
+      await expect(page.locator('#gitlab-issues')).toContainText('Different title');
+      await expect(page.locator('#gitlab-issues')).toContainText('Prefix changed');
+      expect(await postForm(page, `/projects/${oldId}/set-completed/`, {})).toBe(409);
+      await page.reload();
+      await expect(page.locator('#project-detail-page')).toContainText('Completed');
+      await postForm(page, '/projects/toggle-completed/', {});
+      await page.goto('/'); await page.locator(`#proj-${oldId}`).click();
+      await expect(page.locator('#project-popover [role=alert]')).toContainText('Disable collection');
+      await expect(page.locator('#pp-toggle-complete')).toBeDisabled();
+    } finally { await api.close(); }
+  });
+
+  test('GitLab workflow uses configurable labels and historical work cycles without inventing dates', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const projectId = await page.locator('.project-group').first().getAttribute('data-project-id');
+      const date = days => new Date(Date.now() + days * 86400000).toISOString();
+      api.issues = [
+        api.issue(1, 'Portal: Two cycles', { labels: ['WIP', 'Ready'] }),
+        api.issue(2, 'Portal: Closed', { state: 'closed', closed_at: date(-1) }),
+        api.issue(3, 'Portal: Start unknown', { labels: ['WIP'] }),
+      ];
+      api.events['101:1:resource_label_events'] = [
+        { id: 1, action: 'add', label: { name: 'WIP' }, created_at: date(-10) },
+        { id: 2, action: 'add', label: { name: 'Ready' }, created_at: date(-6) },
+        { id: 3, action: 'remove', label: { name: 'Ready' }, created_at: date(-5) },
+        { id: 4, action: 'add', label: { name: 'Ready' }, created_at: date(-2) },
+      ];
+      await connectGitLab(page, api);
+      await page.getByLabel('In-progress labels').fill('WIP');
+      await page.getByLabel('Done labels').fill('Ready');
+      await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
+      await bindGitLab(page, projectId, 'Portal');
+      await syncGitLab(); await page.reload();
+      const cycles = gitlabRows(page).filter({ hasText: 'Two cycles' });
+      await expect(cycles).toHaveAttribute('data-state', 'done');
+      await expect(cycles.locator('[data-start]')).toHaveCount(2);
+      const intervals = await cycles.locator('[data-start]').evaluateAll(els => els.map(e => ({ start: e.dataset.start, end: e.dataset.end })));
+      expect(intervals.every(i => i.start && i.end)).toBe(true);
+      await expect(gitlabRows(page).filter({ hasText: 'Closed' })).toHaveAttribute('data-state', 'done');
+      await expect(gitlabRows(page).filter({ hasText: 'Closed' }).locator('[data-start]')).toHaveAttribute('data-start', '');
+      await expect(gitlabRows(page).filter({ hasText: 'Start unknown' })).toHaveAttribute('data-state', 'in-progress');
+      await expect(gitlabRows(page).filter({ hasText: 'Start unknown' })).toContainText('Timing unknown');
+      await syncGitLab(); await page.reload();
+      await expect(cycles.locator('[data-start]')).toHaveCount(2);
+      // Remapping replays existing historical events, not a transition at save time.
+      await page.goto('/workspaces/gitlab/');
+      await page.getByLabel('Done labels').fill('WIP');
+      await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
+      await syncGitLab(); await page.goto(`/projects/${projectId}/`);
+      await expect(cycles.locator('[data-start]')).toHaveCount(1);
+      await expect(cycles.locator('[data-start]')).toHaveAttribute('data-start', '');
+    } finally { await api.close(); }
+  });
+
+  test('GitLab workflow ignores transitions newer than its source snapshot and honors project overrides', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const id = await page.locator('.project-group').first().getAttribute('data-project-id');
+      const date = days => new Date(Date.now() + days * 86400000).toISOString();
+      api.issues = [api.issue(1, 'Portal: Concurrent workflow', { labels: ['In Development'], updated_at: date(-4) })];
+      api.events['101:1:resource_label_events'] = [
+        { id: 1, action: 'add', label: { name: 'In Development' }, created_at: date(-5) },
+        { id: 2, action: 'add', label: { name: 'Next Deployment' }, created_at: date(-3) },
+      ];
+      await connectGitLab(page, api); await bindGitLab(page, id, 'Portal'); await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveAttribute('data-state', 'in-progress');
+      await expect(gitlabRows(page).locator('[data-end]')).toHaveAttribute('data-end', '');
+      // Next snapshot catches up, producing the real finish.
+      api.issues[0].labels.push('Next Deployment'); api.issues[0].updated_at = date(0);
+      await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveAttribute('data-state', 'done');
+      const end = await gitlabRows(page).locator('[data-end]').getAttribute('data-end');
+      api.issues[0].state = 'closed'; api.issues[0].closed_at = date(-1);
+      api.events['101:1:resource_state_events'] = [{ id: 3, state: 'closed', created_at: date(-1) }];
+      await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page).locator('[data-end]')).toHaveAttribute('data-end', end);
+      api.issues[0].state = 'opened'; api.issues[0].closed_at = null;
+      api.events['101:1:resource_state_events'].push({ id: 4, state: 'reopened', created_at: date(0) });
+      await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveAttribute('data-state', 'done');
+      await page.getByText('GitLab project settings', { exact: true }).click();
+      await page.getByLabel('Override workspace workflow').check();
+      await page.getByLabel('Done labels').fill('Something else');
+      await page.getByRole('button', { name: 'Save GitLab project settings', exact: true }).click();
+      await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveAttribute('data-state', 'in-progress');
+    } finally { await api.close(); }
+  });
+
+  test('GitLab execution overlay survives patches without changing task geometry or interactions', async ({ appPage: page }, testInfo) => {
+    const api = await fakeGitLab();
+    try {
+      const projectId = await page.locator('.project-group').first().getAttribute('data-project-id');
+      const date = days => new Date(Date.now() + days * 86400000).toISOString();
+      api.issues = [api.issue(1, 'Portal: Execution', { labels: ['Next Deployment'] }), api.issue(2, 'Portal: Undated')];
+      api.events['101:1:resource_label_events'] = [
+        { id: 1, action: 'add', label: { name: 'In Development' }, created_at: date(-5) },
+        { id: 2, action: 'add', label: { name: 'Next Deployment' }, created_at: date(-1) },
+      ];
+      await connectGitLab(page, api); await bindGitLab(page, projectId, 'Portal'); await syncGitLab();
+      await page.goto('/');
+      const before = await page.locator('.bar').evaluateAll(bars => bars.map(b => ({ id: b.id, start: b.dataset.start, end: b.dataset.end })));
+      const toggle = page.locator(`[data-gitlab-toggle="${projectId}"]`);
+      await expect(toggle).toHaveCount(1);
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator('.chart-row.gitlab-issue')).toHaveCount(2);
+      await expect(page.locator('.gitlab-interval')).toHaveCount(1);
+      await page.screenshot({ path: testInfo.outputPath('gitlab-overlay.png'), fullPage: true });
+      await expect(page.locator('.chart-row.gitlab-issue').filter({ hasText: 'Timing unknown' })).toHaveCount(1);
+      expect(await page.locator('.gitlab-timing').evaluate(el => {
+        const sc = document.getElementById('grid-scroll');
+        return el.getBoundingClientRect().left >= sc.getBoundingClientRect().left + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-w'));
+      })).toBe(true);
+      // Read-only source rows must not create tasks or become draggable task bars.
+      await page.locator('.gitlab-interval').click();
+      expect(await page.locator('.bar').evaluateAll(bars => bars.map(b => ({ id: b.id, start: b.dataset.start, end: b.dataset.end })))).toEqual(before);
+      await page.reload(); await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      await page.locator('#zoom-slider').evaluate(el => {
+        el.value = el.max; el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await expect(page.locator('#grid-scroll')).toHaveAttribute('data-px-per-day', '72');
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      // Explicitly exercise the client-side recalculation as well as initial render.
+      const arrowsAligned = () => page.evaluate(() => {
+        nano.recalcArrows();
+        return [...document.querySelectorAll('#arrows .hit')].every(path => {
+          if (getComputedStyle(path).display === 'none') return true;
+          const [a, b] = path.dataset.dep.split('-');
+          const svgTop = path.ownerSVGElement.getBoundingClientRect().top;
+          const first = path.getPointAtLength(0), last = path.getPointAtLength(path.getTotalLength());
+          const center = id => { const r = document.getElementById(`bar-${id}`).getBoundingClientRect(); return r.y + r.height / 2; };
+          return Math.abs(first.y + svgTop - center(a)) < 2 && Math.abs(last.y + svgTop - center(b)) < 2;
+        });
+      });
+      expect(await arrowsAligned()).toBe(true);
+      await toggle.click(); await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(await arrowsAligned()).toBe(true);
+    } finally { await api.close(); }
+  });
+
+  test('GitLab failures preserve cached ownership and authentication can be repaired', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const projectId = await page.locator('.project-group').first().getAttribute('data-project-id');
+      api.issues = [api.issue(1, 'Portal: Keep ownership')];
+      await connectGitLab(page, api); await bindGitLab(page, projectId, 'Portal');
+      await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveCount(1);
+      await gitlabDB(`
+from datetime import timedelta
+from django.utils import timezone
+GitLabConnection.objects.update(last_success=timezone.now() - timedelta(hours=1))
+print('true')
+`);
+      await page.reload();
+      await expect(page.locator('#gitlab-project')).toContainText('stale');
+      api.status = 401;
+      await syncGitLab(); await page.goto('/workspaces/gitlab/');
+      await expect(page.locator('#gitlab-sync-status')).toContainText('authentication-failed');
+      const count = api.requests.length;
+      await syncGitLab(); expect(api.requests.length).toBe(count);
+      await page.goto(`/projects/${projectId}/`);
+      await expect(gitlabRows(page)).toHaveCount(1);
+      await expect(page.locator('#gitlab-project')).toContainText('stale');
+      api.status = 200;
+      await connectGitLab(page, api); await syncGitLab();
+      await page.reload();
+      await expect(page.locator('#gitlab-sync-status')).toContainText('Up to date');
+      await page.goto(`/projects/${projectId}/`);
+      await expect(gitlabRows(page)).toHaveCount(1);
+      expect(api.requests.some(r => r.query.includes('updated_after='))).toBe(true);
+    } finally { await api.close(); }
+  });
+
+  test('GitLab rejects competing prefixes and manual issue transfers persist', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const ids = await page.locator('.project-group').evaluateAll(groups => groups.map(g => Number(g.dataset.projectId)));
+      api.issues = [api.issue(1, 'Portal: Transfer')];
+      await connectGitLab(page, api); await bindGitLab(page, ids[0], 'Portal'); await syncGitLab();
+      await page.goto(`/projects/${ids[1]}/`);
+      await page.getByText('GitLab project settings', { exact: true }).click();
+      await page.getByLabel('GitLab title prefix').fill('PORTAL');
+      await page.getByRole('button', { name: 'Save GitLab project settings', exact: true }).click();
+      await expect(page.getByRole('alert')).toContainText('Another active project');
+      await page.goto(`/projects/${ids[0]}/`);
+      await page.getByLabel('Move GitLab issue to project').selectOption(String(ids[1]));
+      await page.getByRole('button', { name: 'Move issue', exact: true }).click();
+      await expect(page).toHaveURL(`/projects/${ids[1]}/`);
+      await syncGitLab(); await page.reload(); await expect(gitlabRows(page)).toHaveCount(1);
+      await page.goto(`/projects/${ids[0]}/`); await expect(gitlabRows(page)).toHaveCount(0);
+    } finally { await api.close(); }
+  });
+
+  test('GitLab collection respects the current source scope even for cached unassigned issues', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const id = await page.locator('.project-group').first().getAttribute('data-project-id');
+      api.issues = [api.issue(1, 'Portal: Removed source'), api.issue(1, 'Portal: Selected source', { project_id: 102 })];
+      await connectGitLab(page, api); await syncGitLab();
+      await page.getByLabel('GitLab project IDs').fill('102');
+      await page.getByRole('button', { name: 'Save GitLab connection', exact: true }).click();
+      await bindGitLab(page, id, 'Portal'); await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveCount(1);
+      await expect(gitlabRows(page)).toContainText('Selected source');
+    } finally { await api.close(); }
+  });
+
+  test('GitLab transient failures back off durably and never follow credential-bearing redirects', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    const other = await fakeGitLab();
+    try {
+      await connectGitLab(page, api);
+      api.status = 503;
+      const delay = () => gitlabDB(`
+from django.utils import timezone
+connection = GitLabConnection.objects.get()
+print(json.dumps((connection.next_run - timezone.now()).total_seconds()))
+`);
+      await syncGitLab(); const first = await delay();
+      await syncGitLab(); const second = await delay();
+      expect(second).toBeGreaterThan(first * 1.8);
+      api.status = 429; api.retryAfter = '600';
+      await syncGitLab(); expect(await delay()).toBeGreaterThan(590);
+      api.status = 302; api.redirectTo = other.url; api.retryAfter = '';
+      await syncGitLab();
+      expect(other.requests).toHaveLength(0);
+      await page.reload();
+      await expect(page.locator('#gitlab-sync-status')).toContainText('request-failed');
+    } finally { await api.close(); await other.close(); }
+  });
+
+  test('GitLab groups discover projects and source unavailability does not erase assignments', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const projectId = await page.locator('.project-group').first().getAttribute('data-project-id');
+      api.groups[9] = [101, 103];
+      api.issues = [api.issue(1, 'Portal: Group issue', { project_id: 103 })];
+      await connectGitLab(page, api);
+      await page.getByLabel('GitLab project IDs').fill('');
+      await page.getByLabel('GitLab group IDs').fill('9');
+      await page.getByRole('button', { name: 'Save GitLab connection', exact: true }).click();
+      await bindGitLab(page, projectId, 'Portal'); await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveCount(1);
+      api.omitFromList = true;
+      api.failures['/api/v4/projects/103/issues/1'] = 404;
+      await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveCount(1);
+      await expect(gitlabRows(page)).toContainText('Source unavailable');
+      delete api.failures['/api/v4/projects/103/issues/1'];
+      api.issues[0].state = 'closed';
+      await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveAttribute('data-state', 'done');
+      await expect(gitlabRows(page)).not.toContainText('Source unavailable');
+    } finally { await api.close(); }
+  });
+
+  test('GitLab stale sync cannot claim issues after the collector changes and leases prevent duplicate polling', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    let release;
+    let firstSync;
+    try {
+      const ids = await page.locator('.project-group').evaluateAll(groups => groups.map(g => Number(g.dataset.projectId)));
+      api.issues = [api.issue(1, 'Portal: Race')];
+      await connectGitLab(page, api); await bindGitLab(page, ids[0], 'Portal');
+      let reached;
+      const started = new Promise(resolve => { reached = resolve; });
+      const wait = new Promise(resolve => { release = resolve; });
+      api.beforeRequest = async url => {
+        if (url.pathname.endsWith('/resource_state_events')) { reached(); await wait; }
+      };
+      firstSync = syncGitLab();
+      await started;
+      const count = api.requests.length;
+      await syncGitLab();
+      expect(api.requests.length).toBe(count);
+      expect(await postForm(page, `/projects/${ids[0]}/set-completed/`, {})).toBe(200);
+      await bindGitLab(page, ids[1], 'Portal');
+      release(); await firstSync;
+      await page.goto(`/projects/${ids[0]}/`); await expect(gitlabRows(page)).toHaveCount(0);
+      await syncGitLab(); await page.goto(`/projects/${ids[1]}/`); await expect(gitlabRows(page)).toHaveCount(1);
+    } finally { if (release) release(); if (firstSync) await firstSync; await api.close(); }
+  });
+
+  test('GitLab sync retries SQLite result writes without repeating API requests', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    let release;
+    let syncing;
+    try {
+      const id = await page.locator('.project-group').first().getAttribute('data-project-id');
+      api.issues = [api.issue(1, 'Portal: Locked write')];
+      await connectGitLab(page, api); await bindGitLab(page, id, 'Portal');
+      let reached;
+      const started = new Promise(resolve => { reached = resolve; });
+      const wait = new Promise(resolve => { release = resolve; });
+      api.beforeRequest = async url => {
+        if (url.pathname.endsWith('/resource_state_events')) { reached(); await wait; }
+      };
+      syncing = syncGitLab(); await started;
+      const count = api.requests.length;
+      const lock = await holdSQLiteWriteLock();
+      release(); await lock.done; await syncing;
+      expect(api.requests.length).toBe(count);
+      await page.reload(); await expect(gitlabRows(page)).toHaveCount(1);
+    } finally { if (release) release(); if (syncing) await syncing; await api.close(); }
+  });
+
+  test('GitLab project workspace moves retire private source associations', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const ids = await page.locator('.project-group').evaluateAll(groups => groups.map(g => Number(g.dataset.projectId)));
+      api.issues = [api.issue(1, 'Portal: Original workspace only')];
+      await connectGitLab(page, api); await bindGitLab(page, ids[0], 'Portal'); await syncGitLab();
+      const target = await gitlabDB(`
+from django.contrib.auth.models import User
+target = Membership.objects.get(user__username='pm2').workspace
+Membership.objects.get_or_create(workspace=target, user=User.objects.get(username='demo'), defaults={'role': 'pm'})
+print(json.dumps(target.pk))
+`);
+      await page.goto('/'); await page.locator(`#proj-${ids[0]}`).click();
+      await expect(page.locator('#project-popover')).toContainText('Private issue data will not move');
+      expect(await postForm(page, `/projects/${ids[0]}/move-workspace/`, { workspace_id: String(target) })).toBe(200);
+      await bindGitLab(page, ids[1], 'Portal'); await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveCount(0);
+      expect(await postForm(page, `/workspaces/${target}/switch/`, {})).toBe(200);
+      await page.goto(`/projects/${ids[0]}/`);
+      await expect(page.locator('#gitlab-project')).toHaveCount(0);
+      expect(await page.content()).not.toContain('Original workspace only');
+    } finally { await api.close(); }
+  });
+
+  test('GitLab input validation rejects unsafe origins without reflecting tokens', async ({ appPage: page }) => {
+    await page.goto('/workspaces/gitlab/');
+    for (const url of ['http://example.com', 'https://user:password@example.com', 'https://example.com/path', 'https://[invalid']) {
+      const status = await postForm(page, '/workspaces/gitlab/', { action: 'connect', instance_url: url, token: 'never-reflect-this', project_ids: '101' });
+      expect(status).toBe(200);
+      await expect(page.locator('#gitlab-connection-status')).toContainText('Disconnected');
+    }
+    const response = await page.request.post('/workspaces/gitlab/', { form: { action: 'connect', instance_url: 'http://example.com', token: 'never-reflect-this', project_ids: '101', csrfmiddlewaretoken: await page.locator('[name=csrfmiddlewaretoken]').first().inputValue() }, headers: { Referer: page.url() } });
+    expect(await response.text()).not.toContain('never-reflect-this');
+  });
+
+  test('GitLab deletion retires ownership and private metadata stays workspace scoped', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const ids = await page.locator('.project-group').evaluateAll(groups => groups.map(g => Number(g.dataset.projectId)));
+      api.issues = [api.issue(1, 'Portal: Private issue')];
+      await connectGitLab(page, api); await bindGitLab(page, ids[0], 'Portal'); await syncGitLab();
+      await page.reload();
+      const roadmap = await enableRoadmap(page);
+      const publicResponse = await page.request.get(roadmap);
+      expect(publicResponse.status()).toBe(200);
+      expect(await publicResponse.text()).not.toContain('Private issue');
+      expect(await publicResponse.text()).not.toContain(api.url);
+      await postForm(page, `/projects/${ids[0]}/delete/`, {});
+      await bindGitLab(page, ids[1], 'Portal'); await syncGitLab(); await page.reload();
+      await expect(gitlabRows(page)).toHaveCount(0);
+      expect(await gitlabDB(`
+retired = GitLabIssue.objects.get(retired=True)
+print(json.dumps(not retired.title and not retired.intervals and not retired.events.exists()))
+`)).toBe(true);
+      await signInAs(page, 'member1');
+      expect((await page.request.get('/workspaces/gitlab/')).status()).toBe(403);
+      expect(await postForm(page, `/projects/${ids[1]}/gitlab/`, { prefix: 'Other', collect: 'on', fallback: 'unclassified' })).toBe(403);
+      await signInAs(page, 'pm2');
+      expect((await page.request.get(`/projects/${ids[1]}/`)).status()).toBe(404);
+      await page.goto('/workspaces/gitlab/');
+      expect(await page.content()).not.toContain('Private issue');
+      await expect(page.locator('#gitlab-connection-status')).toContainText('Disconnected');
+    } finally { await api.close(); }
+  });
+});
+
 test.describe('e2e setup', () => {
   test('worker databases and subprocesses are isolated from other Django servers', async ({ appPage: page, browser }) => {
     const { stdout } = await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `

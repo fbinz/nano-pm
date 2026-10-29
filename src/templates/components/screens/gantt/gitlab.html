@@ -1,0 +1,30 @@
+{% load i18n l10n %}
+<c-vars rg vm />
+{% if rg.gitlab_issues %}
+  <div class="left-cell gitlab-summary" {% if rg.collapsed %}style="display:none"{% endif %} data-show="!$_collapsed.{{ rg.id }}">
+    <button type="button" class="gitlab-toggle" data-gitlab-toggle="{{ rg.id }}" aria-expanded="{{ rg.gitlab_expanded|yesno:'true,false' }}"
+            data-on:click="@post('{% url 'gitlab_toggle_overlay' rg.id %}', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
+      {% if rg.gitlab_expanded %}▾{% else %}▸{% endif %} {% trans "GitLab execution" %} ({{ rg.gitlab_issues|length }})
+    </button>
+  </div>
+  <div class="chart-row gitlab-summary" style="width:{{ vm.chart_width|unlocalize }}px;{% if rg.collapsed %}display:none;{% endif %}" data-show="!$_collapsed.{{ rg.id }}"></div>
+  {% if rg.gitlab_expanded %}
+    {% for issue in rg.gitlab_issues %}
+      <div class="left-cell gitlab-issue" {% if rg.collapsed %}style="display:none"{% endif %} data-show="!$_collapsed.{{ rg.id }}">
+        <a href="{{ issue.url }}" target="_blank" rel="noopener noreferrer" title="{{ issue.title }}">{{ issue.reference }} {{ issue.title }}</a>
+      </div>
+      <div class="chart-row gitlab-issue" data-gitlab-issue-id="{{ issue.id }}" data-state="{{ issue.state }}"
+           style="width:{{ vm.chart_width|unlocalize }}px;{% if rg.collapsed %}display:none;{% endif %}" data-show="!$_collapsed.{{ rg.id }}">
+        {% for segment in issue.segments %}
+          <span class="gitlab-interval{% if segment.point %} gitlab-point{% endif %} {{ issue.state }}"
+                data-start="{{ segment.start }}" data-end="{{ segment.end }}"
+                style="left:{{ segment.x|unlocalize }}px;width:{{ segment.w|unlocalize }}px"
+                title="{{ issue.title }} · {{ issue.state_label }} · {{ segment.start|default:'?' }} → {{ segment.end|default:'…' }}"></span>
+        {% empty %}
+          <span class="gitlab-timing">{% if issue.has_timing %}{% trans "Outside chart range" %}{% else %}{% trans "Timing unknown" %}{% endif %}</span>
+        {% endfor %}
+        {% if issue.unavailable %}<span class="gitlab-timing">{% trans "Source unavailable" %}</span>{% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endif %}

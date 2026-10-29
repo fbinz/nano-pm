@@ -18,6 +18,10 @@ run port="8000":
 teams-worker:
     uv run python src/manage.py deliver_teams_notifications
 
+# Poll GitLab in a separate process alongside `just run`.
+gitlab-worker:
+    uv run python src/manage.py sync_gitlab
+
 # Run migrations
 migrate:
     cd src && uv run python manage.py migrate

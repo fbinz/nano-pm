@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from django.db.models import Prefetch
 from django.utils import timezone
 
-from data.models import Project, Person, Task, Milestone, Dependency
+from data.models import Project, Person, Task, Milestone, Dependency, GitLabIssue
 
 
 @dataclass
@@ -55,6 +55,7 @@ def get_chart_state(workspace) -> ChartState:
         .order_by("order", "id")
         .prefetch_related(
             "responsible_people__teams",
+            Prefetch("gitlab_issues", queryset=GitLabIssue.objects.filter(connection__workspace=workspace)),
             Prefetch(
                 "tasks",
                 queryset=Task.objects.order_by("start", "id").prefetch_related("assignees__teams"),

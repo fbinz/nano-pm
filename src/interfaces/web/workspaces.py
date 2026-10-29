@@ -14,6 +14,7 @@ from .public_subscriptions import render_public_roadmap
 
 from .helpers import is_pm, pm_required, workspace_context
 from .workload import settings_context
+from .gitlab import settings_context as gitlab_settings_context
 
 
 @login_required
@@ -43,6 +44,7 @@ def workspace_settings(request: HttpRequest):
             "is_pm": True,
             **workspace_context(request),
             **settings_context(request.workspace),
+            **gitlab_settings_context(request.workspace),
         },
     )
 

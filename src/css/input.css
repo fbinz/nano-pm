@@ -449,6 +449,18 @@ html, body { height: 100%; }
     cursor: grab;
     @apply relative bg-base-100 border-b border-base-200;
   }
+  .left-cell.gitlab-summary, .left-cell.gitlab-issue { height: var(--row-h); @apply text-xs; }
+  .left-cell.gitlab-issue a { @apply truncate text-base-content/70 hover:underline; }
+  .gitlab-toggle { @apply cursor-pointer text-base-content/70 hover:text-base-content; }
+  .chart-row.gitlab-summary, .chart-row.gitlab-issue { cursor: default; @apply bg-base-200/30; }
+  .gitlab-interval {
+    position: absolute; top: 10px; height: 12px; border-radius: 3px;
+    @apply bg-info/60 border border-info;
+  }
+  .gitlab-interval.done { @apply bg-success/50 border-success; }
+  .gitlab-point { border-radius: 0; transform: rotate(45deg); height: 6px; top: 13px; }
+  .gitlab-timing { position: sticky; left: calc(var(--left-w) + 8px); @apply text-xs text-base-content/50 leading-8; }
+
   .chart-row.proj {
     height: var(--proj-row-h);
     position: sticky;

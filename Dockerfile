@@ -21,6 +21,10 @@
 #   DJANGO_HSTS_SECONDS      — start small (e.g. 3600); ramp up only when
 #                              you're confident the cert won't lapse.
 #
+# Optional GitLab integration env:
+#   DJANGO_GITLAB_ENCRYPTION_KEY — Fernet key, required when GitLab is configured.
+#   DJANGO_GITLAB_PRIVATE_HOSTS  — explicitly authorized private GitLab hostnames.
+#
 # Optional logging env:
 #   DJANGO_LOG_LEVEL         — Django logger level; set DEBUG temporarily when
 #                              diagnosing prod issues. Defaults to INFO.
@@ -85,7 +89,7 @@ VOLUME /data
 
 EXPOSE 80
 
-# Migrate, then supervise Gunicorn (2 workers × 4 threads) and the Teams outbox
-# worker. Both use the same persistent SQLite volume. A failed service causes
+# Migrate, then supervise Gunicorn (2 workers × 4 threads), the Teams outbox,
+# and GitLab polling. All use the same persistent SQLite volume. A failed service causes
 # the container to exit, allowing the platform's restart policy to recover it.
 CMD ["sh", "-c", "python src/manage.py migrate --noinput && exec python src/run_services.py"]

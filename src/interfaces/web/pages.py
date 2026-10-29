@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from datastar_py.django import datastar_response
 
 from readers import get_chart_state
+from readers.gitlab import expanded_projects
 from readers.chart_view import (
     build_chart_vm,
     ZOOM_PPD_RANGE,
@@ -33,6 +34,7 @@ def index(request: HttpRequest) -> HttpResponse:
         state, active_zoom,
         px_per_day=px_per_day,
         collapsed_project_ids=collapsed_projects(request),
+        gitlab_expanded_ids=expanded_projects(request),
         show_completed=show_completed(request),
         is_pm=is_pm(request),
         team_filter=team_filter(request),

@@ -1,0 +1,13 @@
+{% load i18n %}
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" :can_view_ideas="can_view_ideas" active_nav="projects">
+  <main class="p-6 max-w-3xl space-y-4">
+    <h1 class="text-xl font-semibold">{% trans "GitLab project settings" %}</h1>
+    <form method="post" action="{% url 'gitlab_project_settings' project.id %}" class="space-y-3">
+      {% csrf_token %}
+      <div role="alert">{{ form.errors }}</div>
+      {{ form.as_p }}
+      <button class="btn btn-neutral" type="submit">{% trans "Save GitLab project settings" %}</button>
+    </form>
+    <a class="btn btn-ghost" href="{% url 'project_detail' project.id %}">{% trans "Back to project" %}</a>
+  </main>
+</c-layouts.app-shell>

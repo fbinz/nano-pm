@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 09:15+0100\n"
+"POT-Creation-Date: 2026-10-29 18:40+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -14,6 +14,15 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: actions/gitlab_matching.py:33 actions/gitlab_matching.py:57
+msgid "Another active project already collects this GitLab prefix."
+msgstr ""
+"Ein anderes aktives Projekt sammelt bereits Issues mit diesem GitLab-Präfix."
+
+#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:90
+msgid "Enter a project prefix without a colon."
+msgstr "Gib ein Projektpräfix ohne Doppelpunkt ein."
 
 #: actions/manage_dependencies.py:52
 msgid "A task cannot depend on itself."
@@ -147,158 +156,158 @@ msgstr "Benutzername und Passwort sind erforderlich."
 msgid "That username is already taken."
 msgstr "Dieser Benutzername ist bereits vergeben."
 
-#: data/models/activity.py:44
+#: data/models/activity.py:47
 msgid "Someone"
 msgstr "Jemand"
 
-#: data/models/activity.py:53
+#: data/models/activity.py:56
 msgid "created"
 msgstr "erstellt"
 
-#: data/models/activity.py:54
+#: data/models/activity.py:57
 msgid "updated"
 msgstr "aktualisiert"
 
-#: data/models/activity.py:55
+#: data/models/activity.py:58
 msgid "deleted"
 msgstr "gelöscht"
 
-#: data/models/activity.py:56 data/models/activity.py:58
+#: data/models/activity.py:59 data/models/activity.py:61
 msgid "moved"
 msgstr "verschoben"
 
-#: data/models/activity.py:57
+#: data/models/activity.py:60
 msgid "resized"
 msgstr "angepasst"
 
-#: data/models/activity.py:59
+#: data/models/activity.py:62
 msgid "completed"
 msgstr "abgeschlossen"
 
-#: data/models/activity.py:60
+#: data/models/activity.py:63
 msgid "reopened"
 msgstr "wieder geöffnet"
 
-#: data/models/activity.py:61
+#: data/models/activity.py:64
 msgid "converted"
 msgstr "umgewandelt"
 
-#: data/models/activity.py:62
+#: data/models/activity.py:65
 msgid "enabled"
 msgstr "aktiviert"
 
-#: data/models/activity.py:63
+#: data/models/activity.py:66
 msgid "disabled"
 msgstr "deaktiviert"
 
-#: data/models/activity.py:64
+#: data/models/activity.py:67
 msgid "regenerated"
 msgstr "neu generiert"
 
-#: data/models/activity.py:65
+#: data/models/activity.py:68
 msgid "created an invite for"
 msgstr "eingeladen"
 
-#: data/models/activity.py:73
+#: data/models/activity.py:76
 msgid "dependency"
 msgstr "Abhängigkeit"
 
-#: data/models/activity.py:74
+#: data/models/activity.py:77
 msgid "idea"
 msgstr "Idee"
 
-#: data/models/activity.py:75
+#: data/models/activity.py:78
 msgid "milestone"
 msgstr "Meilenstein"
 
-#: data/models/activity.py:76
+#: data/models/activity.py:79
 msgid "person"
 msgstr "Person"
 
-#: data/models/activity.py:77
+#: data/models/activity.py:80
 msgid "project"
 msgstr "Projekt"
 
-#: data/models/activity.py:78
+#: data/models/activity.py:81
 msgid "task"
 msgstr "Aufgabe"
 
-#: data/models/activity.py:79
+#: data/models/activity.py:82
 msgid "team"
 msgstr "Team"
 
-#: data/models/activity.py:80
+#: data/models/activity.py:83
 msgid "workspace"
 msgstr "Arbeitsbereich"
 
-#: data/models/activity.py:81
+#: data/models/activity.py:84
 msgid "tasks"
 msgstr "Aufgaben"
 
-#: data/models/activity.py:89
+#: data/models/activity.py:92
 #, python-format
 msgid "moved %(count)s tasks"
 msgstr "%(count)s Aufgaben verschoben"
 
-#: data/models/activity.py:91
+#: data/models/activity.py:94
 #, python-format
 msgid "changed duration of task %(label)s"
 msgstr "Dauer der Aufgabe %(label)s geändert"
 
-#: data/models/activity.py:94
+#: data/models/activity.py:97
 #, python-format
 msgid "%(verb)s %(entity)s %(label)s"
 msgstr "%(entity)s %(label)s %(verb)s"
 
-#: data/models/activity.py:104
+#: data/models/activity.py:107
 #, python-format
 msgid "%(actor)s moved %(count)s tasks"
 msgstr "%(actor)s hat %(count)s Aufgaben verschoben"
 
-#: data/models/activity.py:109
+#: data/models/activity.py:112
 #, python-format
 msgid "%(actor)s changed duration of task %(label)s"
 msgstr "%(actor)s hat die Dauer der Aufgabe %(label)s geändert"
 
-#: data/models/activity.py:113
+#: data/models/activity.py:116
 #, python-format
 msgid "%(actor)s %(verb)s %(entity)s %(label)s"
 msgstr "%(actor)s hat %(entity)s %(label)s %(verb)s"
 
-#: data/models/activity.py:129 interfaces/web/detail_forms.py:37
+#: data/models/activity.py:143 interfaces/web/detail_forms.py:37
 #: templates/components/screens/gantt/task-popover.html:60
-#: templates/components/screens/projects/detail.html:63
+#: templates/components/screens/projects/detail.html:65
 #: templates/components/screens/tasks/detail.html:57
 msgid "Assignees"
 msgstr "Zuständige"
 
-#: data/models/activity.py:130
+#: data/models/activity.py:144
 msgid "Body"
 msgstr "Text"
 
-#: data/models/activity.py:131 interfaces/web/detail_forms.py:78
+#: data/models/activity.py:145 interfaces/web/detail_forms.py:78
 #: templates/components/screens/gantt/project-popover.html:61
 msgid "Color"
 msgstr "Farbe"
 
-#: data/models/activity.py:132
+#: data/models/activity.py:146
 msgid "Completed at"
 msgstr "Abgeschlossen am"
 
-#: data/models/activity.py:133
+#: data/models/activity.py:147
 msgid "Converted project"
 msgstr "Umgewandeltes Projekt"
 
-#: data/models/activity.py:134
+#: data/models/activity.py:148
 msgid "Converted task"
 msgstr "Umgewandelte Aufgabe"
 
-#: data/models/activity.py:135
+#: data/models/activity.py:149
 #: templates/components/screens/gantt/milestone-popover.html:52
 msgid "Date"
 msgstr "Datum"
 
-#: data/models/activity.py:136 interfaces/web/detail_forms.py:32
+#: data/models/activity.py:150 interfaces/web/detail_forms.py:32
 #: interfaces/web/detail_forms.py:77
 #: templates/components/screens/gantt/milestone-popover.html:21
 #: templates/components/screens/gantt/project-popover.html:23
@@ -308,128 +317,161 @@ msgstr "Datum"
 msgid "Description"
 msgstr "Beschreibung"
 
-#: data/models/activity.py:137
+#: data/models/activity.py:151
 #: templates/components/screens/gantt/task-popover.html:34
 msgid "End"
 msgstr "Ende"
 
-#: data/models/activity.py:138 interfaces/web/detail_forms.py:76
+#: data/models/activity.py:152 interfaces/web/detail_forms.py:76
 #: templates/components/screens/gantt/project-popover.html:19
 msgid "Name"
 msgstr "Name"
 
-#: data/models/activity.py:139
+#: data/models/activity.py:153
 msgid "Order"
 msgstr "Reihenfolge"
 
-#: data/models/activity.py:140
+#: data/models/activity.py:154
 msgid "Predecessor"
 msgstr "Vorgänger"
 
-#: data/models/activity.py:141 interfaces/web/detail_forms.py:35
+#: data/models/activity.py:155 interfaces/web/detail_forms.py:35
 #: templates/components/screens/gantt/milestone-popover.html:56
 #: templates/components/screens/gantt/task-popover.html:39
 #: templates/components/screens/ideas/detail.html:87
 msgid "Project"
 msgstr "Projekt"
 
-#: data/models/activity.py:142 interfaces/web/detail_forms.py:80
+#: data/models/activity.py:156 interfaces/web/detail_forms.py:80
 #: templates/components/screens/gantt/project-popover.html:27
 #: templates/components/screens/projects/detail.html:41
-#: templates/public/roadmap.html:56
+#: templates/public/roadmap.html:62
 msgid "Responsible people"
 msgstr "Verantwortliche"
 
-#: data/models/activity.py:143
-#: templates/components/screens/workspaces/settings.html:42
+#: data/models/activity.py:157
+#: templates/components/screens/workspaces/settings.html:43
 msgid "Public roadmap description"
 msgstr "Beschreibung der öffentlichen Roadmap"
 
-#: data/models/activity.py:144
+#: data/models/activity.py:158
 msgid "Public roadmap enabled"
 msgstr "Öffentliche Roadmap aktiviert"
 
-#: data/models/activity.py:145
-#: templates/components/screens/workspaces/settings.html:38
+#: data/models/activity.py:159
+#: templates/components/screens/workspaces/settings.html:39
 msgid "Public roadmap title"
 msgstr "Titel der öffentlichen Roadmap"
 
-#: data/models/activity.py:146
+#: data/models/activity.py:160
 msgid "Public roadmap token"
 msgstr "Token der öffentlichen Roadmap"
 
-#: data/models/activity.py:147
+#: data/models/activity.py:161
 msgid "Require move reason"
 msgstr "Begründung beim Verschieben erforderlich"
 
-#: data/models/activity.py:148 interfaces/web/detail_forms.py:33
+#: data/models/activity.py:162 interfaces/web/detail_forms.py:33
 #: templates/components/screens/gantt/task-popover.html:30
-#: templates/components/screens/projects/detail.html:61
+#: templates/components/screens/projects/detail.html:63
 #: templates/components/screens/tasks/detail.html:36
 msgid "Start"
 msgstr "Start"
 
-#: data/models/activity.py:149
-#: templates/components/screens/projects/detail.html:60
+#: data/models/activity.py:163
+#: templates/components/screens/projects/detail.html:62
 msgid "Status"
 msgstr "Status"
 
-#: data/models/activity.py:150
+#: data/models/activity.py:164
 msgid "Successor"
 msgstr "Nachfolger"
 
-#: data/models/activity.py:151
+#: data/models/activity.py:165
 #: templates/components/screens/ideas/detail.html:53
 msgid "Tags"
 msgstr "Tags"
 
-#: data/models/activity.py:152
+#: data/models/activity.py:166
 #: templates/components/screens/gantt/team-filter.html:6
 #: templates/components/screens/people/people-content.html:5
 #: templates/components/screens/people/people-list.html:18
 msgid "Teams"
 msgstr "Teams"
 
-#: data/models/activity.py:153 interfaces/web/teams_notifications.py:30
+#: data/models/activity.py:167 interfaces/web/teams_notifications.py:30
 msgid "Microsoft Teams webhook URL"
 msgstr "Microsoft-Teams-Webhook-URL"
 
-#: data/models/activity.py:154 interfaces/web/teams_notifications.py:23
+#: data/models/activity.py:168 interfaces/web/teams_notifications.py:23
 msgid "Notify for"
 msgstr "Benachrichtigen bei"
 
-#: data/models/activity.py:155
+#: data/models/activity.py:169
 #: templates/components/screens/workspaces/settings.html:24
 msgid "Offer a reason when moving milestones"
 msgstr "Beim Verschieben von Meilensteinen eine Begründung anbieten"
 
-#: data/models/activity.py:156 interfaces/web/public_subscriptions.py:23
+#: data/models/activity.py:170 interfaces/web/public_subscriptions.py:23
 msgid "Allowed domains for public followers"
 msgstr "Erlaubte Domains für öffentliche Abonnements"
 
-#: data/models/activity.py:157 interfaces/web/detail_forms.py:31
+#: data/models/activity.py:171 interfaces/web/detail_forms.py:31
 #: templates/components/screens/gantt/milestone-popover.html:17
 #: templates/components/screens/gantt/task-popover.html:21
 msgid "Title"
 msgstr "Titel"
 
-#: data/models/activity.py:158
+#: data/models/activity.py:172
 msgid "Workspace"
 msgstr "Arbeitsbereich"
 
-#: data/models/activity.py:180
+#: data/models/activity.py:194
 msgid "changed"
 msgstr "geändert"
 
-#: data/models/activity.py:184
+#: data/models/activity.py:198
 #, python-format
 msgid "%(before)s → %(after)s"
 msgstr "%(before)s → %(after)s"
 
-#: data/models/activity.py:200
+#: data/models/activity.py:214
 #, python-format
 msgid "%(label)s: %(value)s"
 msgstr "%(label)s: %(value)s"
+
+#: data/models/gitlab.py:42 templates/components/screens/gitlab/settings.html:6
+msgid "Disconnected"
+msgstr "Getrennt"
+
+#: data/models/gitlab.py:44
+msgid "Running"
+msgstr "Synchronisierung läuft"
+
+#: data/models/gitlab.py:48
+msgid "Queued"
+msgstr "Vorgemerkt"
+
+#: data/models/gitlab.py:49
+msgid "Up to date"
+msgstr "Aktuell"
+
+#: data/models/gitlab.py:70
+msgid "Unclassified"
+msgstr "Nicht eingeordnet"
+
+#: data/models/gitlab.py:71
+msgid "Not started"
+msgstr "Noch nicht begonnen"
+
+#: data/models/gitlab.py:72 data/models/task.py:9
+msgid "In progress"
+msgstr "In Bearbeitung"
+
+#: data/models/gitlab.py:73 data/models/task.py:10
+#: templates/components/screens/gantt/chart.html:72
+msgid "Done"
+msgstr "Erledigt"
 
 #: data/models/idea.py:7
 msgid "Inbox"
@@ -510,14 +552,6 @@ msgstr "Meilenstein gelöscht"
 msgid "Planned"
 msgstr "Geplant"
 
-#: data/models/task.py:9
-msgid "In progress"
-msgstr "In Bearbeitung"
-
-#: data/models/task.py:10 templates/components/screens/gantt/chart.html:72
-msgid "Done"
-msgstr "Erledigt"
-
 #: data/models/teams.py:35
 msgid "Pending"
 msgstr "Ausstehend"
@@ -538,8 +572,25 @@ msgstr "Fehlgeschlagen"
 msgid "Cancelled"
 msgstr "Abgebrochen"
 
+#: interfaces/gitlab/client.py:30
+msgid "Configure DJANGO_GITLAB_ENCRYPTION_KEY before connecting GitLab."
+msgstr "Konfiguriere DJANGO_GITLAB_ENCRYPTION_KEY, bevor du GitLab verbindest."
+
+#: interfaces/gitlab/client.py:50
+msgid "Enter a valid GitLab origin."
+msgstr "Gib eine gültige GitLab-Basisadresse ein."
+
+#: interfaces/gitlab/client.py:57
+msgid "Enter an HTTPS GitLab origin without a path or credentials."
+msgstr ""
+"Gib eine HTTPS-Basisadresse von GitLab ohne Pfad oder Zugangsdaten ein."
+
+#: interfaces/gitlab/client.py:61 interfaces/gitlab/client.py:63
+msgid "Enter a valid GitLab port."
+msgstr "Gib einen gültigen GitLab-Port ein."
+
 #: interfaces/web/detail_forms.py:34
-#: templates/components/screens/projects/detail.html:62
+#: templates/components/screens/projects/detail.html:64
 #: templates/components/screens/tasks/detail.html:40
 msgid "End (exclusive)"
 msgstr "Ende (exklusiv)"
@@ -563,6 +614,71 @@ msgstr "Das Ende muss nach dem Start liegen."
 #: interfaces/web/detail_forms.py:71
 msgid "Choose a milestone from the selected project."
 msgstr "Wähle einen Meilenstein aus dem ausgewählten Projekt."
+
+#: interfaces/web/gitlab.py:24
+msgid "GitLab instance URL"
+msgstr "URL der GitLab-Instanz"
+
+#: interfaces/web/gitlab.py:25
+msgid "GitLab API token"
+msgstr "GitLab-API-Token"
+
+#: interfaces/web/gitlab.py:27
+msgid "GitLab project IDs"
+msgstr "GitLab-Projekt-IDs"
+
+#: interfaces/web/gitlab.py:28
+msgid "GitLab group IDs"
+msgstr "GitLab-Gruppen-IDs"
+
+#: interfaces/web/gitlab.py:36
+msgid "Enter numeric GitLab IDs separated by commas."
+msgstr "Gib numerische GitLab-IDs durch Kommas getrennt ein."
+
+#: interfaces/web/gitlab.py:48
+msgid "Choose at least one GitLab project or group to search."
+msgstr ""
+"Wähle mindestens ein GitLab-Projekt oder eine Gruppe für die Suche aus."
+
+#: interfaces/web/gitlab.py:53
+msgid "In-progress labels"
+msgstr "Labels für „In Bearbeitung“"
+
+#: interfaces/web/gitlab.py:54
+msgid "Done labels"
+msgstr "Labels für „Erledigt“"
+
+#: interfaces/web/gitlab.py:55
+msgid "Not-started labels"
+msgstr "Labels für „Noch nicht begonnen“"
+
+#: interfaces/web/gitlab.py:56
+msgid "Unmatched issue state"
+msgstr "Status ohne passendes Label"
+
+#: interfaces/web/gitlab.py:83
+msgid "GitLab title prefix"
+msgstr "GitLab-Titelpräfix"
+
+#: interfaces/web/gitlab.py:84
+msgid "Collect matching GitLab issues"
+msgstr "Passende GitLab-Issues sammeln"
+
+#: interfaces/web/gitlab.py:85
+msgid "Override workspace workflow"
+msgstr "Workflow des Arbeitsbereichs überschreiben"
+
+#: interfaces/web/gitlab.py:135
+msgid ""
+"Disconnecting does not reset ownership. Use a new workspace for a different "
+"GitLab instance."
+msgstr ""
+"Das Trennen setzt die Zuordnungen nicht zurück. Verwende für eine andere "
+"GitLab-Instanz einen neuen Arbeitsbereich."
+
+#: interfaces/web/gitlab.py:137
+msgid "Enter a GitLab API token."
+msgstr "Gib ein GitLab-API-Token ein."
 
 #: interfaces/web/ideas.py:122
 msgid "Idea saved."
@@ -627,17 +743,26 @@ msgstr "Profil gespeichert."
 msgid "Password changed."
 msgstr "Passwort geändert."
 
-#: interfaces/web/projects.py:56
+#: interfaces/web/projects.py:61
 msgid "Project saved."
 msgstr "Projekt gespeichert."
 
-#: interfaces/web/projects.py:65
+#: interfaces/web/projects.py:71
 msgid "Edit project"
 msgstr "Projekt bearbeiten"
 
-#: interfaces/web/projects.py:65
+#: interfaces/web/projects.py:71
 msgid "Save project"
 msgstr "Projekt speichern"
+
+#: interfaces/web/projects.py:229
+msgid ""
+"Another active project already collects this GitLab prefix. Disable "
+"collection or change its prefix before reopening."
+msgstr ""
+"Ein anderes aktives Projekt sammelt bereits Issues mit diesem GitLab-Präfix. "
+"Deaktiviere das Sammeln oder ändere das Präfix, bevor du das Projekt wieder "
+"öffnest."
 
 #: interfaces/web/public_subscriptions.py:25
 msgid ""
@@ -710,23 +835,23 @@ msgstr "Automatisch zur Aktualisierung der Arbeitsverteilung auffordern"
 msgid "Unknown setting."
 msgstr "Unbekannte Einstellung."
 
-#: interfaces/web/workload.py:136
+#: interfaces/web/workload.py:139
 msgid "Workload check-in interval"
 msgstr "Abfrageintervall der Arbeitsverteilung"
 
-#: interfaces/web/workload.py:380
+#: interfaces/web/workload.py:383
 msgid "Unknown action."
 msgstr "Unbekannte Aktion."
 
-#: interfaces/web/workload.py:389
+#: interfaces/web/workload.py:392
 msgid "Review date refreshed."
 msgstr "Überprüfungsdatum aktualisiert."
 
-#: interfaces/web/workload.py:389
+#: interfaces/web/workload.py:392
 msgid "Estimate saved."
 msgstr "Schätzung gespeichert."
 
-#: interfaces/web/workload.py:426
+#: interfaces/web/workload.py:429
 msgid "We’ll remind you next week."
 msgstr "Wir erinnern dich nächste Woche."
 
@@ -825,77 +950,77 @@ msgctxt "Gantt axis day abbreviation"
 msgid "Sun"
 msgstr "So"
 
-#: readers/chart_view.py:229
+#: readers/chart_view.py:235
 msgctxt "Gantt axis ISO week prefix"
 msgid "W"
 msgstr "KW"
 
-#: readers/chart_view.py:621
+#: readers/chart_view.py:637
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
 
-#: readers/public_roadmap.py:61
+#: readers/public_roadmap.py:76
 msgid "today"
 msgstr "heute"
 
-#: readers/public_roadmap.py:63
+#: readers/public_roadmap.py:78
 msgid "tomorrow"
 msgstr "morgen"
 
-#: readers/public_roadmap.py:65
+#: readers/public_roadmap.py:80
 msgid "yesterday"
 msgstr "gestern"
 
-#: readers/public_roadmap.py:70
+#: readers/public_roadmap.py:85
 #, python-format
 msgid "in %(count)d day"
 msgid_plural "in %(count)d days"
 msgstr[0] "in %(count)d Tag"
 msgstr[1] "in %(count)d Tagen"
 
-#: readers/public_roadmap.py:71
+#: readers/public_roadmap.py:86
 #, python-format
 msgid "%(count)d day ago"
 msgid_plural "%(count)d days ago"
 msgstr[0] "vor %(count)d Tag"
 msgstr[1] "vor %(count)d Tagen"
 
-#: readers/public_roadmap.py:74
+#: readers/public_roadmap.py:89
 #, python-format
 msgid "in %(count)d week"
 msgid_plural "in %(count)d weeks"
 msgstr[0] "in %(count)d Woche"
 msgstr[1] "in %(count)d Wochen"
 
-#: readers/public_roadmap.py:75
+#: readers/public_roadmap.py:90
 #, python-format
 msgid "%(count)d week ago"
 msgid_plural "%(count)d weeks ago"
 msgstr[0] "vor %(count)d Woche"
 msgstr[1] "vor %(count)d Wochen"
 
-#: readers/public_roadmap.py:78
+#: readers/public_roadmap.py:93
 #, python-format
 msgid "in %(count)d month"
 msgid_plural "in %(count)d months"
 msgstr[0] "in %(count)d Monat"
 msgstr[1] "in %(count)d Monaten"
 
-#: readers/public_roadmap.py:79
+#: readers/public_roadmap.py:94
 #, python-format
 msgid "%(count)d month ago"
 msgid_plural "%(count)d months ago"
 msgstr[0] "vor %(count)d Monat"
 msgstr[1] "vor %(count)d Monaten"
 
-#: readers/public_roadmap.py:82
+#: readers/public_roadmap.py:97
 #, python-format
 msgid "in %(count)d year"
 msgid_plural "in %(count)d years"
 msgstr[0] "in %(count)d Jahr"
 msgstr[1] "in %(count)d Jahren"
 
-#: readers/public_roadmap.py:83
+#: readers/public_roadmap.py:98
 #, python-format
 msgid "%(count)d year ago"
 msgid_plural "%(count)d years ago"
@@ -957,7 +1082,7 @@ msgstr ""
 #: templates/components/screens/gantt/milestone-popover.html:67
 #: templates/components/screens/gantt/task-popover.html:120
 #: templates/components/screens/teams/settings.html:99
-#: templates/public/roadmap.html:163
+#: templates/public/roadmap.html:170
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -1059,7 +1184,7 @@ msgstr "Abmelden"
 
 #: templates/components/layouts/app-shell.html:123
 #: templates/components/screens/workload/checkin.html:7
-#: templates/public/roadmap.html:174
+#: templates/public/roadmap.html:181
 msgid "Close"
 msgstr "Schließen"
 
@@ -1070,7 +1195,7 @@ msgstr "Warum wird dieser Meilenstein verschoben?"
 #: templates/components/layouts/app-shell.html:152
 #: templates/components/screens/activity/index.html:36
 #: templates/components/screens/activity/index.html:49
-#: templates/components/screens/gantt/milestone-popover.html:87
+#: templates/components/screens/gantt/milestone-history.html:15
 msgid "Reason"
 msgstr "Begründung"
 
@@ -1135,12 +1260,12 @@ msgid "Event"
 msgstr "Ereignis"
 
 #: templates/components/screens/activity/index.html:20
-#: templates/public/roadmap.html:172
+#: templates/public/roadmap.html:179
 msgid "Details"
 msgstr "Details"
 
 #: templates/components/screens/activity/index.html:58
-#: templates/components/screens/gantt/milestone-popover.html:92
+#: templates/components/screens/gantt/milestone-history.html:20
 msgid "No activity yet."
 msgstr "Noch keine Aktivität."
 
@@ -1182,7 +1307,7 @@ msgid "timeline"
 msgstr "Zeitachse"
 
 #: templates/components/screens/gantt/chart.html:40
-#: templates/components/screens/gantt/chart.html:134
+#: templates/components/screens/gantt/chart.html:135
 msgid "Add Project"
 msgstr "Projekt hinzufügen"
 
@@ -1230,17 +1355,35 @@ msgstr ""
 msgid "Open task details"
 msgstr "Aufgabendetails öffnen"
 
-#: templates/components/screens/gantt/chart.html:149
+#: templates/components/screens/gantt/chart.html:150
 msgid "Click to remove this dependency"
 msgstr "Klicken, um diese Abhängigkeit zu entfernen"
 
-#: templates/components/screens/gantt/chart.html:162
+#: templates/components/screens/gantt/chart.html:163
 msgid "No projects yet."
 msgstr "Noch keine Projekte."
 
-#: templates/components/screens/gantt/chart.html:163
+#: templates/components/screens/gantt/chart.html:164
 msgid "+ Create your first project"
 msgstr "+ Erstelle dein erstes Projekt"
+
+#: templates/components/screens/gantt/gitlab.html:7
+msgid "GitLab execution"
+msgstr "GitLab-Umsetzung"
+
+#: templates/components/screens/gantt/gitlab.html:24
+msgid "Outside chart range"
+msgstr "Außerhalb des sichtbaren Zeitraums"
+
+#: templates/components/screens/gantt/gitlab.html:24
+#: templates/components/screens/gitlab/project.html:36
+msgid "Timing unknown"
+msgstr "Zeitpunkte unbekannt"
+
+#: templates/components/screens/gantt/gitlab.html:26
+#: templates/components/screens/gitlab/project.html:33
+msgid "Source unavailable"
+msgstr "Quelle nicht verfügbar"
 
 #: templates/components/screens/gantt/index.html:7
 #: templates/components/screens/gantt/resource_index.html:7
@@ -1269,6 +1412,10 @@ msgstr "Heute"
 msgid "Drag to resize sidebar"
 msgstr "Ziehen, um die Größe der Seitenleiste zu ändern"
 
+#: templates/components/screens/gantt/milestone-history.html:4
+msgid "History"
+msgstr "Verlauf"
+
 #: templates/components/screens/gantt/milestone-moved-toast.html:4
 msgid "moved to"
 msgstr "verschoben auf"
@@ -1294,6 +1441,7 @@ msgstr "Verknüpfen"
 
 #: templates/components/screens/gantt/milestone-popover.html:35
 #: templates/components/screens/gantt/milestone-popover.html:36
+#: templates/components/screens/gitlab/settings.html:6
 msgid "Connected"
 msgstr "Verknüpft"
 
@@ -1319,16 +1467,12 @@ msgid "Delete"
 msgstr "Löschen"
 
 #: templates/components/screens/gantt/milestone-popover.html:72
-#: templates/components/screens/gantt/project-popover.html:111
+#: templates/components/screens/gantt/project-popover.html:115
 #: templates/components/screens/gantt/task-popover.html:125
 #: templates/components/screens/workspaces/settings.html:27
-#: templates/components/screens/workspaces/settings.html:46
+#: templates/components/screens/workspaces/settings.html:47
 msgid "Save"
 msgstr "Speichern"
-
-#: templates/components/screens/gantt/milestone-popover.html:76
-msgid "History"
-msgstr "Verlauf"
 
 #: templates/components/screens/gantt/project-hidden-toast.html:4
 msgid "Project created, but it’s hidden by the active team filter."
@@ -1341,9 +1485,9 @@ msgstr "Teamfilter löschen"
 #: templates/components/screens/gantt/project-popover.html:29
 #: templates/components/screens/gantt/task-popover.html:62
 #: templates/components/screens/projects/detail.html:46
-#: templates/components/screens/projects/detail.html:76
+#: templates/components/screens/projects/detail.html:78
 #: templates/components/screens/tasks/detail.html:62
-#: templates/public/roadmap.html:61
+#: templates/public/roadmap.html:67
 msgid "Nobody assigned"
 msgstr "Niemand zugewiesen"
 
@@ -1383,38 +1527,56 @@ msgstr "+ Aufgabe hinzufügen"
 msgid "+ Add milestone"
 msgstr "+ Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:87
+#: templates/components/screens/gantt/project-popover.html:86
+msgid ""
+"Another active project collects this GitLab prefix. Disable collection or "
+"change the prefix in project details before reopening."
+msgstr ""
+"Ein anderes aktives Projekt sammelt Issues mit diesem GitLab-Präfix. "
+"Deaktiviere das Sammeln oder ändere das Präfix in den Projektdetails, bevor "
+"du das Projekt wieder öffnest."
+
+#: templates/components/screens/gantt/project-popover.html:90
 msgid "Reopen project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:87
+#: templates/components/screens/gantt/project-popover.html:90
 msgid "Mark complete"
 msgstr "Als erledigt markieren"
 
-#: templates/components/screens/gantt/project-popover.html:92
+#: templates/components/screens/gantt/project-popover.html:94
+msgid ""
+"Moving this project removes its GitLab connection and retires its issue "
+"associations in the source workspace. Private issue data will not move."
+msgstr ""
+"Beim Verschieben wird die GitLab-Verbindung dieses Projekts entfernt. Seine "
+"Issue-Zuordnungen werden im bisherigen Arbeitsbereich stillgelegt. Private "
+"Issue-Daten werden nicht mitgenommen."
+
+#: templates/components/screens/gantt/project-popover.html:96
 #, fuzzy
 #| msgid "Create workspace"
 msgid "Move to workspace"
 msgstr "Arbeitsbereich erstellen"
 
-#: templates/components/screens/gantt/project-popover.html:101
+#: templates/components/screens/gantt/project-popover.html:105
 #, fuzzy, python-format
 #| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgid "Move project &quot;%(name)s&quot; to the selected workspace?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:102
+#: templates/components/screens/gantt/project-popover.html:106
 #, fuzzy
 #| msgid "Reopen project"
 msgid "Move project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:109
+#: templates/components/screens/gantt/project-popover.html:113
 #, python-format
 msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:109
+#: templates/components/screens/gantt/project-popover.html:113
 msgid "Delete project"
 msgstr "Projekt löschen"
 
@@ -1484,6 +1646,154 @@ msgstr "Nach Team filtern"
 #: templates/components/screens/people/teams-list.html:28
 msgid "No teams yet."
 msgstr "Noch keine Teams."
+
+#: templates/components/screens/gitlab/binding-errors.html:4
+#: templates/components/screens/gitlab/project.html:10
+msgid "GitLab project settings"
+msgstr "GitLab-Projekteinstellungen"
+
+#: templates/components/screens/gitlab/binding-errors.html:9
+#: templates/components/screens/gitlab/project.html:18
+msgid "Save GitLab project settings"
+msgstr "GitLab-Projekteinstellungen speichern"
+
+#: templates/components/screens/gitlab/binding-errors.html:11
+#: templates/components/screens/tasks/detail.html:9
+msgid "Back to project"
+msgstr "Zurück zum Projekt"
+
+#: templates/components/screens/gitlab/project.html:5
+msgid "GitLab issues"
+msgstr "GitLab-Issues"
+
+#: templates/components/screens/gitlab/project.html:6
+msgid "GitLab is disconnected. Cached issues are retained."
+msgstr "GitLab ist getrennt. Gespeicherte Issues bleiben erhalten."
+
+#: templates/components/screens/gitlab/project.html:7
+#: templates/components/screens/gitlab/settings.html:17
+msgid "GitLab data may be stale."
+msgstr "Die GitLab-Daten sind möglicherweise veraltet."
+
+#: templates/components/screens/gitlab/project.html:15
+msgid ""
+"A prefix matches the text before the first colon, ignoring case and "
+"surrounding spaces. Existing issue ownership is preserved when the prefix "
+"changes."
+msgstr ""
+"Das Präfix entspricht dem Text vor dem ersten Doppelpunkt. Groß-/"
+"Kleinschreibung und umgebende Leerzeichen werden ignoriert. Bestehende Issue-"
+"Zuordnungen bleiben bei einer Präfixänderung erhalten."
+
+#: templates/components/screens/gitlab/project.html:16
+msgid "Completed projects keep their issues but do not collect new ones."
+msgstr ""
+"Abgeschlossene Projekte behalten ihre Issues, sammeln aber keine neuen."
+
+#: templates/components/screens/gitlab/project.html:17
+msgid "Example matching title"
+msgstr "Beispiel für einen passenden Titel"
+
+#: templates/components/screens/gitlab/project.html:22
+#: templates/components/screens/gitlab/settings.html:18
+msgid "Last successful sync"
+msgstr "Letzte erfolgreiche Synchronisierung"
+
+#: templates/components/screens/gitlab/project.html:23
+msgid "issues done (not an effort estimate)"
+msgstr "Issues erledigt (keine Aufwandsschätzung)"
+
+#: templates/components/screens/gitlab/project.html:24
+msgid "Refresh GitLab issues"
+msgstr "GitLab-Issues neu laden"
+
+#: templates/components/screens/gitlab/project.html:27
+msgid "Issue"
+msgstr "Issue"
+
+#: templates/components/screens/gitlab/project.html:27
+msgid "State"
+msgstr "Status"
+
+#: templates/components/screens/gitlab/project.html:27
+msgid "Execution history"
+msgstr "Umsetzungsverlauf"
+
+#: templates/components/screens/gitlab/project.html:27
+msgid "Ownership"
+msgstr "Zuordnung"
+
+#: templates/components/screens/gitlab/project.html:32
+msgid "Prefix changed"
+msgstr "Präfix geändert"
+
+#: templates/components/screens/gitlab/project.html:39
+msgid "Move GitLab issue to project"
+msgstr "GitLab-Issue in Projekt verschieben"
+
+#: templates/components/screens/gitlab/project.html:42
+msgid "Move issue"
+msgstr "Issue verschieben"
+
+#: templates/components/screens/gitlab/settings.html:4
+msgid "GitLab integration"
+msgstr "GitLab-Integration"
+
+#: templates/components/screens/gitlab/settings.html:5
+msgid ""
+"Issue titles, labels and history from the selected sources are visible to "
+"all workspace members, regardless of their individual GitLab access. They "
+"are never shown on public roadmaps."
+msgstr ""
+"Issue-Titel, Labels und Verlauf aus den ausgewählten Quellen sind für alle "
+"Mitglieder des Arbeitsbereichs sichtbar, unabhängig von ihrem persönlichen "
+"GitLab-Zugriff. Sie erscheinen nie auf öffentlichen Roadmaps."
+
+#: templates/components/screens/gitlab/settings.html:10
+msgid ""
+"Use a read-only API token. Leave the token blank to keep the existing "
+"credential. Saved tokens are never displayed."
+msgstr ""
+"Verwende ein API-Token mit reinem Lesezugriff. Lass das Token-Feld leer, um "
+"die bisherigen Zugangsdaten beizubehalten. Gespeicherte Tokens werden nie "
+"angezeigt."
+
+#: templates/components/screens/gitlab/settings.html:11
+msgid "Save GitLab connection"
+msgstr "GitLab-Verbindung speichern"
+
+#: templates/components/screens/gitlab/settings.html:15
+msgid "Synchronization"
+msgstr "Synchronisierung"
+
+#: templates/components/screens/gitlab/settings.html:21
+msgid "Sync GitLab now"
+msgstr "GitLab jetzt synchronisieren"
+
+#: templates/components/screens/gitlab/settings.html:22
+msgid "Disconnect GitLab"
+msgstr "GitLab trennen"
+
+#: templates/components/screens/gitlab/settings.html:24
+msgid "Refresh sync status"
+msgstr "Synchronisierungsstatus neu laden"
+
+#: templates/components/screens/gitlab/settings.html:28
+msgid "GitLab workflow"
+msgstr "GitLab-Workflow"
+
+#: templates/components/screens/gitlab/settings.html:29
+msgid ""
+"Enter one exact GitLab label per line. Closed issues are always done. Done "
+"labels take precedence over in-progress labels, then not-started labels."
+msgstr ""
+"Gib pro Zeile ein exaktes GitLab-Label ein. Geschlossene Issues gelten immer "
+"als erledigt. Labels für „Erledigt“ haben Vorrang vor „In Bearbeitung“, "
+"danach folgen Labels für „Noch nicht begonnen“."
+
+#: templates/components/screens/gitlab/settings.html:33
+msgid "Save GitLab workflow"
+msgstr "GitLab-Workflow speichern"
 
 #: templates/components/screens/ideas/detail.html:10
 #: templates/components/screens/ideas/detail.html:12
@@ -1757,34 +2067,30 @@ msgstr "Projektübersicht"
 
 #: templates/components/screens/projects/detail.html:37
 #: templates/components/screens/tasks/detail.html:53
-#: templates/public/roadmap.html:53
+#: templates/public/roadmap.html:59
 msgid "No description yet."
 msgstr "Noch keine Beschreibung."
 
-#: templates/components/screens/projects/detail.html:53
+#: templates/components/screens/projects/detail.html:55
 msgid "Tasks"
 msgstr "Aufgaben"
 
-#: templates/components/screens/projects/detail.html:59
+#: templates/components/screens/projects/detail.html:61
 msgid "Task"
 msgstr "Aufgabe"
 
-#: templates/components/screens/projects/detail.html:83
+#: templates/components/screens/projects/detail.html:85
 msgid "No tasks yet."
 msgstr "Noch keine Aufgaben."
 
-#: templates/components/screens/projects/detail.html:88
+#: templates/components/screens/projects/detail.html:90
 #: templates/components/screens/workspaces/settings.html:19
 msgid "Milestones"
 msgstr "Meilensteine"
 
-#: templates/components/screens/projects/detail.html:100
+#: templates/components/screens/projects/detail.html:102
 msgid "No milestones yet."
 msgstr "Noch keine Meilensteine."
-
-#: templates/components/screens/tasks/detail.html:9
-msgid "Back to project"
-msgstr "Zurück zum Projekt"
 
 #: templates/components/screens/tasks/detail.html:33
 msgid "Task overview"
@@ -2209,36 +2515,36 @@ msgstr ""
 "Erforderliche Begründungen werden immer abgefragt, auch wenn diese "
 "Einstellung deaktiviert ist."
 
-#: templates/components/screens/workspaces/settings.html:32
+#: templates/components/screens/workspaces/settings.html:33
 msgid "Public roadmap"
 msgstr "Öffentliche Roadmap"
 
-#: templates/components/screens/workspaces/settings.html:34
+#: templates/components/screens/workspaces/settings.html:35
 msgid "Open public roadmap"
 msgstr "Öffentliche Roadmap öffnen"
 
-#: templates/components/screens/workspaces/settings.html:39
+#: templates/components/screens/workspaces/settings.html:40
 msgid "Roadmap"
 msgstr "Roadmap"
 
-#: templates/components/screens/workspaces/settings.html:43
+#: templates/components/screens/workspaces/settings.html:44
 msgid "Optional public description"
 msgstr "Optionale öffentliche Beschreibung"
 
-#: templates/components/screens/workspaces/settings.html:47
+#: templates/components/screens/workspaces/settings.html:48
 msgid "Disable public roadmap"
 msgstr "Öffentliche Roadmap deaktivieren"
 
-#: templates/components/screens/workspaces/settings.html:52
+#: templates/components/screens/workspaces/settings.html:53
 msgid "Regenerate public link"
 msgstr "Öffentlichen Link neu erzeugen"
 
-#: templates/components/screens/workspaces/settings.html:55
+#: templates/components/screens/workspaces/settings.html:56
 msgid "Share task milestones without exposing people or dependencies."
 msgstr ""
 "Aufgaben-Meilensteine teilen, ohne Personen oder Abhängigkeiten offenzulegen."
 
-#: templates/components/screens/workspaces/settings.html:58
+#: templates/components/screens/workspaces/settings.html:59
 msgid "Enable public roadmap"
 msgstr "Öffentliche Roadmap aktivieren"
 
@@ -2270,44 +2576,44 @@ msgstr "Andere E-Mail-Adresse verwenden"
 msgid "Timeline"
 msgstr "Zeitachse"
 
-#: templates/public/roadmap.html:70 templates/public/roadmap.html:72
+#: templates/public/roadmap.html:76 templates/public/roadmap.html:78
 msgid "Subscribed"
 msgstr "Abonniert"
 
-#: templates/public/roadmap.html:78
+#: templates/public/roadmap.html:84
 msgid "Unfollow"
 msgstr "Nicht mehr folgen"
 
-#: templates/public/roadmap.html:83 templates/public/roadmap.html:85
-#: templates/public/roadmap.html:88 templates/public/roadmap.html:90
-#: templates/public/roadmap.html:164
+#: templates/public/roadmap.html:89 templates/public/roadmap.html:91
+#: templates/public/roadmap.html:94 templates/public/roadmap.html:96
+#: templates/public/roadmap.html:171
 msgid "Follow"
 msgstr "Folgen"
 
-#: templates/public/roadmap.html:126 templates/public/roadmap.html:134
+#: templates/public/roadmap.html:133 templates/public/roadmap.html:141
 msgid "No public milestones yet"
 msgstr "Noch keine öffentlichen Meilensteine"
 
-#: templates/public/roadmap.html:127 templates/public/roadmap.html:135
+#: templates/public/roadmap.html:134 templates/public/roadmap.html:142
 msgid "Check back later for roadmap updates."
 msgstr "Schau später wieder vorbei, um Roadmap-Updates zu sehen."
 
-#: templates/public/roadmap.html:144
+#: templates/public/roadmap.html:151
 msgid "Follow project"
 msgstr "Projekt folgen"
 
-#: templates/public/roadmap.html:147
+#: templates/public/roadmap.html:154
 msgid "Allowed domains:"
 msgstr "Erlaubte Domains:"
 
-#: templates/public/roadmap.html:160
+#: templates/public/roadmap.html:167
 msgid ""
 "Your follows are managed in this browser. Keep its cookies to unfollow later."
 msgstr ""
 "Deine Abonnements werden in diesem Browser verwaltet. Behalte dessen "
 "Cookies, um später nicht mehr zu folgen."
 
-#: templates/public/roadmap.html:161
+#: templates/public/roadmap.html:168
 msgid ""
 "Your email will be remembered in this browser for future follows on this "
 "roadmap."

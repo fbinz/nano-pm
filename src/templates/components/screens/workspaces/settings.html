@@ -28,6 +28,7 @@
       </form>
     </section>
     <c-screens.workload.configuration :workspace="workspace" :options="options" :categories="categories" :memberships="memberships" />
+    <c-screens.gitlab.settings :connection="gitlab_connection" :connection_form="gitlab_connection_form" :workflow_form="gitlab_workflow_form" />
     <section id="workspace-roadmap-settings" class="space-y-4 border-t border-base-300 pt-6">
       <h2 class="text-xl font-semibold">{% trans "Public roadmap" %}</h2>
       {% if workspace.public_roadmap_enabled and workspace.public_roadmap_token %}

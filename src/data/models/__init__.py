@@ -1,3 +1,4 @@
+from data.models.gitlab import GitLabConnection, GitLabProjectBinding, GitLabIssue, GitLabIssueEvent
 from data.models.workspace import Workspace
 from data.models.membership import Membership, WorkspaceRole
 from data.models.project import Project
@@ -17,6 +18,7 @@ from data.models.workload import (
 )
 
 __all__ = [
+    "GitLabConnection", "GitLabProjectBinding", "GitLabIssue", "GitLabIssueEvent",
     "WorkloadCategory",
     "WorkloadReport",
     "WorkloadAllocation",

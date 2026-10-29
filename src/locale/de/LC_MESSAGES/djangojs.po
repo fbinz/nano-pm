@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-19 21:58+0200\n"
+"POT-Creation-Date: 2026-10-29 18:16+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -15,11 +15,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: static/js/nano.js:314
+#: static/js/nano.js:317
 msgid "Drop on another task to create a dependency."
 msgstr "Auf eine andere Aufgabe ziehen, um eine Abhängigkeit zu erstellen."
 
-#: static/js/nano.js:350
+#: static/js/nano.js:353
 msgid ""
 "A new task row is highlighted. Click for a 7-day task, or drag to set its "
 "dates. Press Escape to cancel."
@@ -27,7 +27,7 @@ msgstr ""
 "Eine neue Aufgabenzeile ist hervorgehoben. Für eine 7-tägige Aufgabe klicken "
 "oder ziehen, um ihren Zeitraum festzulegen. Zum Abbrechen Escape drücken."
 
-#: static/js/nano.js:351
+#: static/js/nano.js:354
 msgid ""
 "Milestone placement: Move over the timeline to preview a date, then click to "
 "place it. Press Escape to cancel."
@@ -36,35 +36,35 @@ msgstr ""
 "Datum als Vorschau anzuzeigen, und zum Platzieren klicken. Zum Abbrechen "
 "Escape drücken."
 
-#: static/js/nano.js:524 static/js/nano.js:547
+#: static/js/nano.js:527 static/js/nano.js:550
 msgid "New task"
 msgstr "Neue Aufgabe"
 
-#: static/js/nano.js:526
+#: static/js/nano.js:529
 msgid "Click or drag the timeline to schedule it"
 msgstr "Zeitachse anklicken oder ziehen, um sie einzuplanen"
 
-#: static/js/nano.js:531
+#: static/js/nano.js:534
 msgid "Cancel new task"
 msgstr "Neue Aufgabe abbrechen"
 
-#: static/js/nano.js:542
+#: static/js/nano.js:545
 msgid "Schedule new task"
 msgstr "Neue Aufgabe einplanen"
 
-#: static/js/nano.js:742
+#: static/js/nano.js:745
 msgid "day"
 msgstr "Tag"
 
-#: static/js/nano.js:742
+#: static/js/nano.js:745
 msgid "days"
 msgstr "Tage"
 
-#: static/js/nano.js:743
+#: static/js/nano.js:746
 msgid "later"
 msgstr "später"
 
-#: static/js/nano.js:743
+#: static/js/nano.js:746
 msgid "earlier"
 msgstr "früher"
 

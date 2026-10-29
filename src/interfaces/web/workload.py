@@ -111,10 +111,13 @@ def settings(request):
             error = " ".join(exc.messages)
         else:
             return redirect("workspace_settings")
+    from .gitlab import settings_context as gitlab_settings_context
+
     return render(
         request,
         "components/screens/workspaces/settings.html",
-        {**context(request), **settings_context(request.workspace), "error": error},
+        {**context(request), **settings_context(request.workspace),
+         **gitlab_settings_context(request.workspace), "error": error},
     )
 
 

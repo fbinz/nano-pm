@@ -247,6 +247,7 @@ def project_manager_required(view_func):
 
 def patch_chart(request: HttpRequest, active_zoom: str | None = None):
     """Yield an SSE patch that replaces the chart fragment with a fresh render."""
+    from readers.gitlab import expanded_projects
     state = get_chart_state(request.workspace)
     mode = view_mode(request)
     resolved_zoom = active_zoom or zoom(request)
@@ -260,6 +261,7 @@ def patch_chart(request: HttpRequest, active_zoom: str | None = None):
     else:
         vm = build_chart_vm(state, resolved_zoom, px_per_day=px_per_day,
                             collapsed_project_ids=collapsed_projects(request),
+                            gitlab_expanded_ids=expanded_projects(request),
                             show_completed=show_completed(request),
                             is_pm=is_pm(request),
                             team_filter=team_filter(request))

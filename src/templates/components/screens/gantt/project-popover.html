@@ -1,6 +1,6 @@
 {% load i18n %}
 {# Project editor — rendered into the right drawer (#drawer-slot). #}
-<c-vars project people colors destination_workspaces can_manage="False" current_person="" can_assign_self="False" />
+<c-vars project people colors destination_workspaces can_manage="False" current_person="" can_assign_self="False" gitlab_reopen_conflict="False" />
 <div id="drawer-slot">
   <form
     id="project-popover"
@@ -82,12 +82,16 @@
               data-on:click="nano.setCreationMode('milestone', {{ project.id }})">{% trans "+ Add milestone" %}</button>
     </div>
     <div class="row">
-      <button type="button" id="pp-toggle-complete" class="topbar-btn"
+      {% if gitlab_reopen_conflict %}
+        <p role="alert">{% trans "Another active project collects this GitLab prefix. Disable collection or change the prefix in project details before reopening." %}</p>
+      {% endif %}
+      <button type="button" id="pp-toggle-complete" class="topbar-btn"{% if gitlab_reopen_conflict %} disabled{% endif %}
               data-on:click="@post('/projects/{{ project.id }}/set-completed/', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
         {% if project.is_completed %}↩ {% trans "Reopen project" %}{% else %}✓ {% trans "Mark complete" %}{% endif %}
       </button>
     </div>
     {% if destination_workspaces %}
+      {% if project.gitlab_binding %}<p>{% trans "Moving this project removes its GitLab connection and retires its issue associations in the source workspace. Private issue data will not move." %}</p>{% endif %}
       <fieldset class="fieldset">
         <label class="label" for="project-move-workspace">{% trans "Move to workspace" %}</label>
         <select id="project-move-workspace" class="select select-sm w-full" name="workspace_id">

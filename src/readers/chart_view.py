@@ -105,6 +105,8 @@ class ProjectRowVM:
     # when the show-completed filter is on; rendered dimmed with a badge).
     completed: bool = False
     teams: list[str] = field(default_factory=list)
+    gitlab_issues: list = field(default_factory=list)
+    gitlab_expanded: bool = False
 
 
 @dataclass
@@ -393,6 +395,7 @@ def build_chart_vm(
     zoom: str = DEFAULT_ZOOM,
     px_per_day: int | None = None,
     collapsed_project_ids: set[int] | None = None,
+    gitlab_expanded_ids: set[int] | None = None,
     show_completed: bool = False,
     is_pm: bool = False,
     team_filter: set[int] | None = None,
@@ -400,7 +403,10 @@ def build_chart_vm(
     if zoom not in ZOOM_PX_PER_DAY:
         zoom = DEFAULT_ZOOM
     ppd = px_per_day if px_per_day is not None else ZOOM_PX_PER_DAY[zoom]
+    from readers.gitlab import issue_rows
+
     collapsed_ids = collapsed_project_ids or set()
+    gitlab_expanded_ids = gitlab_expanded_ids or set()
     team_ids = team_filter or set()
     g = _build_grid_context(state, zoom, ppd)
 
@@ -487,6 +493,8 @@ def build_chart_vm(
             collapsed=(proj.id in collapsed_ids),
             missing_future_milestone=missing_future_milestone,
             completed=proj.is_completed,
+            gitlab_issues=issue_rows(proj.gitlab_issues.all(), state.chart_start, state.chart_end, ppd),
+            gitlab_expanded=proj.id in gitlab_expanded_ids,
         ))
 
     # Dep arrows — orthogonal route through a small stub between rows.
@@ -510,6 +518,10 @@ def build_chart_vm(
             bar_y_centers[bar.id] = y + 16  # ~half of row_h
             bar_lookup[bar.id] = (bar, rg_idx)
             y += 32  # row_h
+        if rg.gitlab_issues:
+            y += 32  # execution section header
+            if rg.gitlab_expanded:
+                y += 32 * len(rg.gitlab_issues)
     for dep in state.deps:
         a = bar_lookup.get(dep.predecessor_id)
         b = bar_lookup.get(dep.successor_id)

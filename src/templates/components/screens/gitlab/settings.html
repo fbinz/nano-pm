@@ -1,0 +1,37 @@
+{% load i18n %}
+<c-vars connection connection_form workflow_form />
+<section id="workspace-gitlab-settings" class="space-y-4 border-t border-base-300 pt-6" aria-labelledby="workspace-gitlab-title">
+  <h2 id="workspace-gitlab-title" class="text-xl font-semibold">{% trans "GitLab integration" %}</h2>
+  <p class="text-sm text-base-content/60">{% trans "Issue titles, labels and history from the selected sources are visible to all workspace members, regardless of their individual GitLab access. They are never shown on public roadmaps." %}</p>
+  <p id="gitlab-connection-status" role="status">{% if connection.enabled %}{% trans "Connected" %}{% else %}{% trans "Disconnected" %}{% endif %}</p>
+  <form method="post" action="{% url 'gitlab_settings' %}" class="space-y-3">
+    {% csrf_token %}<input type="hidden" name="action" value="connect">
+    {{ connection_form.as_p }}
+    <p class="text-sm text-base-content/60">{% trans "Use a read-only API token. Leave the token blank to keep the existing credential. Saved tokens are never displayed." %}</p>
+    <button class="btn btn-sm btn-neutral" type="submit">{% trans "Save GitLab connection" %}</button>
+  </form>
+  {% if connection %}
+    <section class="space-y-3">
+      <h3 class="text-lg font-semibold">{% trans "Synchronization" %}</h3>
+      <p id="gitlab-sync-status" role="status">{{ connection.sync_status }}</p>
+      {% if connection.is_stale %}<p role="status">{% trans "GitLab data may be stale." %}</p>{% endif %}
+      {% if connection.last_success %}<p>{% trans "Last successful sync" %}: {{ connection.last_success }}</p>{% endif %}
+      <div class="flex flex-wrap gap-3">
+        {% if connection.enabled %}
+          <form method="post" action="{% url 'gitlab_settings' %}">{% csrf_token %}<input type="hidden" name="action" value="sync"><button class="btn btn-sm" type="submit">{% trans "Sync GitLab now" %}</button></form>
+          <form method="post" action="{% url 'gitlab_settings' %}">{% csrf_token %}<input type="hidden" name="action" value="disconnect"><button class="btn btn-sm btn-outline" type="submit">{% trans "Disconnect GitLab" %}</button></form>
+        {% endif %}
+        <a class="btn btn-sm btn-ghost" href="{% url 'workspace_settings' %}#workspace-gitlab-settings">{% trans "Refresh sync status" %}</a>
+      </div>
+    </section>
+    <section class="space-y-3">
+      <h3 class="text-lg font-semibold">{% trans "GitLab workflow" %}</h3>
+      <p class="text-sm text-base-content/60">{% trans "Enter one exact GitLab label per line. Closed issues are always done. Done labels take precedence over in-progress labels, then not-started labels." %}</p>
+      <form method="post" action="{% url 'gitlab_settings' %}" class="space-y-3">
+        {% csrf_token %}<input type="hidden" name="action" value="workflow">
+        {{ workflow_form.as_p }}
+        <button class="btn btn-sm btn-neutral" type="submit">{% trans "Save GitLab workflow" %}</button>
+      </form>
+    </section>
+  {% endif %}
+</section>

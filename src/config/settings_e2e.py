@@ -1,6 +1,7 @@
 """Fast authentication for the isolated Playwright server, never normal app runs."""
 
 import os
+from base64 import urlsafe_b64encode
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -21,3 +22,6 @@ if (
 # Exercise real password checks and validators without expensive PBKDF2 work
 # for the five throwaway accounts recreated before every browser test.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+# Deterministic key exclusively for the guarded throwaway test database.
+GITLAB_ENCRYPTION_KEY = urlsafe_b64encode(b"0" * 32).decode()

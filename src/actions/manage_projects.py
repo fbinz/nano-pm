@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from actions.activity import change_set, created_changes, deleted_changes, log_activity, snapshot
 from actions.manage_milestones import delete_milestone
+from actions.gitlab_matching import sync_completion, retire_project
 from data.models import (
     Dependency, Membership, Person, Project, WorkspaceRole, WorkloadProjectAllocation,
 )
@@ -173,6 +174,7 @@ def reorder_projects(*, workspace, project_ids: list[int], actor=None) -> list[P
     return sorted(projects, key=lambda project: (project.order, project.id))
 
 
+@transaction.atomic
 def set_project_completed(
     *, workspace, project_id: int, completed: bool, actor=None
 ) -> Project | None:
@@ -181,6 +183,7 @@ def set_project_completed(
         proj = Project.objects.get(id=project_id, workspace=workspace)
     except Project.DoesNotExist:
         return None
+    sync_completion(proj, completed)
     before = snapshot(proj, ["completed_at"])
     proj.completed_at = timezone.now() if completed else None
     proj.save(update_fields=["completed_at", "updated_at"])
@@ -264,6 +267,8 @@ def move_project_to_workspace(
             .values_list("order", flat=True)
             .first()
         )
+        # External source data and credentials belong to the source workspace.
+        retire_project(proj)
         # Subscriptions are workspace membership scoped; never move them across tenants.
         proj.subscriptions.all().delete()
         proj.public_subscriptions.all().delete()
@@ -323,6 +328,7 @@ def delete_project(*, workspace, project_id: int, actor=None) -> bool:
     entity_id = project.id
     for milestone_id in list(project.milestones.values_list("id", flat=True)):
         delete_milestone(workspace=workspace, milestone_id=milestone_id, actor=actor)
+    retire_project(project)
     project.delete()
     log_activity(
         workspace=workspace,

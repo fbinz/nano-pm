@@ -1,6 +1,6 @@
-"""Container supervisor: web server + Teams outbox worker share one SQLite volume.
+"""Container supervisor: web server and integration workers share one SQLite volume.
 
-Exit if either service stops so the container platform can restart both. Never
+Exit if any service stops so the container platform can restart all services. Never
 start the worker inside a Django/Gunicorn process (or during migrations/tests).
 """
 
@@ -26,6 +26,7 @@ def main() -> int:
          "--bind", f"0.0.0.0:{os.environ.get('PORT', '80')}",
          "--workers", "2", "--threads", "4", "--access-logfile", "-", "--error-logfile", "-"],
         [sys.executable, "manage.py", "deliver_teams_notifications"],
+        [sys.executable, "manage.py", "sync_gitlab"],
     ]
     children = []
     try:

@@ -1073,6 +1073,8 @@
         // (chart.html). They take a full row_h of vertical space — counting
         // them keeps arrow y-coords aligned with bar y-coords.
         y += 32;
+      } else if (el.matches('.chart-row.gitlab-summary, .chart-row.gitlab-issue')) {
+        if (getComputedStyle(el).display !== 'none') y += 32;
       } else if (el.matches('.chart-row.task-creation-timeline')) {
         y += 32;
       } else if (el.matches('.chart-row[data-task-id]')) {

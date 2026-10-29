@@ -232,6 +232,11 @@ LANGUAGES = [
 ]
 LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "Europe/Berlin"
+
+# Optional until a GitLab connection is configured. Keep the Fernet key outside
+# the database/backups; changing it requires re-entering the API token.
+GITLAB_ENCRYPTION_KEY = os.environ.get("DJANGO_GITLAB_ENCRYPTION_KEY", "")
+GITLAB_PRIVATE_HOSTS = [h.strip() for h in os.environ.get("DJANGO_GITLAB_PRIVATE_HOSTS", "").split(",") if h.strip()]
 USE_I18N = True
 USE_TZ = True
 

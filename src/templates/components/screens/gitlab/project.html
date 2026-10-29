@@ -1,0 +1,50 @@
+{% load i18n %}
+<c-vars project connection form issues destinations done_count can_edit />
+{% if connection %}
+<section class="rounded-box border border-base-300 p-5 space-y-4" id="gitlab-project">
+  <h2 class="text-lg font-semibold">{% trans "GitLab issues" %}</h2>
+  {% if not connection.enabled %}<p role="status">{% trans "GitLab is disconnected. Cached issues are retained." %}</p>{% endif %}
+  {% if connection.is_stale %}<p role="status">{% trans "GitLab data may be stale." %} {{ connection.last_error }}</p>{% endif %}
+  {% if can_edit %}
+    <details>
+      <summary class="btn btn-sm btn-outline">{% trans "GitLab project settings" %}</summary>
+      <form method="post" action="{% url 'gitlab_project_settings' project.id %}" class="space-y-3 mt-3"
+            data-on:input="el.querySelector('[data-prefix-preview]').textContent = el.querySelector('[name=prefix]').value + ': …'">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <p>{% trans "A prefix matches the text before the first colon, ignoring case and surrounding spaces. Existing issue ownership is preserved when the prefix changes." %}</p>
+        <p>{% trans "Completed projects keep their issues but do not collect new ones." %}</p>
+        <p>{% trans "Example matching title" %}: <span data-prefix-preview>{{ form.prefix.value|default:'' }}: …</span></p>
+        <button type="submit" class="btn btn-neutral">{% trans "Save GitLab project settings" %}</button>
+      </form>
+    </details>
+  {% endif %}
+  {% if connection.last_success %}<p>{% trans "Last successful sync" %}: {{ connection.last_success }}</p>{% endif %}
+  <p>{{ done_count }}/{{ issues|length }} {% trans "issues done (not an effort estimate)" %}</p>
+  <a class="btn btn-sm btn-ghost" href="{% url 'project_detail' project.id %}">{% trans "Refresh GitLab issues" %}</a>
+  <div class="overflow-x-auto" id="gitlab-issues">
+    <table class="table table-sm">
+      <thead><tr><th>{% trans "Issue" %}</th><th>{% trans "State" %}</th><th>{% trans "Execution history" %}</th>{% if can_edit %}<th>{% trans "Ownership" %}</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for issue in issues %}
+        <tr data-gitlab-issue-id="{{ issue.id }}" data-state="{{ issue.state }}">
+          <td><a class="link" href="{{ issue.web_url }}" target="_blank" rel="noopener noreferrer">{{ issue.reference }} {{ issue.title }}</a>
+            {% if issue.prefix_changed %}<span class="badge">{% trans "Prefix changed" %}</span>{% endif %}
+            {% if issue.unavailable %}<span class="badge">{% trans "Source unavailable" %}</span>{% endif %}
+          </td>
+          <td>{{ issue.get_state_display }}</td>
+          <td>{% for interval in issue.intervals %}<div data-start="{{ interval.start|default:'' }}" data-end="{{ interval.end|default:'' }}">{{ interval.start|default:'?' }} — {{ interval.end|default:'…' }}</div>{% empty %}{% trans "Timing unknown" %}{% endfor %}</td>
+          {% if can_edit %}<td>{% if destinations %}<form method="post" action="{% url 'gitlab_issue_transfer' issue.id %}">
+            {% csrf_token %}
+            <select name="project_id" aria-label="{% trans 'Move GitLab issue to project' %}" class="select select-sm">
+              {% for destination in destinations %}<option value="{{ destination.id }}">{{ destination.name }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm">{% trans "Move issue" %}</button>
+          </form>{% endif %}</td>{% endif %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}

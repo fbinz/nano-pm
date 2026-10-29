@@ -3,12 +3,15 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
 
 from datastar_py.django import (
+    DatastarResponse,
     ServerSentEventGenerator as SSE,
     datastar_response,
 )
@@ -24,6 +27,8 @@ from data.models.task import status_for_dates
 from readers import get_project
 
 from .detail_forms import ProjectDetailForm
+from .gitlab import project_context as gitlab_project_context
+from actions.gitlab_matching import reopen_conflict
 from .helpers import (
     collapsed_projects, set_collapsed_projects,
     show_completed, set_show_completed, patch_chart,
@@ -61,6 +66,7 @@ def project_detail(request: HttpRequest, project_id: int):
         task.status_label = status_for_dates(task.start, task.end, today).label
     return render(request, "components/screens/projects/detail.html", {
         "project": project,
+        **gitlab_project_context(project, request.workspace),
         "form": form, "can_edit": can_edit,
         "edit_label": _("Edit project"), "save_label": _("Save project"),
         "tasks": tasks,
@@ -109,6 +115,7 @@ def project_popover(request: HttpRequest, project_id: int):
         render_component(
             request, "screens/gantt/project-popover",
             project=proj,
+            gitlab_reopen_conflict=reopen_conflict(proj),
             people=Person.objects.filter(workspace=request.workspace)
                 .prefetch_related("teams").order_by("name", "id"),
             colors=PROJECT_COLORS,
@@ -206,18 +213,21 @@ def project_move_workspace(request: HttpRequest, project_id: int):
 
 @require_http_methods(["POST"])
 @login_required
-@datastar_response
 def project_toggle_completed(request: HttpRequest, project_id: int):
     proj = get_project(request.workspace, project_id)
     if proj is None:
-        return
-    set_project_completed(
-        workspace=request.workspace, project_id=project_id,
-        completed=not proj.is_completed,
-        actor=request.user,
-    )
-    yield patch_chart(request)
-    yield SSE.patch_elements('<div id="drawer-slot"></div>')
+        return HttpResponse(status=404)
+    if not can_manage_project(request, proj):
+        return HttpResponse(status=403)
+    try:
+        set_project_completed(
+            workspace=request.workspace, project_id=project_id,
+            completed=not proj.is_completed,
+            actor=request.user,
+        )
+    except (ValidationError, IntegrityError):
+        return HttpResponse(_("Another active project already collects this GitLab prefix. Disable collection or change its prefix before reopening."), status=409)
+    return DatastarResponse([patch_chart(request), SSE.patch_elements('<div id="drawer-slot"></div>')])
 
 
 @require_http_methods(["POST"])

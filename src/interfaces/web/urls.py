@@ -36,6 +36,7 @@ from .workspaces import (
 from .activity import activity_page
 from .profile import profile, ProfilePasswordChangeView
 from .teams_notifications import teams_settings, roadmap_subscription
+from . import gitlab
 
 from .workload import (
     settings as workload_settings, my_workload, legacy_my_workload, save as workload_save,
@@ -44,6 +45,10 @@ from .workload import (
 )
 
 urlpatterns = [
+    path("workspaces/gitlab/", gitlab.settings, name="gitlab_settings"),
+    path("projects/<int:project_id>/gitlab/", gitlab.project_settings, name="gitlab_project_settings"),
+    path("projects/<int:project_id>/gitlab/toggle/", gitlab.toggle_overlay, name="gitlab_toggle_overlay"),
+    path("gitlab/issues/<int:issue_id>/move/", gitlab.issue_transfer, name="gitlab_issue_transfer"),
     path("workspaces/settings/", workspace_settings, name="workspace_settings"),
     path("workspaces/workload/", workload_settings, name="workload_settings"),
     path("workspaces/workload/settings/<str:setting>/", setting_update,
