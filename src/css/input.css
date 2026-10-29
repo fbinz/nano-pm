@@ -458,7 +458,6 @@ html, body { height: 100%; }
     @apply bg-info/60 border border-info;
   }
   .gitlab-interval.done { @apply bg-success/50 border-success; }
-  .gitlab-point { border-radius: 0; transform: rotate(45deg); height: 6px; top: 13px; }
   .gitlab-timing { position: sticky; left: calc(var(--left-w) + 8px); @apply text-xs text-base-content/50 leading-8; }
 
   .chart-row.proj {

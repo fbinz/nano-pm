@@ -12,7 +12,6 @@ class ExecutionSegment:
     w: float
     start: str
     end: str
-    point: bool = False
 
 
 @dataclass
@@ -32,10 +31,9 @@ def issue_rows(issues, chart_start, chart_end, ppd):
     width = (chart_end - chart_start).days * ppd
     rows = []
 
-    def position(value):
-        instant = timezone.localtime(parse_datetime(value))
-        fraction = (instant.hour * 3600 + instant.minute * 60 + instant.second) / 86400
-        return ((instant.date() - chart_start).days + fraction) * ppd
+    def position(value, *, end_of_day=False):
+        day = timezone.localtime(parse_datetime(value)).date()
+        return ((day - chart_start).days + int(end_of_day)) * ppd
 
     for issue in issues:
         row = IssueRow(
@@ -47,16 +45,14 @@ def issue_rows(issues, chart_start, chart_end, ppd):
             if not start and not end:
                 continue
             row.has_timing = True
-            point = not start or (not end and issue.state != "in-progress")
-            x = position(start or end)
-            if point:
-                if 0 <= x < width:
-                    row.segments.append(ExecutionSegment(x, 6, start or "", end or "", True))
-                continue
-            end_x = position(end or timezone.now().isoformat())
-            left, right = max(0, x), min(width, end_x)
-            if right >= left and right >= 0 and left < width:
-                row.segments.append(ExecutionSegment(left, max(2, right - left), start, end or ""))
+            # Snap geometry only, retaining exact/unknown source timestamps.
+            # A lone boundary gets its whole local day; ongoing work includes
+            # today. Date arithmetic also keeps DST days one cell wide.
+            finish = end or (timezone.now().isoformat() if issue.state == "in-progress" else start)
+            left = max(0, position(start or end))
+            right = min(width, position(finish, end_of_day=True))
+            if right > left:
+                row.segments.append(ExecutionSegment(left, right - left, start or "", end or ""))
         rows.append(row)
     return rows
 

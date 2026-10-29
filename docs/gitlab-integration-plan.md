@@ -152,8 +152,9 @@ instructions. Show queued/running/stale/failed status and last successful sync.
   state, timing, stale/mismatched-prefix indicators, and explicit project transfer.
   Counts describe issue completion, not an estimate of completed effort.
 - Add a collapsed-by-default GitLab execution section below each project's planned
-  task rows. Known work intervals render as distinct read-only bars; known finishes
-  without starts render as points. Issues without usable dates remain accessible
+  task rows. Read-only bars span inclusive local-day boundaries, so same-day work
+  and lone known boundaries occupy a whole day without changing source timestamps.
+  Issues without usable dates remain accessible
   in the issue list/undated section. Never invent durations.
 - Persist expansion through Datastar patches using session-backed UI state. An
   explicit refresh after worker completion reloads cached data; live push is not

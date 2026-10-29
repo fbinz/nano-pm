@@ -16,7 +16,7 @@
       <div class="chart-row gitlab-issue" data-gitlab-issue-id="{{ issue.id }}" data-state="{{ issue.state }}"
            style="width:{{ vm.chart_width|unlocalize }}px;{% if rg.collapsed %}display:none;{% endif %}" data-show="!$_collapsed.{{ rg.id }}">
         {% for segment in issue.segments %}
-          <span class="gitlab-interval{% if segment.point %} gitlab-point{% endif %} {{ issue.state }}"
+          <span class="gitlab-interval {{ issue.state }}"
                 data-start="{{ segment.start }}" data-end="{{ segment.end }}"
                 style="left:{{ segment.x|unlocalize }}px;width:{{ segment.w|unlocalize }}px"
                 title="{{ issue.title }} · {{ issue.state_label }} · {{ segment.start|default:'?' }} → {{ segment.end|default:'…' }}"></span>

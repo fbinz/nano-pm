@@ -479,6 +479,66 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
     } finally { await api.close(); }
   });
 
+  test('GitLab execution spans inclusive local day cells including short and finish-only work', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const projectId = await page.locator('.project-group').first().getAttribute('data-project-id');
+      const day = offset => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+      const startDay = day(-5);
+      const localToday = await gitlabDB(`
+from django.utils import timezone
+print(json.dumps(timezone.localdate().isoformat()))
+`);
+      const cases = [
+        { name: 'Short work', start: `${startDay}T12:00:00Z`, end: `${startDay}T12:05:00Z`, first: startDay, last: startDay },
+        // Both UTC timestamps fall on the next local day in Europe/Berlin.
+        { name: 'UTC midnight', start: `${startDay}T23:30:00Z`, end: `${day(-4)}T00:15:00Z`, first: day(-4), last: day(-4) },
+        { name: 'Several days', start: `${startDay}T12:00:00Z`, end: `${day(-3)}T15:00:00Z`, first: startDay, last: day(-3) },
+        { name: 'Finish only', start: null, end: `${startDay}T23:30:00Z`, first: day(-4), last: day(-4) },
+        { name: 'Still running', start: `${startDay}T12:00:00Z`, end: null, first: startDay, last: localToday },
+      ];
+      api.issues = cases.map((item, index) => {
+        const iid = index + 1;
+        const labels = !item.start ? [] : item.end ? ['Next Deployment'] : ['In Development'];
+        api.events[`101:${iid}:resource_label_events`] = [
+          ...(item.start ? [{ id: 1, action: 'add', label: { name: 'In Development' }, created_at: item.start }] : []),
+          ...(item.end && item.start ? [{ id: 2, action: 'add', label: { name: 'Next Deployment' }, created_at: item.end }] : []),
+        ];
+        return api.issue(iid, `Portal: ${item.name}`, {
+          labels, ...(item.start ? {} : { state: 'closed', closed_at: item.end }),
+        });
+      });
+      await connectGitLab(page, api); await bindGitLab(page, projectId, 'Portal'); await syncGitLab();
+      await page.goto('/');
+      await page.locator(`[data-gitlab-toggle="${projectId}"]`).click();
+      await expect(page.locator('.gitlab-interval')).toHaveCount(cases.length);
+      const assertDayCells = async () => {
+        const ppd = Number(await page.locator('#grid-scroll').getAttribute('data-px-per-day'));
+        const chartStart = await page.locator('#grid-scroll').getAttribute('data-chart-start');
+        const daysBetween = (a, b) => (Date.parse(a) - Date.parse(b)) / 86400000;
+        for (const item of cases) {
+          const bar = page.locator(`.gitlab-interval[title^="Portal: ${item.name} ·"]`);
+          const geometry = await bar.evaluate(el => ({
+            x: parseFloat(el.style.left), width: parseFloat(el.style.width),
+            transform: getComputedStyle(el).transform, start: el.dataset.start, end: el.dataset.end,
+          }));
+          expect(geometry.x, item.name).toBeCloseTo(daysBetween(item.first, chartStart) * ppd, 4);
+          expect(geometry.width, item.name).toBeCloseTo((daysBetween(item.last, item.first) + 1) * ppd, 4);
+          expect(geometry.transform).toBe('none');
+          // Snapping must not replace unknown or exact source timestamps.
+          expect(geometry.start ? Date.parse(geometry.start) : null).toBe(item.start ? Date.parse(item.start) : null);
+          expect(geometry.end ? Date.parse(geometry.end) : null).toBe(item.end ? Date.parse(item.end) : null);
+        }
+      };
+      await assertDayCells();
+      await page.locator('#zoom-slider').evaluate(el => {
+        el.value = el.max; el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await expect(page.locator('#grid-scroll')).toHaveAttribute('data-px-per-day', '72');
+      await assertDayCells();
+    } finally { await api.close(); }
+  });
+
   test('GitLab execution overlay survives patches without changing task geometry or interactions', async ({ appPage: page }, testInfo) => {
     const api = await fakeGitLab();
     try {

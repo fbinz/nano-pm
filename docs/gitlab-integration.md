@@ -78,10 +78,13 @@ the same precedence rule. Events newer than the fetched issue snapshot wait for 
 subsequent sync.
 
 Creation time and general `updated_at` are **not** work-start dates. Missing history
-remains unknown. The chart distinguishes intervals from finish-only points and
-undated issues. It clips execution to the existing planning range rather than
-stretching the chart for historical issues. Expansion survives page refreshes and
-Datastar patches.
+remains unknown. For display, starts snap to the beginning of their local day and
+finishes to the end of their local day. Same-day work occupies one full day; a lone
+known boundary also occupies that day without filling in the unknown timestamp.
+Ongoing work extends through the end of today. Undated issues remain in the issue
+list. The chart clips execution to the existing planning range rather than
+stretching it for historical issues. Expansion survives page refreshes and Datastar
+patches.
 
 Execution is read-only: it never changes task dates, date-derived task status,
 milestones, dependencies, or nano-pm project completion. Issue counts measure issues,
