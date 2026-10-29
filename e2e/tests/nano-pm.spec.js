@@ -7294,11 +7294,11 @@ test.describe('workspace isolation', () => {
     await expect(nav.getByRole('link', { name: 'Integrations', exact: true })).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#workspace-gitlab-settings')).toContainText('Enter an HTTPS GitLab origin');
     await expect(page.locator('#workspace-settings-name, #workspace-workload-settings, #workspace-roadmap-settings')).toHaveCount(0);
-    await nav.getByRole('link', { name: 'Sharing', exact: true }).click();
+    await nav.getByRole('link', { name: 'Roadmap', exact: true }).click();
     await expect(page).toHaveURL('/workspaces/settings/sharing/');
     await page.getByRole('button', { name: 'Enable public roadmap', exact: true }).click();
     await expect(page).toHaveURL('/workspaces/settings/sharing/');
-    await expect(nav.getByRole('link', { name: 'Sharing', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(nav.getByRole('link', { name: 'Roadmap', exact: true })).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#public-roadmap-link')).toBeVisible();
     await nav.getByRole('link', { name: 'General', exact: true }).click();
     await page.locator('main').getByLabel('Workspace name', { exact: true }).fill('Focused settings');
@@ -7370,7 +7370,7 @@ test.describe('workspace isolation', () => {
 
   test('workspace settings configure the public roadmap and keep changes on the settings page', async ({ appPage: page, request }) => {
     await page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true }).click();
-    await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Sharing', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Roadmap', exact: true }).click();
     await page.getByRole('button', { name: 'Enable public roadmap', exact: true }).click();
     await expect(page).toHaveURL(/\/workspaces\/settings\/sharing\/$/);
     await page.getByLabel('Public roadmap title', { exact: true }).fill('Product roadmap');

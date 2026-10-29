@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 22:20+0100\n"
+"POT-Creation-Date: 2026-10-29 22:43+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -865,8 +865,9 @@ msgid "Integrations"
 msgstr "Integrationen"
 
 #: interfaces/web/workspaces.py:50
-msgid "Sharing"
-msgstr "Freigaben"
+#: templates/components/screens/workspaces/settings-sharing.html:10
+msgid "Roadmap"
+msgstr "Roadmap"
 
 #: readers/chart_view.py:26
 msgctxt "Gantt axis month abbreviation"
@@ -2569,10 +2570,6 @@ msgstr "Öffentliche Roadmap"
 msgid "Open public roadmap"
 msgstr "Öffentliche Roadmap öffnen"
 
-#: templates/components/screens/workspaces/settings-sharing.html:10
-msgid "Roadmap"
-msgstr "Roadmap"
-
 #: templates/components/screens/workspaces/settings-sharing.html:14
 msgid "Optional public description"
 msgstr "Optionale öffentliche Beschreibung"
@@ -2674,6 +2671,9 @@ msgid ""
 msgstr ""
 "Deine E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
 "Roadmap gespeichert."
+
+#~ msgid "Sharing"
+#~ msgstr "Freigaben"
 
 #~ msgid "Override workspace workflow"
 #~ msgstr "Workflow des Arbeitsbereichs überschreiben"

@@ -16,7 +16,7 @@ for (const [name, viewport] of Object.entries({
         ['', language === 'de' ? 'Allgemein' : 'General'],
         ['workload/', language === 'de' ? 'Arbeitsverteilung' : 'Workload'],
         ['integrations/', language === 'de' ? 'Integrationen' : 'Integrations'],
-        ['sharing/', language === 'de' ? 'Freigaben' : 'Sharing'],
+        ['sharing/', 'Roadmap'],
       ]) {
         await page.goto('/workspaces/settings/' + section);
         await expect(page.locator('main').getByRole('heading', { name: label, exact: true })).toBeVisible();

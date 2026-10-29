@@ -47,7 +47,7 @@ def render_workspace_settings(request, section, *, status=200, **extra):
         {"key": "general", "label": _("General"), "url": "workspace_settings"},
         {"key": "workload", "label": _("Workload"), "url": "workspace_settings_workload"},
         {"key": "integrations", "label": _("Integrations"), "url": "workspace_settings_integrations"},
-        {"key": "sharing", "label": _("Sharing"), "url": "workspace_settings_sharing"},
+        {"key": "sharing", "label": _("Roadmap"), "url": "workspace_settings_sharing"},
     ]
     context = {
         "user": request.user,

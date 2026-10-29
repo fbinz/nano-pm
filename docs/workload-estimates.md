@@ -11,7 +11,7 @@ feature disabled. A workspace PM can open **Workspace settings** at
 `/workspaces/settings/` using the cog beside the workspace name or the settings
 link in the workspace picker. Settings have four sections: **General** (workspace
 name and milestone behavior), **Workload**, **Integrations** (GitLab), and
-**Sharing** (public roadmap). Use the horizontal tabs on desktop or the section
+**Roadmap** (public roadmap). Use the horizontal tabs on desktop or the section
 selector on mobile. Each section has its own URL; saves return to that section.
 Workload configuration lives at `/workspaces/settings/workload/`, and the old
 `/workspaces/workload/` page redirects there. Public roadmap configuration
