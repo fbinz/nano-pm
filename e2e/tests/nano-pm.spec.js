@@ -401,6 +401,99 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
     } finally { await api.close(); }
   });
 
+  test('GitLab label mappings are workspace-wide while projects only configure prefix collection', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const ids = await page.locator('.project-group').evaluateAll(groups => groups.map(g => Number(g.dataset.projectId)));
+      api.issues = [
+        api.issue(1, 'Portal: Shared workflow', { labels: ['Developing'] }),
+        api.issue(2, 'Reports: Shared workflow', { labels: ['Ready'] }),
+      ];
+      await connectGitLab(page, api);
+      await page.getByLabel('In-progress labels').fill('Developing');
+      await page.getByLabel('Done labels').fill('Ready');
+      await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
+      const workspaceId = await gitlabDB('print(json.dumps(GitLabConnection.objects.get().workspace_id))');
+      await bindGitLab(page, ids[0], 'Portal');
+      await expect(page.getByLabel('In-progress labels')).toHaveCount(0);
+      await expect(page.getByLabel('Done labels')).toHaveCount(0);
+      await expect(page.getByLabel('Not-started labels')).toHaveCount(0);
+      await expect(page.getByLabel('Override workspace workflow')).toHaveCount(0);
+      await expect(page.getByLabel('Unmatched issue state')).toHaveCount(0);
+      await page.getByText('GitLab project settings', { exact: true }).click();
+      await page.getByRole('link', { name: 'GitLab workflow', exact: true }).click();
+      await expect(page).toHaveURL('/workspaces/settings/#workspace-gitlab-settings');
+      await expect(page.getByLabel('Done labels')).toHaveValue('Ready');
+      await bindGitLab(page, ids[1], 'Reports');
+      // Old clients must not be able to persist a project-specific mapping.
+      expect(await postForm(page, `/projects/${ids[0]}/gitlab/`, {
+        prefix: 'Portal', collect: 'on', override_workflow: 'on',
+        in_progress_labels: '', done_labels: 'Developing', fallback: 'done',
+      })).toBe(200);
+      await syncGitLab();
+      await page.goto(`/projects/${ids[0]}/`);
+      await expect(gitlabRows(page)).toHaveAttribute('data-state', 'in-progress');
+      await page.goto(`/projects/${ids[1]}/`);
+      await expect(gitlabRows(page)).toHaveAttribute('data-state', 'done');
+      await page.goto('/workspaces/settings/');
+      await expect(page.getByLabel('Done labels')).toHaveValue('Ready');
+      await page.getByLabel('Done labels').fill('Developing');
+      await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
+      await syncGitLab();
+      await page.goto(`/projects/${ids[0]}/`);
+      await expect(gitlabRows(page)).toHaveAttribute('data-state', 'done');
+      await page.goto(`/projects/${ids[1]}/`);
+      await expect(gitlabRows(page)).toHaveAttribute('data-state', 'unclassified');
+      expect(await postForm(page, '/workspaces/', { name: 'Independent workflow workspace' })).toBe(200);
+      await connectGitLab(page, api);
+      await expect(page.getByLabel('In-progress labels')).toHaveValue('In Development');
+      await expect(page.getByLabel('Done labels')).toHaveValue('Next Deployment');
+      expect(await postForm(page, `/workspaces/${workspaceId}/switch/`, {})).toBe(200);
+      await page.goto('/workspaces/settings/');
+      await expect(page.getByLabel('Done labels')).toHaveValue('Developing');
+    } finally { await api.close(); }
+  });
+
+  test('GitLab workspace-only workflow migration preserves mappings and queues legacy overrides for refresh', async ({ appPage: page }) => {
+    const api = await fakeGitLab();
+    try {
+      const id = await page.locator('.project-group').first().getAttribute('data-project-id');
+      api.issues = [api.issue(1, 'Portal: Existing ownership', { labels: ['In Development'] })];
+      await connectGitLab(page, api); await bindGitLab(page, id, 'Portal'); await syncGitLab();
+      const result = await gitlabDB(`
+from datetime import timedelta
+from django.core.management import call_command
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.utils import timezone
+call_command('migrate', 'data', '0031', interactive=False, verbosity=0)
+legacy = MigrationExecutor(connection).loader.project_state([('data', '0031_gitlabconnection_gitlabissue_gitlabissueevent_and_more')]).apps
+legacy.get_model('data', 'GitLabProjectBinding').objects.filter(project_id=${id}).update(workflow={
+    'in-progress': [], 'done': ['In Development'], 'not-started': [], 'fallback': 'unclassified',
+})
+source = GitLabConnection.objects.get()
+previous_revision = source.revision
+previous_mapping = source.workflow
+GitLabConnection.objects.filter(pk=source.pk).update(needs_backfill=False, next_run=timezone.now() + timedelta(hours=1))
+GitLabIssue.objects.update(state='done')
+call_command('migrate', 'data', '0032', interactive=False, verbosity=0)
+source.refresh_from_db()
+print(json.dumps({
+    'queued': source.needs_backfill and source.next_run is None and source.revision > previous_revision,
+    'workspace_mapping_preserved': source.workflow == previous_mapping,
+    'owner': GitLabIssue.objects.get().owner_id,
+}))
+`);
+      expect(result).toEqual({ queued: true, workspace_mapping_preserved: true, owner: Number(id) });
+      await page.goto('/workspaces/settings/');
+      await expect(page.locator('#gitlab-sync-status')).toContainText('Queued');
+      await syncGitLab(); await page.goto(`/projects/${id}/`);
+      await expect(page.getByLabel('GitLab title prefix')).toHaveValue('Portal');
+      await expect(gitlabRows(page)).toHaveAttribute('data-state', 'in-progress');
+      await expect(page.getByLabel('Done labels')).toHaveCount(0);
+    } finally { await api.close(); }
+  });
+
   test('GitLab workflow uses configurable labels and historical work cycles without inventing dates', async ({ appPage: page }) => {
     const api = await fakeGitLab();
     try {
@@ -444,7 +537,7 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
     } finally { await api.close(); }
   });
 
-  test('GitLab workflow ignores transitions newer than its source snapshot and honors project overrides', async ({ appPage: page }) => {
+  test('GitLab workflow ignores transitions newer than its source snapshot and honors workspace rules', async ({ appPage: page }) => {
     const api = await fakeGitLab();
     try {
       const id = await page.locator('.project-group').first().getAttribute('data-project-id');
@@ -470,11 +563,10 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
       api.events['101:1:resource_state_events'].push({ id: 4, state: 'reopened', created_at: date(0) });
       await syncGitLab(); await page.reload();
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'done');
-      await page.getByText('GitLab project settings', { exact: true }).click();
-      await page.getByLabel('Override workspace workflow').check();
+      await page.goto('/workspaces/settings/');
       await page.getByLabel('Done labels').fill('Something else');
-      await page.getByRole('button', { name: 'Save GitLab project settings', exact: true }).click();
-      await syncGitLab(); await page.reload();
+      await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
+      await syncGitLab(); await page.goto(`/projects/${id}/`);
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'in-progress');
     } finally { await api.close(); }
   });

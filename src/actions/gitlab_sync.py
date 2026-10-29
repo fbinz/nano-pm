@@ -172,7 +172,7 @@ def persist(snapshot, data):
         )
     current.issues.filter(pk__in=unavailable).update(unavailable=True)
     assign_unowned(current, project_ids)
-    for issue in current.issues.filter(owner__isnull=False).select_related("owner__gitlab_binding"):
+    for issue in current.issues.filter(owner__isnull=False).select_related("owner"):
         if issue.owner.workspace_id != current.workspace_id:
             continue
         key = (issue.gitlab_project_id, issue.iid)
@@ -181,8 +181,6 @@ def persist(snapshot, data):
                 issue=issue, kind=event["kind"], source_id=event["id"],
                 defaults={"timestamp": event["at"], "data": event["data"]},
             )
-        binding = getattr(issue.owner, "gitlab_binding", None)
-        mapping = binding.workflow if binding and binding.workflow else current.workflow
         # Read after the upserts rather than the prefetch cache.
         events = [{
             "at": event.timestamp.isoformat(), "kind": event.kind,
@@ -190,7 +188,7 @@ def persist(snapshot, data):
         } for event in GitLabIssueEvent.objects.filter(issue=issue)
             if not issue.source_updated_at or event.timestamp <= issue.source_updated_at]
         issue.state, issue.intervals = reduce_history(
-            issue.labels, issue.source_state, events, mapping,
+            issue.labels, issue.source_state, events, current.workflow,
             issue.source_closed_at.isoformat() if issue.source_closed_at else None,
         )
         issue.mapping_revision = current.revision

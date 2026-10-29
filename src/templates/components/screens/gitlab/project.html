@@ -1,5 +1,5 @@
 {% load i18n %}
-<c-vars project connection form issues destinations done_count can_edit />
+<c-vars project connection form issues destinations done_count can_edit is_pm="False" />
 {% if connection %}
 <section class="rounded-box border border-base-300 p-5 space-y-5 text-base" id="gitlab-project">
   <header class="flex flex-wrap items-center justify-between gap-3">
@@ -21,6 +21,7 @@
         {{ form.as_p }}
         <p>{% trans "A prefix matches the text before the first colon, ignoring case and surrounding spaces. Existing issue ownership is preserved when the prefix changes." %}</p>
         <p>{% trans "Completed projects keep their issues but do not collect new ones." %}</p>
+        <p>{% trans "Label mappings apply to the whole workspace." %}{% if is_pm %} <a class="link" href="{% url 'workspace_settings' %}#workspace-gitlab-settings">{% trans "GitLab workflow" %}</a>{% endif %}</p>
         <p>{% trans "Example matching title" %}: <span data-prefix-preview>{{ form.prefix.value|default:'' }}: …</span></p>
         <button type="submit" class="btn btn-neutral">{% trans "Save GitLab project settings" %}</button>
       </form>

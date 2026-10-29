@@ -35,7 +35,7 @@ These bound the initial implementation rather than adding requirements to GitLab
 3. A project has a configurable collection toggle. Collection is effective only
    while the project is not completed. Only one effective collector per normalized
    prefix is permitted within the connection's shared search scope.
-4. Workflow mappings are connection defaults, with optional per-project overrides.
+4. Workflow mappings are configured once per workspace and apply to all its projects.
    Initial mappings: `In Development` → in progress; `Next Deployment` → done.
    Other labels and an optional not-started state are configurable.
 5. State precedence: GitLab closed > configured done label > in-progress label >
@@ -52,7 +52,8 @@ Add `src/data/models/gitlab.py`, exports in `src/data/models/__init__.py`, and m
   explicit search scope, default workflow mapping, enabled state, configuration
   revision, last success/error, next run, and durable sync/lease metadata.
 - **GitLabProjectBinding:** nano-pm project, connection, displayed/normalized prefix,
-  collection preference, effective collection state, and optional workflow override.
+  collection preference and effective collection state. Workflow rules belong only
+  to the workspace connection.
 - **GitLabIssue:** connection, GitLab numeric project ID and issue IID, title, URL,
   labels, GitLab state, source timestamps, current nano-pm issue state, owner project,
   ownership disposition, and last successful refresh.
@@ -147,7 +148,7 @@ instructions. Show queued/running/stale/failed status and last successful sync.
   `src/interfaces/web/gitlab.py`, `src/interfaces/web/urls.py`, and new templates.
 - Extend project settings in `src/interfaces/web/detail_forms.py`,
   `src/interfaces/web/projects.py`, and the project detail template with prefix,
-  collection toggle, optional workflow override, and a matching-title preview.
+  collection toggle, a matching-title preview, and a link to the workspace workflow.
 - Add a cached issue list on project details: GitLab reference, title, interpreted
   state, timing, stale/mismatched-prefix indicators, and explicit project transfer.
   Counts describe issue completion, not an estimate of completed effort.
@@ -200,7 +201,7 @@ smallest green change, then run the main behavioural spec.
 3. **Stable ownership:** title edits, completion/reuse, old unassigned issues,
    reopening conflicts, concurrent claims, manual transfers, deletion, and workspace
    moves. This is the primary acceptance milestone before timeline work.
-4. **Workflow interpretation:** configurable mappings/overrides, conflicting labels,
+4. **Workflow interpretation:** shared workspace mappings, conflicting labels,
    closed precedence, real transition dates, repeated cycles, missing history,
    mapping changes, and event deduplication.
 5. **Reliable polling:** incremental updates, configuration-triggered backfill,

@@ -57,7 +57,6 @@ class GitLabProjectBinding(models.Model):
     collect = models.BooleanField(default=True)
     # NULL releases the database-enforced claim without losing the saved preference.
     active_prefix = models.CharField(max_length=400, null=True, blank=True)
-    workflow = models.JSONField(null=True, blank=True)
 
     class Meta:
         constraints = [

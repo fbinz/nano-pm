@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 21:45+0100\n"
+"POT-Creation-Date: 2026-10-29 22:00+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -15,12 +15,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: actions/gitlab_matching.py:33 actions/gitlab_matching.py:57
+#: actions/gitlab_matching.py:33 actions/gitlab_matching.py:56
 msgid "Another active project already collects this GitLab prefix."
 msgstr ""
 "Ein anderes aktives Projekt sammelt bereits Issues mit diesem GitLab-Präfix."
 
-#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:91
+#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:88
 msgid "Enter a project prefix without a colon."
 msgstr "Gib ein Projektpräfix ohne Doppelpunkt ein."
 
@@ -456,19 +456,19 @@ msgstr "Vorgemerkt"
 msgid "Up to date"
 msgstr "Aktuell"
 
-#: data/models/gitlab.py:70
+#: data/models/gitlab.py:69
 msgid "Unclassified"
 msgstr "Nicht eingeordnet"
 
-#: data/models/gitlab.py:71
+#: data/models/gitlab.py:70
 msgid "Not started"
 msgstr "Noch nicht begonnen"
 
-#: data/models/gitlab.py:72 data/models/task.py:9
+#: data/models/gitlab.py:71 data/models/task.py:9
 msgid "In progress"
 msgstr "In Bearbeitung"
 
-#: data/models/gitlab.py:73 data/models/task.py:10
+#: data/models/gitlab.py:72 data/models/task.py:10
 #: templates/components/screens/gantt/chart.html:72
 msgid "Done"
 msgstr "Erledigt"
@@ -656,19 +656,15 @@ msgstr "Labels für „Noch nicht begonnen“"
 msgid "Unmatched issue state"
 msgstr "Status ohne passendes Label"
 
-#: interfaces/web/gitlab.py:84
+#: interfaces/web/gitlab.py:82
 msgid "GitLab title prefix"
 msgstr "GitLab-Titelpräfix"
 
-#: interfaces/web/gitlab.py:85
+#: interfaces/web/gitlab.py:83
 msgid "Collect matching GitLab issues"
 msgstr "Passende GitLab-Issues sammeln"
 
-#: interfaces/web/gitlab.py:86
-msgid "Override workspace workflow"
-msgstr "Workflow des Arbeitsbereichs überschreiben"
-
-#: interfaces/web/gitlab.py:136
+#: interfaces/web/gitlab.py:133
 msgid ""
 "Disconnecting does not reset ownership. Use a new workspace for a different "
 "GitLab instance."
@@ -676,7 +672,7 @@ msgstr ""
 "Das Trennen setzt die Zuordnungen nicht zurück. Verwende für eine andere "
 "GitLab-Instanz einen neuen Arbeitsbereich."
 
-#: interfaces/web/gitlab.py:138
+#: interfaces/web/gitlab.py:135
 msgid "Enter a GitLab API token."
 msgstr "Gib ein GitLab-API-Token ein."
 
@@ -1377,12 +1373,12 @@ msgid "Outside chart range"
 msgstr "Außerhalb des sichtbaren Zeitraums"
 
 #: templates/components/screens/gantt/gitlab.html:24
-#: templates/components/screens/gitlab/project.html:69
+#: templates/components/screens/gitlab/project.html:70
 msgid "Timing unknown"
 msgstr "Zeitpunkte unbekannt"
 
 #: templates/components/screens/gantt/gitlab.html:26
-#: templates/components/screens/gitlab/project.html:48
+#: templates/components/screens/gitlab/project.html:49
 msgid "Source unavailable"
 msgstr "Quelle nicht verfügbar"
 
@@ -1654,7 +1650,7 @@ msgid "GitLab project settings"
 msgstr "GitLab-Projekteinstellungen"
 
 #: templates/components/screens/gitlab/binding-errors.html:9
-#: templates/components/screens/gitlab/project.html:25
+#: templates/components/screens/gitlab/project.html:26
 msgid "Save GitLab project settings"
 msgstr "GitLab-Projekteinstellungen speichern"
 
@@ -1726,43 +1722,53 @@ msgstr ""
 "Abgeschlossene Projekte behalten ihre Issues, sammeln aber keine neuen."
 
 #: templates/components/screens/gitlab/project.html:24
+#: templates/components/screens/gitlab/settings.html:29
+msgid "Label mappings apply to the whole workspace."
+msgstr "Die Label-Zuordnung gilt für den gesamten Arbeitsbereich."
+
+#: templates/components/screens/gitlab/project.html:24
+#: templates/components/screens/gitlab/settings.html:28
+msgid "GitLab workflow"
+msgstr "GitLab-Workflow"
+
+#: templates/components/screens/gitlab/project.html:25
 msgid "Example matching title"
 msgstr "Beispiel für einen passenden Titel"
 
-#: templates/components/screens/gitlab/project.html:33
+#: templates/components/screens/gitlab/project.html:34
 msgid "Issue"
 msgstr "Issue"
 
-#: templates/components/screens/gitlab/project.html:34
+#: templates/components/screens/gitlab/project.html:35
 msgid "State"
 msgstr "Status"
 
-#: templates/components/screens/gitlab/project.html:35
+#: templates/components/screens/gitlab/project.html:36
 msgid "Execution history"
 msgstr "Umsetzungsverlauf"
 
-#: templates/components/screens/gitlab/project.html:36
+#: templates/components/screens/gitlab/project.html:37
 msgid "Actions"
 msgstr "Aktionen"
 
-#: templates/components/screens/gitlab/project.html:47
+#: templates/components/screens/gitlab/project.html:48
 msgid "Prefix changed"
 msgstr "Präfix geändert"
 
-#: templates/components/screens/gitlab/project.html:59
+#: templates/components/screens/gitlab/project.html:60
 msgid "Finished on"
 msgstr "Erledigt am"
 
-#: templates/components/screens/gitlab/project.html:61
+#: templates/components/screens/gitlab/project.html:62
 msgid "Ongoing"
 msgstr "Laufend"
 
-#: templates/components/screens/gitlab/project.html:63
+#: templates/components/screens/gitlab/project.html:64
 msgid "Started on"
 msgstr "Begonnen am"
 
-#: templates/components/screens/gitlab/project.html:76
 #: templates/components/screens/gitlab/project.html:77
+#: templates/components/screens/gitlab/project.html:78
 msgid "Issue actions"
 msgstr "Issue-Aktionen"
 
@@ -1809,11 +1815,7 @@ msgstr "GitLab trennen"
 msgid "Refresh sync status"
 msgstr "Synchronisierungsstatus neu laden"
 
-#: templates/components/screens/gitlab/settings.html:28
-msgid "GitLab workflow"
-msgstr "GitLab-Workflow"
-
-#: templates/components/screens/gitlab/settings.html:29
+#: templates/components/screens/gitlab/settings.html:30
 msgid ""
 "Enter one exact GitLab label per line. Closed issues are always done. Done "
 "labels take precedence over in-progress labels, then not-started labels."
@@ -1822,7 +1824,7 @@ msgstr ""
 "als erledigt. Labels für „Erledigt“ haben Vorrang vor „In Bearbeitung“, "
 "danach folgen Labels für „Noch nicht begonnen“."
 
-#: templates/components/screens/gitlab/settings.html:33
+#: templates/components/screens/gitlab/settings.html:34
 msgid "Save GitLab workflow"
 msgstr "GitLab-Workflow speichern"
 
@@ -2651,6 +2653,9 @@ msgid ""
 msgstr ""
 "Deine E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
 "Roadmap gespeichert."
+
+#~ msgid "Override workspace workflow"
+#~ msgstr "Workflow des Arbeitsbereichs überschreiben"
 
 #~ msgid "Move GitLab issue to project"
 #~ msgstr "GitLab-Issue in Projekt verschieben"

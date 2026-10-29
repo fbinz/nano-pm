@@ -30,8 +30,10 @@
    `Portal` matches `Portal: Add login`, ignoring case and surrounding spaces.
    It does not match `Portal Admin: Add login`, titles without a colon, or a prefix
    occurring later in the title. No labels or GitLab writes are needed.
-5. Configure the workspace workflow, optionally overriding it in individual project
-   settings. Enter one exact GitLab label per line. Defaults are
+5. Configure label mappings once under **Workspace settings → GitLab integration →
+   GitLab workflow**. They apply to every project in that workspace; project settings
+   only configure the title prefix and issue collection. Enter one exact GitLab
+   label per line. Defaults are
    `In Development` → in progress and `Next Deployment` → done.
 6. Run the GitLab worker. **Sync GitLab now** queues work; it does not make the web
    process fetch from GitLab. Refresh the settings/project page after synchronization.
@@ -97,6 +99,13 @@ explicit labels rather than raw timestamps or question marks.
 Execution is read-only: it never changes task dates, date-derived task status,
 milestones, dependencies, or nano-pm project completion. Issue counts measure issues,
 not effort. The resource and kanban views are unchanged.
+
+### Existing installations
+
+Migration `0032` removes project-specific workflow overrides. Existing workspace
+mappings, title prefixes, and issue ownership are preserved. Connections that had
+project overrides are queued for synchronization so their cached issue states and
+history are rebuilt from the workspace rules on the next successful sync.
 
 ## Running synchronization
 
@@ -169,6 +178,6 @@ uv run ruff check .
 ```
 
 Coverage includes credential protection, paginated imports, source scopes, immutable
-ownership/prefix reuse, workflow overrides/history, missing dates, source failures,
+ownership/prefix reuse, shared workspace workflows/history, missing dates, source failures,
 backoff/redirect safety, leases, in-flight settings changes, real SQLite contention,
 deletion/workspace isolation, and read-only overlay geometry through chart patches.

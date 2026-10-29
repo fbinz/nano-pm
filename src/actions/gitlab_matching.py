@@ -34,7 +34,7 @@ def claim_prefix(binding, completed):
 
 
 @transaction.atomic
-def save_binding(*, workspace, project_id, prefix, collect, workflow=None):
+def save_binding(*, workspace, project_id, prefix, collect):
     project = Project.objects.select_for_update().get(pk=project_id, workspace=workspace)
     connection = GitLabConnection.objects.get(workspace=workspace)
     prefix = prefix.strip()
@@ -48,7 +48,6 @@ def save_binding(*, workspace, project_id, prefix, collect, workflow=None):
     binding.prefix = prefix
     binding.normalized_prefix = normalize_prefix(prefix)
     binding.collect = collect
-    binding.workflow = workflow
     claim_prefix(binding, project.is_completed)
     try:
         with transaction.atomic():

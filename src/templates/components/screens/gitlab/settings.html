@@ -26,6 +26,7 @@
     </section>
     <section class="space-y-3">
       <h3 class="text-lg font-semibold">{% trans "GitLab workflow" %}</h3>
+      <p class="text-sm text-base-content/60">{% trans "Label mappings apply to the whole workspace." %}</p>
       <p class="text-sm text-base-content/60">{% trans "Enter one exact GitLab label per line. Closed issues are always done. Done labels take precedence over in-progress labels, then not-started labels." %}</p>
       <form method="post" action="{% url 'gitlab_settings' %}" class="space-y-3">
         {% csrf_token %}<input type="hidden" name="action" value="workflow">

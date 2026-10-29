@@ -74,16 +74,13 @@ class WorkflowForm(DetailForm):
         } | {"fallback": self.cleaned_data["fallback"]}
 
 
-class BindingForm(WorkflowForm):
+class BindingForm(DetailForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.order_fields(["prefix", "collect", "override_workflow", "in_progress_labels", "done_labels", "not_started_labels", "fallback"])
-        for name in ("collect", "override_workflow"):
-            self.fields[name].widget.attrs["class"] = "checkbox"
+        self.fields["collect"].widget.attrs["class"] = "checkbox"
 
     prefix = forms.CharField(label=_("GitLab title prefix"), max_length=200)
     collect = forms.BooleanField(label=_("Collect matching GitLab issues"), required=False)
-    override_workflow = forms.BooleanField(label=_("Override workspace workflow"), required=False)
 
     def clean_prefix(self):
         value = self.cleaned_data["prefix"].strip()
@@ -180,11 +177,9 @@ def render_settings(request, connection, form, workflow_form, status=200):
 def project_context(project, workspace):
     connection = GitLabConnection.objects.filter(workspace=workspace).first()
     binding = getattr(project, "gitlab_binding", None)
-    mapping = binding.workflow if binding and binding.workflow else connection.workflow if connection else default_workflow()
     form = BindingForm(initial={
-        **WorkflowForm.initial_for(mapping), "prefix": binding.prefix if binding else "",
+        "prefix": binding.prefix if binding else "",
         "collect": binding.collect if binding else True,
-        "override_workflow": bool(binding and binding.workflow),
     })
     issues = list(GitLabIssue.objects.filter(owner=project, connection__workspace=workspace)
                   .select_related("owner__gitlab_binding", "connection"))
@@ -210,7 +205,6 @@ def project_settings(request, project_id):
             save_binding(
                 workspace=request.workspace, project_id=project.pk,
                 prefix=form.cleaned_data["prefix"], collect=form.cleaned_data["collect"],
-                workflow=form.mapping() if form.cleaned_data["override_workflow"] else None,
             )
             return redirect("project_detail", project_id=project.pk)
         except ValidationError as error:

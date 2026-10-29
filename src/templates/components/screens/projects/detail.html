@@ -49,7 +49,7 @@
       </div>
     </section>
 
-    <c-screens.gitlab.project :project="project" :connection="gitlab_connection" :form="gitlab_binding_form" :issues="gitlab_issues" :destinations="gitlab_destinations" :done_count="gitlab_done_count" :can_edit="can_edit" />
+    <c-screens.gitlab.project :project="project" :connection="gitlab_connection" :form="gitlab_binding_form" :issues="gitlab_issues" :destinations="gitlab_destinations" :done_count="gitlab_done_count" :can_edit="can_edit" :is_pm="is_pm" />
 
     <section class="rounded-box border border-base-300 bg-base-100 p-5" aria-labelledby="project-tasks-title">
       <h2 id="project-tasks-title" class="text-lg font-semibold mb-3">{% trans "Tasks" %} <span class="badge badge-ghost">{{ tasks|length }}</span></h2>
