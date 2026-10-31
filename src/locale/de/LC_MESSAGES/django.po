@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 22:43+0100\n"
+"POT-Creation-Date: 2026-10-31 22:03+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -869,109 +869,129 @@ msgstr "Integrationen"
 msgid "Roadmap"
 msgstr "Roadmap"
 
-#: readers/chart_view.py:26
+#: readers/chart_view.py:27
 msgctxt "Gantt axis month abbreviation"
 msgid "Jan"
 msgstr "Jan"
 
-#: readers/chart_view.py:27
+#: readers/chart_view.py:28
 msgctxt "Gantt axis month abbreviation"
 msgid "Feb"
 msgstr "Feb"
 
-#: readers/chart_view.py:28
+#: readers/chart_view.py:29
 msgctxt "Gantt axis month abbreviation"
 msgid "Mar"
 msgstr "Mär"
 
-#: readers/chart_view.py:29
+#: readers/chart_view.py:30
 msgctxt "Gantt axis month abbreviation"
 msgid "Apr"
 msgstr "Apr"
 
-#: readers/chart_view.py:30
+#: readers/chart_view.py:31
 msgctxt "Gantt axis month abbreviation"
 msgid "May"
 msgstr "Mai"
 
-#: readers/chart_view.py:31
+#: readers/chart_view.py:32
 msgctxt "Gantt axis month abbreviation"
 msgid "Jun"
 msgstr "Jun"
 
-#: readers/chart_view.py:32
+#: readers/chart_view.py:33
 msgctxt "Gantt axis month abbreviation"
 msgid "Jul"
 msgstr "Jul"
 
-#: readers/chart_view.py:33
+#: readers/chart_view.py:34
 msgctxt "Gantt axis month abbreviation"
 msgid "Aug"
 msgstr "Aug"
 
-#: readers/chart_view.py:34
+#: readers/chart_view.py:35
 msgctxt "Gantt axis month abbreviation"
 msgid "Sep"
 msgstr "Sep"
 
-#: readers/chart_view.py:35
+#: readers/chart_view.py:36
 msgctxt "Gantt axis month abbreviation"
 msgid "Oct"
 msgstr "Okt"
 
-#: readers/chart_view.py:36
+#: readers/chart_view.py:37
 msgctxt "Gantt axis month abbreviation"
 msgid "Nov"
 msgstr "Nov"
 
-#: readers/chart_view.py:37
+#: readers/chart_view.py:38
 msgctxt "Gantt axis month abbreviation"
 msgid "Dec"
 msgstr "Dez"
 
-#: readers/chart_view.py:43
+#: readers/chart_view.py:44
 msgctxt "Gantt axis day abbreviation"
 msgid "Mon"
 msgstr "Mo"
 
-#: readers/chart_view.py:44
+#: readers/chart_view.py:45
 msgctxt "Gantt axis day abbreviation"
 msgid "Tue"
 msgstr "Di"
 
-#: readers/chart_view.py:45
+#: readers/chart_view.py:46
 msgctxt "Gantt axis day abbreviation"
 msgid "Wed"
 msgstr "Mi"
 
-#: readers/chart_view.py:46
+#: readers/chart_view.py:47
 msgctxt "Gantt axis day abbreviation"
 msgid "Thu"
 msgstr "Do"
 
-#: readers/chart_view.py:47
+#: readers/chart_view.py:48
 msgctxt "Gantt axis day abbreviation"
 msgid "Fri"
 msgstr "Fr"
 
-#: readers/chart_view.py:48
+#: readers/chart_view.py:49
 msgctxt "Gantt axis day abbreviation"
 msgid "Sat"
 msgstr "Sa"
 
-#: readers/chart_view.py:49
+#: readers/chart_view.py:50
 msgctxt "Gantt axis day abbreviation"
 msgid "Sun"
 msgstr "So"
 
-#: readers/chart_view.py:235
+#: readers/chart_view.py:237
 msgctxt "Gantt axis ISO week prefix"
 msgid "W"
 msgstr "KW"
 
-#: readers/chart_view.py:637
+#: readers/chart_view.py:638
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
+
+#: readers/gitlab.py:27
+#, python-format
+msgid "%(count)d done"
+msgstr "%(count)d erledigt"
+
+#: readers/gitlab.py:28
+#, python-format
+msgid "%(count)d in progress"
+msgstr "%(count)d in Bearbeitung"
+
+#: readers/gitlab.py:29
+#, python-format
+msgid "%(count)d not started"
+msgstr "%(count)d noch nicht begonnen"
+
+#: readers/gitlab.py:30
+#, python-format
+msgid "%(count)d unclassified"
+msgstr "%(count)d nicht eingeordnet"
 
 #: readers/public_roadmap.py:76
 msgid "today"
@@ -1322,7 +1342,7 @@ msgid "timeline"
 msgstr "Zeitachse"
 
 #: templates/components/screens/gantt/chart.html:40
-#: templates/components/screens/gantt/chart.html:135
+#: templates/components/screens/gantt/chart.html:136
 msgid "Add Project"
 msgstr "Projekt hinzufügen"
 
@@ -1335,28 +1355,28 @@ msgstr "Ziehen, um das Projekt neu anzuordnen"
 msgid "No future milestone"
 msgstr "Kein zukünftiger Meilenstein"
 
-#: templates/components/screens/gantt/chart.html:75
+#: templates/components/screens/gantt/chart.html:76
 #: templates/components/screens/gantt/project-popover.html:14
 msgid "Open project details"
 msgstr "Projektdetails öffnen"
 
-#: templates/components/screens/gantt/chart.html:81
+#: templates/components/screens/gantt/chart.html:82
 msgid "Add task"
 msgstr "Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:82
+#: templates/components/screens/gantt/chart.html:83
 msgid "Add a highlighted row for a new task"
 msgstr "Hervorgehobene Zeile für eine neue Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:88
+#: templates/components/screens/gantt/chart.html:89
 msgid "Add milestone"
 msgstr "Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/chart.html:89
+#: templates/components/screens/gantt/chart.html:90
 msgid "Add milestone, then place it on the timeline"
 msgstr "Meilenstein hinzufügen und dann auf der Zeitachse platzieren"
 
-#: templates/components/screens/gantt/chart.html:98
+#: templates/components/screens/gantt/chart.html:99
 msgid ""
 "Choose Milestone beside the project, then place it here. Shift-click and "
 "Shift-drag are shortcuts."
@@ -1364,38 +1384,34 @@ msgstr ""
 "Meilenstein neben dem Projekt auswählen und dann hier platzieren. Umschalt-"
 "Klick und Umschalt-Ziehen sind Kurzbefehle."
 
-#: templates/components/screens/gantt/chart.html:115
+#: templates/components/screens/gantt/chart.html:116
 #: templates/components/screens/gantt/chart_resource.html:70
 #: templates/components/screens/gantt/task-popover.html:16
 msgid "Open task details"
 msgstr "Aufgabendetails öffnen"
 
-#: templates/components/screens/gantt/chart.html:150
+#: templates/components/screens/gantt/chart.html:151
 msgid "Click to remove this dependency"
 msgstr "Klicken, um diese Abhängigkeit zu entfernen"
 
-#: templates/components/screens/gantt/chart.html:163
+#: templates/components/screens/gantt/chart.html:164
 msgid "No projects yet."
 msgstr "Noch keine Projekte."
 
-#: templates/components/screens/gantt/chart.html:164
+#: templates/components/screens/gantt/chart.html:165
 msgid "+ Create your first project"
 msgstr "+ Erstelle dein erstes Projekt"
 
-#: templates/components/screens/gantt/gitlab.html:7
-msgid "GitLab execution"
-msgstr "GitLab-Umsetzung"
-
-#: templates/components/screens/gantt/gitlab.html:24
+#: templates/components/screens/gantt/gitlab.html:17
 msgid "Outside chart range"
 msgstr "Außerhalb des sichtbaren Zeitraums"
 
-#: templates/components/screens/gantt/gitlab.html:24
+#: templates/components/screens/gantt/gitlab.html:17
 #: templates/components/screens/gitlab/project.html:70
 msgid "Timing unknown"
 msgstr "Zeitpunkte unbekannt"
 
-#: templates/components/screens/gantt/gitlab.html:26
+#: templates/components/screens/gantt/gitlab.html:19
 #: templates/components/screens/gitlab/project.html:49
 msgid "Source unavailable"
 msgstr "Quelle nicht verfügbar"
@@ -1663,12 +1679,12 @@ msgid "No teams yet."
 msgstr "Noch keine Teams."
 
 #: templates/components/screens/gitlab/binding-errors.html:4
-#: templates/components/screens/gitlab/project.html:17
+#: templates/components/screens/gitlab/project.html:16
 msgid "GitLab project settings"
 msgstr "GitLab-Projekteinstellungen"
 
 #: templates/components/screens/gitlab/binding-errors.html:9
-#: templates/components/screens/gitlab/project.html:26
+#: templates/components/screens/gitlab/project.html:25
 msgid "Save GitLab project settings"
 msgstr "GitLab-Projekteinstellungen speichern"
 
@@ -1698,33 +1714,63 @@ msgstr "Zielprojekt"
 msgid "Choose project…"
 msgstr "Projekt wählen …"
 
-#: templates/components/screens/gitlab/project.html:7
-msgid "GitLab issues"
-msgstr "GitLab-Issues"
+#: templates/components/screens/gitlab/project-summary.html:8
+#: templates/components/screens/gitlab/project-summary.html:9
+#, python-format
+msgid "GitLab · %(done)s/%(total)s done"
+msgstr "GitLab · %(done)s/%(total)s erledigt"
 
-#: templates/components/screens/gitlab/project.html:8
-msgid "issues done"
-msgstr "Issues erledigt"
+#: templates/components/screens/gitlab/project-summary.html:9
+#: templates/components/screens/gitlab/project-summary.html:26
+msgid "GitLab is disconnected."
+msgstr "GitLab ist getrennt."
 
-#: templates/components/screens/gitlab/project.html:10
-msgid "Refresh GitLab issues"
-msgstr "GitLab-Issues neu laden"
-
-#: templates/components/screens/gitlab/project.html:12
-#: templates/components/screens/gitlab/settings.html:18
-msgid "Last successful sync"
-msgstr "Letzte erfolgreiche Synchronisierung"
-
+#: templates/components/screens/gitlab/project-summary.html:9
+#: templates/components/screens/gitlab/project-summary.html:28
 #: templates/components/screens/gitlab/project.html:13
-msgid "GitLab is disconnected. Cached issues are retained."
-msgstr "GitLab ist getrennt. Gespeicherte Issues bleiben erhalten."
-
-#: templates/components/screens/gitlab/project.html:14
 #: templates/components/screens/gitlab/settings.html:17
 msgid "GitLab data may be stale."
 msgstr "Die GitLab-Daten sind möglicherweise veraltet."
 
-#: templates/components/screens/gitlab/project.html:22
+#: templates/components/screens/gitlab/project-summary.html:9
+#: templates/components/screens/gitlab/project-summary.html:32
+#: templates/components/screens/gitlab/project.html:11
+#: templates/components/screens/gitlab/settings.html:18
+msgid "Last successful sync"
+msgstr "Letzte erfolgreiche Synchronisierung"
+
+#: templates/components/screens/gitlab/project-summary.html:9
+#: templates/components/screens/gitlab/project-summary.html:34
+msgid "No successful sync yet."
+msgstr "Noch keine erfolgreiche Synchronisierung."
+
+#: templates/components/screens/gitlab/project-summary.html:15
+#, python-format
+msgid "GitLab status for %(name)s"
+msgstr "GitLab-Status für %(name)s"
+
+#: templates/components/screens/gitlab/project-summary.html:21
+#: templates/components/screens/gitlab/project.html:7
+msgid "GitLab issues"
+msgstr "GitLab-Issues"
+
+#: templates/components/screens/gitlab/project-summary.html:41
+msgid "Hide execution timeline"
+msgstr "Ausführungsverlauf ausblenden"
+
+#: templates/components/screens/gitlab/project-summary.html:41
+msgid "Show execution timeline"
+msgstr "Ausführungsverlauf anzeigen"
+
+#: templates/components/screens/gitlab/project.html:9
+msgid "Refresh GitLab issues"
+msgstr "GitLab-Issues neu laden"
+
+#: templates/components/screens/gitlab/project.html:12
+msgid "GitLab is disconnected. Cached issues are retained."
+msgstr "GitLab ist getrennt. Gespeicherte Issues bleiben erhalten."
+
+#: templates/components/screens/gitlab/project.html:21
 msgid ""
 "A prefix matches the text before the first colon, ignoring case and "
 "surrounding spaces. Existing issue ownership is preserved when the prefix "
@@ -1734,22 +1780,22 @@ msgstr ""
 "Kleinschreibung und umgebende Leerzeichen werden ignoriert. Bestehende Issue-"
 "Zuordnungen bleiben bei einer Präfixänderung erhalten."
 
-#: templates/components/screens/gitlab/project.html:23
+#: templates/components/screens/gitlab/project.html:22
 msgid "Completed projects keep their issues but do not collect new ones."
 msgstr ""
 "Abgeschlossene Projekte behalten ihre Issues, sammeln aber keine neuen."
 
-#: templates/components/screens/gitlab/project.html:24
+#: templates/components/screens/gitlab/project.html:23
 #: templates/components/screens/gitlab/settings.html:29
 msgid "Label mappings apply to the whole workspace."
 msgstr "Die Label-Zuordnung gilt für den gesamten Arbeitsbereich."
 
-#: templates/components/screens/gitlab/project.html:24
+#: templates/components/screens/gitlab/project.html:23
 #: templates/components/screens/gitlab/settings.html:28
 msgid "GitLab workflow"
 msgstr "GitLab-Workflow"
 
-#: templates/components/screens/gitlab/project.html:25
+#: templates/components/screens/gitlab/project.html:24
 msgid "Example matching title"
 msgstr "Beispiel für einen passenden Titel"
 
@@ -1789,6 +1835,10 @@ msgstr "Begonnen am"
 #: templates/components/screens/gitlab/project.html:78
 msgid "Issue actions"
 msgstr "Issue-Aktionen"
+
+#: templates/components/screens/gitlab/project.html:89
+msgid "No GitLab issues match this filter."
+msgstr "Keine GitLab-Issues entsprechen diesem Filter."
 
 #: templates/components/screens/gitlab/settings.html:4
 msgid "GitLab integration"
@@ -1845,6 +1895,15 @@ msgstr ""
 #: templates/components/screens/gitlab/settings.html:34
 msgid "Save GitLab workflow"
 msgstr "GitLab-Workflow speichern"
+
+#: templates/components/screens/gitlab/summary.html:3
+msgid "GitLab issue summary"
+msgstr "GitLab-Issue-Übersicht"
+
+#: templates/components/screens/gitlab/summary.html:7
+#, python-format
+msgid "All issues (%(count)s)"
+msgstr "Alle Issues (%(count)s)"
 
 #: templates/components/screens/ideas/detail.html:10
 #: templates/components/screens/ideas/detail.html:12
@@ -2672,6 +2731,15 @@ msgstr ""
 "Deine E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
 "Roadmap gespeichert."
 
+#~ msgid "GitLab execution"
+#~ msgstr "GitLab-Umsetzung"
+
+#~ msgid "Issue counts, not an effort estimate."
+#~ msgstr "Issue-Anzahl, keine Aufwandsschätzung."
+
+#~ msgid "issues done"
+#~ msgstr "Issues erledigt"
+
 #~ msgid "Sharing"
 #~ msgstr "Freigaben"
 
@@ -2680,9 +2748,6 @@ msgstr ""
 
 #~ msgid "Move GitLab issue to project"
 #~ msgstr "GitLab-Issue in Projekt verschieben"
-
-#~ msgid "issues done (not an effort estimate)"
-#~ msgstr "Issues erledigt (keine Aufwandsschätzung)"
 
 #~ msgid "Ownership"
 #~ msgstr "Zuordnung"

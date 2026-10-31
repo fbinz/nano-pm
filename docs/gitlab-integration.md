@@ -15,7 +15,7 @@
    fallback to Django's secret key. The guarded e2e settings use a throwaway key only.
 
 2. A workspace PM opens **Workspace settings** using the cog beside the workspace
-   name, then finds the **GitLab integration** section. Enter the GitLab
+   name, then opens **Integrations → GitLab integration**. Enter the GitLab
    HTTPS origin (for example `https://gitlab.example.com`), a token with the
    `read_api` scope and sufficient source access, and comma-separated numeric GitLab
    project and/or group IDs. Group searches include subgroups and exclude projects
@@ -37,7 +37,26 @@
    `In Development` → in progress and `Next Deployment` → done.
 6. Run the GitLab worker. **Sync GitLab now** queues work; it does not make the web
    process fetch from GitLab. Refresh the settings/project page after synchronization.
-   Expand **GitLab execution** under a project's task rows to see cached intervals.
+   Click the **GitLab icon + done/total count** beside the other project controls, then choose
+   **Show execution timeline** to see cached intervals.
+
+## Project status summaries
+
+Projects with collected issues show a **GitLab icon followed by 2/5** (done/total)
+in the same row as the other project controls, including when collapsed. The
+accessible label and tooltip explain the count; the visible text is just the numbers. There is no separate
+summary row. Click the indicator to open a popover with **done**, **in progress**,
+**not started**, and **unclassified** counts (when present). The GitLab icon turns
+amber for stale/disconnected data, without adding another warning symbol. The
+tooltip and popover explain the status and show the last successful sync time
+(or say that no sync has succeeded yet). The project milestone warning is unchanged.
+
+The popover also offers **Show/Hide execution timeline**; individual execution
+rows appear only when explicitly expanded. Click a count to open the project's
+issues filtered to that state. Project details
+show the same totals across all states and an **All issues** link. Filters live in
+the URL and survive refreshes. Counts measure issues, not effort or percentage
+completion; they never change planning dates or project/milestone completion.
 
 ## Ownership and prefix reuse
 

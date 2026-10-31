@@ -14,7 +14,7 @@ from actions.gitlab_matching import queue_sync, save_binding, transfer_issue
 from data.models import GitLabConnection, GitLabIssue, Project
 from data.models.gitlab import default_workflow
 from interfaces.gitlab.client import encrypt_token, validate_origin
-from readers.gitlab import execution_periods
+from readers.gitlab import execution_periods, issue_summary
 
 from .helpers import can_manage_project, is_pm, workspace_context
 from .detail_forms import DetailForm
@@ -173,20 +173,23 @@ def render_settings(request, connection, form, workflow_form, status=200):
     )
 
 
-def project_context(project, workspace):
+def project_context(project, workspace, state=""):
     connection = GitLabConnection.objects.filter(workspace=workspace).first()
     binding = getattr(project, "gitlab_binding", None)
     form = BindingForm(initial={
         "prefix": binding.prefix if binding else "",
         "collect": binding.collect if binding else True,
     })
-    issues = list(GitLabIssue.objects.filter(owner=project, connection__workspace=workspace)
+    issues = list(GitLabIssue.objects.filter(owner=project, connection__workspace=workspace, retired=False)
                   .select_related("owner__gitlab_binding", "connection"))
+    summary = issue_summary(issues, connection)
+    state = state if state in GitLabIssue.State.values else ""
+    issues = [issue for issue in issues if not state or issue.state == state]
     for issue in issues:
         issue.execution_periods = execution_periods(issue.intervals)
     return {
         "gitlab_connection": connection, "gitlab_binding_form": form, "gitlab_issues": issues,
-        "gitlab_done_count": sum(issue.state == "done" for issue in issues),
+        "gitlab_summary": summary, "gitlab_state": state,
         "gitlab_destinations": Project.objects.filter(workspace=workspace).exclude(pk=project.pk).order_by("name"),
     }
 
@@ -237,6 +240,11 @@ def toggle_overlay(request, project_id):
     expanded = set(request.session.get(key, []))
     expanded.symmetric_difference_update({project_id})
     request.session[key] = sorted(expanded)
-    from datastar_py.django import DatastarResponse
-    from .helpers import patch_chart
-    return DatastarResponse([patch_chart(request)])
+    from datastar_py.django import DatastarResponse, ServerSentEventGenerator as SSE
+    from .helpers import collapsed_projects, set_collapsed_projects, patch_chart
+
+    patches = []
+    if project_id in expanded:
+        set_collapsed_projects(request, collapsed_projects(request) - {project_id})
+        patches.append(SSE.patch_signals({"_collapsed": {str(project_id): False}}))
+    return DatastarResponse([*patches, patch_chart(request)])

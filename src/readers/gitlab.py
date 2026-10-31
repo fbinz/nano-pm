@@ -1,10 +1,45 @@
 """Cached execution view models; rendering never calls the GitLab API."""
 
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
 
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils.translation import gettext as _
+
+
+@dataclass
+class IssueSummary:
+    counts: list[dict]
+    total: int
+    done: int
+    stale: bool
+    disconnected: bool
+    last_success: datetime | None
+
+
+def issue_summary(issues, connection=None):
+    """Count cached issues, never infer effort or query GitLab while rendering."""
+    counts = Counter(issue.state for issue in issues)
+    connection = connection or (issues[0].connection if issues else None)
+    labels = [
+        ("done", _("%(count)d done")),
+        ("in-progress", _("%(count)d in progress")),
+        ("not-started", _("%(count)d not started")),
+        ("unclassified", _("%(count)d unclassified")),
+    ]
+    return IssueSummary(
+        counts=[
+            {"state": state, "count": counts[state], "text": label % {"count": counts[state]}}
+            for state, label in labels if state != "unclassified" or counts[state]
+        ],
+        total=len(issues),
+        done=counts["done"],
+        stale=bool(connection and connection.is_stale),
+        disconnected=bool(connection and not connection.enabled),
+        last_success=connection.last_success if connection else None,
+    )
 
 
 @dataclass

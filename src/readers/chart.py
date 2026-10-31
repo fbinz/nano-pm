@@ -55,7 +55,9 @@ def get_chart_state(workspace) -> ChartState:
         .order_by("order", "id")
         .prefetch_related(
             "responsible_people__teams",
-            Prefetch("gitlab_issues", queryset=GitLabIssue.objects.filter(connection__workspace=workspace)),
+            Prefetch("gitlab_issues", queryset=GitLabIssue.objects.filter(
+                connection__workspace=workspace, retired=False,
+            ).select_related("connection")),
             Prefetch(
                 "tasks",
                 queryset=Task.objects.order_by("start", "id").prefetch_related("assignees__teams"),

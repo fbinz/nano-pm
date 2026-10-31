@@ -397,7 +397,7 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
       await page.reload();
       await expect(page.locator('#project-detail-page')).toContainText('Completed');
       await postForm(page, '/projects/toggle-completed/', {});
-      await page.goto('/'); await page.locator(`#proj-${oldId}`).click();
+      await page.goto('/'); await page.locator(`#proj-${oldId} .swatch`).click();
       await expect(page.locator('#project-popover [role=alert]')).toContainText('Disable collection');
       await expect(page.locator('#pp-toggle-complete')).toBeDisabled();
     } finally { await api.close(); }
@@ -607,7 +607,9 @@ print(json.dumps({
       await expect(gitlabRows(page).filter({ hasText: 'Finish only' })).toContainText('Erledigt am 05.08.2025');
       await expect(gitlabRows(page).filter({ hasText: 'Ongoing work' })).toContainText('06.08.2025 – Laufend');
       await expect(gitlabRows(page).filter({ hasText: 'Unknown dates' })).toContainText('Zeitpunkte unbekannt');
-      await expect(section).toContainText('3 / 5 Issues erledigt');
+      await expect(section.locator('[data-gitlab-summary]')).toHaveAttribute('data-total', '5');
+      await expect(section.locator('[data-state="done"][data-count]')).toHaveText('3 erledigt');
+      await expect(section.locator('[data-state="in-progress"][data-count]')).toHaveText('2 in Bearbeitung');
       await expect(section).not.toContainText('keine Aufwandsschätzung');
       expect(await section.innerText()).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:/);
       await expect(section.getByRole('columnheader', { name: 'In Projekt verschieben', exact: true })).toHaveCount(0);
@@ -673,6 +675,7 @@ print(json.dumps(timezone.localdate().isoformat()))
       });
       await connectGitLab(page, api); await bindGitLab(page, projectId, 'Portal'); await syncGitLab();
       await page.goto('/');
+      await page.locator(`[data-gitlab-summary-trigger="${projectId}"]`).click();
       await page.locator(`[data-gitlab-toggle="${projectId}"]`).click();
       await expect(page.locator('.gitlab-interval')).toHaveCount(cases.length);
       const assertDayCells = async () => {
@@ -702,6 +705,225 @@ print(json.dumps(timezone.localdate().isoformat()))
     } finally { await api.close(); }
   });
 
+  test('compact GitLab indicators reveal details on demand without adding chart rows', async ({ appPage: page }, testInfo) => {
+    const api = await fakeGitLab();
+    try {
+      const projectId = await page.locator('.project-group').first().getAttribute('data-project-id');
+      const rowCount = await page.locator('.chart-row').count();
+      api.issues = [api.issue(1, 'Portal: Finished', { state: 'closed' }), api.issue(2, 'Portal: Building', { labels: ['In Development'] })];
+      await connectGitLab(page, api); await bindGitLab(page, projectId, 'Portal'); await syncGitLab();
+      await page.goto('/');
+      const trigger = page.locator(`[data-gitlab-summary-trigger="${projectId}"]`);
+      const popover = page.locator(`#gitlab-project-summary-${projectId}`);
+      await expect(trigger).toBeVisible();
+      await expect(trigger).toHaveText('1/2');
+      await expect(trigger).toHaveAccessibleName('GitLab · 1/2 done');
+      await expect(trigger.locator('svg.gitlab-icon')).toBeVisible();
+      await expect(page.locator('.chart-row')).toHaveCount(rowCount);
+      await expect(page.locator('.gitlab-summary, .gitlab-summary-content')).toHaveCount(0);
+      await expect(popover).not.toBeVisible();
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await expect(popover).toBeVisible();
+      await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+      await expect(popover.getByRole('link', { name: '1 in progress', exact: true })).toBeVisible();
+      await expect(page.locator('#project-popover')).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      await expect(popover).not.toBeVisible();
+      await expect(trigger).toBeFocused();
+      await Promise.all([
+        page.waitForResponse(response => response.url().endsWith(`/projects/${projectId}/toggle-collapse/`)),
+        page.locator(`.project-group[data-project-id="${projectId}"] .collapse-toggle`).click(),
+      ]);
+      await page.reload();
+      await trigger.click();
+      await popover.getByRole('button', { name: 'Show execution timeline', exact: true }).click();
+      await expect(page.locator('.chart-row.gitlab-issue')).toHaveCount(2);
+      await expect(page.locator('.chart-row.gitlab-issue').first()).toBeVisible();
+      await page.reload();
+      await expect(page.locator('.chart-row.gitlab-issue').first()).toBeVisible();
+      await expect(popover).not.toBeVisible();
+      await trigger.click();
+      await popover.getByRole('button', { name: 'Hide execution timeline', exact: true }).click();
+      await expect(page.locator('.chart-row.gitlab-issue')).toHaveCount(0);
+      await expect(page.locator('.chart-row')).toHaveCount(rowCount);
+      await page.locator('.lang-btn', { hasText: 'DE' }).click();
+      await expect(trigger).toHaveText('1/2');
+      await expect(trigger).toHaveAccessibleName('GitLab · 1/2 erledigt');
+      for (const width of [1280, 390]) {
+        await page.setViewportSize({ width, height: 844 });
+        await trigger.scrollIntoViewIfNeeded();
+        await expect(trigger).toBeInViewport();
+        const controls = trigger.locator('xpath=..');
+        await expect(controls).toHaveClass(/project-create-actions/);
+        const triggerBox = await trigger.boundingBox();
+        const taskBox = await controls.getByRole('button', { name: 'Aufgabe hinzufügen', exact: true }).boundingBox();
+        expect(triggerBox.y + triggerBox.height / 2).toBeCloseTo(taskBox.y + taskBox.height / 2, 0);
+        expect(triggerBox.height).toBeGreaterThanOrEqual(24);
+        expect(await trigger.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(14);
+        await page.screenshot({ path: testInfo.outputPath(`gitlab-compact-${width}.png`), fullPage: true, animations: 'disabled' });
+        await trigger.click();
+        await expect(popover).toBeVisible();
+        const box = await popover.boundingBox();
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(width);
+        expect(box.y).toBeGreaterThanOrEqual(0);
+        expect(box.y + box.height).toBeLessThanOrEqual(844);
+        await page.screenshot({ path: testInfo.outputPath(`gitlab-compact-popover-${width}.png`), fullPage: true, animations: 'disabled' });
+        await page.keyboard.press('Escape');
+        await expect(trigger).toBeFocused();
+      }
+    } finally { await api.close(); }
+  });
+
+  test('GitLab project summaries show issue counts and open persistent state filters', async ({ appPage: page }, testInfo) => {
+    const api = await fakeGitLab();
+    try {
+      const ids = await page.locator('.project-group').evaluateAll(groups => groups.map(group => group.dataset.projectId));
+      api.issues = [
+        api.issue(1, 'Portal: Closed', { state: 'closed' }),
+        api.issue(2, 'Portal: Ready to ship', { labels: ['Next Deployment'] }),
+        api.issue(3, 'Portal: Building', { labels: ['In Development'] }),
+        api.issue(4, 'Portal: Planned', { labels: ['Ready'] }),
+        api.issue(5, 'Portal: Unknown workflow'),
+        api.issue(6, 'Reports: Separate project'),
+        api.issue(7, 'Unassigned: Not counted'),
+      ];
+      await connectGitLab(page, api);
+      await page.getByLabel('Not-started labels').fill('Ready');
+      await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
+      await bindGitLab(page, ids[0], 'Portal');
+      await bindGitLab(page, ids[1], 'Reports');
+      await syncGitLab();
+      const requestsAfterSync = api.requests.length;
+      await page.goto('/');
+      const trigger = page.locator(`[data-gitlab-summary-trigger="${ids[0]}"]`);
+      const summary = page.locator(`.project-group[data-project-id="${ids[0]}"] [data-gitlab-summary]`);
+      await expect(trigger).toBeVisible();
+      await expect(summary).not.toBeVisible();
+      await trigger.click();
+      await expect(summary).toBeVisible();
+      await expect(summary).toHaveAttribute('data-total', '5');
+      for (const [state, count] of [['done', 2], ['in-progress', 1], ['not-started', 1], ['unclassified', 1]]) {
+        await expect(summary.locator(`[data-state="${state}"]`)).toHaveAttribute('data-count', String(count));
+      }
+      await expect(page.locator('.chart-row.gitlab-issue')).toHaveCount(0);
+      await expect(page.locator(`.project-group[data-project-id="${ids[2]}"] [data-gitlab-summary]`)).toHaveCount(0);
+      const collapse = page.locator(`.project-group[data-project-id="${ids[0]}"] .collapse-toggle`);
+      await Promise.all([
+        page.waitForResponse(response => response.url().endsWith(`/projects/${ids[0]}/toggle-collapse/`)),
+        collapse.click(),
+      ]);
+      await expect(trigger).toBeVisible();
+      await page.reload();
+      await expect(trigger).toBeVisible();
+      await Promise.all([
+        page.waitForResponse(response => response.url().endsWith(`/projects/${ids[0]}/toggle-collapse/`)),
+        collapse.click(),
+      ]);
+      await page.reload();
+      for (const width of [1280, 390]) {
+        await page.setViewportSize({ width, height: 844 });
+        await trigger.scrollIntoViewIfNeeded();
+        await expect(trigger).toBeInViewport();
+        await page.screenshot({ path: testInfo.outputPath(`gitlab-summary-${width}.png`), fullPage: true, animations: 'disabled' });
+      }
+      await page.setViewportSize({ width: 1280, height: 844 });
+      await trigger.click();
+      await summary.getByRole('link', { name: '2 done', exact: true }).click();
+      await expect(page).toHaveURL(`/projects/${ids[0]}/?gitlab_state=done#gitlab-issues`);
+      await expect(gitlabRows(page)).toHaveCount(2);
+      expect(await gitlabRows(page).evaluateAll(rows => rows.map(row => row.dataset.state))).toEqual(['done', 'done']);
+      await page.getByRole('link', { name: 'Refresh GitLab issues', exact: true }).click();
+      await expect(page).toHaveURL(`/projects/${ids[0]}/?gitlab_state=done#gitlab-issues`);
+      await page.reload();
+      const detailSummary = page.locator('#gitlab-project [data-gitlab-summary]');
+      await expect(detailSummary).toHaveAttribute('data-total', '5');
+      await expect(detailSummary.locator('[data-state="done"]')).toHaveAttribute('aria-current', 'page');
+      for (const state of ['in-progress', 'not-started', 'unclassified']) {
+        await detailSummary.locator(`[data-state="${state}"]`).click();
+        await expect(gitlabRows(page)).toHaveCount(1);
+        await expect(gitlabRows(page)).toHaveAttribute('data-state', state);
+      }
+      await detailSummary.getByRole('link', { name: 'All issues (5)', exact: true }).click();
+      await expect(gitlabRows(page)).toHaveCount(5);
+      await page.goto(`/projects/${ids[1]}/?gitlab_state=done#gitlab-issues`);
+      await expect(gitlabRows(page)).toHaveCount(0);
+      await expect(page.locator('#gitlab-issues')).toContainText('No GitLab issues match this filter.');
+      await expect(page.locator('#gitlab-project [data-gitlab-summary]')).toHaveAttribute('data-total', '1');
+      await page.goto(`/projects/${ids[0]}/?gitlab_state=invalid`);
+      await expect(gitlabRows(page)).toHaveCount(5);
+      await page.locator('.lang-btn', { hasText: 'DE' }).click();
+      await expect(detailSummary.locator('[data-state="done"]')).toHaveText('2 erledigt');
+      await detailSummary.locator('[data-state="in-progress"]').click();
+      await expect(gitlabRows(page)).toHaveCount(1);
+      await expect(detailSummary.locator('[data-state="in-progress"]')).toHaveAttribute('aria-current', 'page');
+      for (const width of [1280, 390]) {
+        await page.setViewportSize({ width, height: 844 });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        await page.screenshot({ path: testInfo.outputPath(`gitlab-summary-details-de-${width}.png`), fullPage: true, animations: 'disabled' });
+      }
+      expect(api.requests.length).toBe(requestsAfterSync);
+    } finally { await api.close(); }
+  });
+
+  test('GitLab project summaries identify stale and disconnected cached counts', async ({ appPage: page }, testInfo) => {
+    const api = await fakeGitLab();
+    try {
+      const projectId = await page.locator('.project-group').first().getAttribute('data-project-id');
+      api.issues = [api.issue(1, 'Portal: Cached', { labels: ['In Development'] })];
+      await connectGitLab(page, api); await bindGitLab(page, projectId, 'Portal'); await syncGitLab();
+      await page.goto('/');
+      const group = page.locator(`.project-group[data-project-id="${projectId}"]`);
+      const trigger = group.locator('[data-gitlab-summary-trigger]');
+      const icon = trigger.locator('svg.gitlab-icon');
+      const popover = page.locator(`#gitlab-project-summary-${projectId}`);
+      await expect(trigger).toHaveAttribute('data-cache-warning', 'false');
+      const freshColor = await icon.evaluate(el => getComputedStyle(el).color);
+      await expect(trigger).toHaveAttribute('title', /Last successful sync/);
+      api.status = 503;
+      await syncGitLab();
+      await page.reload();
+      await expect(trigger).toHaveAttribute('data-cache-warning', 'true');
+      await expect(trigger).toHaveText('0/1');
+      await expect(trigger.locator('svg')).toHaveCount(1);
+      expect(await icon.evaluate(el => getComputedStyle(el).color)).not.toBe(freshColor);
+      await expect(trigger).toHaveAttribute('title', /GitLab data may be stale\./);
+      await expect(trigger).toHaveAccessibleDescription(/GitLab data may be stale\./);
+      await trigger.click();
+      await expect(popover).toContainText('GitLab data may be stale.');
+      await expect(popover).toContainText('Last successful sync');
+      const syncTime = await popover.locator('time').textContent();
+      expect(await trigger.getAttribute('title')).toContain(syncTime);
+      await page.screenshot({ path: testInfo.outputPath('gitlab-stale-icon.png'), fullPage: true, animations: 'disabled' });
+      await page.goto('/workspaces/settings/integrations/');
+      await page.getByRole('button', { name: 'Disconnect GitLab', exact: true }).click();
+      await page.goto('/');
+      await expect(trigger).toHaveAttribute('data-cache-warning', 'true');
+      await expect(trigger.locator('svg')).toHaveCount(1);
+      await expect(trigger).toHaveAttribute('title', /GitLab is disconnected\./);
+      await expect(trigger).not.toHaveAttribute('title', /may be stale/);
+      await expect(group.locator('[data-gitlab-summary]')).toHaveAttribute('data-total', '1');
+      api.status = 200;
+      await connectGitLab(page, api); await syncGitLab();
+      await page.goto('/');
+      await expect(trigger).toHaveAttribute('data-cache-warning', 'false');
+      expect(await icon.evaluate(el => getComputedStyle(el).color)).toBe(freshColor);
+      await gitlabDB("GitLabConnection.objects.update(last_success=None)\nprint('true')");
+      await page.reload();
+      await expect(trigger).toHaveAttribute('title', /No successful sync yet\./);
+      await trigger.click();
+      await expect(popover).toContainText('No successful sync yet.');
+      await page.locator('.lang-btn', { hasText: 'DE' }).click();
+      await expect(trigger).toHaveAttribute('title', /Noch keine erfolgreiche Synchronisierung\./);
+      await expect(trigger).toHaveAccessibleDescription(/Die GitLab-Daten sind möglicherweise veraltet\./);
+      await expect(trigger.locator('svg')).toHaveCount(1);
+      await trigger.click();
+      await expect(popover).toContainText('Noch keine erfolgreiche Synchronisierung.');
+      await page.screenshot({ path: testInfo.outputPath('gitlab-stale-icon-de.png'), fullPage: true, animations: 'disabled' });
+    } finally { await api.close(); }
+  });
+
   test('GitLab execution overlay survives patches without changing task geometry or interactions', async ({ appPage: page }, testInfo) => {
     const api = await fakeGitLab();
     try {
@@ -718,6 +940,7 @@ print(json.dumps(timezone.localdate().isoformat()))
       const toggle = page.locator(`[data-gitlab-toggle="${projectId}"]`);
       await expect(toggle).toHaveCount(1);
       await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      await page.locator(`[data-gitlab-summary-trigger="${projectId}"]`).click();
       await toggle.click();
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');
       await expect(page.locator('.chart-row.gitlab-issue')).toHaveCount(2);
@@ -750,6 +973,7 @@ print(json.dumps(timezone.localdate().isoformat()))
         });
       });
       expect(await arrowsAligned()).toBe(true);
+      await page.locator(`[data-gitlab-summary-trigger="${projectId}"]`).click();
       await toggle.click(); await expect(toggle).toHaveAttribute('aria-expanded', 'false');
       expect(await arrowsAligned()).toBe(true);
     } finally { await api.close(); }
@@ -981,7 +1205,7 @@ target = Membership.objects.get(user__username='pm2').workspace
 Membership.objects.get_or_create(workspace=target, user=User.objects.get(username='demo'), defaults={'role': 'pm'})
 print(json.dumps(target.pk))
 `);
-      await page.goto('/'); await page.locator(`#proj-${ids[0]}`).click();
+      await page.goto('/'); await page.locator(`#proj-${ids[0]} .name`).click();
       await expect(page.locator('#project-popover')).toContainText('Private issue data will not move');
       expect(await postForm(page, `/projects/${ids[0]}/move-workspace/`, { workspace_id: String(target) })).toBe(200);
       await bindGitLab(page, ids[1], 'Portal'); await syncGitLab(); await page.reload();

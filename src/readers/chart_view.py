@@ -11,6 +11,7 @@ from django.utils.translation import gettext as _, pgettext
 
 from data.models import TaskStatus, status_for_dates
 from readers.chart import ChartState
+from readers.gitlab import IssueSummary, issue_rows, issue_summary
 
 
 ZOOM_PX_PER_DAY = {"day": 36}
@@ -107,6 +108,7 @@ class ProjectRowVM:
     teams: list[str] = field(default_factory=list)
     gitlab_issues: list = field(default_factory=list)
     gitlab_expanded: bool = False
+    gitlab_summary: IssueSummary | None = None
 
 
 @dataclass
@@ -403,7 +405,6 @@ def build_chart_vm(
     if zoom not in ZOOM_PX_PER_DAY:
         zoom = DEFAULT_ZOOM
     ppd = px_per_day if px_per_day is not None else ZOOM_PX_PER_DAY[zoom]
-    from readers.gitlab import issue_rows
 
     collapsed_ids = collapsed_project_ids or set()
     gitlab_expanded_ids = gitlab_expanded_ids or set()
@@ -487,14 +488,16 @@ def build_chart_vm(
         project_assignees = ", ".join(
             person.name.split(" ")[0] for person in proj.responsible_people.all()
         )
+        gitlab_issues = list(proj.gitlab_issues.all())
         row_groups.append(ProjectRowVM(
             id=proj.id, name=proj.name, color=proj.color, order=proj.order,
             tasks=bars, milestones=miles, assignees=project_assignees,
             collapsed=(proj.id in collapsed_ids),
             missing_future_milestone=missing_future_milestone,
             completed=proj.is_completed,
-            gitlab_issues=issue_rows(proj.gitlab_issues.all(), state.chart_start, state.chart_end, ppd),
+            gitlab_issues=issue_rows(gitlab_issues, state.chart_start, state.chart_end, ppd),
             gitlab_expanded=proj.id in gitlab_expanded_ids,
+            gitlab_summary=issue_summary(gitlab_issues),
         ))
 
     # Dep arrows — orthogonal route through a small stub between rows.
@@ -504,7 +507,7 @@ def build_chart_vm(
 
     # Compute y-centers in the chart-area coordinate system (excluding axis).
     # Each project row group: 1 project header (proj_row_h) + N task rows (row_h each).
-    # Collapsed projects contribute their header row but no task rows.
+    # Collapsed projects contribute only their header (including the GitLab indicator).
     # Project view always shows an "Add Project" spacer row above the first
     # project (chart.html); shift everything below it down by one row_h so dep
     # arrows still terminate on the correct bars.
@@ -518,10 +521,8 @@ def build_chart_vm(
             bar_y_centers[bar.id] = y + 16  # ~half of row_h
             bar_lookup[bar.id] = (bar, rg_idx)
             y += 32  # row_h
-        if rg.gitlab_issues:
-            y += 32  # execution section header
-            if rg.gitlab_expanded:
-                y += 32 * len(rg.gitlab_issues)
+        if rg.gitlab_expanded:
+            y += 32 * len(rg.gitlab_issues)
     for dep in state.deps:
         a = bar_lookup.get(dep.predecessor_id)
         b = bar_lookup.get(dep.successor_id)

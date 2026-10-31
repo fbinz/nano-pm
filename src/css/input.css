@@ -449,16 +449,40 @@ html, body { height: 100%; }
     cursor: grab;
     @apply relative bg-base-100 border-b border-base-200;
   }
-  .left-cell.gitlab-summary, .left-cell.gitlab-issue { height: var(--row-h); @apply text-xs; }
+  .left-cell.gitlab-issue { height: var(--row-h); @apply text-xs; }
   .left-cell.gitlab-issue a { @apply truncate text-base-content/70 hover:underline; }
-  .gitlab-toggle { @apply cursor-pointer text-base-content/70 hover:text-base-content; }
-  .chart-row.gitlab-summary, .chart-row.gitlab-issue { cursor: default; @apply bg-base-200/30; }
+  .chart-row.gitlab-issue { cursor: default; @apply bg-base-200/30; }
   .gitlab-interval {
     position: absolute; top: 10px; height: 12px; border-radius: 3px;
     @apply bg-info/60 border border-info;
   }
   .gitlab-interval.done { @apply bg-success/50 border-success; }
   .gitlab-timing { position: sticky; left: calc(var(--left-w) + 8px); @apply text-xs text-base-content/50 leading-8; }
+
+  .gitlab-status-summary { @apply flex flex-wrap items-center gap-2 text-sm; }
+  .gitlab-status-summary a {
+    @apply whitespace-nowrap rounded border border-base-300 bg-base-100 px-2 py-0.5 hover:bg-base-200;
+    font-variant-numeric: tabular-nums;
+  }
+  .gitlab-status-summary a[aria-current="page"] { @apply border-primary font-semibold; }
+  .gitlab-status-summary a:focus-visible { @apply outline-2 outline-offset-2 outline-primary; }
+  .left-cell.proj:has(.gitlab-summary-trigger) { @apply gap-1 px-2; }
+  .gitlab-summary-trigger {
+    @apply inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded border-0
+           bg-transparent px-1 text-sm font-normal text-base-content/60 cursor-pointer
+           hover:bg-base-content/10 hover:text-base-content;
+    font-variant-numeric: tabular-nums;
+  }
+  .gitlab-summary-trigger svg { flex-shrink: 0; }
+  .gitlab-summary-trigger:focus-visible { @apply outline-2 outline-primary; }
+  .gitlab-summary-trigger[data-cache-warning="true"] .gitlab-icon { @apply text-warning; }
+  .project-sort-mode .gitlab-summary-trigger { display: none; }
+  .gitlab-project-summary[popover] {
+    position: fixed; inset: auto; margin: 0; width: 20rem;
+    max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px);
+    @apply overflow-auto rounded-box border border-base-300 bg-base-100 p-4
+           shadow-lg space-y-3 text-base font-normal cursor-auto;
+  }
 
   .gitlab-issues-table { table-layout: fixed; min-width: 48rem; @apply w-full text-base; }
   .gitlab-issues-table th { @apply px-4 py-3 text-base font-semibold text-base-content/80; }

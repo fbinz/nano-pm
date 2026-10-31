@@ -1073,7 +1073,7 @@
         // (chart.html). They take a full row_h of vertical space — counting
         // them keeps arrow y-coords aligned with bar y-coords.
         y += 32;
-      } else if (el.matches('.chart-row.gitlab-summary, .chart-row.gitlab-issue')) {
+      } else if (el.matches('.chart-row.gitlab-issue')) {
         if (getComputedStyle(el).display !== 'none') y += 32;
       } else if (el.matches('.chart-row.task-creation-timeline')) {
         y += 32;
@@ -1239,9 +1239,8 @@
     menu.style.left = `12px`;
   }
 
-  // Native popovers escape the issue table's horizontal-scroll clipping.
-  // Keep the single-item menu inside the viewport, including near its edges.
-  function positionGitLabIssueMenu(menu) {
+  // Native popovers escape chart/table overflow clipping. Keep them in the viewport.
+  function positionGitLabPopover(menu) {
     const trigger = document.getElementById(menu.dataset.triggerId);
     if (!trigger) return;
     const rect = trigger.getBoundingClientRect();
@@ -1276,7 +1275,7 @@
     setCreationMode, cancelCreationMode,
     toggleProjectSortMode, projectSortModeActive,
     closeDrawer, discardDrawer, onCollapseChanged, onCollapseAllChanged, recalcArrows,
-    scrollToToday, positionWorkspaceMenu, positionGitLabIssueMenu,
+    scrollToToday, positionWorkspaceMenu, positionGitLabPopover,
     addProjectResponsible, removeProjectResponsible, assignProjectToMe,
     addTaskAssignee, removeTaskAssignee, assignTaskToMe,
   };

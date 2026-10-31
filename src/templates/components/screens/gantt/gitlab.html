@@ -1,13 +1,6 @@
 {% load i18n l10n %}
 <c-vars rg vm />
 {% if rg.gitlab_issues %}
-  <div class="left-cell gitlab-summary" {% if rg.collapsed %}style="display:none"{% endif %} data-show="!$_collapsed.{{ rg.id }}">
-    <button type="button" class="gitlab-toggle" data-gitlab-toggle="{{ rg.id }}" aria-expanded="{{ rg.gitlab_expanded|yesno:'true,false' }}"
-            data-on:click="@post('{% url 'gitlab_toggle_overlay' rg.id %}', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
-      {% if rg.gitlab_expanded %}▾{% else %}▸{% endif %} {% trans "GitLab execution" %} ({{ rg.gitlab_issues|length }})
-    </button>
-  </div>
-  <div class="chart-row gitlab-summary" style="width:{{ vm.chart_width|unlocalize }}px;{% if rg.collapsed %}display:none;{% endif %}" data-show="!$_collapsed.{{ rg.id }}"></div>
   {% if rg.gitlab_expanded %}
     {% for issue in rg.gitlab_issues %}
       <div class="left-cell gitlab-issue" {% if rg.collapsed %}style="display:none"{% endif %} data-show="!$_collapsed.{{ rg.id }}">

@@ -66,7 +66,7 @@ def project_detail(request: HttpRequest, project_id: int):
         task.status_label = status_for_dates(task.start, task.end, today).label
     return render(request, "components/screens/projects/detail.html", {
         "project": project,
-        **gitlab_project_context(project, request.workspace),
+        **gitlab_project_context(project, request.workspace, request.GET.get("gitlab_state", "")),
         "form": form, "can_edit": can_edit,
         "edit_label": _("Edit project"), "save_label": _("Save project"),
         "tasks": tasks,

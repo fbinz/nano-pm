@@ -2,7 +2,7 @@
 <c-vars issue project destinations />
 <div id="gitlab-actions-menu-{{ issue.id }}" class="gitlab-issue-menu" popover="auto" role="menu"
      aria-labelledby="gitlab-actions-trigger-{{ issue.id }}" data-trigger-id="gitlab-actions-trigger-{{ issue.id }}"
-     data-on:toggle="document.getElementById(el.dataset.triggerId).setAttribute('aria-expanded', evt.newState === 'open'); evt.newState === 'open' && nano.positionGitLabIssueMenu(el)"
+     data-on:toggle="document.getElementById(el.dataset.triggerId).setAttribute('aria-expanded', evt.newState === 'open'); evt.newState === 'open' && nano.positionGitLabPopover(el)"
      data-on:keydown="evt.key === 'Tab' ? el.hidePopover() : ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(evt.key) && (evt.preventDefault(), el.querySelector('[role=menuitem]').focus())"
      data-on:scroll__window__capture="el.matches(':popover-open') && el.hidePopover()"
      data-on:resize__window="el.matches(':popover-open') && el.hidePopover()">

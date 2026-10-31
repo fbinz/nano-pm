@@ -1,0 +1,43 @@
+{% load i18n %}
+<c-vars rg />
+<button type="button" id="gitlab-summary-trigger-{{ rg.id }}" class="gitlab-summary-trigger"
+        data-gitlab-summary-trigger="{{ rg.id }}" popovertarget="gitlab-project-summary-{{ rg.id }}"
+        data-cache-warning="{% if rg.gitlab_summary.disconnected or rg.gitlab_summary.stale %}true{% else %}false{% endif %}"
+        aria-describedby="gitlab-sync-info-{{ rg.id }}"
+        aria-controls="gitlab-project-summary-{{ rg.id }}" aria-haspopup="dialog" aria-expanded="false"
+        aria-label="{% blocktrans with done=rg.gitlab_summary.done total=rg.gitlab_summary.total %}GitLab · {{ done }}/{{ total }} done{% endblocktrans %}"
+        title="{% blocktrans with done=rg.gitlab_summary.done total=rg.gitlab_summary.total %}GitLab · {{ done }}/{{ total }} done{% endblocktrans %}{% if rg.gitlab_summary.disconnected %} · {% trans 'GitLab is disconnected.' %}{% elif rg.gitlab_summary.stale %} · {% trans 'GitLab data may be stale.' %}{% endif %} · {% if rg.gitlab_summary.last_success %}{% trans 'Last successful sync' %}: {{ rg.gitlab_summary.last_success|date:'d.m.Y H:i' }}{% else %}{% trans 'No successful sync yet.' %}{% endif %}"
+        data-on:click__stop="evt.stopPropagation()">
+  <c-lucide name="gitlab" size="14" class="gitlab-icon" />
+  <span>{{ rg.gitlab_summary.done }}/{{ rg.gitlab_summary.total }}</span>
+</button>
+<div id="gitlab-project-summary-{{ rg.id }}" class="gitlab-project-summary" popover="auto" role="dialog"
+     aria-label="{% blocktrans with name=rg.name %}GitLab status for {{ name }}{% endblocktrans %}"
+     data-trigger-id="gitlab-summary-trigger-{{ rg.id }}"
+     data-on:click__stop="evt.stopPropagation()"
+     data-on:toggle="document.getElementById(el.dataset.triggerId)?.setAttribute('aria-expanded', evt.newState === 'open'); evt.newState === 'open' && nano.positionGitLabPopover(el)"
+     data-on:scroll__window__capture="el.matches(':popover-open') && !el.contains(evt.target) && el.hidePopover()"
+     data-on:resize__window="el.matches(':popover-open') && el.hidePopover()">
+  <h3 class="font-semibold">{% trans "GitLab issues" %}</h3>
+  <p class="text-sm text-base-content/60 break-words">{{ rg.name }}</p>
+  <c-screens.gitlab.summary :summary="rg.gitlab_summary" :project_id="rg.id" show_all />
+  <div id="gitlab-sync-info-{{ rg.id }}" class="space-y-2 text-sm">
+    {% if rg.gitlab_summary.disconnected %}
+      <p class="text-warning">{% trans "GitLab is disconnected." %}</p>
+    {% elif rg.gitlab_summary.stale %}
+      <p class="text-warning">{% trans "GitLab data may be stale." %}</p>
+    {% endif %}
+    <p class="text-base-content/60">
+      {% if rg.gitlab_summary.last_success %}
+        {% trans "Last successful sync" %}: <time datetime="{{ rg.gitlab_summary.last_success|date:'c' }}">{{ rg.gitlab_summary.last_success|date:"d.m.Y H:i" }}</time>
+      {% else %}
+        {% trans "No successful sync yet." %}
+      {% endif %}
+    </p>
+  </div>
+  <button type="button" class="btn btn-sm btn-ghost" data-gitlab-toggle="{{ rg.id }}"
+          aria-expanded="{{ rg.gitlab_expanded|yesno:'true,false' }}"
+          data-on:click="el.closest('[popover]').hidePopover(); @post('{% url 'gitlab_toggle_overlay' rg.id %}', { headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
+    {% if rg.gitlab_expanded %}{% trans "Hide execution timeline" %}{% else %}{% trans "Show execution timeline" %}{% endif %}
+  </button>
+</div>
