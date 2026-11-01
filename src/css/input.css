@@ -466,7 +466,6 @@ html, body { height: 100%; }
   }
   .gitlab-status-summary a[aria-current="page"] { @apply border-primary font-semibold; }
   .gitlab-status-summary a:focus-visible { @apply outline-2 outline-offset-2 outline-primary; }
-  .left-cell.proj:has(.gitlab-summary-trigger) { @apply gap-1 px-2; }
   .gitlab-summary-trigger {
     @apply inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded border-0
            bg-transparent px-1 text-sm font-normal text-base-content/60 cursor-pointer
