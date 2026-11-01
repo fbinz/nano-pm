@@ -1,0 +1,21 @@
+{% load i18n %}
+{% trans "Assistant connections" as page_title %}
+<c-layouts.base :title="page_title">
+  <main class="p-6 max-w-3xl mx-auto">
+    <a class="link" href="{% url 'profile' %}">{% trans "My profile" %}</a>
+    <h1 class="text-2xl font-bold mt-4">{% trans "Assistant connections" %}</h1>
+    <p class="mt-2">{% trans "Disconnecting revokes this connection and its refreshed tokens immediately. Connect again to grant different access." %}</p>
+    {% for policy in policies %}
+    <section class="border rounded-box p-4 mt-4" data-oauth-policy="{{ policy.id }}">
+      <h2 class="font-semibold">{{ policy.oauth_code.client }}</h2>
+      <p>{% trans "Allowed workspaces" %}: {% for workspace in policy.workspaces.all %}{{ workspace.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</p>
+      <p>{% trans "Allowed permissions" %}: {{ policy.capabilities|join:", " }}</p>
+      <form method="post" class="mt-2">
+        {% csrf_token %}
+        <input type="hidden" name="policy_id" value="{{ policy.id }}">
+        <button type="submit" class="btn btn-error">{% trans "Disconnect" %}</button>
+      </form>
+    </section>
+    {% empty %}<p class="mt-4">{% trans "No assistant connections." %}</p>{% endfor %}
+  </main>
+</c-layouts.base>

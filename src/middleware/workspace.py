@@ -16,6 +16,11 @@ class WorkspaceMiddleware:
         request.workspace = None
         request.membership = None
 
+        # MCP authenticates a bearer user later, inside its view. Do not select
+        # or repair the browser session's active workspace for API requests.
+        if request.path_info == "/mcp":
+            return self.get_response(request)
+
         if not getattr(request, "user", None) or not request.user.is_authenticated:
             return self.get_response(request)
 

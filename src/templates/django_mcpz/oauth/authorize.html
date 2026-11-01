@@ -1,0 +1,31 @@
+{% extends "django_mcpz/oauth/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Connect an assistant" %}{% endblock %}
+{% block content %}
+<h1>{% trans "Connect an assistant" %}</h1>
+<p>{% blocktrans with client_name=client username=user.username %}<strong>{{ client_name }}</strong> wants to access nano-pm as <strong>{{ username }}</strong>.{% endblocktrans %}</p>
+<p><code>{{ resource }}</code></p>
+<p>{% blocktrans %}Only continue if you started this connection. Client names are not verified.{% endblocktrans %}</p>
+<p>{% blocktrans %}After your decision, you will return to <strong>{{ redirect_host }}</strong>.{% endblocktrans %}</p>
+{% for error in request.mcp_oauth_errors %}<p role="alert">{{ error }}</p>{% endfor %}
+<form method="post">
+  {% csrf_token %}
+  <fieldset>
+    <legend>{% trans "Allowed workspaces" %}</legend>
+    {% for workspace in request.mcp_oauth_workspaces %}
+    <p><label><input type="checkbox" name="workspace" value="{{ workspace.id }}"{% if workspace.selected %} checked{% endif %}> {{ workspace.name }}</label></p>
+    {% empty %}<p>{% trans "You do not belong to any workspaces." %}</p>{% endfor %}
+  </fieldset>
+  <fieldset>
+    <legend>{% trans "Allowed permissions" %}</legend>
+    {% for capability in request.mcp_oauth_capabilities %}
+    <p><label><input type="checkbox" name="capability" value="{{ capability.id }}"{% if capability.selected %} checked{% endif %}> {{ capability.label }} <code>{{ capability.id }}</code></label></p>
+    {% endfor %}
+  </fieldset>
+  <p>{% trans "Unchecked workspaces and permissions are not shared. New memberships do not expand this connection." %}</p>
+  <p>{% trans "Write access can change schedules, send notifications and delete data. Require approval for destructive actions in your assistant." %}</p>
+  <p>{% trans "You can disconnect this assistant from your profile at any time." %}</p>
+  <button type="submit" name="decision" value="allow"{% if request.mcp_oauth_errors %} disabled{% endif %}>{% trans "Allow access" %}</button>
+  <button type="submit" name="decision" value="deny">{% trans "Deny" %}</button>
+</form>
+{% endblock %}

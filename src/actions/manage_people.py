@@ -77,12 +77,24 @@ def set_person_role(*, workspace, person_id: int, role: str, actor=None) -> Memb
     if person is None:
         return None
 
+    membership = Membership.objects.filter(workspace=workspace, user_id=person.user_id).first()
+    if membership is None:
+        return None
+    return set_membership_role(
+        workspace=workspace, membership_id=membership.pk, role=role, actor=actor,
+    )
+
+
+def set_membership_role(*, workspace, membership_id: int, role: str, actor=None):
+    """Change a membership even without a Person, preserving last-PM protection."""
+    if role not in WorkspaceRole.values:
+        return None
     with transaction.atomic():
         memberships = list(
             Membership.objects.select_for_update().filter(workspace=workspace)
         )
         membership = next(
-            (item for item in memberships if item.user_id == person.user_id), None
+            (item for item in memberships if item.pk == membership_id), None
         )
         if membership is None:
             return None
@@ -95,14 +107,15 @@ def set_person_role(*, workspace, person_id: int, role: str, actor=None) -> Memb
         ):
             raise LastManagerError
 
+        person = Person.objects.filter(workspace=workspace, user_id=membership.user_id).first()
         old_role = membership.get_role_display()
         membership.role = role
         membership.save(update_fields=["role"])
         log_activity(
             workspace=workspace,
             actor=actor,
-            action="person.updated",
-            entity=person,
+            action="person.updated" if person else "membership.updated",
+            entity=person or membership,
             changes={
                 "role": {
                     "from": old_role,

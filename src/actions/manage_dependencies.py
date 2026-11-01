@@ -8,7 +8,7 @@ from data.models import Dependency, Task
 from actions.auto_cascade import cascade_workspace
 
 
-def _would_cycle(workspace, predecessor_id: int, successor_id: int) -> bool:
+def would_cycle(workspace, predecessor_id: int, successor_id: int) -> bool:
     """True if predecessor -> successor would create a cycle in the DAG."""
     if predecessor_id == successor_id:
         return True
@@ -58,7 +58,7 @@ def add_dependency(
         predecessor_id=predecessor_id, successor_id=successor_id
     ).exists():
         return None, set(), _("That dependency already exists.")
-    if _would_cycle(workspace, predecessor_id, successor_id):
+    if would_cycle(workspace, predecessor_id, successor_id):
         return None, set(), _("That dependency would create a cycle.")
     dep = Dependency.objects.select_related("predecessor", "successor").create(
         predecessor_id=predecessor_id, successor_id=successor_id

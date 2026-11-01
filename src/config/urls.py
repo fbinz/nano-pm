@@ -11,6 +11,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.i18n import JavaScriptCatalog
 
 from data.models import Invitation, Membership, WorkspaceRole
+from interfaces.mcp import oauth
+from interfaces.mcp.server import endpoint as mcp_endpoint
 
 
 @csrf_exempt
@@ -73,6 +75,11 @@ def invite_accept(request: HttpRequest, token: str):
 
 urlpatterns = [
     path("healthz", healthz, name="healthz"),
+    path("mcp", mcp_endpoint, name="mcp"),
+    path("oauth/", include("interfaces.mcp.oauth_urls")),
+    path(".well-known/oauth-protected-resource/<path:resource_path>", oauth.resource_metadata),
+    path(".well-known/oauth-authorization-server/<path:issuer_path>", oauth.server_metadata),
+    path("accounts/mcp/", oauth.connections, name="mcp_connections"),
     path("admin/", admin.site.urls),
     path(
         "accounts/login/",

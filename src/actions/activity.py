@@ -8,7 +8,6 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from django.db import transaction
 from django.db.models import Model
 
 from data.models import ActivityEvent
@@ -107,7 +106,7 @@ def log_activity(
     metadata: dict[str, Any] | None = None,
     skip_empty_changes: bool = False,
 ) -> None:
-    """Create an ActivityEvent when the surrounding transaction commits."""
+    """Write an event in the surrounding transaction (rolled back with its action)."""
 
     clean_changes = _json_value(redact_long_text_changes(changes or {}))
     if skip_empty_changes and not clean_changes:
@@ -124,16 +123,13 @@ def log_activity(
     workspace_id = getattr(workspace, "id", workspace)
     clean_metadata = _json_value(metadata or {})
 
-    def create_event() -> None:
-        ActivityEvent.objects.create(
-            workspace_id=workspace_id,
-            actor_id=actor_id,
-            action=action,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            entity_label=(entity_label or "")[:255],
-            changes=clean_changes,
-            metadata=clean_metadata,
-        )
-
-    transaction.on_commit(create_event)
+    ActivityEvent.objects.create(
+        workspace_id=workspace_id,
+        actor_id=actor_id,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        entity_label=(entity_label or "")[:255],
+        changes=clean_changes,
+        metadata=clean_metadata,
+    )

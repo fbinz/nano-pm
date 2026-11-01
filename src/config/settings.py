@@ -100,6 +100,7 @@ LOGGING = {
         "interfaces": {"handlers": ["console"], "level": APP_LOG_LEVEL, "propagate": False},
         "middleware": {"handlers": ["console"], "level": APP_LOG_LEVEL, "propagate": False},
         "readers": {"handlers": ["console"], "level": APP_LOG_LEVEL, "propagate": False},
+        "interfaces.mcp": {"handlers": ["console"], "level": APP_LOG_LEVEL, "propagate": False},
     },
 }
 
@@ -107,6 +108,11 @@ LOGGING = {
 # explicitly in CI/local-test environments. Decoupled from DEBUG so a deploy
 # that accidentally leaves DEBUG on still doesn't expose a database wipe.
 ENABLE_TEST_RESET = _env_bool("DJANGO_ENABLE_TEST_RESET", False)
+
+# Authenticated, stateless MCP API and OAuth are always available.
+MCP_MAX_BODY_BYTES = 131072
+MCP_MAX_RESPONSE_BYTES = 1048576
+MCP_RATE_LIMIT = 240
 
 # Seed/demo management commands create accounts with trivial passwords
 # (username == password). Off by default — the commands refuse to run unless
@@ -124,6 +130,9 @@ INSTALLED_APPS = [
     "django_cotton",
     "lucide",
     "data",
+    "django_mcpz",
+    "django_mcpz.bearer_tokens",
+    "django_mcpz.oauth",
 ]
 
 MIDDLEWARE = [

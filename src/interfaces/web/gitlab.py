@@ -11,6 +11,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 
 from actions.gitlab_matching import queue_sync, save_binding, transfer_issue
+from actions.manage_workspace_settings import request_sync
 from data.models import GitLabConnection, GitLabIssue, Project
 from data.models.gitlab import default_workflow
 from interfaces.gitlab.client import encrypt_token, validate_origin
@@ -156,7 +157,11 @@ def settings(request):
                 elif action == "workflow":
                     connection.workflow = workflow_form.mapping()
                 connection.save()
-                queue_sync(connection)
+                if action == "disconnect":
+                    queue_sync(connection)
+                else:
+                    request_sync(workspace=request.workspace, connection=connection, actor=request.user,
+                                 workflow=connection.workflow if action == "workflow" else None)
             return settings_redirect()
         else:
             return HttpResponse(status=400)

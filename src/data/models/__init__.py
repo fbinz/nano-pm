@@ -1,3 +1,4 @@
+from data.models.mcp import MCPAccessPolicy, MCPMutationReceipt
 from data.models.gitlab import GitLabConnection, GitLabProjectBinding, GitLabIssue, GitLabIssueEvent
 from data.models.workspace import Workspace
 from data.models.membership import Membership, WorkspaceRole
@@ -18,6 +19,7 @@ from data.models.workload import (
 )
 
 __all__ = [
+    "MCPAccessPolicy", "MCPMutationReceipt",
     "GitLabConnection", "GitLabProjectBinding", "GitLabIssue", "GitLabIssueEvent",
     "WorkloadCategory",
     "WorkloadReport",

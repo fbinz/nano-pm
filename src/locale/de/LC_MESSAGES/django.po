@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 22:03+0100\n"
+"POT-Creation-Date: 2026-11-01 16:54+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -20,7 +20,7 @@ msgid "Another active project already collects this GitLab prefix."
 msgstr ""
 "Ein anderes aktives Projekt sammelt bereits Issues mit diesem GitLab-Präfix."
 
-#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:87
+#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:88
 msgid "Enter a project prefix without a colon."
 msgstr "Gib ein Projektpräfix ohne Doppelpunkt ein."
 
@@ -123,7 +123,7 @@ msgstr ""
 msgid "Enter no more than 20 domains."
 msgstr "Gib höchstens 20 Domains ein."
 
-#: actions/public_subscriptions.py:35 interfaces/web/profile.py:58
+#: actions/public_subscriptions.py:35 interfaces/web/profile.py:59
 msgid "Enter a valid Microsoft sign-in address."
 msgstr "Gib eine gültige Microsoft-Anmeldeadresse ein."
 
@@ -136,11 +136,11 @@ msgid "Use an HTTPS Microsoft Teams or Power Automate webhook URL."
 msgstr ""
 "Verwende eine HTTPS-Webhook-URL von Microsoft Teams oder Power Automate."
 
-#: config/settings.py:230
+#: config/settings.py:240
 msgid "English"
 msgstr "Englisch"
 
-#: config/settings.py:231
+#: config/settings.py:241
 msgid "German"
 msgstr "Deutsch"
 
@@ -589,6 +589,54 @@ msgstr ""
 msgid "Enter a valid GitLab port."
 msgstr "Gib einen gültigen GitLab-Port ein."
 
+#: interfaces/mcp/oauth.py:30
+msgid "Read project data"
+msgstr "Projektdaten lesen"
+
+#: interfaces/mcp/oauth.py:31
+msgid "Change project data"
+msgstr "Projektdaten ändern"
+
+#: interfaces/mcp/oauth.py:32
+msgid "Manage workspace settings and roles"
+msgstr "Arbeitsbereichseinstellungen und Rollen verwalten"
+
+#: interfaces/mcp/oauth.py:33
+msgid "Read and submit your workload"
+msgstr "Deine Arbeitsverteilung lesen und melden"
+
+#: interfaces/mcp/oauth.py:34
+msgid "Manage workload reports and settings"
+msgstr "Arbeitsverteilungsberichte und Einstellungen verwalten"
+
+#: interfaces/mcp/oauth.py:35
+msgid "Reveal invitation and public roadmap links"
+msgstr "Einladungs- und öffentliche Roadmap-Links anzeigen"
+
+#: interfaces/mcp/oauth.py:36
+msgid "Create workspaces"
+msgstr "Arbeitsbereiche erstellen"
+
+#: interfaces/mcp/oauth.py:96
+msgid "This client requested unsupported permissions."
+msgstr "Dieser Client hat nicht unterstützte Berechtigungen angefordert."
+
+#: interfaces/mcp/oauth.py:110
+msgid "Choose only the requested permissions available to you."
+msgstr "Wähle nur angeforderte Berechtigungen, die dir zur Verfügung stehen."
+
+#: interfaces/mcp/oauth.py:114
+msgid "Choose only workspaces you belong to."
+msgstr "Wähle nur Arbeitsbereiche, denen du angehörst."
+
+#: interfaces/mcp/oauth.py:116
+msgid "Choose at least one workspace."
+msgstr "Wähle mindestens einen Arbeitsbereich."
+
+#: interfaces/mcp/oauth.py:125
+msgid "The requested MCP resource does not match this site."
+msgstr "Die angeforderte MCP-Ressource gehört nicht zu dieser Website."
+
 #: interfaces/web/detail_forms.py:34
 #: templates/components/screens/projects/detail.html:64
 #: templates/components/screens/tasks/detail.html:40
@@ -615,56 +663,56 @@ msgstr "Das Ende muss nach dem Start liegen."
 msgid "Choose a milestone from the selected project."
 msgstr "Wähle einen Meilenstein aus dem ausgewählten Projekt."
 
-#: interfaces/web/gitlab.py:24
+#: interfaces/web/gitlab.py:25
 msgid "GitLab instance URL"
 msgstr "URL der GitLab-Instanz"
 
-#: interfaces/web/gitlab.py:25
+#: interfaces/web/gitlab.py:26
 msgid "GitLab API token"
 msgstr "GitLab-API-Token"
 
-#: interfaces/web/gitlab.py:27
+#: interfaces/web/gitlab.py:28
 msgid "GitLab project IDs"
 msgstr "GitLab-Projekt-IDs"
 
-#: interfaces/web/gitlab.py:28
+#: interfaces/web/gitlab.py:29
 msgid "GitLab group IDs"
 msgstr "GitLab-Gruppen-IDs"
 
-#: interfaces/web/gitlab.py:36
+#: interfaces/web/gitlab.py:37
 msgid "Enter numeric GitLab IDs separated by commas."
 msgstr "Gib numerische GitLab-IDs durch Kommas getrennt ein."
 
-#: interfaces/web/gitlab.py:48
+#: interfaces/web/gitlab.py:49
 msgid "Choose at least one GitLab project or group to search."
 msgstr ""
 "Wähle mindestens ein GitLab-Projekt oder eine Gruppe für die Suche aus."
 
-#: interfaces/web/gitlab.py:53
+#: interfaces/web/gitlab.py:54
 msgid "In-progress labels"
 msgstr "Labels für „In Bearbeitung“"
 
-#: interfaces/web/gitlab.py:54
+#: interfaces/web/gitlab.py:55
 msgid "Done labels"
 msgstr "Labels für „Erledigt“"
 
-#: interfaces/web/gitlab.py:55
+#: interfaces/web/gitlab.py:56
 msgid "Not-started labels"
 msgstr "Labels für „Noch nicht begonnen“"
 
-#: interfaces/web/gitlab.py:56
+#: interfaces/web/gitlab.py:57
 msgid "Unmatched issue state"
 msgstr "Status ohne passendes Label"
 
-#: interfaces/web/gitlab.py:81
+#: interfaces/web/gitlab.py:82
 msgid "GitLab title prefix"
 msgstr "GitLab-Titelpräfix"
 
-#: interfaces/web/gitlab.py:82
+#: interfaces/web/gitlab.py:83
 msgid "Collect matching GitLab issues"
 msgstr "Passende GitLab-Issues sammeln"
 
-#: interfaces/web/gitlab.py:132
+#: interfaces/web/gitlab.py:133
 msgid ""
 "Disconnecting does not reset ownership. Use a new workspace for a different "
 "GitLab instance."
@@ -672,23 +720,23 @@ msgstr ""
 "Das Trennen setzt die Zuordnungen nicht zurück. Verwende für eine andere "
 "GitLab-Instanz einen neuen Arbeitsbereich."
 
-#: interfaces/web/gitlab.py:134
+#: interfaces/web/gitlab.py:135
 msgid "Enter a GitLab API token."
 msgstr "Gib ein GitLab-API-Token ein."
 
-#: interfaces/web/ideas.py:122
+#: interfaces/web/ideas.py:116
 msgid "Idea saved."
 msgstr "Idee gespeichert."
 
-#: interfaces/web/ideas.py:150
+#: interfaces/web/ideas.py:144
 msgid "Idea converted to a project."
 msgstr "Idee in ein Projekt umgewandelt."
 
-#: interfaces/web/ideas.py:175
+#: interfaces/web/ideas.py:169
 msgid "Idea converted to a task."
 msgstr "Idee in eine Aufgabe umgewandelt."
 
-#: interfaces/web/ideas.py:186
+#: interfaces/web/ideas.py:180
 msgid "Idea deleted."
 msgstr "Idee gelöscht."
 
@@ -699,11 +747,11 @@ msgstr "Idee gelöscht."
 msgid "Add a team…"
 msgstr "Person hinzufügen…"
 
-#: interfaces/web/profile.py:23 interfaces/web/public_subscriptions.py:34
+#: interfaces/web/profile.py:24 interfaces/web/public_subscriptions.py:34
 msgid "Teams email address"
 msgstr "Teams-E-Mail-Adresse"
 
-#: interfaces/web/profile.py:25
+#: interfaces/web/profile.py:26
 msgid ""
 "Use the email address you sign in to Microsoft Teams with for this "
 "workspace. It may differ from your contact email. Leave blank to turn off "
@@ -713,29 +761,29 @@ msgstr ""
 "Microsoft Teams anmeldest. Sie kann von deiner Kontakt-E-Mail abweichen. "
 "Lass das Feld leer, um deine Erwähnungen auszuschalten."
 
-#: interfaces/web/profile.py:33
+#: interfaces/web/profile.py:34
 msgid "First name"
 msgstr "Vorname"
 
-#: interfaces/web/profile.py:34
+#: interfaces/web/profile.py:35
 msgid "Last name"
 msgstr "Nachname"
 
-#: interfaces/web/profile.py:35
+#: interfaces/web/profile.py:36
 msgid "Email address"
 msgstr "E-Mail-Adresse"
 
-#: interfaces/web/profile.py:65
+#: interfaces/web/profile.py:66
 msgid "The active workspace changed. Reload your profile and try again."
 msgstr ""
 "Der aktive Arbeitsbereich hat sich geändert. Lade dein Profil neu und "
 "versuche es erneut."
 
-#: interfaces/web/profile.py:87
+#: interfaces/web/profile.py:88
 msgid "Profile saved."
 msgstr "Profil gespeichert."
 
-#: interfaces/web/profile.py:117
+#: interfaces/web/profile.py:119
 msgid "Password changed."
 msgstr "Passwort geändert."
 
@@ -851,20 +899,20 @@ msgstr "Schätzung gespeichert."
 msgid "We’ll remind you next week."
 msgstr "Wir erinnern dich nächste Woche."
 
-#: interfaces/web/workspaces.py:47
+#: interfaces/web/workspaces.py:36
 msgid "General"
 msgstr "Allgemein"
 
-#: interfaces/web/workspaces.py:48
+#: interfaces/web/workspaces.py:37
 #: templates/components/screens/people/people-list.html:89
 msgid "Workload"
 msgstr "Arbeitsverteilung"
 
-#: interfaces/web/workspaces.py:49
+#: interfaces/web/workspaces.py:38
 msgid "Integrations"
 msgstr "Integrationen"
 
-#: interfaces/web/workspaces.py:50
+#: interfaces/web/workspaces.py:39
 #: templates/components/screens/workspaces/settings-sharing.html:10
 msgid "Roadmap"
 msgstr "Roadmap"
@@ -1112,6 +1160,47 @@ msgstr ""
 "Die Beispieldaten enthalten den Benutzer <code>demo</code> / Passwort "
 "<code>demo</code>."
 
+#: templates/accounts/mcp-connections.html:2
+#: templates/accounts/mcp-connections.html:6
+#: templates/components/screens/profile/index.html:37
+msgid "Assistant connections"
+msgstr "Assistenten-Verbindungen"
+
+#: templates/accounts/mcp-connections.html:5
+#: templates/components/layouts/app-shell.html:105
+#: templates/components/screens/profile/index.html:5
+#: templates/components/screens/profile/password.html:4
+#: templates/components/screens/workload/index.html:4
+msgid "My profile"
+msgstr "Mein Profil"
+
+#: templates/accounts/mcp-connections.html:7
+msgid ""
+"Disconnecting revokes this connection and its refreshed tokens immediately. "
+"Connect again to grant different access."
+msgstr ""
+"Beim Trennen werden diese Verbindung und ihre erneuerten Tokens sofort "
+"widerrufen. Verbinde den Assistenten erneut, um andere Zugriffsrechte zu "
+"vergeben."
+
+#: templates/accounts/mcp-connections.html:11
+#: templates/django_mcpz/oauth/authorize.html:14
+msgid "Allowed workspaces"
+msgstr "Erlaubte Arbeitsbereiche"
+
+#: templates/accounts/mcp-connections.html:12
+#: templates/django_mcpz/oauth/authorize.html:20
+msgid "Allowed permissions"
+msgstr "Erlaubte Berechtigungen"
+
+#: templates/accounts/mcp-connections.html:16
+msgid "Disconnect"
+msgstr "Verbindung trennen"
+
+#: templates/accounts/mcp-connections.html:19
+msgid "No assistant connections."
+msgstr "Keine Assistenten-Verbindungen."
+
 #: templates/components/detail-editor.html:36
 #: templates/components/screens/gantt/milestone-popover.html:67
 #: templates/components/screens/gantt/task-popover.html:120
@@ -1205,13 +1294,6 @@ msgstr "In den Hellmodus wechseln"
 #: templates/components/layouts/app-shell.html:93
 msgid "Theme"
 msgstr "Design"
-
-#: templates/components/layouts/app-shell.html:105
-#: templates/components/screens/profile/index.html:5
-#: templates/components/screens/profile/password.html:4
-#: templates/components/screens/workload/index.html:4
-msgid "My profile"
-msgstr "Mein Profil"
 
 #: templates/components/layouts/app-shell.html:108
 msgid "Sign out"
@@ -2658,6 +2740,68 @@ msgstr "Einstellungsbereich"
 msgid "Settings sections"
 msgstr "Einstellungsbereiche"
 
+#: templates/django_mcpz/oauth/authorize.html:3
+#: templates/django_mcpz/oauth/authorize.html:5
+msgid "Connect an assistant"
+msgstr "Assistent verbinden"
+
+#: templates/django_mcpz/oauth/authorize.html:6
+#, python-format
+msgid ""
+"<strong>%(client_name)s</strong> wants to access nano-pm as "
+"<strong>%(username)s</strong>."
+msgstr ""
+"<strong>%(client_name)s</strong> möchte als <strong>%(username)s</strong> "
+"auf nano-pm zugreifen."
+
+#: templates/django_mcpz/oauth/authorize.html:8
+msgid ""
+"Only continue if you started this connection. Client names are not verified."
+msgstr ""
+"Fahre nur fort, wenn du diese Verbindung gestartet hast. Clientnamen sind "
+"nicht verifiziert."
+
+#: templates/django_mcpz/oauth/authorize.html:9
+#, python-format
+msgid ""
+"After your decision, you will return to <strong>%(redirect_host)s</strong>."
+msgstr ""
+"Nach deiner Entscheidung kehrst du zu <strong>%(redirect_host)s</strong> "
+"zurück."
+
+#: templates/django_mcpz/oauth/authorize.html:17
+msgid "You do not belong to any workspaces."
+msgstr "Du gehörst noch keinem Arbeitsbereich an."
+
+#: templates/django_mcpz/oauth/authorize.html:25
+msgid ""
+"Unchecked workspaces and permissions are not shared. New memberships do not "
+"expand this connection."
+msgstr ""
+"Nicht ausgewählte Arbeitsbereiche und Berechtigungen werden nicht "
+"freigegeben. Neue Mitgliedschaften erweitern diese Verbindung nicht."
+
+#: templates/django_mcpz/oauth/authorize.html:26
+msgid ""
+"Write access can change schedules, send notifications and delete data. "
+"Require approval for destructive actions in your assistant."
+msgstr ""
+"Schreibzugriff kann Zeitpläne ändern, Benachrichtigungen senden und Daten "
+"löschen. Lass deinen Assistenten vor destruktiven Aktionen nach deiner "
+"Bestätigung fragen."
+
+#: templates/django_mcpz/oauth/authorize.html:27
+msgid "You can disconnect this assistant from your profile at any time."
+msgstr "Du kannst diesen Assistenten jederzeit in deinem Profil trennen."
+
+#: templates/django_mcpz/oauth/authorize.html:28
+msgid "Allow access"
+msgstr "Zugriff erlauben"
+
+#: templates/django_mcpz/oauth/authorize.html:29
+msgid "Deny"
+msgstr "Ablehnen"
+
 #: templates/public/roadmap.html:12
 msgid ""
 "Follow projects to receive Teams mentions. You must have access to the "
@@ -2892,9 +3036,6 @@ msgstr ""
 
 #~ msgid "Keep independent"
 #~ msgstr "Unabhängig lassen"
-
-#~ msgid "Connect milestone"
-#~ msgstr "Meilenstein verknüpfen"
 
 #~ msgid "No — keep this milestone independent"
 #~ msgstr "Nein — diesen Meilenstein unabhängig lassen"

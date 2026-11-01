@@ -13,6 +13,7 @@ dependencies = [
     "whitenoise>=6.7.0",
     "sentry-sdk[django]>=2.20.0",
     "cryptography>=50.0.2",
+    "django-mcpz>=1.2,<2",
 ]
 
 [dependency-groups]

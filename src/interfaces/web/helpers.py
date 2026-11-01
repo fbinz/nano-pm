@@ -10,7 +10,15 @@ from django.http import HttpRequest, HttpResponse
 from datastar_py.django import ServerSentEventGenerator as SSE, read_signals
 from django_cotton import render_component
 
-from data.models import Membership, Person, TaskStatus, Team, WorkspaceRole
+from data.models import Membership, TaskStatus, Team
+from permissions import (
+    is_pm,
+    request_person as request_person,
+    is_assigned as is_assigned,
+    is_project_responsible as is_project_responsible,
+    can_manage_project,
+    can_manage_task as can_manage_task,
+)
 from readers import get_chart_state, get_project
 from readers.chart_view import (
     build_chart_vm,
@@ -146,11 +154,6 @@ def view_mode(request: HttpRequest) -> str:
     return mode if mode in {"project", "resource"} else "project"
 
 
-def is_pm(request: HttpRequest) -> bool:
-    m = getattr(request, "membership", None)
-    return m is not None and m.role == WorkspaceRole.PM
-
-
 def pm_required(view_func):
     if iscoroutinefunction(view_func):
         @wraps(view_func)
@@ -186,35 +189,6 @@ def workspace_context(request: HttpRequest) -> dict:
         "has_multiple_workspaces": len(workspaces) > 1,
         "can_view_ideas": is_pm(request) or request.user.has_perm("data.view_idea"),
     }
-
-
-def request_person(request: HttpRequest) -> Person | None:
-    return Person.objects.filter(
-        workspace=request.workspace,
-        user=request.user,
-    ).first()
-
-
-def is_assigned(request: HttpRequest, task) -> bool:
-    person = request_person(request)
-    return person is not None and task.assignees.filter(id=person.id).exists()
-
-
-def is_project_responsible(request: HttpRequest, project) -> bool:
-    person = request_person(request)
-    return person is not None and project.responsible_people.filter(id=person.id).exists()
-
-
-def can_manage_project(request: HttpRequest, project) -> bool:
-    return is_pm(request) or is_project_responsible(request, project)
-
-
-def can_manage_task(request: HttpRequest, task) -> bool:
-    return (
-        can_manage_project(request, task.project)
-        or not task.assignees.exists()
-        or is_assigned(request, task)
-    )
 
 
 def project_manager_required(view_func):

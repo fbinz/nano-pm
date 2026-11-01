@@ -20,6 +20,7 @@ from actions.manage_ideas import (
 from data.models import Idea, IdeaStatus, Project
 
 from .helpers import is_pm, parse_iso, workspace_context
+from permissions import has_idea_perm
 
 
 def _idea_queryset(request: HttpRequest):
@@ -34,13 +35,6 @@ def _idea_or_404(request: HttpRequest, idea_id: int) -> Idea:
 
 def _projects(request: HttpRequest):
     return Project.objects.filter(workspace=request.workspace).order_by("order", "id")
-
-
-def has_idea_perm(request: HttpRequest, action: str) -> bool:
-    """Workspace PMs are idea admins; other users use Django model perms."""
-    if is_pm(request):
-        return True
-    return request.user.has_perm(f"data.{action}_idea")
 
 
 def forbidden() -> HttpResponse:

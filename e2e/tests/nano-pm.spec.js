@@ -282,6 +282,633 @@ async function bindGitLab(page, projectId, prefix) {
 
 function gitlabRows(page) { return page.locator('#gitlab-issues tbody tr'); }
 
+const mcp = require('./mcp-helpers');
+const oauth = require('./oauth-helpers');
+
+test.describe('MCP endpoint', () => {
+  test('MCP OAuth discovery advertises authorization code PKCE and refresh endpoints', async ({ appPage: page, baseURL }) => {
+    const unauthorized = await page.request.post('/mcp', { data: { jsonrpc: '2.0', id: 1, method: 'tools/list' } });
+    expect(unauthorized.status()).toBe(401);
+    expect(unauthorized.headers()['www-authenticate']).toContain(`resource_metadata="${baseURL}/.well-known/oauth-protected-resource/mcp"`);
+    const resource = await page.request.get('/.well-known/oauth-protected-resource/mcp');
+    expect(resource.status()).toBe(200);
+    expect((await resource.json()).authorization_servers).toEqual([`${baseURL}/oauth`]);
+    const metadata = await page.request.get('/.well-known/oauth-authorization-server/oauth');
+    expect(metadata.status()).toBe(200);
+    expect(await metadata.json()).toMatchObject({ authorization_endpoint: `${baseURL}/oauth/authorize`, token_endpoint: `${baseURL}/oauth/token`, registration_endpoint: `${baseURL}/oauth/register`, revocation_endpoint: `${baseURL}/oauth/revoke`, code_challenge_methods_supported: ['S256'], grant_types_supported: ['authorization_code', 'refresh_token'] });
+  });
+
+  test('MCP OAuth login and consent bind selected workspaces and scopes', async ({ appPage: page, baseURL }) => {
+    const bearer = await mcp.setup(page);
+    const flow = await oauth.start(page, baseURL, { scope: 'core.read core.write workspace.admin sharing.links' });
+    await page.context().clearCookies();
+    await page.goto(flow.url);
+    await expect(page).toHaveURL(/\/accounts\/login\//);
+    await page.getByLabel('Username').fill('demo');
+    await page.getByLabel('Password').fill('demo');
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Connect an assistant' })).toBeVisible();
+    expect(await page.locator('input[name="workspace"]:checked').count()).toBe(0);
+    await expect(page.locator('input[value="workspace.admin"]')).not.toBeChecked();
+    await expect(page.locator('input[value="sharing.links"]')).not.toBeChecked();
+    const callback = await oauth.decide(page, flow, { workspaces: [bearer.workspace_id], caps: ['core.read'] });
+    const response = await flow.exchange(callback.get('code'));
+    expect(response.status(), await response.text()).toBe(200);
+    const tokens = await response.json();
+    expect(tokens.scope).toBe('core.read');
+    expect(response.headers()['cache-control']).toBe('no-store');
+    const workspaces = await flow.call(tokens.access_token, 'list_workspaces');
+    expect(workspaces.items.map(w => w.id)).toEqual([bearer.workspace_id]);
+    expect((await flow.call(tokens.access_token, 'get_me')).capabilities).toEqual(['core.read']);
+    const write = await flow.rpc(tokens.access_token, 'create_project', { workspace_id: bearer.workspace_id, operation_id: mcp.randomUUID(), name: 'Denied' });
+    expect((await write.json()).error.message).toContain('Unknown tool');
+    const foreign = await flow.rpc(tokens.access_token, 'list_projects', { workspace_id: bearer.foreign_workspace_id });
+    expect(JSON.stringify(await foreign.json())).toContain('not_found');
+    await mcp.db(`Membership.objects.create(user=get_user_model().objects.get(username='demo'), workspace_id=${bearer.foreign_workspace_id}, role='pm')\nprint('null')`);
+    expect((await flow.call(tokens.access_token, 'list_workspaces')).items.map(w => w.id)).toEqual([bearer.workspace_id]);
+    const privateData = await mcp.db("from django_mcpz.oauth.models import AccessToken, RefreshToken, AuthorizationCode\nprint(json.dumps({'access':list(AccessToken.objects.values()),'refresh':list(RefreshToken.objects.values()),'codes':list(AuthorizationCode.objects.values())},default=str))");
+    expect(JSON.stringify(privateData)).not.toContain(tokens.access_token);
+    expect(JSON.stringify(privateData)).not.toContain(tokens.refresh_token);
+    expect(JSON.stringify(privateData)).not.toContain(callback.get('code'));
+  });
+
+  test('MCP OAuth refresh preserves consent, mutation receipts and rate state', async ({ appPage: page, baseURL }) => {
+    const bearer = await mcp.setup(page);
+    const flow = await oauth.start(page, baseURL);
+    const callback = await oauth.decide(page, flow, { workspaces: [bearer.workspace_id] });
+    const exchanged = await flow.exchange(callback.get('code'));
+    expect(exchanged.status()).toBe(200);
+    const original = await exchanged.json();
+    const args = { workspace_id: bearer.workspace_id, operation_id: mcp.randomUUID(), name: 'OAuth-created project' };
+    const created = await flow.call(original.access_token, 'create_project', args);
+    const escalation = await flow.refresh(original.refresh_token, { scope: 'workspace.admin sharing.links' });
+    expect(escalation.status()).toBe(400);
+    expect((await escalation.json()).error).toBe('invalid_scope');
+    const refreshed = await flow.refresh(original.refresh_token);
+    expect(refreshed.status(), await refreshed.text()).toBe(200);
+    const next = await refreshed.json();
+    expect(next.access_token).not.toBe(original.access_token);
+    expect(next.refresh_token).not.toBe(original.refresh_token);
+    expect(next.scope.split(' ').sort()).toEqual(['core.read', 'core.write']);
+    expect(await flow.call(next.access_token, 'create_project', args)).toEqual(created);
+    const details = await mcp.db("print(json.dumps({'policies':MCPAccessPolicy.objects.filter(oauth_code__isnull=False).count(),'receipts':MCPMutationReceipt.objects.filter(policy__oauth_code__isnull=False).count(),'requests':MCPAccessPolicy.objects.get(oauth_code__isnull=False).rate_count}))");
+    expect(details).toEqual({ policies: 1, receipts: 1, requests: 2 });
+    const replay = await flow.refresh(original.refresh_token);
+    expect(replay.status()).toBe(400);
+    expect((await flow.rpc(next.access_token, 'get_me')).status()).toBe(401);
+    expect((await flow.rpc(original.access_token, 'get_me')).status()).toBe(401);
+  });
+
+  test('MCP OAuth validates PKCE, redirect and resource binding and revokes token families', async ({ appPage: page, baseURL }) => {
+    const bearer = await mcp.setup(page);
+    const flow = await oauth.start(page, baseURL);
+    const callback = await oauth.decide(page, flow, { workspaces: [bearer.workspace_id] });
+    for (const extra of [{ code_verifier: 'x'.repeat(64) }, { redirect_uri: 'https://attacker.invalid/callback' }, { resource: `${baseURL}/other-resource` }]) {
+      const invalid = await flow.exchange(callback.get('code'), extra);
+      expect(invalid.status()).toBe(400);
+    }
+    const response = await flow.exchange(callback.get('code'));
+    expect(response.status()).toBe(200);
+    const tokens = await response.json();
+    expect((await flow.call(tokens.access_token, 'get_me')).username).toBe('demo');
+    const wrongHost = await page.request.post(`${baseURL.replace('localhost', '127.0.0.1')}/mcp`, { headers: { Authorization: `Bearer ${tokens.access_token}` }, data: { jsonrpc: '2.0', id: 1, method: 'tools/list' } });
+    expect(wrongHost.status()).toBe(401);
+    expect((await flow.revoke(tokens.refresh_token)).status()).toBe(200);
+    expect((await flow.rpc(tokens.access_token, 'get_me')).status()).toBe(401);
+    expect((await flow.refresh(tokens.refresh_token)).status()).toBe(400);
+  });
+
+  test('MCP OAuth consent rejects forged workspaces, extra scopes and missing CSRF', async ({ appPage: page, baseURL }) => {
+    const bearer = await mcp.setup(page);
+    const flow = await oauth.start(page, baseURL, { scope: 'core.read' });
+    await page.goto(flow.url);
+    const csrf = await page.locator('input[name="csrfmiddlewaretoken"]').inputValue();
+    const missing = await page.request.post(flow.url, { form: { decision: 'allow', workspace: bearer.workspace_id, capability: 'core.read' }, maxRedirects: 0 });
+    expect(missing.status()).toBe(403);
+    for (const extra of [{ workspace: bearer.foreign_workspace_id, capability: 'core.read' }, { workspace: bearer.workspace_id, capability: 'workspace.admin' }, { capability: 'core.read' }]) {
+      const bad = await page.request.post(flow.url, { form: { csrfmiddlewaretoken: csrf, decision: 'allow', ...extra }, maxRedirects: 0 });
+      expect(bad.status(), await bad.text()).toBe(400);
+    }
+    expect(await mcp.db("from django_mcpz.oauth.models import AuthorizationCode\nprint(json.dumps(AuthorizationCode.objects.count()))")).toBe(0);
+    const denied = await oauth.decide(page, flow, { decision: 'deny', caps: [] });
+    expect(denied.get('error')).toBe('access_denied');
+    expect(denied.has('code')).toBe(false);
+  });
+
+  test('MCP OAuth connections disconnect immediately and cannot revoke another user grant', async ({ appPage: page, baseURL }) => {
+    const bearer = await mcp.setup(page);
+    const flow = await oauth.start(page, baseURL);
+    const callback = await oauth.decide(page, flow, { workspaces: [bearer.workspace_id] });
+    const response = await flow.exchange(callback.get('code'));
+    expect(response.status()).toBe(200);
+    const tokens = await response.json();
+    const policyId = await mcp.db("print(json.dumps(MCPAccessPolicy.objects.get(oauth_code__isnull=False).pk))");
+    await page.goto('/profile/');
+    await page.getByRole('link', { name: 'Assistant connections', exact: true }).click();
+    await expect(page.locator(`[data-oauth-policy="${policyId}"]`)).toContainText('Test assistant');
+    await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+    await expect(page.getByText('No assistant connections.', { exact: true })).toBeVisible();
+    expect((await flow.rpc(tokens.access_token, 'get_me')).status()).toBe(401);
+    expect((await flow.refresh(tokens.refresh_token)).status()).toBe(400);
+    await page.goto('/');
+    await signInAs(page, 'pm2');
+    await page.goto('/accounts/mcp/');
+    const csrf = await page.locator('meta[name="csrf-token"]').getAttribute('content');
+    const foreign = await page.request.post('/accounts/mcp/', { form: { csrfmiddlewaretoken: csrf, policy_id: policyId }, maxRedirects: 0 });
+    expect(foreign.status()).toBe(404);
+  });
+
+  test('MCP OAuth refresh can narrow scopes but cannot restore removed permissions', async ({ appPage: page, baseURL }) => {
+    const bearer = await mcp.setup(page);
+    const flow = await oauth.start(page, baseURL);
+    const callback = await oauth.decide(page, flow, { workspaces: [bearer.workspace_id] });
+    const original = await (await flow.exchange(callback.get('code'))).json();
+    const response = await flow.refresh(original.refresh_token, { scope: 'core.read' });
+    expect(response.status()).toBe(200);
+    const narrowed = await response.json();
+    expect(narrowed.scope).toBe('core.read');
+    expect((await flow.call(narrowed.access_token, 'get_me')).capabilities).toEqual(['core.read']);
+    const denied = await flow.rpc(narrowed.access_token, 'create_project', { workspace_id: bearer.workspace_id, operation_id: mcp.randomUUID(), name: 'Not permitted' });
+    expect((await denied.json()).error.message).toContain('Unknown tool');
+    expect((await flow.refresh(narrowed.refresh_token, { scope: 'core.read core.write' })).status()).toBe(400);
+  });
+
+  test('MCP OAuth enforces expiry, user deactivation and current membership after consent', async ({ appPage: page, baseURL }) => {
+    const bearer = await mcp.setup(page);
+    const flow = await oauth.start(page, baseURL, { scope: null });
+    const callback = await oauth.decide(page, flow, { workspaces: [bearer.workspace_id] });
+    let tokens = await (await flow.exchange(callback.get('code'))).json();
+    await mcp.db("from django_mcpz.oauth.models import AccessToken\nAccessToken.objects.update(expires_at=timezone.now()-timedelta(seconds=1))\nprint('null')");
+    expect((await flow.rpc(tokens.access_token, 'get_me')).status()).toBe(401);
+    const refreshed = await flow.refresh(tokens.refresh_token);
+    expect(refreshed.status()).toBe(200);
+    tokens = await refreshed.json();
+    await mcp.db("get_user_model().objects.filter(username='demo').update(is_active=False)\nprint('null')");
+    expect((await flow.rpc(tokens.access_token, 'get_me')).status()).toBe(401);
+    expect((await flow.refresh(tokens.refresh_token)).status()).toBe(400);
+    await mcp.db("get_user_model().objects.filter(username='demo').update(is_active=True)\nMembership.objects.filter(user__username='demo').delete()\nprint('null')");
+    expect((await flow.call(tokens.access_token, 'list_workspaces')).items).toEqual([]);
+    expect((await (await flow.rpc(tokens.access_token, 'list_projects', { workspace_id: bearer.workspace_id })).json()).error.message).toContain('Unknown tool');
+  });
+
+  test('MCP OAuth grants cannot share bearer cursors or replay another consent grant', async ({ appPage: page, baseURL }) => {
+    const bearer = await mcp.setup(page);
+    const cursor = (await bearer.call('list_tasks', { ...bearer.scope, limit: 1 })).next_cursor;
+    const first = await oauth.start(page, baseURL);
+    const firstCode = await oauth.decide(page, first, { workspaces: [bearer.workspace_id] });
+    const firstTokens = await (await first.exchange(firstCode.get('code'))).json();
+    const rejected = await first.rpc(firstTokens.access_token, 'list_tasks', { ...bearer.scope, limit: 1, cursor });
+    expect(JSON.stringify(await rejected.json())).toContain('Cursor does not match');
+    const args = { ...bearer.scope, operation_id: mcp.randomUUID(), name: 'Distinct consent' };
+    const created = await first.call(firstTokens.access_token, 'create_project', args);
+    const second = await oauth.start(page, baseURL);
+    const secondCode = await oauth.decide(page, second, { workspaces: [bearer.workspace_id] });
+    const secondTokens = await (await second.exchange(secondCode.get('code'))).json();
+    const other = await second.call(secondTokens.access_token, 'create_project', args);
+    expect(other.item.id).not.toBe(created.item.id);
+  });
+
+  test('MCP OAuth operator revocation and cleanup preserve active grant families', async ({ appPage: page, baseURL }) => {
+    const bearer = await mcp.setup(page);
+    const flow = await oauth.start(page, baseURL);
+    const callback = await oauth.decide(page, flow, { workspaces: [bearer.workspace_id] });
+    const tokens = await (await flow.exchange(callback.get('code'))).json();
+    const command = (...args) => promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'mcp_access', ...args], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv() });
+    await mcp.db("from django_mcpz.oauth.models import AuthorizationCode\nAuthorizationCode.objects.update(expires_at=timezone.now()-timedelta(minutes=1))\nprint('null')");
+    await command('cleanup');
+    expect((await flow.call(tokens.access_token, 'get_me')).username).toBe('demo');
+    const policy = await mcp.db("print(json.dumps(MCPAccessPolicy.objects.get(oauth_code__isnull=False).pk))");
+    const listed = await command('oauth-list');
+    expect(listed.stdout).toContain('Test assistant');
+    expect(listed.stdout).not.toContain(tokens.access_token);
+    await command('oauth-revoke', String(policy));
+    expect((await flow.rpc(tokens.access_token, 'get_me')).status()).toBe(401);
+    expect((await flow.refresh(tokens.refresh_token)).status()).toBe(400);
+    await command('cleanup');
+    expect(await mcp.db("from django_mcpz.oauth.models import AuthorizationCode\nprint(json.dumps(AuthorizationCode.objects.count()))")).toBe(0);
+  });
+
+  test('MCP OAuth migration preserves existing bearer policies and mutation receipts', async ({ appPage: page }) => {
+    const bearer = await mcp.setup(page);
+    const args = { ...bearer.scope, operation_id: mcp.randomUUID(), name: 'Before OAuth migration' };
+    const result = await bearer.call('create_project', args);
+    const migrated = await mcp.db(`
+from django.core.management import call_command
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+try:
+    call_command('migrate','data','0033',interactive=False,verbosity=0)
+    apps=MigrationExecutor(connection).loader.project_state([('data','0033_mcpaccesspolicy_mcpmutationreceipt')]).apps
+    receipt=apps.get_model('data','MCPMutationReceipt').objects.get(operation_id='${args.operation_id}')
+    legacy_token=receipt.token_id
+finally:
+    call_command('migrate','data',interactive=False,verbosity=0)
+print(json.dumps({'token':legacy_token,'policy':MCPMutationReceipt.objects.get(operation_id='${args.operation_id}').policy.token_id}))`);
+    expect(migrated).toEqual({ token: bearer.token_id, policy: bearer.token_id });
+    expect(await bearer.call('create_project', args)).toEqual(result);
+  });
+
+  test('MCP OAuth consent is translated and preserves CSRF and anti-framing headers', async ({ appPage: page, baseURL }) => {
+    const flow = await oauth.start(page, baseURL);
+    await page.context().addCookies([{ name: 'django_language', value: 'de', url: baseURL }]);
+    const response = await page.goto(flow.url);
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");
+    expect(response.headers()['x-frame-options']).toBe('DENY');
+    expect(response.headers()['cache-control']).toBe('no-store');
+    expect(response.headers()['referrer-policy']).toBe('same-origin');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+    await expect(page.getByRole('heading', { name: 'Assistent verbinden' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Zugriff erlauben' })).toBeVisible();
+  });
+
+  test('MCP discovers all 82 typed tools and initializes without sessions', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    const initialized = await api.rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
+    expect(initialized.status()).toBe(200);
+    expect(initialized.headers()['mcp-session-id']).toBeUndefined();
+    const response = await api.rpc('tools/list');
+    expect(response.status()).toBe(200);
+    const tools = (await response.json()).result.tools;
+    expect(tools.map(t => t.name).sort()).toEqual([...mcp.expectedTools].sort());
+    for (const tool of tools) {
+      expect(tool.inputSchema.additionalProperties).toBe(false);
+      expect(tool.outputSchema.type).toBe('object');
+    }
+  });
+
+  test('MCP task mutations commit, cascade, replay and reject stale or foreign inputs atomically', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    const projects = await api.call('list_projects', api.scope);
+    const project = projects.items[0];
+    const people = await api.call('list_people', api.scope);
+    const args = { ...api.scope, operation_id: mcp.randomUUID(), project_id: project.id, title: 'MCP task', start: '2030-01-01', end: '2030-01-03', assignee_ids: [people.items[0].id] };
+    const created = await api.call('create_task', args);
+    expect(created.item.title).toBe('MCP task');
+    expect((await api.call('create_task', args))).toEqual(created);
+    const changedPayload = await api.raw('create_task', { ...args, title: 'different' });
+    expect(JSON.stringify(changedPayload)).toContain('conflict');
+    const invalid = await api.raw('update_task', { ...api.scope, operation_id: mcp.randomUUID(), id: created.item.id, if_match: created.item.revision, title: 'must roll back', assignee_ids: [999999] });
+    expect(JSON.stringify(invalid)).toContain('not_found');
+    expect((await api.call('get_task', { ...api.scope, id: created.item.id })).item.title).toBe('MCP task');
+    const moved = await api.mutate('move_task', { id: created.item.id, if_match: created.item.revision, new_start: '2030-02-01' });
+    expect(moved.item.end).toBe('2030-02-03');
+    const stale = await api.raw('update_task', { ...api.scope, operation_id: mcp.randomUUID(), id: moved.item.id, if_match: created.item.revision, title: 'stale' });
+    expect(JSON.stringify(stale)).toContain('conflict');
+    const foreign = await api.raw('get_task', { workspace_id: api.foreign_workspace_id, id: moved.item.id });
+    expect(JSON.stringify(foreign)).toContain('not_found');
+    await page.reload();
+    expect(await page.locator(`[data-task-id="${moved.item.id}"]`).count()).toBeGreaterThan(0);
+    const removed = await api.mutate('delete_task', { id: moved.item.id, if_match: moved.item.revision });
+    expect(removed.deleted_ids).toContain(moved.item.id);
+    const activity = await api.call('list_activity', { ...api.scope, entity_type: 'task', entity_id: moved.item.id });
+    expect(activity.items.map(e => e.action)).toContain('task.created');
+  });
+
+  test('MCP scopes tokens, ignores browser workspace and filters capabilities', async ({ appPage: page }) => {
+    const api = await mcp.setup(page, { user: 'pm2', caps: ['core.read'] });
+    const session = (await page.context().cookies()).find(c => c.name === 'nano_pm_sessionid').value;
+    await mcp.db(`from django.contrib.sessions.backends.db import SessionStore\ns=SessionStore(session_key=${JSON.stringify(session)})\ns['active_workspace_id']=${api.workspace_id}\ns.save()\nprint('null')`);
+    const workspaces = await api.call('list_workspaces');
+    expect(await mcp.db(`from django.contrib.sessions.backends.db import SessionStore\nprint(json.dumps(SessionStore(session_key=${JSON.stringify(session)}).get('active_workspace_id')))`)).toBe(api.workspace_id);
+    expect(workspaces.items.map(w => w.id)).toEqual([api.workspace_id]);
+    expect((await api.call('list_projects', api.scope)).items).toEqual([]);
+    const response = await api.rpc('tools/list');
+    const names = (await response.json()).result.tools.map(t => t.name);
+    expect(names).toContain('list_tasks');
+    for (const forbidden of ['create_task', 'get_my_workload', 'list_memberships', 'get_public_roadmap_link']) {
+      expect(names).not.toContain(forbidden);
+      expect((await api.raw(forbidden, api.scope)).error.message).toContain('Unknown tool');
+    }
+    expect(JSON.stringify(await api.raw('list_projects', { workspace_id: api.foreign_workspace_id }))).toContain('not_found');
+    expect((await api.rpc('tools/list', {}, { Origin: 'https://attacker.invalid' })).status()).toBe(403);
+    await mcp.db(`Token.objects.filter(pk=${api.token_id}).update(revoked_at=timezone.now())\nprint('null')`);
+    expect((await api.rpc('tools/list')).status()).toBe(401);
+  });
+
+  test('MCP rejects missing policy, expired tokens, inactive users and removed memberships', async ({ appPage: page }) => {
+    for (const change of ['MCPAccessPolicy.objects.filter(token_id=TOKEN).delete()', 'Token.objects.filter(pk=TOKEN).update(expires_at=timezone.now()-timedelta(seconds=1))', 'Token.objects.filter(pk=TOKEN).update(expires_at=None)', "get_user_model().objects.filter(username='demo').update(is_active=False)"]) {
+      const api = await mcp.setup(page);
+      await mcp.db(`${change.replace('TOKEN', api.token_id)}\nprint('null')`);
+      expect([401, 403]).toContain((await api.rpc('tools/list')).status());
+      await mcp.db("get_user_model().objects.filter(username='demo').update(is_active=True)\nprint('null')");
+    }
+    const api = await mcp.setup(page);
+    await mcp.db(`Membership.objects.filter(user__username='demo', workspace_id=${api.workspace_id}).delete()\nprint('null')`);
+    expect((await api.call('list_workspaces')).items).toEqual([]);
+    expect((await api.raw('list_tasks', api.scope)).error.message).toContain('Unknown tool');
+  });
+
+  test('MCP validates typed arguments, binds cursors and limits requests', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    const first = await api.call('list_tasks', { ...api.scope, limit: 2 });
+    expect(first.items).toHaveLength(2);
+    expect(first.next_cursor).toBeTruthy();
+    const second = await api.call('list_tasks', { ...api.scope, limit: 2, cursor: first.next_cursor });
+    expect(second.items.map(t => t.id).some(id => first.items.map(t => t.id).includes(id))).toBe(false);
+    for (const args of [{ limit: 101 }, { workspace_id: 'wrong' }, { unexpected: true }, { cursor: first.next_cursor, search: 'other', limit: 2 }]) {
+      expect((await api.raw('list_tasks', { ...api.scope, ...args })).result.isError).toBe(true);
+    }
+    const response = await page.request.post('/mcp', { headers: { Authorization: `Bearer ${api.token}` }, data: 'x'.repeat(131073) });
+    expect(response.status()).toBe(413);
+    await mcp.db(`MCPAccessPolicy.objects.filter(token_id=${api.token_id}).update(rate_count=240, rate_window=timezone.now())\nprint('null')`);
+    expect((await api.rpc('tools/list')).status()).toBe(429);
+  });
+
+  test('MCP project workspace and people mutations preserve permissions and relationships', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    const me = await api.call('get_me');
+    expect(me.username).toBe('demo');
+    const current = (await api.call('get_workspace', api.scope)).item;
+    const renamed = await api.mutate('update_workspace', { if_match: current.revision, name: 'MCP workspace', prompt_milestone_move_reason: false });
+    expect(renamed.item.name).toBe('MCP workspace');
+    const team = (await api.mutate('create_team', { name: 'MCP team' })).item;
+    const person = (await api.mutate('create_person', { name: 'MCP person', team_ids: [team.id] })).item;
+    expect((await api.call('get_person', { ...api.scope, id: person.id })).item.team_ids).toEqual([team.id]);
+    const changedPerson = (await api.mutate('update_person', { id: person.id, if_match: person.revision, name: 'Changed person', team_ids: [] })).item;
+    let teams = await api.call('list_teams', api.scope);
+    const changedTeam = (await api.mutate('update_team', { id: team.id, if_match: teams.items.find(t => t.id === team.id).revision, name: 'Changed team' })).item;
+    const project = (await api.mutate('create_project', { name: 'MCP project', description: 'Description', responsible_person_ids: [person.id] })).item;
+    let updated = (await api.mutate('update_project', { id: project.id, if_match: project.revision, name: 'Changed project', color: '#123456' })).item;
+    updated = (await api.mutate('set_project_completed', { id: project.id, if_match: updated.revision, completed: true })).item;
+    expect(updated.completed_at).toBeTruthy();
+    updated = (await api.mutate('set_project_completed', { id: project.id, if_match: updated.revision, completed: false })).item;
+    const ordered = await api.call('list_projects', api.scope);
+    await api.mutate('reorder_projects', { if_match: ordered.revision, project_ids: [...ordered.items.map(p => p.id)].reverse() });
+    updated = (await api.call('get_project', { ...api.scope, id: project.id })).item;
+    const destination = (await api.call('create_workspace', { name: 'Destination', operation_id: mcp.randomUUID() })).item;
+    const transferArgs = { ...api.scope, operation_id: mcp.randomUUID(), id: project.id, if_match: updated.revision, target_workspace_id: destination.id };
+    const transferred = await api.call('move_project_to_workspace', transferArgs);
+    expect(transferred.item.workspace_id).toBe(destination.id);
+    await mcp.db(`MCPAccessPolicy.objects.get(token_id=${api.token_id}).workspaces.remove(${destination.id})\nprint('null')`);
+    expect(JSON.stringify(await api.raw('move_project_to_workspace', transferArgs))).toContain('not_found');
+    await mcp.db(`MCPAccessPolicy.objects.get(token_id=${api.token_id}).workspaces.add(${destination.id})\nprint('null')`);
+    await api.mutate('delete_project', { workspace_id: destination.id, id: project.id, if_match: transferred.item.revision });
+    await api.mutate('delete_person', { id: person.id, if_match: (await api.call('get_person', { ...api.scope, id: person.id })).item.revision });
+    teams = await api.call('list_teams', api.scope);
+    await api.mutate('delete_team', { id: team.id, if_match: teams.items.find(t => t.id === changedTeam.id).revision });
+    expect(changedPerson.name).toBe('Changed person');
+  });
+
+  test('MCP dependencies cascade, milestones enforce reasons and bulk moves are atomic', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    const project = (await api.mutate('create_project', { name: 'Schedule' })).item;
+    let a = (await api.mutate('create_task', { project_id: project.id, title: 'A', start: '2030-01-01', end: '2030-01-03' })).item;
+    let b = (await api.mutate('create_task', { project_id: project.id, title: 'B', start: '2030-01-01', end: '2030-01-02' })).item;
+    const edge = (await api.mutate('add_dependency', { predecessor_id: a.id, successor_id: b.id, predecessor_revision: a.revision, successor_revision: b.revision })).item;
+    b = (await api.call('get_task', { ...api.scope, id: b.id })).item;
+    expect(b.start >= a.end).toBe(true);
+    a = (await api.call('get_task', { ...api.scope, id: a.id })).item;
+    const cycle = await api.raw('add_dependency', { ...api.scope, operation_id: mcp.randomUUID(), predecessor_id: b.id, successor_id: a.id, predecessor_revision: b.revision, successor_revision: a.revision });
+    expect(JSON.stringify(cycle)).toContain('cycle_detected');
+    const german = await api.rpc('tools/call', { name: 'add_dependency', arguments: { ...api.scope, operation_id: mcp.randomUUID(), predecessor_id: b.id, successor_id: a.id, predecessor_revision: b.revision, successor_revision: a.revision } }, { 'Accept-Language': 'de' });
+    expect(JSON.stringify(await german.json())).toContain('cycle_detected');
+    expect((await api.call('list_dependencies', { ...api.scope, project_id: project.id })).items).toHaveLength(1);
+    let milestone = (await api.mutate('create_milestone', { project_id: project.id, task_id: b.id, title: 'Linked', date: b.end, require_move_reason: true })).item;
+    expect((await api.call('get_milestone', { ...api.scope, id: milestone.id })).item.task_id).toBe(b.id);
+    const noReason = await api.raw('update_milestone', { ...api.scope, operation_id: mcp.randomUUID(), id: milestone.id, if_match: milestone.revision, date: '2030-01-20' });
+    expect(JSON.stringify(noReason)).toContain('reason_required');
+    milestone = (await api.mutate('update_milestone', { id: milestone.id, if_match: milestone.revision, date: '2030-01-20', move_reason: 'Scope changed' })).item;
+    expect((await api.call('get_task', { ...api.scope, id: b.id })).item.end).toBe('2030-01-20');
+    expect((await api.call('list_milestones', { ...api.scope, project_id: project.id })).items).toHaveLength(1);
+    const schedule = await api.call('get_schedule', { ...api.scope, start: '2030-01-01', end: '2030-03-01', project_ids: [project.id] });
+    expect(schedule.items).toHaveLength(3);
+    const before = (await api.call('get_task', { ...api.scope, id: a.id })).item;
+    const invalid = await api.raw('move_tasks', { ...api.scope, operation_id: mcp.randomUUID(), targets: [{ id: a.id, if_match: before.revision }, { id: 999999, if_match: before.revision }], delta_days: 2 });
+    expect(JSON.stringify(invalid)).toContain('not_found');
+    expect((await api.call('get_task', { ...api.scope, id: a.id })).item.start).toBe(before.start);
+    const moved = await api.mutate('move_tasks', { targets: [{ id: a.id, if_match: before.revision }], delta_days: 2 });
+    expect(moved.effects.tasks.changed_count).toBeGreaterThan(0);
+    await api.mutate('delete_dependency', { predecessor_id: a.id, successor_id: b.id, if_match: edge.revision });
+    milestone = (await api.call('get_milestone', { ...api.scope, id: milestone.id })).item;
+    await api.mutate('delete_milestone', { id: milestone.id, if_match: milestone.revision });
+    expect((await api.call('get_task', { ...api.scope, id: b.id })).item.id).toBe(b.id);
+  });
+
+  test('MCP idea conversions are atomic and cannot create duplicate projects or tasks', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    let idea = (await api.mutate('create_idea', { title: 'Idea', body: 'Copy this body', tags: 'mcp' })).item;
+    idea = (await api.mutate('update_idea', { id: idea.id, if_match: idea.revision, status: 'exploring' })).item;
+    expect((await api.call('list_ideas', { ...api.scope, tag: 'mcp' })).items).toHaveLength(1);
+    const args = { ...api.scope, operation_id: mcp.randomUUID(), id: idea.id, if_match: idea.revision };
+    const converted = await api.call('convert_idea_to_project', args);
+    expect(converted.project.description).toBe('Copy this body');
+    expect(await api.call('convert_idea_to_project', args)).toEqual(converted);
+    const twice = await api.raw('convert_idea_to_project', { ...args, operation_id: mcp.randomUUID(), if_match: converted.item.revision });
+    expect(JSON.stringify(twice)).toContain('conflict');
+    const other = (await api.mutate('create_idea', { title: 'Task idea', body: 'Task body' })).item;
+    const task = await api.mutate('convert_idea_to_task', { id: other.id, if_match: other.revision, project_id: converted.project.id, start: '2030-01-01', end: '2030-01-02' });
+    expect(task.task.description).toBe('Task body');
+    expect((await api.call('get_idea', { ...api.scope, id: other.id })).item.converted_task_id).toBe(task.task.id);
+    await api.mutate('delete_idea', { id: other.id, if_match: task.item.revision });
+    expect((await api.call('get_task', { ...api.scope, id: task.task.id })).item.id).toBe(task.task.id);
+  });
+
+  test('MCP member writes honor assignment and explicit self-claim permissions', async ({ appPage: page }) => {
+    const pm = await mcp.setup(page);
+    const project = (await pm.mutate('create_project', { name: 'Claimable' })).item;
+    let task = (await pm.mutate('create_task', { project_id: project.id, title: 'Claim task', start: '2030-01-01', end: '2030-01-02' })).item;
+    const member = await mcp.setup(page, { user: 'member1', caps: ['core.read', 'core.write', 'workspace.admin'] });
+    const claim = await member.mutate('claim_task', { id: task.id, if_match: task.revision });
+    expect(claim.item.assignee_ids).toHaveLength(1);
+    const claimedProject = await member.mutate('claim_project', { id: project.id, if_match: (await member.call('get_project', { ...member.scope, id: project.id })).item.revision });
+    expect(claimedProject.item.responsible_person_ids).toHaveLength(1);
+    task = (await member.mutate('update_task', { id: task.id, if_match: claim.item.revision, title: 'Assigned edit' })).item;
+    expect(task.title).toBe('Assigned edit');
+    const all = await member.call('list_tasks', member.scope);
+    const forbiddenTask = all.items.find(t => t.assignee_ids.length && !t.assignee_ids.includes(claim.item.assignee_ids[0]));
+    const denied = await member.raw('delete_task', { ...member.scope, operation_id: mcp.randomUUID(), id: forbiddenTask.id, if_match: forbiddenTask.revision });
+    expect(JSON.stringify(denied)).toContain('forbidden');
+    expect((await member.raw('list_memberships', member.scope)).error.message).toContain('Unknown tool');
+  });
+
+  test('MCP concurrent updates and retries produce one committed result', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    const item = (await api.mutate('create_project', { name: 'Concurrency' })).item;
+    const args = { ...api.scope, operation_id: mcp.randomUUID(), id: item.id, if_match: item.revision, name: 'Exactly once' };
+    const [a, b] = await Promise.all([api.call('update_project', args), api.call('update_project', args)]);
+    expect(a).toEqual(b);
+    const competing = await Promise.all(['A', 'B'].map(name => api.raw('update_project', { ...args, operation_id: mcp.randomUUID(), if_match: a.item.revision, name })));
+    expect(competing.filter(x => x.result?.isError)).toHaveLength(1);
+    expect(JSON.stringify(competing)).toContain('conflict');
+  });
+
+  test('MCP workload tools preserve immutable estimates and private self-service boundaries', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    const settings = (await api.call('get_workload_settings', api.scope)).item;
+    const enabled = await api.mutate('update_workload_settings', { if_match: settings.revision, workload_enabled: true, workload_pms_included: true });
+    expect(enabled.item.workload_members_included).toBe(true);
+    let category = (await api.mutate('create_workload_category', { name: 'MCP allocation', active: false, supports_projects: true })).item;
+    category = (await api.mutate('update_workload_category', { id: category.id, if_match: category.revision, active: true })).item;
+    const categories = (await api.call('list_workload_categories', api.scope)).items;
+    const my = (await api.call('get_my_workload', api.scope)).item;
+    const allocations = categories.filter(c => c.active).map(c => ({ category_id: c.id, percentage: c.id === category.id ? 100 : 0, projects: c.id === category.id ? [{ project_id: my.projects[0].id, percentage: 75 }] : [] }));
+    const submitted = await api.mutate('submit_my_workload', { if_match: my.revision, allocations, checkin: true });
+    expect(submitted.item.allocations.find(a => a.category_id === category.id).percentage).toBe(100);
+    const reviewed = await api.mutate('review_my_workload', { if_match: submitted.state.revision });
+    expect(reviewed.item.id).not.toBe(submitted.item.id);
+    const snoozed = await api.mutate('snooze_my_workload_checkin', { if_match: reviewed.state.revision });
+    expect(snoozed.item.snoozed_until).toBeTruthy();
+    expect((await api.call('list_workload_reports', api.scope)).items).toHaveLength(2);
+    expect((await api.call('get_workload_report', { ...api.scope, id: submitted.item.id })).item.id).toBe(submitted.item.id);
+    expect((await api.call('get_workload_overview', api.scope)).reported).toBe(1);
+    const membership = (await api.call('list_memberships', api.scope)).items.find(m => m.user_label === 'member1');
+    const participation = await api.mutate('set_workload_participation', { id: membership.id, if_match: membership.revision, value: 'exempt' });
+    expect(participation.item.workload_participation).toBe('exempt');
+    const member = await mcp.setup(page, { user: 'member1', caps: ['workload.self'] });
+    expect(JSON.stringify(await member.raw('get_my_workload', member.scope))).toContain('feature_disabled');
+    expect(JSON.stringify(await member.raw('get_workload_report', { ...member.scope, id: submitted.item.id }))).toContain('not_found');
+    const readOnly = await mcp.setup(page, { caps: ['core.read'] });
+    expect((await readOnly.raw('list_workload_reports', readOnly.scope)).error.message).toContain('Unknown tool');
+    await api.mutate('delete_workload_category', { id: category.id, if_match: category.revision });
+    const historical = (await api.call('get_workload_report', { ...api.scope, id: submitted.item.id })).item;
+    expect(historical.allocations.find(a => a.category_label === 'MCP allocation')).toMatchObject({ category_id: null, percentage: 100 });
+  });
+
+  test('MCP sharing links and role mutations are explicit, redacted and replay-safe', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    const members = (await api.call('list_memberships', api.scope)).items;
+    const own = members.find(m => m.user_label === 'demo');
+    const last = await api.raw('set_member_role', { ...api.scope, operation_id: mcp.randomUUID(), id: own.id, if_match: own.revision, role: 'member' });
+    expect(JSON.stringify(last)).toContain('last PM');
+    const member = members.find(m => m.user_label === 'member1');
+    const promoted = await api.mutate('set_member_role', { id: member.id, if_match: member.revision, role: 'pm' });
+    expect(promoted.item.role).toBe('pm');
+    const person = (await api.call('list_people', api.scope)).items.find(p => !p.linked);
+    const invite = await api.mutate('create_person_invite', { id: person.id, if_match: person.revision });
+    expect(invite.url).toContain('/invite/');
+    const initial = (await api.call('get_public_roadmap_settings', api.scope)).item;
+    let roadmap = await api.mutate('update_public_roadmap_settings', { if_match: initial.revision, enabled: true, title: 'MCP roadmap' });
+    const original = await api.call('get_public_roadmap_link', api.scope);
+    const args = { ...api.scope, operation_id: mcp.randomUUID(), if_match: roadmap.item.revision };
+    const rotated = await api.call('rotate_public_roadmap_link', args);
+    expect(rotated.url).not.toBe(original.url);
+    expect(await api.call('rotate_public_roadmap_link', args)).toEqual(rotated);
+    expect((await page.request.get(original.url)).status()).toBe(404);
+    roadmap = await api.call('get_public_roadmap_settings', api.scope);
+    await api.mutate('rotate_public_roadmap_link', { if_match: roadmap.item.revision });
+    expect(JSON.stringify(await api.raw('rotate_public_roadmap_link', args))).toContain('conflict');
+    const project = (await api.call('list_projects', api.scope)).items[0];
+    await api.mutate('set_my_project_subscription', { id: project.id, if_match: project.revision, subscribed: true });
+    expect((await api.call('list_my_project_subscriptions', api.scope)).items).toHaveLength(1);
+    await api.mutate('set_my_project_subscription', { id: project.id, if_match: project.revision, subscribed: false });
+    expect((await api.call('list_my_project_subscriptions', api.scope)).items).toHaveLength(0);
+    const notification = (await api.call('get_notification_settings', api.scope)).item;
+    const changed = await api.mutate('update_notification_settings', { if_match: notification.revision, events: ['milestone.moved'], subscriber_domains: ['example.com'] });
+    expect(changed.item.events).toEqual(['milestone.moved']);
+    expect((await api.call('list_notification_deliveries', api.scope)).items).toEqual([]);
+    const secretChecks = await mcp.db(`w=Workspace.objects.get(pk=${api.workspace_id})\nprint(json.dumps({'receipts':list(MCPMutationReceipt.objects.values_list('result', flat=True)), 'token':w.public_roadmap_token}))`);
+    expect(JSON.stringify(secretChecks.receipts)).not.toContain(secretChecks.token);
+    const core = await mcp.setup(page, { caps: ['core.read', 'core.write'] });
+    for (const tool of ['get_public_roadmap_link', 'create_person_invite']) expect((await core.raw(tool, core.scope)).error.message).toContain('Unknown tool');
+    const activity = await core.call('list_activity', core.scope);
+    expect(JSON.stringify(activity)).not.toContain(secretChecks.token);
+  });
+
+  test('MCP GitLab tools use cached data, stable revisions and queued sync without exposing credentials', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    const ids = await mcp.db(`
+w=Workspace.objects.get(pk=${api.workspace_id})
+c=GitLabConnection.objects.create(workspace=w,instance_url='https://gitlab.example.com',token_ciphertext='never-return-this',enabled=True)
+projects=list(Project.objects.filter(workspace=w).order_by('id'))
+i=GitLabIssue.objects.create(connection=c,gitlab_project_id=1,iid=1,title='MCP cached issue',owner=projects[0],web_url='https://gitlab.example.com/p/-/issues/1')
+print(json.dumps({'issue':i.pk,'source':projects[0].pk,'target':projects[1].pk}))`);
+    const listed = (await api.call('list_gitlab_issues', api.scope)).items[0];
+    let issue = (await api.call('get_gitlab_issue', { ...api.scope, id: ids.issue })).item;
+    expect(listed.revision).toBe(issue.revision);
+    const binding = (await api.call('get_project_gitlab_binding', { ...api.scope, id: ids.source })).item;
+    await api.mutate('update_project_gitlab_binding', { id: ids.source, if_match: binding.revision, prefix: 'MCP', collect: true });
+    issue = (await api.mutate('transfer_gitlab_issue', { id: ids.issue, if_match: issue.revision, project_id: ids.target })).item;
+    expect(issue.owner_id).toBe(ids.target);
+    let connection = (await api.call('get_gitlab_connection', api.scope)).item;
+    expect(JSON.stringify(connection)).not.toContain('never-return-this');
+    connection = (await api.mutate('request_gitlab_sync', { if_match: connection.revision })).item;
+    const workflow = await api.mutate('update_gitlab_workflow', { if_match: connection.revision, in_progress_labels: ['Doing'], done_labels: ['Done'], not_started_labels: ['Ready'], fallback: 'unclassified' });
+    expect(workflow.item.workflow['in-progress']).toEqual(['Doing']);
+  });
+
+  test('MCP and OAuth are available without opt-in and operator credentials remain restricted', async ({ appPage: page }) => {
+    expect((await page.request.post('/mcp', { data: {} })).status()).toBe(401);
+    for (const path of ['/.well-known/oauth-protected-resource/mcp', '/.well-known/oauth-authorization-server/oauth', '/accounts/mcp/']) {
+      expect((await page.request.get(path)).status()).toBe(200);
+    }
+    for (const path of ['/oauth/token', '/oauth/register', '/oauth/revoke']) {
+      expect((await page.request.get(path)).status()).toBe(405);
+    }
+    await page.goto('/profile/');
+    await expect(page.getByRole('link', { name: 'Assistant connections', exact: true })).toBeVisible();
+    const ws = await mcp.db("print(json.dumps(Membership.objects.get(user__username='demo').workspace_id))");
+    const command = (...args) => promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'mcp_access', ...args], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv() });
+    const { stdout } = await command('create', 'Playwright operator', '--user', 'demo', '--workspace', String(ws), '--capability', 'core.read', '--expires-in-days', '1');
+    const credential = stdout.trim();
+    expect(credential).toMatch(/^mcp_/);
+    const result = await page.request.post('/mcp', { headers: { Authorization: `Bearer ${credential}` }, data: { jsonrpc: '2.0', id: 1, method: 'tools/list' } });
+    expect(result.status()).toBe(200);
+    expect((await result.json()).result.tools.map(t => t.name)).not.toContain('create_task');
+    const tokenId = await mcp.db("print(json.dumps(Token.objects.get(name='Playwright operator').pk))");
+    await command('configure', String(tokenId), '--workspace', String(ws), '--capability', 'core.read', '--capability', 'core.write');
+    await command('revoke', String(tokenId));
+    await command('cleanup');
+    expect(await mcp.db(`print(json.dumps(Token.objects.filter(pk=${tokenId}).exists()))`)).toBe(false);
+  });
+
+  test('MCP oversized mutation results roll back state, activity and retry receipts together', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    const ids = await mcp.db(`
+p=Project.objects.filter(workspace_id=${api.workspace_id}).first()
+from datetime import date
+objects=Task.objects.bulk_create([Task(project=p,title=f'Oversized {i}',description='x'*20000,start=date(2030,1,1),end=date(2030,1,2)) for i in range(20)])
+print(json.dumps([o.pk for o in objects]))`);
+    const targets = [];
+    for (const id of ids) targets.push({ id, if_match: (await api.call('get_task', { ...api.scope, id })).item.revision });
+    const operation = mcp.randomUUID();
+    const response = await api.raw('move_tasks', { ...api.scope, operation_id: operation, targets, delta_days: 2 });
+    expect(JSON.stringify(response)).toContain('Result too large');
+    const state = await mcp.db(`print(json.dumps({'starts':list(Task.objects.filter(pk__in=${JSON.stringify(ids)}).values_list('start',flat=True)), 'events':ActivityEvent.objects.filter(action='tasks.bulk_moved').count(), 'receipts':MCPMutationReceipt.objects.filter(operation_id='${operation}').count()},default=str))`);
+    expect(new Set(state.starts)).toEqual(new Set(['2030-01-01']));
+    expect(state.events).toBe(0);
+    expect(state.receipts).toBe(0);
+  });
+
+  test('MCP retry replay rechecks current object permissions and token workspace bindings', async ({ appPage: page }) => {
+    const pm = await mcp.setup(page);
+    const project = (await pm.mutate('create_project', { name: 'Replay access' })).item;
+    let task = (await pm.mutate('create_task', { project_id: project.id, title: 'Unassigned', start: '2030-01-01', end: '2030-01-02' })).item;
+    const member = await mcp.setup(page, { user: 'member1', caps: ['core.read', 'core.write'] });
+    const args = { ...member.scope, operation_id: mcp.randomUUID(), id: task.id, if_match: task.revision, title: 'Previously allowed' };
+    task = (await member.call('update_task', args)).item;
+    const others = (await pm.call('list_people', pm.scope)).items;
+    const unlinked = others.find(p => !p.linked);
+    await pm.mutate('update_task', { id: task.id, if_match: task.revision, assignee_ids: [unlinked.id] });
+    expect(JSON.stringify(await member.raw('update_task', args))).toContain('forbidden');
+    await mcp.db(`MCPAccessPolicy.objects.get(token_id=${member.token_id}).workspaces.clear()\nprint('null')`);
+    expect((await member.raw('update_task', args)).error.message).toContain('Unknown tool');
+  });
+
+  test('MCP reads redact historical secrets and delivery payloads', async ({ appPage: page }) => {
+    const api = await mcp.setup(page);
+    await mcp.db(`
+w=Workspace.objects.get(pk=${api.workspace_id})
+w.teams_webhook_url='https://example.com/secret-webhook';w.save()
+ActivityEvent.objects.create(workspace=w,action='workspace.updated',entity_type='workspace',entity_id=w.pk,entity_label='secret-label',changes={'teams_webhook_url':{'to':'secret-webhook'},'public_roadmap_token':{'to':'secret-roadmap'}},metadata={'email':'secret-email'})
+TeamsDelivery.objects.create(workspace=w,destination_hash='x'*64,payload={'email':'secret-email'},last_error='secret-error')
+print('null')`);
+    const settings = await api.call('get_notification_settings', api.scope);
+    expect(settings.item.configured).toBe(true);
+    const deliveries = await api.call('list_notification_deliveries', api.scope);
+    const history = await api.call('list_activity', api.scope);
+    for (const value of [settings, deliveries, history]) expect(JSON.stringify(value)).not.toContain('secret-');
+  });
+
+  test('MCP requires bearer authentication even with a browser session', async ({ appPage: page }) => {
+    const response = await page.request.post('/mcp', {
+      data: { jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} },
+    });
+    expect(response.status()).toBe(401);
+    expect(response.headers()['www-authenticate']).toContain('Bearer');
+  });
+});
+
 test.describe('GitLab integration', () => {
   test('GitLab configuration lives inside workspace settings rather than the main navigation', async ({ appPage: page }, testInfo) => {
     const api = await fakeGitLab();
@@ -480,6 +1107,8 @@ GitLabConnection.objects.filter(pk=source.pk).update(needs_backfill=False, next_
 GitLabIssue.objects.update(state='done')
 call_command('migrate', 'data', '0032', interactive=False, verbosity=0)
 source.refresh_from_db()
+# Restore the current schema before this worker serves another fixture reset.
+call_command('migrate', 'data', interactive=False, verbosity=0)
 print(json.dumps({
     'queued': source.needs_backfill and source.next_run is None and source.revision > previous_revision,
     'workspace_mapping_preserved': source.workflow == previous_mapping,

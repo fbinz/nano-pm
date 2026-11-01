@@ -1,7 +1,5 @@
 """Workspace switching, creation, and public roadmap settings."""
 
-import secrets
-
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import redirect, render
@@ -9,8 +7,8 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.cache import never_cache
 
-from actions.activity import change_set, created_changes, log_activity, snapshot
-from data.models import Membership, Workspace, WorkspaceRole
+from actions import manage_workspace_settings as settings_actions
+from data.models import Membership
 from .public_subscriptions import render_public_roadmap
 
 from .helpers import is_pm, pm_required, workspace_context
@@ -25,18 +23,9 @@ def workspace_settings(request: HttpRequest, section: str = "general"):
     if request.method == "POST":
         if section != "general":
             return HttpResponseNotAllowed(["GET"])
-        workspace = request.workspace
-        fields = ["prompt_milestone_move_reason"]
-        before = snapshot(workspace, fields)
-        workspace.prompt_milestone_move_reason = request.POST.get("prompt_milestone_move_reason") == "on"
-        workspace.save(update_fields=[*fields, "updated_at"])
-        log_activity(
-            workspace=workspace,
-            actor=request.user,
-            action="workspace.updated",
-            entity=workspace,
-            changes=change_set(before, snapshot(workspace, fields)),
-            skip_empty_changes=True,
+        settings_actions.update_settings(
+            workspace=request.workspace, actor=request.user,
+            values={"prompt_milestone_move_reason": request.POST.get("prompt_milestone_move_reason") == "on"},
         )
         return redirect("workspace_settings")
     return render_workspace_settings(request, section)
@@ -83,15 +72,7 @@ def workspace_switch(request: HttpRequest, workspace_id: int):
 @login_required
 def workspace_create(request: HttpRequest):
     name = request.POST.get("name", "").strip() or "New workspace"
-    ws = Workspace.objects.create(name=name)
-    Membership.objects.create(user=request.user, workspace=ws, role=WorkspaceRole.PM)
-    log_activity(
-        workspace=ws,
-        actor=request.user,
-        action="workspace.created",
-        entity=ws,
-        changes=created_changes(snapshot(ws, ["name"])),
-    )
+    ws = settings_actions.create_workspace(name=name, actor=request.user)
     request.session["active_workspace_id"] = ws.id
     request.session.save()
     return redirect("/")
@@ -107,33 +88,10 @@ def workspace_rename(request: HttpRequest):
     if not name:
         return HttpResponse(status=400)
 
-    workspace = request.workspace
-    before = snapshot(workspace, ["name"])
-    workspace.name = name[:200]
-    workspace.save(update_fields=["name", "updated_at"])
-    log_activity(
-        workspace=workspace,
-        actor=request.user,
-        action="workspace.updated",
-        entity=workspace,
-        changes=change_set(before, snapshot(workspace, ["name"])),
-        skip_empty_changes=True,
-    )
+    settings_actions.update_settings(workspace=request.workspace, actor=request.user, values={"name": name[:200]})
     if request.POST.get("next") == "workspace_settings":
         return redirect("workspace_settings")
     return redirect("/")
-
-
-def _generate_public_roadmap_token() -> str:
-    while True:
-        token = secrets.token_urlsafe(18)
-        if not Workspace.objects.filter(public_roadmap_token=token).exists():
-            return token
-
-
-def _ensure_public_roadmap_token(workspace: Workspace) -> None:
-    if not workspace.public_roadmap_token:
-        workspace.public_roadmap_token = _generate_public_roadmap_token()
 
 
 @require_http_methods(["POST"])
@@ -142,50 +100,22 @@ def public_roadmap_update(request: HttpRequest):
     if not is_pm(request):
         return HttpResponse(status=403)
 
-    workspace = request.workspace
-    before = snapshot(workspace, [
-        "public_roadmap_enabled",
-        "public_roadmap_title",
-        "public_roadmap_description",
-    ])
     action = request.POST.get("action")
-    if action == "enable":
-        _ensure_public_roadmap_token(workspace)
-        workspace.public_roadmap_enabled = True
-    elif action == "disable":
-        workspace.public_roadmap_enabled = False
+    if action in {"enable", "disable"}:
+        values = {"public_roadmap_enabled": action == "enable"}
     elif action == "save":
-        workspace.public_roadmap_title = request.POST.get("title", "").strip()
-        workspace.public_roadmap_description = request.POST.get("description", "").strip()
+        values = {
+            "public_roadmap_title": request.POST.get("title", "").strip(),
+            "public_roadmap_description": request.POST.get("description", "").strip(),
+        }
     else:
         return HttpResponse(status=400)
-
-    workspace.save(update_fields=[
-        "public_roadmap_enabled",
-        "public_roadmap_token",
-        "public_roadmap_title",
-        "public_roadmap_description",
-        "updated_at",
-    ])
     event_action = {
         "enable": "workspace.public_roadmap.enabled",
         "disable": "workspace.public_roadmap.disabled",
         "save": "workspace.public_roadmap.updated",
     }[action]
-    log_activity(
-        workspace=workspace,
-        actor=request.user,
-        action=event_action,
-        entity_type="workspace",
-        entity_id=workspace.id,
-        entity_label=workspace.name,
-        changes=change_set(before, snapshot(workspace, [
-            "public_roadmap_enabled",
-            "public_roadmap_title",
-            "public_roadmap_description",
-        ])),
-        skip_empty_changes=True,
-    )
+    settings_actions.update_roadmap(workspace=request.workspace, actor=request.user, values=values, action=event_action)
     return redirect("workspace_settings_sharing")
 
 
@@ -195,22 +125,7 @@ def public_roadmap_regenerate(request: HttpRequest):
     if not is_pm(request):
         return HttpResponse(status=403)
 
-    workspace = request.workspace
-    before = snapshot(workspace, ["public_roadmap_enabled"])
-    workspace.public_roadmap_token = _generate_public_roadmap_token()
-    workspace.public_roadmap_enabled = True
-    workspace.save(update_fields=["public_roadmap_token", "public_roadmap_enabled", "updated_at"])
-    changes = change_set(before, snapshot(workspace, ["public_roadmap_enabled"]))
-    changes["public_roadmap_token"] = {"to": "regenerated"}
-    log_activity(
-        workspace=workspace,
-        actor=request.user,
-        action="workspace.public_roadmap.regenerated",
-        entity_type="workspace",
-        entity_id=workspace.id,
-        entity_label=workspace.name,
-        changes=changes,
-    )
+    settings_actions.update_roadmap(workspace=request.workspace, actor=request.user, values={}, rotate=True)
     return redirect("workspace_settings_sharing")
 
 

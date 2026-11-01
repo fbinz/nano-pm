@@ -9,9 +9,9 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.cache import never_cache
 from django.utils.translation import gettext_lazy as _
 
-from actions.activity import change_set, log_activity, snapshot
+from actions.manage_workspace_settings import set_subscription, update_settings
 from actions.teams_delivery import validate_webhook_url
-from data.models import Membership, Project, ProjectSubscription, Workspace
+from data.models import Membership, Project, Workspace
 from data.models.project import TEAMS_NOTIFY_EVENT_CHOICES
 
 from .helpers import is_pm, workspace_context
@@ -74,15 +74,7 @@ def teams_settings(request):
         if updates is not None:
             # Each action changes only its own fields; connection changes must
             # never overwrite event preferences (or vice versa).
-            before = snapshot(workspace, list(updates))
-            for field, value in updates.items():
-                setattr(workspace, field, value)
-            workspace.save(update_fields=[*updates, "updated_at"])
-            log_activity(
-                workspace=workspace, actor=request.user, action="workspace.updated", entity=workspace,
-                changes=change_set(before, snapshot(workspace, list(updates))),
-                skip_empty_changes=True,
-            )
+            update_settings(workspace=workspace, actor=request.user, values=updates)
             return redirect("teams_settings")
     return render(request, "components/screens/teams/settings.html", {
         **workspace_context(request), "user": request.user, "is_pm": is_pm(request),
@@ -103,11 +95,9 @@ def roadmap_subscription(request, token, project_id):
     action = request.POST.get("action")
     if membership is None:
         return public_subscription(request, workspace, project, action)
-    if action == "follow":
-        ProjectSubscription.objects.get_or_create(project=project, membership=membership)
-    elif action == "unfollow":
-        ProjectSubscription.objects.filter(project=project, membership=membership).delete()
-        unfollow_public_subscription(request, project)
-    else:
+    if action not in {"follow", "unfollow"}:
         return HttpResponse(status=400)
+    set_subscription(workspace=workspace, membership=membership, project=project, subscribed=action == "follow", actor=request.user)
+    if action == "unfollow":
+        unfollow_public_subscription(request, project)
     return redirect("public_roadmap", token=token)

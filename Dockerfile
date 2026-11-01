@@ -21,6 +21,9 @@
 #   DJANGO_HSTS_SECONDS      — start small (e.g. 3600); ramp up only when
 #                              you're confident the cert won't lapse.
 #
+# MCP and OAuth are available at /mcp without an additional environment flag.
+#   See docs/mcp.md for consent/token policies, HTTPS and cleanup scheduling.
+#
 # Optional GitLab integration env:
 #   DJANGO_GITLAB_ENCRYPTION_KEY — Fernet key, required when GitLab is configured.
 #   DJANGO_GITLAB_PRIVATE_HOSTS  — explicitly authorized private GitLab hostnames.
