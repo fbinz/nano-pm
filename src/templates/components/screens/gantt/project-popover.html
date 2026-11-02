@@ -99,19 +99,30 @@
     </div>
     {% if destination_workspaces %}
       {% if project.gitlab_binding %}<p>{% trans "Moving this project removes its GitLab connection and retires its issue associations in the source workspace. Private issue data will not move." %}</p>{% endif %}
-      <fieldset class="fieldset">
-        <label class="label" for="project-move-workspace">{% trans "Move to workspace" %}</label>
-        <select id="project-move-workspace" class="select select-sm w-full" name="workspace_id">
-          {% for ws in destination_workspaces %}
-            <option value="{{ ws.id }}">{{ ws.name }}</option>
-          {% endfor %}
-        </select>
-      </fieldset>
-      <div class="row">
-        <button type="button" id="pp-move-workspace" class="topbar-btn"
-                data-on:click="confirm('{% blocktrans with name=project.name|escapejs %}Move project &quot;{{ name }}&quot; to the selected workspace?{% endblocktrans %}') && @post('/projects/{{ project.id }}/move-workspace/', { contentType: 'form', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
-          {% trans "Move project" %}
-        </button>
+      <button type="button" id="pp-show-move-workspace" class="topbar-btn"
+              aria-controls="project-move-controls" aria-expanded="false"
+              data-on:click="document.getElementById('project-move-controls').hidden = false; el.setAttribute('aria-expanded', 'true'); document.getElementById('project-move-workspace').focus()">
+        {% trans "Move to workspace" %}
+      </button>
+      <div id="project-move-controls" hidden>
+        <fieldset class="fieldset">
+          <select id="project-move-workspace" class="select select-sm w-full" name="workspace_id"
+                  aria-label="{% trans 'Move to workspace' %}">
+            {% for ws in destination_workspaces %}
+              <option value="{{ ws.id }}">{{ ws.name }}</option>
+            {% endfor %}
+          </select>
+        </fieldset>
+        <div class="row mt-2">
+          <button type="button" id="pp-move-workspace" class="topbar-btn"
+                  data-on:click="@post('/projects/{{ project.id }}/move-workspace/', { contentType: 'form', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })">
+            {% trans "Confirm" %}
+          </button>
+          <button type="button" class="topbar-btn"
+                  data-on:click="document.getElementById('project-move-controls').hidden = true; document.getElementById('pp-show-move-workspace').setAttribute('aria-expanded', 'false'); document.getElementById('pp-show-move-workspace').focus()">
+            {% trans "Cancel" %}
+          </button>
+        </div>
       </div>
     {% endif %}
     <div class="actions">

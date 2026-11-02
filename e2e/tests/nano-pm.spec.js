@@ -8988,23 +8988,35 @@ print(json.dumps({'existing': list(Project.objects.filter(id__in=existing_ids).v
 
     await page.locator('.left-cell.proj', { hasText: 'API Migration' }).click();
     await page.waitForSelector('#project-popover');
-    await expect(page.locator('#project-move-workspace')).toBeVisible();
-    await page.selectOption('#project-move-workspace', { label: 'Side project' });
+    const moveButton = page.getByRole('button', { name: 'Move to workspace', exact: true });
+    const destination = page.locator('#project-move-workspace');
+    const confirm = page.locator('#project-popover').getByRole('button', { name: 'Confirm', exact: true });
+    const cancel = page.locator('#project-popover').getByRole('button', { name: 'Cancel', exact: true });
+    await expect(moveButton).toBeVisible();
+    await expect(destination).toBeHidden();
+    await expect(confirm).toBeHidden();
+    await expect(cancel).toBeHidden();
 
-    // Cancel keeps the project in the current workspace.
-    page.once('dialog', async dialog => {
-      expect(dialog.message()).toContain('Move project');
-      await dialog.dismiss();
-    });
-    await page.click('#pp-move-workspace');
+    await moveButton.click();
+    await expect(destination).toBeVisible();
+    await expect(destination).toBeFocused();
+    await expect(confirm).toBeVisible();
+    await expect(cancel).toBeVisible();
+    await destination.selectOption({ label: 'Side project' });
+
+    // Cancel closes only the move controls and keeps the editor and project intact.
+    await cancel.click();
+    await expect(destination).toBeHidden();
+    await expect(confirm).toBeHidden();
+    await expect(cancel).toBeHidden();
+    await expect(moveButton).toBeFocused();
+    await expect(page.locator('#project-popover')).toBeVisible();
     await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toBeVisible();
 
-    // Accept moves the project and patches it out of the source chart.
-    page.once('dialog', async dialog => {
-      expect(dialog.message()).toContain('Move project');
-      await dialog.accept();
-    });
-    await page.click('#pp-move-workspace');
+    // Inline confirmation moves the project without an additional browser dialog.
+    await moveButton.click();
+    await destination.selectOption({ label: 'Side project' });
+    await confirm.click();
     await expect(page.locator('.left-cell.proj', { hasText: 'API Migration' })).toHaveCount(0);
     await expect(page.locator('.left-cell.proj')).toHaveCount(2);
     // The old API → Onboarding cross-project dependency is removed at the workspace boundary.

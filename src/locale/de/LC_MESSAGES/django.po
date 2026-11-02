@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-02 20:54+0100\n"
+"POT-Creation-Date: 2026-11-02 21:52+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -1208,6 +1208,7 @@ msgstr "Keine Assistenten-Verbindungen."
 
 #: templates/components/detail-editor.html:36
 #: templates/components/screens/gantt/milestone-popover.html:67
+#: templates/components/screens/gantt/project-popover.html:123
 #: templates/components/screens/gantt/task-popover.html:120
 #: templates/components/screens/gitlab/issue-actions.html:33
 #: templates/components/screens/teams/settings.html:99
@@ -1585,7 +1586,7 @@ msgid "Delete"
 msgstr "Löschen"
 
 #: templates/components/screens/gantt/milestone-popover.html:72
-#: templates/components/screens/gantt/project-popover.html:122
+#: templates/components/screens/gantt/project-popover.html:133
 #: templates/components/screens/gantt/task-popover.html:125
 #: templates/components/screens/workspaces/settings-general.html:20
 #: templates/components/screens/workspaces/settings-sharing.html:17
@@ -1671,30 +1672,21 @@ msgstr ""
 "Issue-Zuordnungen werden im bisherigen Arbeitsbereich stillgelegt. Private "
 "Issue-Daten werden nicht mitgenommen."
 
-#: templates/components/screens/gantt/project-popover.html:103
-#, fuzzy
-#| msgid "Create workspace"
+#: templates/components/screens/gantt/project-popover.html:105
+#: templates/components/screens/gantt/project-popover.html:109
 msgid "Move to workspace"
-msgstr "Arbeitsbereich erstellen"
+msgstr "In anderen Arbeitsbereich verschieben"
 
-#: templates/components/screens/gantt/project-popover.html:112
-#, fuzzy, python-format
-#| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
-msgid "Move project &quot;%(name)s&quot; to the selected workspace?"
-msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
+#: templates/components/screens/gantt/project-popover.html:119
+msgid "Confirm"
+msgstr "Bestätigen"
 
-#: templates/components/screens/gantt/project-popover.html:113
-#, fuzzy
-#| msgid "Reopen project"
-msgid "Move project"
-msgstr "Projekt wieder öffnen"
-
-#: templates/components/screens/gantt/project-popover.html:120
+#: templates/components/screens/gantt/project-popover.html:131
 #, python-format
 msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:120
+#: templates/components/screens/gantt/project-popover.html:131
 msgid "Delete project"
 msgstr "Projekt löschen"
 
@@ -2879,6 +2871,16 @@ msgid ""
 msgstr ""
 "Deine E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
 "Roadmap gespeichert."
+
+#, fuzzy, python-format
+#~| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
+#~ msgid "Move project &quot;%(name)s&quot; to the selected workspace?"
+#~ msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
+
+#, fuzzy
+#~| msgid "Reopen project"
+#~ msgid "Move project"
+#~ msgstr "Projekt wieder öffnen"
 
 #~ msgid "GitLab execution"
 #~ msgstr "GitLab-Umsetzung"
