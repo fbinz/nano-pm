@@ -74,6 +74,7 @@ class Command(BaseCommand):
             description="Move public API traffic to the new v2 platform.",
             color="#3b82f6",
             order=1,
+            public_roadmap_visible=True,
         )
         p2 = Project.objects.create(
             workspace=ws,
@@ -81,6 +82,7 @@ class Command(BaseCommand):
             description="Improve activation for first-time customers.",
             color="#10b981",
             order=2,
+            public_roadmap_visible=True,
         )
         p3 = Project.objects.create(
             workspace=ws,
@@ -88,6 +90,7 @@ class Command(BaseCommand):
             description="Reduce production risk across core infrastructure.",
             color="#f59e0b",
             order=3,
+            public_roadmap_visible=True,
         )
 
         # Project 1: API Migration

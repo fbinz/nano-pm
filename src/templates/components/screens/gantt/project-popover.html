@@ -23,6 +23,13 @@
       <label class="label" for="project-description">{% trans "Description" %}</label>
       <textarea id="project-description" class="textarea textarea-sm w-full" name="description" rows="3">{{ project.description }}</textarea>
     </fieldset>
+    {% if can_manage %}
+      <label class="label">
+        <input type="hidden" name="public_roadmap_visible" value="false">
+        <input class="checkbox checkbox-sm" type="checkbox" name="public_roadmap_visible" value="true"{% if project.public_roadmap_visible %} checked{% endif %}>
+        {% trans "Visible in public roadmap" %}
+      </label>
+    {% endif %}
     <fieldset id="project-responsible-editor" class="fieldset" data-can-edit="{{ can_manage|yesno:'true,false' }}">
       <label class="label" for="project-responsible-people">{% trans "Responsible people" %}</label>
       <div id="project-responsible-pills" class="assignees-area">

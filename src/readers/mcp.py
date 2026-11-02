@@ -51,7 +51,7 @@ def ordering(workspace):
 
 
 def project(obj, detail=True):
-    data = fields(obj, "id workspace_id name color order completed_at")
+    data = fields(obj, "id workspace_id name color order completed_at public_roadmap_visible")
     data["responsible_person_ids"] = list(
         obj.responsible_people.order_by("id").values_list("id", flat=True)
     )

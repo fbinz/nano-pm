@@ -32,6 +32,7 @@ class Project(models.Model):
     )
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
+    public_roadmap_visible = models.BooleanField(default=False)
     responsible_people = models.ManyToManyField(
         "data.Person",
         related_name="responsible_projects",

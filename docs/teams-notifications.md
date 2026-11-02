@@ -18,7 +18,10 @@
    the active workspace and independent of their contact email or Person record.
    Clearing it disables mentions, not subscriptions. Existing addresses are
    preserved; no data migration is needed for the profile move.
-4. Enable the public roadmap from the workspace menu. Each project card has a
+4. Enable the public roadmap from the workspace menu. In the project drawer or
+   detail editor, select **Visible in public roadmap** for each project you want
+   to publish. New projects are private by default; existing projects retain
+   their visibility after the migration. Each public project card has a
    **Follow** button. Once subscribed it shows **Subscribed** (**Abonniert**);
    click it to open **Unfollow**. Following and project filtering are separate
    controls, and the current tab's project filters survive subscription changes.

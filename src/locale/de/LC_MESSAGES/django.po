@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 16:54+0100\n"
+"POT-Creation-Date: 2026-11-02 20:54+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -123,7 +123,7 @@ msgstr ""
 msgid "Enter no more than 20 domains."
 msgstr "Gib höchstens 20 Domains ein."
 
-#: actions/public_subscriptions.py:35 interfaces/web/profile.py:59
+#: actions/public_subscriptions.py:35 interfaces/web/profile.py:58
 msgid "Enter a valid Microsoft sign-in address."
 msgstr "Gib eine gültige Microsoft-Anmeldeadresse ein."
 
@@ -136,23 +136,23 @@ msgid "Use an HTTPS Microsoft Teams or Power Automate webhook URL."
 msgstr ""
 "Verwende eine HTTPS-Webhook-URL von Microsoft Teams oder Power Automate."
 
-#: config/settings.py:240
+#: config/settings.py:239
 msgid "English"
 msgstr "Englisch"
 
-#: config/settings.py:241
+#: config/settings.py:240
 msgid "German"
 msgstr "Deutsch"
 
-#: config/urls.py:44
+#: config/urls.py:46
 msgid "Invalid or expired invite link."
 msgstr "Ungültiger oder abgelaufener Einladungslink."
 
-#: config/urls.py:57
+#: config/urls.py:59
 msgid "Username and password are required."
 msgstr "Benutzername und Passwort sind erforderlich."
 
-#: config/urls.py:62
+#: config/urls.py:64
 msgid "That username is already taken."
 msgstr "Dieser Benutzername ist bereits vergeben."
 
@@ -285,8 +285,8 @@ msgstr "Zuständige"
 msgid "Body"
 msgstr "Text"
 
-#: data/models/activity.py:145 interfaces/web/detail_forms.py:78
-#: templates/components/screens/gantt/project-popover.html:61
+#: data/models/activity.py:145 interfaces/web/detail_forms.py:79
+#: templates/components/screens/gantt/project-popover.html:68
 msgid "Color"
 msgstr "Farbe"
 
@@ -308,7 +308,7 @@ msgid "Date"
 msgstr "Datum"
 
 #: data/models/activity.py:150 interfaces/web/detail_forms.py:32
-#: interfaces/web/detail_forms.py:77
+#: interfaces/web/detail_forms.py:78
 #: templates/components/screens/gantt/milestone-popover.html:21
 #: templates/components/screens/gantt/project-popover.html:23
 #: templates/components/screens/gantt/task-popover.html:25
@@ -322,7 +322,7 @@ msgstr "Beschreibung"
 msgid "End"
 msgstr "Ende"
 
-#: data/models/activity.py:152 interfaces/web/detail_forms.py:76
+#: data/models/activity.py:152 interfaces/web/detail_forms.py:77
 #: templates/components/screens/gantt/project-popover.html:19
 msgid "Name"
 msgstr "Name"
@@ -342,8 +342,8 @@ msgstr "Vorgänger"
 msgid "Project"
 msgstr "Projekt"
 
-#: data/models/activity.py:156 interfaces/web/detail_forms.py:80
-#: templates/components/screens/gantt/project-popover.html:27
+#: data/models/activity.py:156 interfaces/web/detail_forms.py:81
+#: templates/components/screens/gantt/project-popover.html:34
 #: templates/components/screens/projects/detail.html:41
 #: templates/public/roadmap.html:62
 msgid "Responsible people"
@@ -363,79 +363,84 @@ msgstr "Öffentliche Roadmap aktiviert"
 msgid "Public roadmap title"
 msgstr "Titel der öffentlichen Roadmap"
 
-#: data/models/activity.py:160
+#: data/models/activity.py:160 interfaces/web/detail_forms.py:76
+#: templates/components/screens/gantt/project-popover.html:30
+msgid "Visible in public roadmap"
+msgstr "In der öffentlichen Roadmap sichtbar"
+
+#: data/models/activity.py:161
 msgid "Public roadmap token"
 msgstr "Token der öffentlichen Roadmap"
 
-#: data/models/activity.py:161
+#: data/models/activity.py:162
 msgid "Require move reason"
 msgstr "Begründung beim Verschieben erforderlich"
 
-#: data/models/activity.py:162 interfaces/web/detail_forms.py:33
+#: data/models/activity.py:163 interfaces/web/detail_forms.py:33
 #: templates/components/screens/gantt/task-popover.html:30
 #: templates/components/screens/projects/detail.html:63
 #: templates/components/screens/tasks/detail.html:36
 msgid "Start"
 msgstr "Start"
 
-#: data/models/activity.py:163
+#: data/models/activity.py:164
 #: templates/components/screens/projects/detail.html:62
 msgid "Status"
 msgstr "Status"
 
-#: data/models/activity.py:164
+#: data/models/activity.py:165
 msgid "Successor"
 msgstr "Nachfolger"
 
-#: data/models/activity.py:165
+#: data/models/activity.py:166
 #: templates/components/screens/ideas/detail.html:53
 msgid "Tags"
 msgstr "Tags"
 
-#: data/models/activity.py:166
+#: data/models/activity.py:167
 #: templates/components/screens/gantt/team-filter.html:6
 #: templates/components/screens/people/people-content.html:5
 #: templates/components/screens/people/people-list.html:18
 msgid "Teams"
 msgstr "Teams"
 
-#: data/models/activity.py:167 interfaces/web/teams_notifications.py:30
+#: data/models/activity.py:168 interfaces/web/teams_notifications.py:30
 msgid "Microsoft Teams webhook URL"
 msgstr "Microsoft-Teams-Webhook-URL"
 
-#: data/models/activity.py:168 interfaces/web/teams_notifications.py:23
+#: data/models/activity.py:169 interfaces/web/teams_notifications.py:23
 msgid "Notify for"
 msgstr "Benachrichtigen bei"
 
-#: data/models/activity.py:169
+#: data/models/activity.py:170
 #: templates/components/screens/workspaces/settings-general.html:17
 msgid "Offer a reason when moving milestones"
 msgstr "Beim Verschieben von Meilensteinen eine Begründung anbieten"
 
-#: data/models/activity.py:170 interfaces/web/public_subscriptions.py:23
+#: data/models/activity.py:171 interfaces/web/public_subscriptions.py:23
 msgid "Allowed domains for public followers"
 msgstr "Erlaubte Domains für öffentliche Abonnements"
 
-#: data/models/activity.py:171 interfaces/web/detail_forms.py:31
+#: data/models/activity.py:172 interfaces/web/detail_forms.py:31
 #: templates/components/screens/gantt/milestone-popover.html:17
 #: templates/components/screens/gantt/task-popover.html:21
 msgid "Title"
 msgstr "Titel"
 
-#: data/models/activity.py:172
+#: data/models/activity.py:173
 msgid "Workspace"
 msgstr "Arbeitsbereich"
 
-#: data/models/activity.py:194
+#: data/models/activity.py:195
 msgid "changed"
 msgstr "geändert"
 
-#: data/models/activity.py:198
+#: data/models/activity.py:199
 #, python-format
 msgid "%(before)s → %(after)s"
 msgstr "%(before)s → %(after)s"
 
-#: data/models/activity.py:214
+#: data/models/activity.py:215
 #, python-format
 msgid "%(label)s: %(value)s"
 msgstr "%(label)s: %(value)s"
@@ -747,11 +752,11 @@ msgstr "Idee gelöscht."
 msgid "Add a team…"
 msgstr "Person hinzufügen…"
 
-#: interfaces/web/profile.py:24 interfaces/web/public_subscriptions.py:34
+#: interfaces/web/profile.py:23 interfaces/web/public_subscriptions.py:34
 msgid "Teams email address"
 msgstr "Teams-E-Mail-Adresse"
 
-#: interfaces/web/profile.py:26
+#: interfaces/web/profile.py:25
 msgid ""
 "Use the email address you sign in to Microsoft Teams with for this "
 "workspace. It may differ from your contact email. Leave blank to turn off "
@@ -761,45 +766,45 @@ msgstr ""
 "Microsoft Teams anmeldest. Sie kann von deiner Kontakt-E-Mail abweichen. "
 "Lass das Feld leer, um deine Erwähnungen auszuschalten."
 
-#: interfaces/web/profile.py:34
+#: interfaces/web/profile.py:33
 msgid "First name"
 msgstr "Vorname"
 
-#: interfaces/web/profile.py:35
+#: interfaces/web/profile.py:34
 msgid "Last name"
 msgstr "Nachname"
 
-#: interfaces/web/profile.py:36
+#: interfaces/web/profile.py:35
 msgid "Email address"
 msgstr "E-Mail-Adresse"
 
-#: interfaces/web/profile.py:66
+#: interfaces/web/profile.py:65
 msgid "The active workspace changed. Reload your profile and try again."
 msgstr ""
 "Der aktive Arbeitsbereich hat sich geändert. Lade dein Profil neu und "
 "versuche es erneut."
 
-#: interfaces/web/profile.py:88
+#: interfaces/web/profile.py:87
 msgid "Profile saved."
 msgstr "Profil gespeichert."
 
-#: interfaces/web/profile.py:119
+#: interfaces/web/profile.py:117
 msgid "Password changed."
 msgstr "Passwort geändert."
 
-#: interfaces/web/projects.py:61
+#: interfaces/web/projects.py:62
 msgid "Project saved."
 msgstr "Projekt gespeichert."
 
-#: interfaces/web/projects.py:71
+#: interfaces/web/projects.py:72
 msgid "Edit project"
 msgstr "Projekt bearbeiten"
 
-#: interfaces/web/projects.py:71
+#: interfaces/web/projects.py:72
 msgid "Save project"
 msgstr "Projekt speichern"
 
-#: interfaces/web/projects.py:229
+#: interfaces/web/projects.py:234
 msgid ""
 "Another active project already collects this GitLab prefix. Disable "
 "collection or change its prefix before reopening."
@@ -1580,7 +1585,7 @@ msgid "Delete"
 msgstr "Löschen"
 
 #: templates/components/screens/gantt/milestone-popover.html:72
-#: templates/components/screens/gantt/project-popover.html:115
+#: templates/components/screens/gantt/project-popover.html:122
 #: templates/components/screens/gantt/task-popover.html:125
 #: templates/components/screens/workspaces/settings-general.html:20
 #: templates/components/screens/workspaces/settings-sharing.html:17
@@ -1595,7 +1600,7 @@ msgstr "Projekt erstellt, aber durch den aktiven Teamfilter ausgeblendet."
 msgid "Clear team filter"
 msgstr "Teamfilter löschen"
 
-#: templates/components/screens/gantt/project-popover.html:29
+#: templates/components/screens/gantt/project-popover.html:36
 #: templates/components/screens/gantt/task-popover.html:62
 #: templates/components/screens/projects/detail.html:46
 #: templates/components/screens/projects/detail.html:78
@@ -1604,43 +1609,43 @@ msgstr "Teamfilter löschen"
 msgid "Nobody assigned"
 msgstr "Niemand zugewiesen"
 
-#: templates/components/screens/gantt/project-popover.html:35
+#: templates/components/screens/gantt/project-popover.html:42
 #: templates/components/screens/gantt/task-popover.html:68
 #: templates/components/screens/workload/content.html:74
 #, python-format
 msgid "Remove %(name)s"
 msgstr "%(name)s entfernen"
 
-#: templates/components/screens/gantt/project-popover.html:44
+#: templates/components/screens/gantt/project-popover.html:51
 msgid "Add responsible person"
 msgstr "Verantwortliche Person hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:46
+#: templates/components/screens/gantt/project-popover.html:53
 msgid "Add responsible person…"
 msgstr "Verantwortliche Person hinzufügen…"
 
-#: templates/components/screens/gantt/project-popover.html:56
+#: templates/components/screens/gantt/project-popover.html:63
 #: templates/components/screens/gantt/task-popover.html:89
 msgid "Assign to me"
 msgstr "Mir zuweisen"
 
-#: templates/components/screens/gantt/project-popover.html:74
+#: templates/components/screens/gantt/project-popover.html:81
 msgid "move up"
 msgstr "nach oben"
 
-#: templates/components/screens/gantt/project-popover.html:76
+#: templates/components/screens/gantt/project-popover.html:83
 msgid "move down"
 msgstr "nach unten"
 
-#: templates/components/screens/gantt/project-popover.html:80
+#: templates/components/screens/gantt/project-popover.html:87
 msgid "+ Add task"
 msgstr "+ Aufgabe hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:82
+#: templates/components/screens/gantt/project-popover.html:89
 msgid "+ Add milestone"
 msgstr "+ Meilenstein hinzufügen"
 
-#: templates/components/screens/gantt/project-popover.html:86
+#: templates/components/screens/gantt/project-popover.html:93
 msgid ""
 "Another active project collects this GitLab prefix. Disable collection or "
 "change the prefix in project details before reopening."
@@ -1649,15 +1654,15 @@ msgstr ""
 "Deaktiviere das Sammeln oder ändere das Präfix in den Projektdetails, bevor "
 "du das Projekt wieder öffnest."
 
-#: templates/components/screens/gantt/project-popover.html:90
+#: templates/components/screens/gantt/project-popover.html:97
 msgid "Reopen project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:90
+#: templates/components/screens/gantt/project-popover.html:97
 msgid "Mark complete"
 msgstr "Als erledigt markieren"
 
-#: templates/components/screens/gantt/project-popover.html:94
+#: templates/components/screens/gantt/project-popover.html:101
 msgid ""
 "Moving this project removes its GitLab connection and retires its issue "
 "associations in the source workspace. Private issue data will not move."
@@ -1666,30 +1671,30 @@ msgstr ""
 "Issue-Zuordnungen werden im bisherigen Arbeitsbereich stillgelegt. Private "
 "Issue-Daten werden nicht mitgenommen."
 
-#: templates/components/screens/gantt/project-popover.html:96
+#: templates/components/screens/gantt/project-popover.html:103
 #, fuzzy
 #| msgid "Create workspace"
 msgid "Move to workspace"
 msgstr "Arbeitsbereich erstellen"
 
-#: templates/components/screens/gantt/project-popover.html:105
+#: templates/components/screens/gantt/project-popover.html:112
 #, fuzzy, python-format
 #| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgid "Move project &quot;%(name)s&quot; to the selected workspace?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:106
+#: templates/components/screens/gantt/project-popover.html:113
 #, fuzzy
 #| msgid "Reopen project"
 msgid "Move project"
 msgstr "Projekt wieder öffnen"
 
-#: templates/components/screens/gantt/project-popover.html:113
+#: templates/components/screens/gantt/project-popover.html:120
 #, python-format
 msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
 msgstr "Projekt &quot;%(name)s&quot; und alle zugehörigen Aufgaben löschen?"
 
-#: templates/components/screens/gantt/project-popover.html:113
+#: templates/components/screens/gantt/project-popover.html:120
 msgid "Delete project"
 msgstr "Projekt löschen"
 

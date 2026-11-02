@@ -12,7 +12,7 @@ class DetailForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            if isinstance(field.widget, forms.CheckboxSelectMultiple):
+            if isinstance(field.widget, (forms.CheckboxInput, forms.CheckboxSelectMultiple)):
                 field.widget.attrs["class"] = "checkbox checkbox-sm"
             elif isinstance(field.widget, forms.Select):
                 field.widget.attrs["class"] = "select w-full text-base"
@@ -73,6 +73,7 @@ class TaskDetailForm(DetailForm):
 
 
 class ProjectDetailForm(DetailForm):
+    public_roadmap_visible = forms.BooleanField(label=_("Visible in public roadmap"), required=False)
     name = forms.CharField(label=_("Name"), max_length=200)
     description = forms.CharField(label=_("Description"), required=False, strip=False, widget=forms.Textarea)
     color = forms.ChoiceField(label=_("Color"), choices=[(color, color) for color in PROJECT_COLORS])
@@ -85,6 +86,7 @@ class ProjectDetailForm(DetailForm):
         kwargs.setdefault("auto_id", "project-edit-%s")
         kwargs.setdefault("initial", {
             "name": project.name, "description": project.description, "color": project.color,
+            "public_roadmap_visible": project.public_roadmap_visible,
             "responsible_person_ids": list(project.responsible_people.values_list("id", flat=True)),
         })
         super().__init__(*args, **kwargs)

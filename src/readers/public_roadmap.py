@@ -148,7 +148,7 @@ def get_public_roadmap(token: str, user=None, browser_key_hash=None) -> PublicRo
         ).values_list("project_id", flat=True))
     today = date.today()
     projects = list(
-        Project.objects.filter(workspace=workspace, completed_at__isnull=True)
+        Project.objects.filter(workspace=workspace, completed_at__isnull=True, public_roadmap_visible=True)
         .exclude(name="New project")
         .order_by("order", "id")
         .prefetch_related(

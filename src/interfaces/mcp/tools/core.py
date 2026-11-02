@@ -208,6 +208,7 @@ def create_project(r, p):
         project_id=obj.pk,
         description=p.description,
         responsible_person_ids=p.responsible_person_ids,
+        public_roadmap_visible=p.public_roadmap_visible,
         actor=r.user,
     )
     obj.refresh_from_db()
@@ -220,7 +221,7 @@ def update_project(r, p):
     obj = lookup(Project, p.id, r.workspace)
     manage_project(r, obj)
     match(p, view.project(obj))
-    values = patch(p, "name description color responsible_person_ids")
+    values = patch(p, "name description color responsible_person_ids public_roadmap_visible")
     if "responsible_person_ids" in values:
         related(Person, values["responsible_person_ids"], r.workspace)
     obj = projects.update_project(

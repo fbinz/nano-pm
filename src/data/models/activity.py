@@ -157,6 +157,7 @@ class ActivityEvent(models.Model):
             "public_roadmap_description": _("Public roadmap description"),
             "public_roadmap_enabled": _("Public roadmap enabled"),
             "public_roadmap_title": _("Public roadmap title"),
+            "public_roadmap_visible": _("Visible in public roadmap"),
             "public_roadmap_token": _("Public roadmap token"),
             "require_move_reason": _("Require move reason"),
             "start": _("Start"),

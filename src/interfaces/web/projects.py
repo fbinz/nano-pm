@@ -56,6 +56,7 @@ def project_detail(request: HttpRequest, project_id: int):
             workspace=request.workspace, project_id=project.id,
             name=data["name"], description=data["description"], color=data["color"],
             responsible_person_ids=[person.id for person in data["responsible_person_ids"]],
+            public_roadmap_visible=data["public_roadmap_visible"],
             actor=request.user,
         )
         messages.success(request, _("Project saved."))
@@ -156,6 +157,10 @@ def project_update(request: HttpRequest, project_id: int):
         name=request.POST.get("name") or None,
         description=request.POST.get("description") if "description" in request.POST else None,
         color=request.POST.get("color") or None,
+        public_roadmap_visible=(
+            request.POST.get("public_roadmap_visible") == "true"
+            if can_manage and "public_roadmap_visible" in request.POST else None
+        ),
         responsible_person_ids=(
             responsible_person_ids if can_update_responsible_people else None
         ),

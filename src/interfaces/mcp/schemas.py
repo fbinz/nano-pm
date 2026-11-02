@@ -74,6 +74,7 @@ class ProjectCreate(Mutation, kw_only=True):
         | None
     ) = None
     responsible_person_ids: IDs = []
+    public_roadmap_visible: bool = False
 
 
 class ProjectUpdate(ObjectChange, kw_only=True):
@@ -83,6 +84,7 @@ class ProjectUpdate(ObjectChange, kw_only=True):
         str, msgspec.Meta(pattern=r"^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")
     ] = UNSET
     responsible_person_ids: IDs = UNSET
+    public_roadmap_visible: bool = UNSET
 
 
 class Completed(ObjectChange, kw_only=True):

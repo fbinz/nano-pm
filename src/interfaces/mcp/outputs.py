@@ -24,6 +24,7 @@ class Project(Revision):
     order: float
     completed_at: str | None
     responsible_person_ids: list[int]
+    public_roadmap_visible: bool
     description: NotRequired[str]
 
 

@@ -14,7 +14,7 @@ from data.models.project import PROJECT_COLORS
 
 
 PROJECT_FIELDS = [
-    "name", "description", "color", "order", "completed_at",
+    "name", "description", "color", "order", "completed_at", "public_roadmap_visible",
 ]
 
 
@@ -65,6 +65,7 @@ def update_project(
     description: str | None = None,
     color: str | None = None,
     responsible_person_ids: list[int] | None = None,
+    public_roadmap_visible: bool | None = None,
     actor=None,
 ) -> Project | None:
     try:
@@ -73,7 +74,7 @@ def update_project(
         )
     except Project.DoesNotExist:
         return None
-    update_fields = ["name", "description", "color"]
+    update_fields = ["name", "description", "color", "public_roadmap_visible"]
     before = _project_values(proj, update_fields)
     if name is not None:
         proj.name = name
@@ -81,6 +82,8 @@ def update_project(
         proj.description = description
     if color is not None:
         proj.color = color
+    if public_roadmap_visible is not None:
+        proj.public_roadmap_visible = public_roadmap_visible
     proj.save()
     if responsible_person_ids is not None:
         valid_ids = Person.objects.filter(

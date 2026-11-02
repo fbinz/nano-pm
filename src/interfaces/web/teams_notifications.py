@@ -91,7 +91,10 @@ def teams_settings(request):
 def roadmap_subscription(request, token, project_id):
     workspace = get_object_or_404(Workspace, public_roadmap_token=token, public_roadmap_enabled=True)
     membership = Membership.objects.filter(workspace=workspace, user=request.user).first() if request.user.is_authenticated else None
-    project = get_object_or_404(Project, pk=project_id, workspace=workspace, completed_at__isnull=True)
+    project = get_object_or_404(
+        Project.objects.exclude(name="New project"), pk=project_id, workspace=workspace,
+        completed_at__isnull=True, public_roadmap_visible=True,
+    )
     action = request.POST.get("action")
     if membership is None:
         return public_subscription(request, workspace, project, action)

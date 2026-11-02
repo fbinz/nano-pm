@@ -629,7 +629,9 @@ print(json.dumps({'token':legacy_token,'policy':MCPMutationReceipt.objects.get(o
     let teams = await api.call('list_teams', api.scope);
     const changedTeam = (await api.mutate('update_team', { id: team.id, if_match: teams.items.find(t => t.id === team.id).revision, name: 'Changed team' })).item;
     const project = (await api.mutate('create_project', { name: 'MCP project', description: 'Description', responsible_person_ids: [person.id] })).item;
-    let updated = (await api.mutate('update_project', { id: project.id, if_match: project.revision, name: 'Changed project', color: '#123456' })).item;
+    expect(project.public_roadmap_visible).toBe(false);
+    let updated = (await api.mutate('update_project', { id: project.id, if_match: project.revision, name: 'Changed project', color: '#123456', public_roadmap_visible: true })).item;
+    expect(updated.public_roadmap_visible).toBe(true);
     updated = (await api.mutate('set_project_completed', { id: project.id, if_match: updated.revision, completed: true })).item;
     expect(updated.completed_at).toBeTruthy();
     updated = (await api.mutate('set_project_completed', { id: project.id, if_match: updated.revision, completed: false })).item;
@@ -8726,7 +8728,7 @@ test.describe('workspace isolation', () => {
       await page.locator('.add-project-row').last().click();
       await expect(page.locator('.left-cell.proj')).toHaveCount(4 + i);
       const projectId = await page.locator('.left-cell.proj').last().getAttribute('data-project-id');
-      expect(await postForm(page, `/projects/${projectId}/update/`, { name: `Extra project ${i + 1}` })).toBe(200);
+      expect(await postForm(page, `/projects/${projectId}/update/`, { name: `Extra project ${i + 1}`, public_roadmap_visible: 'true' })).toBe(200);
     }
     const href = await enableRoadmap(page);
 
@@ -8787,6 +8789,119 @@ test.describe('workspace isolation', () => {
     }
   });
 
+  test('ordinary project members cannot change public roadmap visibility', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    expect(await postForm(page, `/projects/${id}/update/`, { public_roadmap_visible: 'false' })).toBe(200);
+    const href = await enableRoadmap(page);
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.fill('input[name=username]', 'member1');
+    await page.fill('input[name=password]', 'member1');
+    await page.click('button[type=submit]');
+    await page.waitForURL('/');
+    await page.locator(`.left-cell.proj[data-project-id="${id}"]`).click();
+    await expect(page.locator('#project-popover')).toBeVisible();
+    await expect(page.locator('#project-popover').getByLabel('Visible in public roadmap', { exact: true })).toHaveCount(0);
+    expect(await postForm(page, `/projects/${id}/update/`, { public_roadmap_visible: 'true' })).toBe(200);
+    expect(await postForm(page, `/projects/${id}/`, { name: 'API Migration', color: '#3b82f6', public_roadmap_visible: 'true' })).toBe(403);
+    const response = await page.request.get(href);
+    expect(response.status()).toBe(200);
+    expect(await response.text()).not.toContain('API Migration');
+  });
+
+  test('project roadmap visibility migration publishes existing projects but not new ones', async ({ appPage }) => {
+    const result = JSON.parse(await notificationDB(`
+from django.core.management import call_command
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from data.models import Project
+try:
+    call_command('migrate', 'data', '0034', interactive=False, verbosity=0)
+    legacy = MigrationExecutor(connection).loader.project_state([('data', '0034_mcp_oauth_grants')]).apps
+    LegacyProject = legacy.get_model('data', 'Project')
+    existing_ids = list(LegacyProject.objects.values_list('id', flat=True))
+finally:
+    call_command('migrate', 'data', interactive=False, verbosity=0)
+new_project = Project.objects.create(workspace_id=Project.objects.first().workspace_id, name='Private after migration')
+print(json.dumps({'existing': list(Project.objects.filter(id__in=existing_ids).values_list('public_roadmap_visible', flat=True)), 'new': new_project.public_roadmap_visible}))
+`));
+    expect(result).toEqual({ existing: [true, true, true], new: false });
+  });
+
+  test('new projects stay private after renaming until explicitly published in the drawer', async ({ appPage: page, browser }) => {
+    await page.locator('.add-project-row').last().click();
+    await expect(page.locator('.left-cell.proj')).toHaveCount(4);
+    const project = page.locator('.left-cell.proj').last();
+    const id = await project.getAttribute('data-project-id');
+    expect(await postForm(page, `/projects/${id}/update/`, { name: 'Private launch' })).toBe(200);
+    const href = await enableRoadmap(page);
+    const context = await browser.newContext();
+    try {
+      const visitor = await context.newPage();
+      await visitor.goto(href);
+      await expect(visitor.locator('.roadmap-project-label').filter({ hasText: 'Private launch' })).toHaveCount(0);
+      expect(await postForm(visitor, `${href}projects/${id}/follow/`, { action: 'follow', teams_email: 'visitor@example.com' })).toBe(404);
+
+      await page.goto('/');
+      await page.locator(`.left-cell.proj[data-project-id="${id}"]`).click();
+      const visibility = page.locator('#project-popover').getByLabel('Visible in public roadmap', { exact: true });
+      await expect(visibility).not.toBeChecked();
+      await visibility.check();
+      await page.locator('#project-popover').getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(page.locator('#project-popover')).toHaveCount(0);
+      await page.reload();
+      await page.locator(`.left-cell.proj[data-project-id="${id}"]`).click();
+      await expect(visibility).toBeChecked();
+      await visitor.reload();
+      await expect(visitor.locator('.roadmap-project-label').filter({ hasText: 'Private launch' })).toHaveCount(1);
+      await visibility.uncheck();
+      await page.locator('#project-popover').getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(page.locator('#project-popover')).toHaveCount(0);
+      await visitor.reload();
+      await expect(visitor.locator('.roadmap-project-label').filter({ hasText: 'Private launch' })).toHaveCount(0);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('project detail visibility setting hides and restores project milestones and descriptions', async ({ appPage: page, browser }) => {
+    const milestone = page.locator('.chart-row.proj .milestone').first();
+    const id = await milestone.getAttribute('data-project-id');
+    const title = await milestone.getAttribute('data-title');
+    expect(await postForm(page, `/projects/${id}/update/`, { description: 'Confidential launch notes' })).toBe(200);
+    const href = await enableRoadmap(page);
+    const context = await browser.newContext();
+    try {
+      const visitor = await context.newPage();
+      await visitor.goto(href);
+      expect(await visitor.content()).toContain(title);
+      await page.goto(`/projects/${id}/`);
+      await page.getByText('Edit project', { exact: true }).click();
+      const editor = page.locator('#project-detail-editor');
+      const visibility = editor.getByLabel('Visible in public roadmap', { exact: true });
+      await expect(visibility).toBeChecked();
+      await visibility.uncheck();
+      await editor.getByRole('button', { name: 'Save project', exact: true }).click();
+      await expect(page.getByRole('status')).toHaveText('Project saved.');
+      await visitor.reload();
+      await expect(visitor.locator('.roadmap-project-label')).toHaveCount(2);
+      expect(await visitor.content()).not.toContain(title);
+      expect(await visitor.content()).not.toContain('Confidential launch notes');
+      expect(await postForm(visitor, `${href}projects/${id}/follow/`, { action: 'follow', teams_email: 'visitor@example.com' })).toBe(404);
+
+      await page.reload();
+      await page.getByText('Edit project', { exact: true }).click();
+      await expect(visibility).not.toBeChecked();
+      await visibility.check();
+      await editor.getByRole('button', { name: 'Save project', exact: true }).click();
+      await expect(page.getByRole('status')).toHaveText('Project saved.');
+      await visitor.reload();
+      await expect(visitor.locator('.roadmap-project-label')).toHaveCount(3);
+      expect(await visitor.content()).toContain(title);
+    } finally {
+      await context.close();
+    }
+  });
+
   test('public roadmap hides default-named projects and their milestones until renamed', async ({ appPage: page, browser }) => {
     const milestone = page.locator('.chart-row.proj .milestone').first();
     const projectId = await milestone.getAttribute('data-project-id');
@@ -8808,7 +8923,7 @@ test.describe('workspace isolation', () => {
       expect(await visitor.content()).not.toContain('Unpublished placeholder description');
 
       // Named projects without milestones remain public; similarly named projects are not filtered.
-      expect(await postForm(page, `/projects/${emptyProjectId}/update/`, { name: 'Published empty project' })).toBe(200);
+      expect(await postForm(page, `/projects/${emptyProjectId}/update/`, { name: 'Published empty project', public_roadmap_visible: 'true' })).toBe(200);
       expect(await postForm(page, `/projects/${projectId}/update/`, { name: 'New project launch' })).toBe(200);
       await visitor.reload();
       await expect(visitor.locator('.roadmap-project-label')).toHaveCount(4);
