@@ -2266,7 +2266,9 @@ test.describe('workload estimates', () => {
     await page.goto('/workload/overview/');
     const months = page.locator('#workload-timeline [data-workload-month]');
     await expect(months).toHaveCount(12);
-    const month = offset => months.nth(11 + offset);
+    const dates = await months.evaluateAll(rows => rows.map(row => row.dataset.workloadMonth));
+    expect(dates).toEqual([...dates].sort().reverse());
+    const month = offset => months.nth(-offset);
     await expect(month(-6)).toHaveAttribute('data-reported', '0');
     await expect(month(-6).locator('[data-category-key]')).toHaveCount(0);
     await expect(month(-5)).toHaveAttribute('data-reported', '1');
@@ -2335,7 +2337,7 @@ test.describe('workload estimates', () => {
     await page.getByRole('button', { name: 'DE', exact: true }).click();
     await page.locator('#workload-timeline-heading').scrollIntoViewIfNeeded();
     await expect(page.getByRole('heading', { name: 'Arbeitsverteilung im Zeitverlauf', exact: true })).toBeVisible();
-    await expect(page.locator('#workload-timeline [data-workload-month]').last().locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '60');
+    await expect(page.locator('#workload-timeline [data-workload-month]').first().locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '60');
   });
 
   test('workload dashboard retains pre-window estimates and deleted categories without leaking other workspaces', async ({ appPage: page }) => {
@@ -2358,9 +2360,9 @@ print(membership.user_id)
 `], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv() });
     await page.goto('/workload/overview/');
     const months = page.locator('#workload-timeline [data-workload-month]');
-    await expect(months.first()).toHaveAttribute('data-reported', '1');
-    await expect(months.first()).toHaveAttribute('data-outdated', '1');
-    await expect(months.first().locator('[data-category-key]')).toHaveAttribute('data-percentage', '100');
+    await expect(months.last()).toHaveAttribute('data-reported', '1');
+    await expect(months.last()).toHaveAttribute('data-outdated', '1');
+    await expect(months.last().locator('[data-category-key]')).toHaveAttribute('data-percentage', '100');
     await expect(page.locator('#workload-timeline')).toContainText('Retired category');
     await expect(page.locator('main')).not.toContainText('Secret category');
     const member = page.locator('#workload-heatmap [data-person="member1"]');

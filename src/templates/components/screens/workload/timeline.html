@@ -5,7 +5,7 @@
     {% for category in dashboard_categories %}<button type="button" data-highlight-category="{{ category.key }}" aria-pressed="false"><span class="workload-color-dot" style="background: {{ category.color }}" aria-hidden="true"></span>{{ category.name }}</button>{% endfor %}
   </div>
   <div class="workload-months">
-    {% for month in timeline %}
+    {% for month in timeline reversed %}
       <details data-workload-month="{{ month.start|date:'Y-m' }}" data-reported="{{ month.reported }}" data-participating="{{ month.participating }}" data-outdated="{{ month.outdated }}">
         <summary class="workload-month-summary">
           <span class="workload-month-label">{{ month.start|date:'M Y' }}{% if month.current %}<span class="block text-xs text-base-content/60">{% trans "So far" %}</span>{% endif %}</span>

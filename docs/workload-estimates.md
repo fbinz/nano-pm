@@ -119,7 +119,7 @@ monthly chart, heatmap, selected-person history and current averages. Coverage
 distinguishes missing reports from exempt members.
 
 **Workload mix over time** shows the last 12 calendar months as 100% stacked
-bars. Each month uses the last snapshot per participating person at month-end;
+bars, newest first. Each month uses the last snapshot per participating person at month-end;
 the current month uses the latest snapshot so far. Estimates carry forward,
 including estimates submitted before the visible window. Reports are not
 interpolated, and multiple submissions never give a person extra weight. Each
