@@ -1,0 +1,25 @@
+{% load i18n %}
+<section class="space-y-3 min-w-0" aria-labelledby="workload-heatmap-heading">
+  <h2 id="workload-heatmap-heading" class="text-xl font-semibold">{% trans "People and categories" %}</h2>
+  <div class="workload-heatmap-scroll" tabindex="0" role="region" aria-label="{% trans 'Workload by person and category' %}">
+    <table id="workload-heatmap" class="workload-heatmap">
+      <thead><tr>
+        <th scope="col">{% trans "Person" %}</th>
+        <th scope="col">{% trans "Last reviewed" %}</th>
+        {% for category in dashboard_categories %}<th scope="col" aria-sort="{% if heatmap_sort == category.key %}descending{% else %}none{% endif %}"><a class="link" href="{{ category.sort_url }}">{{ category.name }}</a></th>{% endfor %}
+      </tr></thead>
+      <tbody>
+        {% for row in heatmap %}
+          <tr data-person="{{ row.membership.user.username }}">
+            <th scope="row"><a class="link" href="{{ row.url }}">{{ row.membership.user.username }}</a>{% if not row.included %}<span class="block text-xs text-base-content/60">{% trans "Exempt" %}</span>{% endif %}</th>
+            <td>{% if row.report %}<time datetime="{{ row.report.reviewed_at|date:'c' }}">{{ row.report.reviewed_at|date:'d.m.Y' }}</time>{% if row.report.outdated %}<span class="block text-xs text-warning">{% trans "Outdated estimate (over 90 days)" %}</span>{% endif %}{% else %}<span class="text-base-content/60">{% trans "Not reported" %}</span>{% endif %}</td>
+            {% for cell in row.cells %}
+              {% if cell.percentage != None %}<td data-percentage="{{ cell.percentage }}" style="--cell-color: {{ cell.color }}; --cell-share: {{ cell.percentage }}%;"><span>{{ cell.percentage }}%</span></td>
+              {% else %}<td class="workload-heatmap-missing"><span aria-label="{% trans 'Not recorded' %}">—</span></td>{% endif %}
+            {% endfor %}
+          </tr>
+        {% empty %}<tr><td colspan="100" class="text-base-content/60">{% trans "No people match these filters." %}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

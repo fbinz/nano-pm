@@ -113,8 +113,39 @@ The running form total can therefore change after category configuration changes
 
 ## Overview and history
 
-PMs can filter current membership rows by team and person. Coverage distinguishes
-missing reports from exempt members. The overview reuses the personal editor's
+PMs can filter the dashboard and current membership rows by team and person.
+The filters combine (their intersection), persist in the URL, and apply to the
+monthly chart, heatmap, selected-person history and current averages. Coverage
+distinguishes missing reports from exempt members.
+
+**Workload mix over time** shows the last 12 calendar months as 100% stacked
+bars. Each month uses the last snapshot per participating person at month-end;
+the current month uses the latest snapshot so far. Estimates carry forward,
+including estimates submitted before the visible window. Reports are not
+interpolated, and multiple submissions never give a person extra weight. Each
+month shows respondent/participant counts and how many included estimates were
+already over 90 days old at that cutoff. Months without respondents have no
+invented allocations. Open a month (click, tap, Enter or Space) for a table of
+exact category shares, or select a legend button to highlight a category.
+
+The chart uses retained history, not just the latest 20 submissions. Historical
+views use **current** workspace memberships, team assignments and participation
+settings, because historical staffing/participation changes are not recorded.
+Missing respondents are excluded, not counted as zero. Changing respondent
+coverage can therefore change the average without anyone changing their mix.
+These are unweighted self-reported workload shares, never hours, utilization,
+productivity or absolute team capacity.
+
+**People and categories** is a horizontally scrollable heatmap of the filtered
+members' latest estimates. Category-colored cell intensity indicates share;
+every recorded cell also shows its exact percentage. A dash means the category
+was not recorded (or there is no report), not a reported 0%. Exempt and missing
+respondents are explicitly labelled, and review dates/stale warnings remain
+visible. Select a category heading to sort largest-first (missing values last).
+Select a person's name to set the person filter and open their latest 20
+snapshots. Category and project labels from deleted objects remain available.
+
+The overview reuses the personal editor's
 donut widget in a read-only mode for the respondent average. Individual estimates
 use the same date/time and stacked-bar rows as workspace history, aligned across
 members, with category and project details on hover. Category legends and the thin
@@ -140,6 +171,8 @@ entire workspace removes its reports.
 - Models/migration: `src/data/models/workload.py`, migration `0024`.
 - Writes and validation: `src/actions/manage_workload.py`.
 - Project guidance and summaries: `src/readers/workload.py`.
+- Monthly cutoffs, heatmap and person drill-down: `src/readers/workload_dashboard.py`.
+- Dashboard category highlighting: `src/static/js/workload-dashboard.js`.
 - Web/SSE: `src/interfaces/web/workload.py` and workload Cotton components.
 - Draft preview: `src/static/js/workload.js`; styles in `src/css/input.css`.
 - Desktop/mobile/theme screenshots: `e2e/tests/workload-screenshot.spec.js`.

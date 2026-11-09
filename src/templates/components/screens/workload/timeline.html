@@ -1,0 +1,27 @@
+{% load i18n l10n %}
+<section id="workload-timeline" class="space-y-3 min-w-0" aria-labelledby="workload-timeline-heading">
+  <h2 id="workload-timeline-heading" class="text-xl font-semibold">{% trans "Workload mix over time" %}</h2>
+  <div class="workload-chart-legend" aria-label="{% trans 'Highlight a category' %}">
+    {% for category in dashboard_categories %}<button type="button" data-highlight-category="{{ category.key }}" aria-pressed="false"><span class="workload-color-dot" style="background: {{ category.color }}" aria-hidden="true"></span>{{ category.name }}</button>{% endfor %}
+  </div>
+  <div class="workload-months">
+    {% for month in timeline %}
+      <details data-workload-month="{{ month.start|date:'Y-m' }}" data-reported="{{ month.reported }}" data-participating="{{ month.participating }}" data-outdated="{{ month.outdated }}">
+        <summary class="workload-month-summary">
+          <span class="workload-month-label">{{ month.start|date:'M Y' }}{% if month.current %}<span class="block text-xs text-base-content/60">{% trans "So far" %}</span>{% endif %}</span>
+          <span class="workload-month-bar" role="img" aria-label="{% trans 'Workload allocation' %}">
+            {% for allocation in month.allocations %}{% if allocation.percentage %}<span data-category-key="{{ allocation.key }}" data-percentage="{{ allocation.percentage|floatformat:'-6u' }}" style="width: {{ allocation.percentage|floatformat:'-6u' }}%; background: {{ allocation.color }}" title="{{ allocation.name }}: {{ allocation.percentage|floatformat:'-1' }}%"></span>{% endif %}{% empty %}<span class="workload-month-empty">{% trans "No reports" %}</span>{% endfor %}
+          </span>
+          <span class="workload-month-coverage">{% blocktrans with reported=month.reported participating=month.participating %}{{ reported }}/{{ participating }} reported{% endblocktrans %}<span class="block text-xs text-base-content/60">{% blocktrans with outdated=month.outdated %}{{ outdated }} outdated{% endblocktrans %}</span></span>
+        </summary>
+        {% if month.reported %}
+          <table class="workload-month-details">
+            <caption class="sr-only">{{ month.start|date:'F Y' }}</caption>
+            <thead><tr><th scope="col">{% trans "Category" %}</th><th scope="col">{% trans "Average share" %}</th></tr></thead>
+            <tbody>{% for allocation in month.allocations %}<tr><th scope="row">{{ allocation.name }}</th><td>{{ allocation.percentage|floatformat:'-1' }}%</td></tr>{% endfor %}</tbody>
+          </table>
+        {% else %}<p class="p-3 text-sm text-base-content/60">{% trans "No reports from participating members." %}</p>{% endif %}
+      </details>
+    {% endfor %}
+  </div>
+</section>

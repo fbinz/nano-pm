@@ -1089,6 +1089,35 @@ html, body { height: 100%; }
 /* Personal workload editor: a visual draft, with ordinary form inputs. */
 @layer components {
   .workload-overview-filters { @apply grid gap-3 items-end; grid-template-columns: minmax(0, 1fr); }
+  .workload-chart-legend { @apply flex flex-wrap gap-2; }
+  .workload-chart-legend button { @apply flex items-center gap-2 rounded-md border border-base-300 px-2 py-1 text-sm cursor-pointer; }
+  .workload-chart-legend button[aria-pressed="true"] { @apply outline-2 outline-primary; }
+  .workload-months { @apply divide-y divide-base-300; }
+  .workload-month-summary { @apply grid items-center gap-3 py-3 cursor-pointer; grid-template-columns: 5.5rem minmax(0, 1fr) 7rem; }
+  .workload-month-label { @apply text-sm font-medium; }
+  .workload-month-bar { @apply flex h-7 rounded overflow-hidden bg-base-200; }
+  .workload-month-bar > [data-category-key] { @apply h-full; }
+  .workload-month-bar .is-muted { opacity: 0.2; }
+  .workload-month-empty { @apply m-auto text-xs text-base-content/60; }
+  .workload-month-coverage { @apply text-right text-sm tabular-nums; }
+  .workload-month-details { @apply w-full mb-3 text-sm; }
+  .workload-month-details th, .workload-month-details td { @apply px-3 py-1 text-left; }
+  .workload-month-details td { @apply text-right tabular-nums; }
+  .workload-heatmap-scroll { @apply max-w-full overflow-x-auto rounded-lg border border-base-300; }
+  .workload-heatmap { @apply w-full text-sm; border-collapse: separate; border-spacing: 0; }
+  .workload-heatmap th, .workload-heatmap td { @apply p-3 border-b border-base-300 text-left; }
+  .workload-heatmap thead th { @apply bg-base-200; min-width: 8rem; }
+  .workload-heatmap tbody th { @apply sticky left-0 bg-base-100 z-10; overflow-wrap: anywhere; }
+  .workload-heatmap td[data-percentage] {
+    background: color-mix(in srgb, var(--cell-color) var(--cell-share), var(--color-base-100));
+    text-align: center;
+  }
+  .workload-heatmap td[data-percentage] span { @apply inline-block rounded px-1.5 py-0.5 bg-base-100 text-base-content tabular-nums; }
+  .workload-heatmap-missing { @apply bg-base-200 text-center text-base-content/50; }
+  @media (max-width: 639px) {
+    .workload-month-summary { grid-template-columns: 4.5rem minmax(0, 1fr); }
+    .workload-month-coverage { @apply col-span-2 flex justify-end gap-2 text-xs; }
+  }
   .workload-summary { @apply grid gap-4 items-center py-3; grid-template-columns: minmax(0, 1fr); }
   .workload-summary .workload-donut-wrap { @apply mx-auto; max-width: 224px; }
   .workload-average .workload-donut-wrap { max-width: 260px; }

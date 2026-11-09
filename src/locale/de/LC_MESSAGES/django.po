@@ -3090,3 +3090,65 @@ msgstr ""
 
 #~ msgid "Only the creator or PMs can edit this idea."
 #~ msgstr "Nur der Ersteller oder PMs können diese Idee bearbeiten."
+
+#: templates/components/screens/workload/timeline.html:16
+#, python-format
+msgid "%(outdated)s outdated"
+msgstr "%(outdated)s veraltet"
+
+#: templates/components/screens/workload/timeline.html:16
+#, python-format
+msgid "%(reported)s/%(participating)s reported"
+msgstr "%(reported)s/%(participating)s gemeldet"
+
+#: templates/components/screens/workload/timeline.html:21
+msgid "Average share"
+msgstr "Durchschnittlicher Anteil"
+
+#: templates/components/screens/workload/timeline.html:21
+msgid "Category"
+msgstr "Kategorie"
+
+#: templates/components/screens/workload/timeline.html:5
+msgid "Highlight a category"
+msgstr "Eine Kategorie hervorheben"
+
+#: templates/components/screens/workload/heatmap.html:9
+msgid "Last reviewed"
+msgstr "Zuletzt überprüft"
+
+#: templates/components/screens/workload/overview.html:33
+msgid "No estimates recorded."
+msgstr "Keine Schätzungen erfasst."
+
+#: templates/components/screens/workload/heatmap.html:22
+msgid "No people match these filters."
+msgstr "Keine Personen entsprechen diesen Filtern."
+
+#: templates/components/screens/workload/timeline.html:14
+msgid "No reports"
+msgstr "Keine Schätzungen"
+
+#: templates/components/screens/workload/heatmap.html:19
+msgid "Not recorded"
+msgstr "Nicht erfasst"
+
+#: templates/components/screens/workload/heatmap.html:3
+msgid "People and categories"
+msgstr "Personen und Kategorien"
+
+#: templates/components/screens/workload/overview.html:32
+msgid "Selected person's recent history"
+msgstr "Letzte Schätzungen der ausgewählten Person"
+
+#: templates/components/screens/workload/timeline.html:12
+msgid "So far"
+msgstr "Bisher"
+
+#: templates/components/screens/workload/heatmap.html:5
+msgid "Workload by person and category"
+msgstr "Arbeitsverteilung nach Person und Kategorie"
+
+#: templates/components/screens/workload/timeline.html:3
+msgid "Workload mix over time"
+msgstr "Arbeitsverteilung im Zeitverlauf"

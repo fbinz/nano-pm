@@ -95,7 +95,7 @@
         </div>
         <form method="post" action="{% url 'set_language' %}" class="lang-switch">
           {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.path }}">
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <button type="submit" name="language" value="en"
                   class="lang-btn{% if LANGUAGE_CODE|slice:':2' == 'en' %} active{% endif %}">EN</button>
           <button type="submit" name="language" value="de"

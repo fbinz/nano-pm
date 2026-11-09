@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n static %}
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" :can_view_ideas="can_view_ideas" active_nav="workload-overview">
   <main class="p-4 sm:p-6 max-w-5xl space-y-8">
     <header class="flex flex-wrap items-center gap-3">
@@ -8,6 +8,7 @@
     </header>
     {% if not workspace.workload_enabled %}<p class="text-sm text-base-content/60">{% trans "Reporting is disabled. Historical estimates are retained; no members are currently participating." %}</p>{% endif %}
     <form method="get" class="workload-overview-filters">
+      {% if heatmap_sort %}<input type="hidden" name="sort" value="{{ heatmap_sort }}">{% endif %}
       <div class="space-y-1 min-w-0">
         <label class="block text-sm font-semibold" for="workload-team">{% trans "Team" %}</label>
         <select id="workload-team" name="team" class="select select-sm w-full">
@@ -24,6 +25,14 @@
       </div>
       <button class="btn btn-sm" type="submit">{% trans "Filter" %}</button>
     </form>
+    <c-screens.workload.timeline :timeline="timeline" :dashboard_categories="dashboard_categories" />
+    <c-screens.workload.heatmap :heatmap="heatmap" :dashboard_categories="dashboard_categories" :heatmap_sort="heatmap_sort" />
+    {% if user_id %}
+      <section id="workload-person-history" class="space-y-3">
+        <h2 class="text-xl font-semibold">{% trans "Selected person's recent history" %}</h2>
+        {% if person_history %}<c-screens.workload.history :reports="person_history" />{% else %}<p class="text-sm text-base-content/60">{% trans "No estimates recorded." %}</p>{% endif %}
+      </section>
+    {% endif %}
     <section class="space-y-3 workload-average">
       <h2 class="text-xl font-semibold">{% trans "Average workload mix" %}</h2>
       <div id="workload-averages" class="max-w-2xl"><c-screens.workload.summary :donut="average_donut" /></div>
@@ -45,4 +54,5 @@
       <c-screens.workload.history :reports="recent_history" show_people="true" />
     </details>
   </main>
+  <script type="module" src="{% static 'js/workload-dashboard.js' %}"></script>
 </c-layouts.app-shell>

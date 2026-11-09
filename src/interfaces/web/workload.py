@@ -24,6 +24,7 @@ from actions.manage_workload import (
 )
 from data.models import Membership, Person, WorkloadCategory
 from readers.workload import overview, personal
+from readers.workload_dashboard import dashboard
 from .helpers import is_pm, pm_required, workspace_context
 
 
@@ -435,12 +436,14 @@ def workload_overview(request):
                 identifier(value)
     except ValidationError:
         return HttpResponseBadRequest()
+    data = overview(request.workspace, team_id, user_id)
     return render(
         request,
         "components/screens/workload/overview.html",
         {
             **context(request),
-            **overview(request.workspace, team_id, user_id),
+            **data,
+            **dashboard(request.workspace, data, request.GET.get("sort", "")),
         },
     )
 

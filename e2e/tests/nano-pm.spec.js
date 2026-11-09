@@ -191,6 +191,38 @@ async function submitWorkloadExample(page, { maintenance = 30, meetings = 10 } =
   await expect(page.locator('#workload-status')).toContainText('Estimate saved');
 }
 
+async function seedWorkloadDashboard() {
+  const { stdout } = await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
+import json
+from datetime import datetime
+from django.utils import timezone
+from data.models import Membership, Person, Team, WorkloadCategory, WorkloadReport, WorkloadAllocation
+workspace = Membership.objects.get(user__username='member1').workspace
+categories = list(WorkloadCategory.objects.filter(workspace=workspace).order_by('order', 'id'))
+now = timezone.now()
+def at_month(offset):
+    year, month = divmod(now.year * 12 + now.month - 1 + offset, 12)
+    return datetime(year, month + 1, 1, tzinfo=now.tzinfo)
+def snapshot(username, offset, values):
+    user = Membership.objects.get(workspace=workspace, user__username=username).user
+    report = WorkloadReport.objects.create(workspace=workspace, user=user, user_label=username)
+    WorkloadReport.objects.filter(pk=report.pk).update(reviewed_at=at_month(offset))
+    for category, value in zip(categories, values):
+        WorkloadAllocation.objects.create(report=report, category=category, category_label=category.name, supports_projects=category.supports_projects, percentage=value)
+snapshot('member1', -5, [20, 70, 10])
+for _ in range(22):
+    snapshot('member1', -5, [40, 50, 10])
+snapshot('ideaeditor', -4, [80, 10, 10])
+snapshot('member1', -2, [60, 30, 10])
+snapshot('ideaeditor', 0, [20, 80, 0])
+team = Team.objects.create(workspace=workspace, name='Dashboard team')
+person, _ = Person.objects.get_or_create(workspace=workspace, user__username='member1', defaults={'user': Membership.objects.get(workspace=workspace, user__username='member1').user, 'name': 'Dashboard member'})
+person.teams.add(team)
+print(json.dumps({'team': str(team.pk), 'ideaeditor': str(Membership.objects.get(workspace=workspace, user__username='ideaeditor').user_id)}))
+`], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv() });
+  return JSON.parse(stdout.trim().split('\n').at(-1));
+}
+
 async function ageWorkloadCheckin(days = 31, snoozeDays = 0) {
   await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
 from datetime import timedelta
@@ -2226,6 +2258,120 @@ test.describe('workload estimates', () => {
     await page.getByRole('button', { name: 'Filtern', exact: true }).click();
     await expect(average.locator('[data-workload-slice][data-percentage="31"]')).toBeVisible();
     await expect(average.locator('[data-workload-project-slice]')).toHaveAttribute('data-percentage', '40');
+  });
+
+  test('workload dashboard carries monthly snapshots forward without weighting frequent reporters', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const fixture = await seedWorkloadDashboard();
+    await page.goto('/workload/overview/');
+    const months = page.locator('#workload-timeline [data-workload-month]');
+    await expect(months).toHaveCount(12);
+    const month = offset => months.nth(11 + offset);
+    await expect(month(-6)).toHaveAttribute('data-reported', '0');
+    await expect(month(-6).locator('[data-category-key]')).toHaveCount(0);
+    await expect(month(-5)).toHaveAttribute('data-reported', '1');
+    await expect(month(-5).locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '40');
+    await expect(month(-4)).toHaveAttribute('data-reported', '2');
+    await expect(month(-4).locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '60');
+    // No new reports: carry the same mix forward, rather than interpolate.
+    await expect(month(-3).locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '60');
+    await expect(month(-2).locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '70');
+    await expect(month(0).locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '40');
+    await expect(month(0)).toHaveAttribute('data-participating', '3');
+    await expect(month(-1)).toHaveAttribute('data-outdated', '1');
+    await month(-4).locator('summary').click();
+    await expect(month(-4).getByRole('cell', { name: '60%', exact: true })).toBeVisible();
+    const highlight = page.locator('#workload-timeline').getByRole('button', { name: 'Maintenance', exact: true });
+    await highlight.click();
+    await expect(highlight).toHaveAttribute('aria-pressed', 'true');
+    await expect(month(0).locator('[data-category-key]').nth(1)).toHaveClass(/is-muted/);
+    await highlight.click();
+    await expect(highlight).toHaveAttribute('aria-pressed', 'false');
+    await expect(month(0).locator('[data-category-key]').nth(1)).not.toHaveClass(/is-muted/);
+    // Team and person filters must affect every visualization, not only the donut.
+    await page.getByLabel('Team', { exact: true }).selectOption(fixture.team);
+    await page.getByRole('button', { name: 'Filter', exact: true }).click();
+    await expect(month(0)).toHaveAttribute('data-reported', '1');
+    await expect(month(0).locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '60');
+    await page.getByLabel('Person', { exact: true }).selectOption(fixture.ideaeditor);
+    await page.getByRole('button', { name: 'Filter', exact: true }).click();
+    await expect(month(0)).toHaveAttribute('data-reported', '0');
+    await expect(page.locator('#workload-heatmap tbody tr[data-person]')).toHaveCount(0);
+    await expect(page.locator('#workload-heatmap')).toContainText('No people match these filters.');
+    await page.getByLabel('Team', { exact: true }).selectOption('');
+    await page.getByRole('button', { name: 'Filter', exact: true }).click();
+    await expect(month(0)).toHaveAttribute('data-reported', '1');
+    await expect(month(0).locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '20');
+    await expect(page.locator('#workload-heatmap tbody tr')).toHaveCount(1);
+    await page.reload();
+    await expect(page.getByLabel('Person', { exact: true })).toHaveValue(fixture.ideaeditor);
+    await expect(month(0).locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '20');
+  });
+
+  test('workload dashboard heatmap distinguishes missing estimates, sorts and opens personal history', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    await seedWorkloadDashboard();
+    await page.goto('/workload/overview/');
+    const heatmap = page.locator('#workload-heatmap');
+    await expect(heatmap.getByRole('columnheader', { name: 'Maintenance', exact: true })).toBeVisible();
+    const member = heatmap.locator('[data-person="member1"]');
+    await expect(member.locator('[data-percentage]').first()).toHaveAttribute('data-percentage', '60');
+    await expect(member.getByRole('time')).toHaveCount(1);
+    await expect(heatmap.locator('[data-person="multi1"]')).toContainText('Not reported');
+    await expect(heatmap.locator('[data-person="multi1"] [data-percentage]')).toHaveCount(0);
+    await expect(heatmap.locator('[data-person="demo"]')).toContainText('Exempt');
+    await expect(heatmap.locator('[data-person="ideaeditor"] [data-percentage]').last()).toHaveAttribute('data-percentage', '0');
+    await heatmap.getByRole('link', { name: 'Maintenance', exact: true }).click();
+    await expect(heatmap.locator('tbody tr').first()).toHaveAttribute('data-person', 'member1');
+    await expect(heatmap.getByRole('columnheader', { name: 'Maintenance', exact: true })).toHaveAttribute('aria-sort', 'descending');
+    await member.getByRole('link', { name: 'member1', exact: true }).click();
+    await expect(page.getByLabel('Person', { exact: true })).not.toHaveValue('');
+    await expect(heatmap.locator('tbody tr')).toHaveCount(1);
+    await expect(page.locator('#workload-person-history')).toBeVisible();
+    await expect(page.locator('#workload-person-history [data-workload-history]')).toHaveCount(20);
+    await page.setViewportSize({ width: 320, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await page.locator('#workload-timeline-heading').scrollIntoViewIfNeeded();
+    await expect(page.getByRole('heading', { name: 'Arbeitsverteilung im Zeitverlauf', exact: true })).toBeVisible();
+    await expect(page.locator('#workload-timeline [data-workload-month]').last().locator('[data-category-key]').first()).toHaveAttribute('data-percentage', '60');
+  });
+
+  test('workload dashboard retains pre-window estimates and deleted categories without leaking other workspaces', async ({ appPage: page }) => {
+    await enableWorkload(page);
+    const { stdout } = await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
+from datetime import timedelta
+from django.utils import timezone
+from data.models import Membership, WorkloadReport, WorkloadAllocation, WorkloadCategory
+membership = Membership.objects.get(user__username='member1')
+workspace = membership.workspace
+category = WorkloadCategory.objects.create(workspace=workspace, name='Retired category')
+report = WorkloadReport.objects.create(workspace=workspace, user=membership.user, user_label='member1')
+WorkloadReport.objects.filter(pk=report.pk).update(reviewed_at=timezone.now()-timedelta(days=800))
+WorkloadAllocation.objects.create(report=report, category=category, category_label=category.name, percentage=100)
+category.delete()
+foreign = Membership.objects.get(user__username='pm2').workspace
+foreign_report = WorkloadReport.objects.create(workspace=foreign, user=membership.user, user_label='member1')
+WorkloadAllocation.objects.create(report=foreign_report, category_label='Secret category', percentage=100)
+print(membership.user_id)
+`], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv() });
+    await page.goto('/workload/overview/');
+    const months = page.locator('#workload-timeline [data-workload-month]');
+    await expect(months.first()).toHaveAttribute('data-reported', '1');
+    await expect(months.first()).toHaveAttribute('data-outdated', '1');
+    await expect(months.first().locator('[data-category-key]')).toHaveAttribute('data-percentage', '100');
+    await expect(page.locator('#workload-timeline')).toContainText('Retired category');
+    await expect(page.locator('main')).not.toContainText('Secret category');
+    const member = page.locator('#workload-heatmap [data-person="member1"]');
+    await expect(member.locator('[data-percentage]')).toHaveCount(1);
+    await expect(member.locator('[data-percentage]')).toHaveAttribute('data-percentage', '100');
+    await expect(member.getByLabel('Not recorded', { exact: true })).toHaveCount(3);
+    await page.getByLabel('Person', { exact: true }).selectOption(stdout.trim().split('\n').at(-1));
+    await page.getByRole('button', { name: 'Filter', exact: true }).click();
+    await expect(page.locator('#workload-person-history [data-workload-history]')).toHaveCount(1);
+    await signInAs(page, 'member1');
+    expect((await page.goto('/workload/overview/')).status()).toBe(403);
   });
 
   test('workload overview keeps small averaged project shares visible in the shared donut', async ({ appPage: page }) => {
