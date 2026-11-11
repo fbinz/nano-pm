@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n journal_markdown %}
 <c-vars entry project journal_kind="" journal_page="" />
 <article class="journal-entry journal-entry-{{ entry.kind }}" id="entry-{{ entry.id }}" data-journal-entry="{{ entry.id }}">
   <div class="journal-entry-meta">
@@ -8,7 +8,7 @@
     <a href="#entry-{{ entry.id }}" class="journal-time"><time datetime="{{ entry.created_at|date:'c' }}">{{ entry.created_at|date:'d M Y, H:i' }}</time></a>
   </div>
   {% if entry.kind == 'phase' %}<p class="journal-phase-change">{{ entry.get_previous_phase_display }} → {{ entry.get_phase_display }}</p>{% endif %}
-  {% if entry.body %}<div class="journal-body">{{ entry.body|urlize }}</div>{% endif %}
+  {% if entry.body %}<div class="journal-body journal-markdown">{{ entry.body|journal_markdown }}</div>{% endif %}
   <div class="journal-entry-footer">
     {% if entry.kind == 'question' %}
       {% if entry.resolved_at %}<span class="journal-answered"><c-lucide name="check" size="13" /> {% trans "Answered" %}</span>{% else %}<span class="journal-open">{% trans "Open question" %}</span>{% endif %}
@@ -22,7 +22,7 @@
       </summary>
       <div class="journal-replies">
         {% for reply in entry.replies.all %}
-          <div class="journal-reply"><div class="journal-reply-meta"><strong>{{ reply.author_label }}</strong><time datetime="{{ reply.created_at|date:'c' }}">{{ reply.created_at|date:'d M, H:i' }}</time></div><div class="journal-body">{{ reply.body|urlize }}</div></div>
+          <div class="journal-reply"><div class="journal-reply-meta"><strong>{{ reply.author_label }}</strong><time datetime="{{ reply.created_at|date:'c' }}">{{ reply.created_at|date:'d M, H:i' }}</time></div><div class="journal-body journal-markdown">{{ reply.body|journal_markdown }}</div></div>
         {% endfor %}
         <form method="post" action="{% url 'project_reply' project.id entry.id %}" class="journal-reply-form">
           {% csrf_token %}

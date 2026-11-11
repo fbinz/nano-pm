@@ -951,7 +951,7 @@ html, body { height: 100%; }
   .project-section-heading h2 { @apply text-sm font-semibold; }
   .project-section-heading > svg { @apply text-base-content/50; }
   .project-muted { @apply text-xs leading-relaxed text-base-content/50 mt-2; }
-  .project-composer textarea { @apply mt-2 bg-base-100 min-h-16 text-sm leading-relaxed resize-y; }
+  .project-composer textarea { @apply mt-2 bg-base-100 min-h-16 text-sm leading-relaxed resize-y; field-sizing: content; }
   .project-composer-footer { @apply flex items-center justify-between gap-3 mt-2; }
   .project-composer-footer select { @apply w-auto select-sm text-xs bg-transparent; }
   .project-journal-toolbar { @apply flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mt-5 mb-3; }
@@ -975,6 +975,21 @@ html, body { height: 100%; }
   .journal-time { @apply ml-auto text-[10px] hover:underline; }
   .journal-body { @apply whitespace-pre-wrap break-words text-sm leading-relaxed text-base-content/80; overflow-wrap: anywhere; }
   .journal-body a { @apply underline decoration-base-content/25 underline-offset-2; }
+  .journal-markdown { @apply whitespace-normal; }
+  .journal-markdown > * + * { @apply mt-2; }
+  .journal-markdown h1, .journal-markdown h2, .journal-markdown h3,
+  .journal-markdown h4, .journal-markdown h5, .journal-markdown h6 { @apply font-semibold; }
+  .journal-markdown h1 { @apply text-xl; }
+  .journal-markdown h2 { @apply text-lg; }
+  .journal-markdown h3 { @apply text-base; }
+  .journal-markdown ul { @apply list-disc pl-5; }
+  .journal-markdown ol { @apply list-decimal pl-5; }
+  .journal-markdown blockquote { @apply border-l-2 border-base-300 pl-3 text-base-content/60; }
+  .journal-markdown code { @apply rounded bg-base-200 px-1 py-0.5 text-xs; }
+  .journal-markdown pre { @apply overflow-x-auto rounded-lg bg-base-200 p-3 whitespace-pre; }
+  .journal-markdown pre code { @apply bg-transparent p-0; }
+  .journal-markdown img { @apply max-w-full h-auto; }
+  .journal-markdown hr { @apply border-base-300; }
   .journal-entry > .journal-body { @apply mt-2; }
   .journal-phase-change { @apply text-sm font-medium mt-2; }
   .journal-entry-footer { @apply flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-base-content/60; }

@@ -6066,6 +6066,68 @@ print(json.dumps(True))
   });
 });
 
+test.describe('project journal Markdown and textareas', () => {
+  test('journal entries and replies render safe Markdown after posting and reloading', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    await page.getByLabel('Journal entry', { exact: true }).fill([
+      '## Journal heading', '', '**Important** and *thoughtful* with `code`.', '',
+      '- First item', '- Second item', '', '> A quotation', '',
+      '```js', 'const answer = 42;', '```', '',
+      '[Documentation](https://example.com/docs)', 'https://example.com/plain', '',
+      '<script>window.journalXss = true</script>',
+      '<img src=x onerror="window.journalXss = true">',
+      '[Unsafe](javascript:alert(1))',
+    ].join('\n'));
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    const entry = page.locator('[data-journal-entry]');
+    const body = entry.locator(':scope > .journal-body');
+    await expect(body.locator('h2')).toHaveText('Journal heading');
+    await expect(body.locator('strong')).toHaveText('Important');
+    await expect(body.locator('em')).toHaveText('thoughtful');
+    await expect(body.locator('li')).toHaveText(['First item', 'Second item']);
+    await expect(body.locator('blockquote')).toContainText('A quotation');
+    await expect(body.locator('pre code')).toContainText('const answer = 42;');
+    await expect(body.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', 'https://example.com/docs');
+    await expect(body.getByRole('link', { name: 'https://example.com/plain', exact: true })).toHaveAttribute('href', 'https://example.com/plain');
+    await expect(body.locator('script, img, [onerror], a[href^="javascript:"]')).toHaveCount(0);
+    await expect(body).toContainText('<script>');
+    expect(await page.evaluate(() => window.journalXss)).toBeUndefined();
+    await entry.locator('.journal-discussion > summary').click();
+    await entry.getByLabel('Reply', { exact: true }).fill('A **Markdown reply** with `inline code`.\n\n1. Next step');
+    await entry.getByRole('button', { name: 'Post reply', exact: true }).click();
+    await expect(entry.locator('.journal-reply strong').last()).toHaveText('Markdown reply');
+    await expect(entry.locator('.journal-reply code')).toHaveText('inline code');
+    await expect(entry.locator('.journal-reply ol li')).toHaveText('Next step');
+    await page.reload();
+    await expect(body.locator('h2')).toHaveText('Journal heading');
+    await expect(entry.locator('.journal-reply .journal-body strong')).toHaveText('Markdown reply');
+  });
+
+  test('journal composer and reply textareas grow and shrink with their content', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    const composer = page.getByLabel('Journal entry', { exact: true });
+    const longText = Array.from({ length: 18 }, (_, i) => `Line ${i + 1}: a thought worth remembering.`).join('\n');
+    const checkGrowth = async textarea => {
+      const initial = await textarea.evaluate(el => el.getBoundingClientRect().height);
+      await textarea.fill(longText);
+      await expect.poll(() => textarea.evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThan(initial + 100);
+      expect(await textarea.evaluate(el => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
+      await textarea.fill('Short again.');
+      await expect.poll(() => textarea.evaluate(el => el.getBoundingClientRect().height)).toBeLessThanOrEqual(initial + 1);
+    };
+    await checkGrowth(composer);
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
+    await page.locator('.journal-discussion > summary').click();
+    await checkGrowth(page.getByLabel('Reply', { exact: true }));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await checkGrowth(composer);
+    await checkGrowth(page.getByLabel('Reply', { exact: true }));
+  });
+});
+
 test.describe('text box submission shortcuts', () => {
   test('Ctrl+Enter posts journal entries and Cmd+Enter submits only the focused reply form', async ({ appPage: page }) => {
     const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');

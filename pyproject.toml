@@ -14,6 +14,7 @@ dependencies = [
     "sentry-sdk[django]>=2.20.0",
     "cryptography>=50.0.2",
     "django-mcpz>=1.2,<2",
+    "mistune>=3.2,<4",
 ]
 
 [dependency-groups]
