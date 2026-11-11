@@ -1,5 +1,6 @@
 """Write operations for projects."""
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -8,13 +9,15 @@ from actions.activity import change_set, created_changes, deleted_changes, log_a
 from actions.manage_milestones import delete_milestone
 from actions.gitlab_matching import sync_completion, retire_project
 from data.models import (
-    Dependency, Membership, Person, Project, WorkspaceRole, WorkloadProjectAllocation,
+    Dependency, Membership, Person, Project, ProjectPhase, ProjectJournalEntry,
+    JournalKind, WorkspaceRole, WorkloadProjectAllocation,
 )
 from data.models.project import PROJECT_COLORS
 
 
 PROJECT_FIELDS = [
     "name", "description", "color", "order", "completed_at", "public_roadmap_visible",
+    "phase", "outcome", "scope", "constraints", "checkpoint", "checkpoint_date",
 ]
 
 
@@ -66,6 +69,11 @@ def update_project(
     color: str | None = None,
     responsible_person_ids: list[int] | None = None,
     public_roadmap_visible: bool | None = None,
+    outcome: str | None = None,
+    scope: str | None = None,
+    constraints: str | None = None,
+    checkpoint: str | None = None,
+    checkpoint_date=...,
     actor=None,
 ) -> Project | None:
     try:
@@ -74,7 +82,10 @@ def update_project(
         )
     except Project.DoesNotExist:
         return None
-    update_fields = ["name", "description", "color", "public_roadmap_visible"]
+    update_fields = [
+        "name", "description", "color", "public_roadmap_visible",
+        "outcome", "scope", "constraints", "checkpoint", "checkpoint_date",
+    ]
     before = _project_values(proj, update_fields)
     if name is not None:
         proj.name = name
@@ -84,6 +95,15 @@ def update_project(
         proj.color = color
     if public_roadmap_visible is not None:
         proj.public_roadmap_visible = public_roadmap_visible
+    brief_values = {
+        "outcome": outcome, "scope": scope,
+        "constraints": constraints, "checkpoint": checkpoint,
+    }
+    for field, value in brief_values.items():
+        if value is not None:
+            setattr(proj, field, value)
+    if checkpoint_date is not ...:
+        proj.checkpoint_date = checkpoint_date
     proj.save()
     if responsible_person_ids is not None:
         valid_ids = Person.objects.filter(
@@ -178,27 +198,48 @@ def reorder_projects(*, workspace, project_ids: list[int], actor=None) -> list[P
 
 
 @transaction.atomic
-def set_project_completed(
-    *, workspace, project_id: int, completed: bool, actor=None
-) -> Project | None:
-    """Mark a project complete (stamp `completed_at`) or reopen it (clear it)."""
+def set_project_phase(*, workspace, project_id: int, phase: str, reason: str = "", actor=None) -> Project | None:
+    """Phase and completion are one atomic transition, including GitLab checks."""
+    if phase not in ProjectPhase.values:
+        raise ValidationError("Invalid project phase.")
     try:
-        proj = Project.objects.get(id=project_id, workspace=workspace)
+        proj = Project.objects.select_for_update().get(id=project_id, workspace=workspace)
     except Project.DoesNotExist:
         return None
-    sync_completion(proj, completed)
-    before = snapshot(proj, ["completed_at"])
-    proj.completed_at = timezone.now() if completed else None
-    proj.save(update_fields=["completed_at", "updated_at"])
+    if proj.phase == phase:
+        return proj
+    previous = proj.phase
+    before = snapshot(proj, ["phase", "completed_at"])
+    completed = phase == ProjectPhase.COMPLETED
+    if completed != proj.is_completed:
+        sync_completion(proj, completed)
+        proj.completed_at = timezone.now() if completed else None
+    proj.phase = phase
+    proj.save(update_fields=["phase", "completed_at", "updated_at"])
+    ProjectJournalEntry.objects.create(
+        project=proj, author=actor, author_label=actor.get_username() if actor else "",
+        kind=JournalKind.PHASE, phase=phase, previous_phase=previous, body=reason.strip(),
+    )
+    action = "project.updated"
+    if completed:
+        action = "project.completed"
+    elif previous == ProjectPhase.COMPLETED:
+        action = "project.reopened"
     log_activity(
-        workspace=workspace,
-        actor=actor,
-        action="project.completed" if completed else "project.reopened",
-        entity=proj,
-        changes=change_set(before, snapshot(proj, ["completed_at"])),
-        skip_empty_changes=True,
+        workspace=workspace, actor=actor, action=action,
+        entity=proj, changes=change_set(before, snapshot(proj, ["phase", "completed_at"])),
     )
     return proj
+
+
+def set_project_completed(*, workspace, project_id: int, completed: bool, actor=None) -> Project | None:
+    proj = Project.objects.filter(id=project_id, workspace=workspace).first()
+    if proj is None or proj.is_completed == completed:
+        return proj
+    return set_project_phase(
+        workspace=workspace, project_id=project_id,
+        phase=ProjectPhase.COMPLETED if completed else ProjectPhase.DELIVERY, actor=actor,
+    )
 
 
 def move_project_to_workspace(

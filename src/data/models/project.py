@@ -22,8 +22,20 @@ def default_teams_notify_events() -> list[str]:
     return list(DEFAULT_TEAMS_NOTIFY_EVENTS)
 
 
+class ProjectPhase(models.TextChoices):
+    IDEA = "idea", _("Idea")
+    DISCOVERY = "discovery", _("Discovery")
+    SHAPING = "shaping", _("Shaping")
+    PLANNED = "planned", _("Planned")
+    DELIVERY = "delivery", _("Delivery")
+    REVIEW = "review", _("Review")
+    COMPLETED = "completed", _("Completed")
+    PARKED = "parked", _("Parked")
+    DROPPED = "dropped", _("Dropped")
+
+
 class Project(models.Model):
-    """A project within a workspace. Groups tasks, including task milestones."""
+    """A workspace-scoped project, from its first idea through delivery and review."""
 
     workspace = models.ForeignKey(
         "data.Workspace",
@@ -32,6 +44,12 @@ class Project(models.Model):
     )
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
+    phase = models.CharField(max_length=20, choices=ProjectPhase.choices, default=ProjectPhase.IDEA)
+    outcome = models.TextField(blank=True, default="")
+    scope = models.TextField(blank=True, default="")
+    constraints = models.TextField(blank=True, default="")
+    checkpoint = models.CharField(max_length=500, blank=True, default="")
+    checkpoint_date = models.DateField(null=True, blank=True)
     public_roadmap_visible = models.BooleanField(default=False)
     responsible_people = models.ManyToManyField(
         "data.Person",

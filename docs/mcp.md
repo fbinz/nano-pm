@@ -1,10 +1,17 @@
 # MCP endpoint
 
-nano-pm exposes 82 explicitly registered tools, including mutations, through
+nano-pm exposes 76 explicitly registered tools, including mutations, through
 `django-mcpz` at **`/mcp`** (no trailing slash). The tool catalog and permission
 matrix are in [the integration plan](mcp-integration-plan.md#complete-initial-tool-catalog).
 Input and output JSON schemas are advertised through `tools/list`; both are
 validated at runtime. No models are automatically exposed.
+
+Projects now start in the `idea` phase. Use `list_projects` with `phase`,
+`update_project` for brief fields (`outcome`, `scope`, `constraints`, `checkpoint`,
+`checkpoint_date`), and `set_project_phase` with an optional `reason` to move
+through the lifecycle. Completion remains synchronized with
+`set_project_completed`. Separate idea/conversion tools have been removed;
+existing idea records are not migrated. See [Project workspace](project-workspace.md).
 
 ## Setup
 
@@ -99,7 +106,7 @@ policy fails closed. Use `mcp_access` to configure that policy.
 
 | Capability | Permits, subject to current application permissions |
 | --- | --- |
-| `core.read` | Safe projects/tasks/milestones/people/teams/ideas/activity/cache reads |
+| `core.read` | Safe projects/tasks/milestones/people/teams/activity/cache reads |
 | `core.write` | Planning mutations; PM/responsible-person/task-assignee checks still apply |
 | `workspace.admin` | PM-only workspace, membership, notification, sharing and GitLab administration |
 | `workload.self` | Own workload reads/submissions/reviews/check-ins; reporting participation still applies |
@@ -308,7 +315,7 @@ long-lived snapshots across concurrent writes.
 
 Behavior and transport tests are in `e2e/tests/nano-pm.spec.js`, with helpers in
 `e2e/tests/mcp-helpers.js`. Servers use isolated migrated worker databases without
-an MCP opt-in. Tests cover all 82 tool registrations and successful domain flows,
+an MCP opt-in. Tests cover all 76 tool registrations and successful domain flows,
 auth/permissions, privacy, initialization, paging, stale/concurrent writes, replay,
 atomic rollback, link rotation, operator setup and always-available authenticated endpoints. OAuth tests
 cover real browser login and consent, forged workspace/scope selection, CSRF, PKCE,

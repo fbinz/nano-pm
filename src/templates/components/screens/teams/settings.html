@@ -1,5 +1,5 @@
 {% load i18n %}
-<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" :can_view_ideas="can_view_ideas" active_nav="teams-notifications">
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" active_nav="teams-notifications">
   <main class="p-6 max-w-3xl">
     <h1 class="text-2xl font-bold">{% trans "Teams notifications" %}</h1>
     {% if is_pm %}

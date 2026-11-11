@@ -1,0 +1,15 @@
+{% load i18n %}
+<c-vars project phase_steps can_edit />
+<ol id="project-lifecycle" class="project-lifecycle" aria-label="{% trans 'Project lifecycle' %}">
+  {% for value, label in phase_steps %}
+    <li>
+      <button id="project-phase-{{ value }}" type="button" class="phase-step" data-phase="{{ value }}"
+              aria-describedby="project-phase-instructions"{% if project.phase == value %} aria-current="step" aria-disabled="true"{% endif %}{% if not can_edit %} disabled{% endif %}>
+        <span class="phase-step-fill" aria-hidden="true"></span>
+        <span class="phase-mark" aria-hidden="true"><span class="phase-dot"></span><svg class="phase-check" viewBox="0 0 16 16" fill="none"><path d="m3 8 3 3 7-7" /></svg></span>
+        <span class="phase-step-label">{{ label }}</span>
+        <span class="phase-sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      </button>
+    </li>
+  {% endfor %}
+</ol>

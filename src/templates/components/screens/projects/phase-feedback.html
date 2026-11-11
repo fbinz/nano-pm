@@ -1,0 +1,4 @@
+{% load i18n %}
+<c-vars operation result project message />
+<p id="project-phase-feedback" role="status" aria-live="polite" aria-atomic="true"
+   data-phase-operation="{{ operation }}" data-phase-result="{{ result }}" data-committed-phase="{{ project.phase }}">{{ message }}</p>

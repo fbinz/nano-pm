@@ -5,6 +5,11 @@ Status: implemented with reads and mutations in the initial release. See
 limits and verification. Authentication supports both expiring pasted bearer tokens
 and django-mcpz OAuth with login, explicit consent, refresh and revocation.
 
+> Historical initial catalog: the separate Ideas feature and its seven tools
+> have since been retired without migrating existing ideas. Projects default to
+> the Idea phase and now support `set_project_phase` and living-brief fields.
+> See [Project workspace](project-workspace.md) for the current lifecycle.
+
 ## Scope and architecture
 
 Expose nano-pm application operations through one authenticated `/mcp` endpoint,

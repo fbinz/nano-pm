@@ -16,6 +16,10 @@ from data.models import ActivityEvent
 LONG_TEXT_FIELDS = {
     "body",
     "description",
+    "outcome",
+    "scope",
+    "constraints",
+    "checkpoint",
     "public_roadmap_description",
     "teams_webhook_url",
 }

@@ -1,7 +1,5 @@
 """Shared authorization, bounded pagination and strict domain validation."""
 
-from types import SimpleNamespace
-
 import msgspec
 from django.core import signing
 from django.db.models import Q
@@ -16,7 +14,7 @@ from data.models import (
     Task,
     WorkspaceRole,
 )
-from permissions import can_manage_project, can_manage_task, has_idea_perm, is_pm
+from permissions import can_manage_project, can_manage_task, is_pm
 from readers.mcp import fingerprint
 
 
@@ -46,15 +44,11 @@ def scope(request, workspace_id):
     return membership.workspace
 
 
-def visible(request, caps, pm=False, idea_action=None):
+def visible(request, caps, pm=False):
     if not any(has_cap(request, c) for c in caps):
         return False
     for membership in memberships(request):
         if pm and membership.role != WorkspaceRole.PM:
-            continue
-        if idea_action and not has_idea_perm(
-            SimpleNamespace(user=request.user, membership=membership), idea_action
-        ):
             continue
         return True
     return False

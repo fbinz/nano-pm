@@ -4,15 +4,21 @@ from django import forms
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
-from data.models import Milestone, Person, Project
+from data.models import Milestone, Person, Project, ProjectPhase, JournalKind
 from data.models.project import PROJECT_COLORS
+
+
+class ColorSwatchSelect(forms.RadioSelect):
+    is_color_picker = True
 
 
 class DetailForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            if isinstance(field.widget, (forms.CheckboxInput, forms.CheckboxSelectMultiple)):
+            if isinstance(field.widget, ColorSwatchSelect):
+                field.widget.attrs["class"] = "color-picker-input"
+            elif isinstance(field.widget, (forms.CheckboxInput, forms.CheckboxSelectMultiple)):
                 field.widget.attrs["class"] = "checkbox checkbox-sm"
             elif isinstance(field.widget, forms.Select):
                 field.widget.attrs["class"] = "select w-full text-base"
@@ -76,7 +82,14 @@ class ProjectDetailForm(DetailForm):
     public_roadmap_visible = forms.BooleanField(label=_("Visible in public roadmap"), required=False)
     name = forms.CharField(label=_("Name"), max_length=200)
     description = forms.CharField(label=_("Description"), required=False, strip=False, widget=forms.Textarea)
-    color = forms.ChoiceField(label=_("Color"), choices=[(color, color) for color in PROJECT_COLORS])
+    color = forms.ChoiceField(
+        label=_("Color"),
+        choices=list(zip(PROJECT_COLORS, [
+            _("Blue"), _("Green"), _("Amber"), _("Violet"), _("Pink"),
+            _("Cyan"), _("Red"), _("Lime"), _("Orange"), _("Sky blue"),
+        ], strict=True)),
+        widget=ColorSwatchSelect,
+    )
     responsible_person_ids = forms.ModelMultipleChoiceField(
         label=_("Responsible people"), queryset=Person.objects.none(), required=False,
         widget=forms.CheckboxSelectMultiple,
@@ -91,3 +104,30 @@ class ProjectDetailForm(DetailForm):
         })
         super().__init__(*args, **kwargs)
         self.fields["responsible_person_ids"].queryset = Person.objects.filter(workspace=workspace).order_by("name", "id")
+
+
+class ProjectCreateForm(DetailForm):
+    name = forms.CharField(label=_("Project name"), max_length=200)
+
+
+class ProjectPhaseForm(DetailForm):
+    phase = forms.ChoiceField(label=_("Project phase"), choices=ProjectPhase.choices)
+    reason = forms.CharField(label=_("Reason for phase change"), required=False, max_length=20000, widget=forms.Textarea)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["reason"].widget.attrs["rows"] = 2
+
+
+class JournalEntryForm(DetailForm):
+    kind = forms.ChoiceField(label=_("Entry type"), choices=[choice for choice in JournalKind.choices if choice[0] != JournalKind.PHASE])
+    body = forms.CharField(label=_("Journal entry"), max_length=20000, widget=forms.Textarea(attrs={"placeholder": _("A thought, a conversation, something worth remembering…")}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["kind"].widget.attrs["class"] = "select select-sm w-auto text-xs"
+        self.fields["body"].widget.attrs["rows"] = 2
+
+
+class JournalReplyForm(DetailForm):
+    body = forms.CharField(label=_("Reply"), max_length=20000, widget=forms.Textarea)

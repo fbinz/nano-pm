@@ -1,5 +1,5 @@
 {% load i18n %}
-<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" :can_view_ideas="can_view_ideas" active_nav="workspace-settings">
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" active_nav="workspace-settings">
   <main class="p-4 sm:p-6 w-full max-w-4xl space-y-6">
     <header class="flex items-center gap-3">
       <label for="app-drawer" class="btn btn-sm btn-ghost lg:hidden" aria-label="{% trans 'Open menu' %}"><c-lucide name="menu" size="20" /></label>
@@ -23,7 +23,7 @@
     </nav>
 
     <div class="min-w-0 max-w-3xl space-y-6">
-      <h2 class="text-xl font-semibold">{{ settings_section_label }}</h2>
+      {% if settings_section != "workload" %}<h2 class="text-xl font-semibold">{{ settings_section_label }}</h2>{% endif %}
       {% if error %}<p role="alert" class="text-error">{{ error }}</p>{% endif %}
       {% if settings_section == "general" %}
         {% include "components/screens/workspaces/settings-general.html" %}

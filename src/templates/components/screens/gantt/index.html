@@ -9,6 +9,7 @@
     </label>
     <c-screens.gantt.show-completed-toggle :show_completed="vm.show_completed" />
     <c-screens.gantt.team-filter :teams="team_choices" :team_filter="team_filter" />
+    <a href="/projects/" class="topbar-btn" aria-label="{% trans 'Project library' %}" title="{% trans 'Project library' %}"><c-lucide name="notebook-pen" size="16" /><span class="hidden sm:inline">{% trans "Project library" %}</span></a>
     <div class="spacer"></div>
     <input class="range range-xs" type="range" id="zoom-slider" aria-label="{% trans 'Zoom' %}" title="{% trans 'Zoom' %}"
            min="{{ ppd_unit_min }}" max="{{ ppd_unit_max }}"

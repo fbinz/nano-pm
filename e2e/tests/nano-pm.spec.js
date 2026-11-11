@@ -303,7 +303,7 @@ async function connectGitLab(page, api) {
 }
 
 async function bindGitLab(page, projectId, prefix) {
-  await page.goto(`/projects/${projectId}/`);
+  await page.goto(`/projects/${projectId}/?tab=gitlab`);
   await page.getByText('GitLab project settings', { exact: true }).click();
   await page.getByLabel('GitLab title prefix').fill(prefix);
   await expect(page.locator('[data-prefix-preview]')).toHaveText(`${prefix}: …`);
@@ -554,7 +554,7 @@ print(json.dumps({'token':legacy_token,'policy':MCPMutationReceipt.objects.get(o
     await expect(page.getByRole('button', { name: 'Zugriff erlauben' })).toBeVisible();
   });
 
-  test('MCP discovers all 82 typed tools and initializes without sessions', async ({ appPage: page }) => {
+  test('MCP discovers all 76 typed tools and initializes without sessions', async ({ appPage: page }) => {
     const api = await mcp.setup(page);
     const initialized = await api.rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
     expect(initialized.status()).toBe(200);
@@ -719,23 +719,27 @@ print(json.dumps({'token':legacy_token,'policy':MCPMutationReceipt.objects.get(o
     expect((await api.call('get_task', { ...api.scope, id: b.id })).item.id).toBe(b.id);
   });
 
-  test('MCP idea conversions are atomic and cannot create duplicate projects or tasks', async ({ appPage: page }) => {
+  test('MCP projects start as ideas and retain identity through phase changes', async ({ appPage: page }) => {
     const api = await mcp.setup(page);
-    let idea = (await api.mutate('create_idea', { title: 'Idea', body: 'Copy this body', tags: 'mcp' })).item;
-    idea = (await api.mutate('update_idea', { id: idea.id, if_match: idea.revision, status: 'exploring' })).item;
-    expect((await api.call('list_ideas', { ...api.scope, tag: 'mcp' })).items).toHaveLength(1);
-    const args = { ...api.scope, operation_id: mcp.randomUUID(), id: idea.id, if_match: idea.revision };
-    const converted = await api.call('convert_idea_to_project', args);
-    expect(converted.project.description).toBe('Copy this body');
-    expect(await api.call('convert_idea_to_project', args)).toEqual(converted);
-    const twice = await api.raw('convert_idea_to_project', { ...args, operation_id: mcp.randomUUID(), if_match: converted.item.revision });
-    expect(JSON.stringify(twice)).toContain('conflict');
-    const other = (await api.mutate('create_idea', { title: 'Task idea', body: 'Task body' })).item;
-    const task = await api.mutate('convert_idea_to_task', { id: other.id, if_match: other.revision, project_id: converted.project.id, start: '2030-01-01', end: '2030-01-02' });
-    expect(task.task.description).toBe('Task body');
-    expect((await api.call('get_idea', { ...api.scope, id: other.id })).item.converted_task_id).toBe(task.task.id);
-    await api.mutate('delete_idea', { id: other.id, if_match: task.item.revision });
-    expect((await api.call('get_task', { ...api.scope, id: task.task.id })).item.id).toBe(task.task.id);
+    let project = (await api.mutate('create_project', { name: 'An early possibility' })).item;
+    expect(project.phase).toBe('idea');
+    project = (await api.mutate('update_project', { id: project.id, if_match: project.revision, outcome: 'Learn what users need', checkpoint: 'Review findings', checkpoint_date: '2030-07-18' })).item;
+    expect(project.outcome).toBe('Learn what users need');
+    const args = { ...api.scope, operation_id: mcp.randomUUID(), id: project.id, if_match: project.revision, phase: 'discovery', reason: 'Talk to users first' };
+    const changed = await api.call('set_project_phase', args);
+    expect(changed.item.id).toBe(project.id);
+    expect(changed.item.phase).toBe('discovery');
+    expect(await api.call('set_project_phase', args)).toEqual(changed);
+    expect((await api.call('list_projects', { ...api.scope, phase: 'discovery' })).items.map(p => p.id)).toContain(project.id);
+    await page.goto(`/projects/${project.id}/`);
+    await expect(page.locator('[data-journal-entry]')).toContainText('Talk to users first');
+    const completed = (await api.mutate('set_project_completed', { id: project.id, if_match: changed.item.revision, completed: true })).item;
+    expect(completed.phase).toBe('completed');
+    expect(completed.completed_at).not.toBeNull();
+    const reopened = (await api.mutate('set_project_phase', { id: project.id, if_match: completed.revision, phase: 'parked' })).item;
+    expect(reopened.completed_at).toBeNull();
+    const listed = await api.rpc('tools/list');
+    expect(JSON.stringify(await listed.json())).not.toContain('"create_idea"');
   });
 
   test('MCP member writes honor assignment and explicit self-claim permissions', async ({ appPage: page }) => {
@@ -1050,7 +1054,7 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
       await syncGitLab(); await page.reload();
       await expect(gitlabRows(page)).toHaveCount(1);
       await expect(gitlabRows(page)).toContainText('Previously undiscovered');
-      await page.goto(`/projects/${oldId}/`);
+      await page.goto(`/projects/${oldId}/?tab=gitlab`);
       await expect(gitlabRows(page)).toHaveCount(3);
       await expect(page.locator('#gitlab-issues')).toContainText('Different title');
       await expect(page.locator('#gitlab-issues')).toContainText('Prefix changed');
@@ -1094,18 +1098,18 @@ print(json.dumps(connection.token_ciphertext != 'test-private-token' and decrypt
         in_progress_labels: '', done_labels: 'Developing', fallback: 'done',
       })).toBe(200);
       await syncGitLab();
-      await page.goto(`/projects/${ids[0]}/`);
+      await page.goto(`/projects/${ids[0]}/?tab=gitlab`);
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'in-progress');
-      await page.goto(`/projects/${ids[1]}/`);
+      await page.goto(`/projects/${ids[1]}/?tab=gitlab`);
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'done');
       await page.goto('/workspaces/settings/integrations/');
       await expect(page.getByLabel('Done labels')).toHaveValue('Ready');
       await page.getByLabel('Done labels').fill('Developing');
       await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
       await syncGitLab();
-      await page.goto(`/projects/${ids[0]}/`);
+      await page.goto(`/projects/${ids[0]}/?tab=gitlab`);
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'done');
-      await page.goto(`/projects/${ids[1]}/`);
+      await page.goto(`/projects/${ids[1]}/?tab=gitlab`);
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'unclassified');
       expect(await postForm(page, '/workspaces/', { name: 'Independent workflow workspace' })).toBe(200);
       await connectGitLab(page, api);
@@ -1152,7 +1156,7 @@ print(json.dumps({
       expect(result).toEqual({ queued: true, workspace_mapping_preserved: true, owner: Number(id) });
       await page.goto('/workspaces/settings/integrations/');
       await expect(page.locator('#gitlab-sync-status')).toContainText('Queued');
-      await syncGitLab(); await page.goto(`/projects/${id}/`);
+      await syncGitLab(); await page.goto(`/projects/${id}/?tab=gitlab`);
       await expect(page.getByLabel('GitLab title prefix')).toHaveValue('Portal');
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'in-progress');
       await expect(page.getByLabel('Done labels')).toHaveCount(0);
@@ -1196,7 +1200,7 @@ print(json.dumps({
       await page.goto('/workspaces/gitlab/');
       await page.getByLabel('Done labels').fill('WIP');
       await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
-      await syncGitLab(); await page.goto(`/projects/${projectId}/`);
+      await syncGitLab(); await page.goto(`/projects/${projectId}/?tab=gitlab`);
       await expect(cycles.locator('[data-start]')).toHaveCount(1);
       await expect(cycles.locator('[data-start]')).toHaveAttribute('data-start', '');
     } finally { await api.close(); }
@@ -1231,7 +1235,7 @@ print(json.dumps({
       await page.goto('/workspaces/settings/integrations/');
       await page.getByLabel('Done labels').fill('Something else');
       await page.getByRole('button', { name: 'Save GitLab workflow', exact: true }).click();
-      await syncGitLab(); await page.goto(`/projects/${id}/`);
+      await syncGitLab(); await page.goto(`/projects/${id}/?tab=gitlab`);
       await expect(gitlabRows(page)).toHaveAttribute('data-state', 'in-progress');
     } finally { await api.close(); }
   });
@@ -1494,11 +1498,11 @@ print(json.dumps(timezone.localdate().isoformat()))
       await page.setViewportSize({ width: 1280, height: 844 });
       await trigger.click();
       await summary.getByRole('link', { name: '2 done', exact: true }).click();
-      await expect(page).toHaveURL(`/projects/${ids[0]}/?gitlab_state=done#gitlab-issues`);
+      await expect(page).toHaveURL(`/projects/${ids[0]}/?tab=gitlab&gitlab_state=done#gitlab-issues`);
       await expect(gitlabRows(page)).toHaveCount(2);
       expect(await gitlabRows(page).evaluateAll(rows => rows.map(row => row.dataset.state))).toEqual(['done', 'done']);
       await page.getByRole('link', { name: 'Refresh GitLab issues', exact: true }).click();
-      await expect(page).toHaveURL(`/projects/${ids[0]}/?gitlab_state=done#gitlab-issues`);
+      await expect(page).toHaveURL(`/projects/${ids[0]}/?tab=gitlab&gitlab_state=done#gitlab-issues`);
       await page.reload();
       const detailSummary = page.locator('#gitlab-project [data-gitlab-summary]');
       await expect(detailSummary).toHaveAttribute('data-total', '5');
@@ -1510,11 +1514,11 @@ print(json.dumps(timezone.localdate().isoformat()))
       }
       await detailSummary.getByRole('link', { name: 'All issues (5)', exact: true }).click();
       await expect(gitlabRows(page)).toHaveCount(5);
-      await page.goto(`/projects/${ids[1]}/?gitlab_state=done#gitlab-issues`);
+      await page.goto(`/projects/${ids[1]}/?tab=gitlab&gitlab_state=done#gitlab-issues`);
       await expect(gitlabRows(page)).toHaveCount(0);
       await expect(page.locator('#gitlab-issues')).toContainText('No GitLab issues match this filter.');
       await expect(page.locator('#gitlab-project [data-gitlab-summary]')).toHaveAttribute('data-total', '1');
-      await page.goto(`/projects/${ids[0]}/?gitlab_state=invalid`);
+      await page.goto(`/projects/${ids[0]}/?tab=gitlab&gitlab_state=invalid`);
       await expect(gitlabRows(page)).toHaveCount(5);
       await page.locator('.lang-btn', { hasText: 'DE' }).click();
       await expect(detailSummary.locator('[data-state="done"]')).toHaveText('2 erledigt');
@@ -1663,14 +1667,14 @@ print('true')
       await expect(page.locator('#gitlab-sync-status')).toContainText('authentication-failed');
       const count = api.requests.length;
       await syncGitLab(); expect(api.requests.length).toBe(count);
-      await page.goto(`/projects/${projectId}/`);
+      await page.goto(`/projects/${projectId}/?tab=gitlab`);
       await expect(gitlabRows(page)).toHaveCount(1);
       await expect(page.locator('#gitlab-project')).toContainText('stale');
       api.status = 200;
       await connectGitLab(page, api); await syncGitLab();
       await page.reload();
       await expect(page.locator('#gitlab-sync-status')).toContainText('Up to date');
-      await page.goto(`/projects/${projectId}/`);
+      await page.goto(`/projects/${projectId}/?tab=gitlab`);
       await expect(gitlabRows(page)).toHaveCount(1);
       expect(api.requests.some(r => r.query.includes('updated_after='))).toBe(true);
     } finally { await api.close(); }
@@ -1682,12 +1686,12 @@ print('true')
       const ids = await page.locator('.project-group').evaluateAll(groups => groups.map(g => Number(g.dataset.projectId)));
       api.issues = [api.issue(1, 'Portal: Transfer'), api.issue(2, 'Portal: Leave this issue here')];
       await connectGitLab(page, api); await bindGitLab(page, ids[0], 'Portal'); await syncGitLab();
-      await page.goto(`/projects/${ids[1]}/`);
+      await page.goto(`/projects/${ids[1]}/?tab=gitlab`);
       await page.getByText('GitLab project settings', { exact: true }).click();
       await page.getByLabel('GitLab title prefix').fill('PORTAL');
       await page.getByRole('button', { name: 'Save GitLab project settings', exact: true }).click();
       await expect(page.getByRole('alert')).toContainText('Another active project');
-      await page.goto(`/projects/${ids[0]}/`);
+      await page.goto(`/projects/${ids[0]}/?tab=gitlab`);
       await expect(page.locator('#gitlab-issues select')).toHaveCount(0);
       const actions = gitlabRows(page).filter({ hasText: 'Portal: Transfer' }).getByRole('button', { name: 'Issue actions', exact: true });
       await expect(actions).toBeVisible();
@@ -1736,9 +1740,9 @@ print('true')
       await expect(move).toBeDisabled();
       await destination.selectOption(String(ids[1]));
       await move.click();
-      await expect(page).toHaveURL(`/projects/${ids[1]}/`);
+      await expect(page).toHaveURL(`/projects/${ids[1]}/?tab=gitlab`);
       await syncGitLab(); await page.reload(); await expect(gitlabRows(page)).toHaveCount(1);
-      await page.goto(`/projects/${ids[0]}/`); await expect(gitlabRows(page)).toHaveCount(1);
+      await page.goto(`/projects/${ids[0]}/?tab=gitlab`); await expect(gitlabRows(page)).toHaveCount(1);
       await expect(gitlabRows(page)).toContainText('Leave this issue here');
     } finally { await api.close(); }
   });
@@ -1828,8 +1832,8 @@ print(json.dumps((connection.next_run - timezone.now()).total_seconds()))
       expect(await postForm(page, `/projects/${ids[0]}/set-completed/`, {})).toBe(200);
       await bindGitLab(page, ids[1], 'Portal');
       release(); await firstSync;
-      await page.goto(`/projects/${ids[0]}/`); await expect(gitlabRows(page)).toHaveCount(0);
-      await syncGitLab(); await page.goto(`/projects/${ids[1]}/`); await expect(gitlabRows(page)).toHaveCount(1);
+      await page.goto(`/projects/${ids[0]}/?tab=gitlab`); await expect(gitlabRows(page)).toHaveCount(0);
+      await syncGitLab(); await page.goto(`/projects/${ids[1]}/?tab=gitlab`); await expect(gitlabRows(page)).toHaveCount(1);
     } finally { if (release) release(); if (firstSync) await firstSync; await api.close(); }
   });
 
@@ -1874,7 +1878,7 @@ print(json.dumps(target.pk))
       await bindGitLab(page, ids[1], 'Portal'); await syncGitLab(); await page.reload();
       await expect(gitlabRows(page)).toHaveCount(0);
       expect(await postForm(page, `/workspaces/${target}/switch/`, {})).toBe(200);
-      await page.goto(`/projects/${ids[0]}/`);
+      await page.goto(`/projects/${ids[0]}/?tab=gitlab`);
       await expect(page.locator('#gitlab-project')).toHaveCount(0);
       expect(await page.content()).not.toContain('Original workspace only');
     } finally { await api.close(); }
@@ -4903,189 +4907,6 @@ test.describe('activity log', () => {
 });
 
 // =============================================================================
-// Ideas
-// =============================================================================
-test.describe('ideas', () => {
-  async function loginAs(page, username, password = username) {
-    await page.goto('/accounts/login/');
-    await page.fill('input[name=username]', username);
-    await page.fill('input[name=password]', password);
-    await page.click('button[type=submit]');
-    await page.waitForURL('/');
-  }
-
-  test('ideas can be captured, edited in a full-page detail view, and promoted', async ({ appPage: page }) => {
-    await page.getByRole('link', { name: 'Ideas' }).click();
-    await expect(page).toHaveURL('/ideas/');
-    await expect(page.getByRole('heading', { name: 'Ideas' })).toBeVisible();
-
-    await page.getByPlaceholder('Sketch a new idea…').fill('Client-facing timeline');
-    await page.getByRole('button', { name: 'Add idea' }).click();
-    await expect(page).toHaveURL(/\/ideas\/\d+\/$/);
-
-    await page.waitForFunction(() => window.nanoIdeaEditor);
-    const textarea = page.locator('textarea[name="body"]');
-    await expect(textarea).toHaveAttribute('rows', '24');
-    await expect(page.locator('.EasyMDEContainer')).toBeVisible();
-    await expect(page.locator('.editor-toolbar button.image')).toHaveCount(0);
-    await expect(page.locator('.editor-toolbar button.table')).toHaveCount(0);
-
-    await page.locator('select[name="status"]').selectOption('exploring');
-    await page.locator('input[name="tags"]').fill('client, roadmap');
-    await page.evaluate(() => {
-      window.nanoIdeaEditor.setMarkdown('# Goal\n\nLet customers see a simplified schedule.');
-    });
-    await page.getByRole('button', { name: 'Save idea' }).click();
-
-    await expect(page.locator('.idea-flash')).toContainText('Idea saved');
-    await expect(page.locator('select[name="status"]')).toHaveValue('exploring');
-    await page.waitForFunction(() => window.nanoIdeaEditor);
-    await expect(textarea).toHaveValue(/simplified schedule/);
-    await expect.poll(() => page.evaluate(() => window.nanoIdeaEditor.getMarkdown())).toContain('simplified schedule');
-
-    await page.getByRole('button', { name: 'Convert to project' }).click();
-    await expect(page.locator('.idea-conversion')).toContainText('Converted to project');
-
-    await page.getByRole('link', { name: 'Projects' }).click();
-    await expect(page.locator('.left-cell.proj', { hasText: 'Client-facing timeline' })).toBeVisible();
-  });
-
-  test('EasyMDE full-screen modes cover the app sidebar', async ({ appPage: page }) => {
-    await page.goto('/ideas/');
-    await page.getByPlaceholder('Sketch a new idea…').fill('Fullscreen editor idea');
-    await page.getByRole('button', { name: 'Add idea' }).click();
-    await expect(page).toHaveURL(/\/ideas\/\d+\/$/);
-    await page.waitForFunction(() => window.nanoIdeaEditor);
-
-    const coverageAtSidebar = () => page.evaluate(() => ({
-      toolbar: Boolean(document.elementFromPoint(16, 16)?.closest('.editor-toolbar.fullscreen')),
-      editor: Boolean(document.elementFromPoint(16, 80)?.closest('.CodeMirror-fullscreen')),
-    }));
-
-    await page.locator('.editor-toolbar button.fullscreen').click();
-    await expect(page.locator('.editor-toolbar.fullscreen')).toBeVisible();
-    expect(await coverageAtSidebar()).toEqual({ toolbar: true, editor: true });
-
-    await page.locator('.editor-toolbar button.fullscreen').click();
-    await expect(page.locator('.editor-toolbar.fullscreen')).toHaveCount(0);
-
-    await page.locator('.editor-toolbar button.side-by-side').click();
-    await expect(page.locator('.editor-preview-active-side')).toBeVisible();
-    expect(await coverageAtSidebar()).toEqual({ toolbar: true, editor: true });
-  });
-
-  test('idea cards do not show body previews', async ({ appPage: page }) => {
-    await page.goto('/ideas/');
-    await page.getByPlaceholder('Sketch a new idea…').fill('HTML preview idea');
-    await page.getByRole('button', { name: 'Add idea' }).click();
-    await expect(page).toHaveURL(/\/ideas\/\d+\/$/);
-    const ideaId = page.url().match(/\/ideas\/(\d+)\//)[1];
-
-    await page.evaluate(async (id) => {
-      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
-      await fetch(`/ideas/${id}/update/`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'X-CSRFToken': decodeURIComponent(token), 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          title: 'HTML preview idea',
-          body: '<p>Customer <strong>research</strong> notes</p>',
-          status: 'inbox',
-          tags: '',
-        }),
-      });
-    }, ideaId);
-
-    await page.goto('/ideas/');
-    const card = page.locator('.idea-card', { hasText: 'HTML preview idea' });
-    await expect(card).toBeVisible();
-    await expect(card).not.toContainText('Customer research notes');
-    await expect(card).not.toContainText('<p>');
-    await expect(card).not.toContainText('<strong>');
-  });
-
-  test('idea CRUD uses Django model permissions, with PMs as workspace admins', async ({ page, request }) => {
-    await reset(request);
-    await loginAs(page, 'member1');
-    await expect(page.getByRole('link', { name: 'Ideas' })).toHaveCount(0);
-    const deniedList = await page.goto('/ideas/');
-    expect(deniedList.status()).toBe(403);
-
-    await loginAs(page, 'ideaeditor');
-    await expect(page.getByRole('link', { name: 'Ideas' })).toBeVisible();
-    await page.getByRole('link', { name: 'Ideas' }).click();
-    await page.getByPlaceholder('Sketch a new idea…').fill('Permissioned idea');
-    await page.getByRole('button', { name: 'Add idea' }).click();
-    await expect(page).toHaveURL(/\/ideas\/\d+\/$/);
-    const ideaUrl = page.url();
-    const ideaId = ideaUrl.match(/\/ideas\/(\d+)\//)[1];
-
-    await page.waitForFunction(() => window.nanoIdeaEditor);
-    await expect(page.getByRole('button', { name: 'Save idea' })).toBeVisible();
-    await page.locator('.idea-title-input').fill('Permissioned idea updated');
-    await page.getByRole('button', { name: 'Save idea' }).click();
-    await expect(page.locator('.idea-flash')).toContainText('Idea saved');
-
-    const allowed = await page.evaluate(async (id) => {
-      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
-      const response = await fetch(`/ideas/${id}/update/`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'X-CSRFToken': decodeURIComponent(token), 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'title=Permission+updated+via+fetch&body=Allowed&status=exploring&tags=permitted',
-      });
-      return response.status;
-    }, ideaId);
-    expect(allowed).toBe(200);
-
-    await page.getByRole('button', { name: 'Sign out' }).click();
-    await login(page);
-    await page.goto(ideaUrl);
-    await expect(page.getByRole('button', { name: 'Save idea' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Delete idea' })).toBeVisible();
-    await page.locator('.idea-title-input').fill('PM updated permissioned idea');
-    await page.getByRole('button', { name: 'Save idea' }).click();
-    await expect(page.locator('.idea-flash')).toContainText('Idea saved');
-
-    await page.getByRole('button', { name: 'Sign out' }).click();
-    await loginAs(page, 'member1');
-    const deniedUpdate = await page.evaluate(async (id) => {
-      const token = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || '';
-      const response = await fetch(`/ideas/${id}/update/`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'X-CSRFToken': decodeURIComponent(token), 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'title=Denied&body=Nope&status=exploring&tags=',
-      });
-      return response.status;
-    }, ideaId);
-    expect(deniedUpdate).toBe(403);
-
-    await page.getByRole('button', { name: 'Sign out' }).click();
-    await loginAs(page, 'ideaeditor');
-    await page.goto(ideaUrl);
-    let sawCancelDialog = false;
-    page.once('dialog', async dialog => {
-      sawCancelDialog = true;
-      expect(dialog.message()).toContain('Delete idea');
-      await dialog.dismiss();
-    });
-    await page.getByRole('button', { name: 'Delete idea' }).click();
-    expect(sawCancelDialog).toBe(true);
-    await expect(page).toHaveURL(ideaUrl);
-    await expect(page.getByRole('button', { name: 'Delete idea' })).toBeVisible();
-
-    page.once('dialog', async dialog => {
-      expect(dialog.message()).toContain('Delete idea');
-      await dialog.accept();
-    });
-    await page.getByRole('button', { name: 'Delete idea' }).click();
-    await expect(page).toHaveURL('/ideas/');
-    await expect(page.locator('.idea-card', { hasText: 'PM updated permissioned idea' })).toHaveCount(0);
-  });
-});
-
-// =============================================================================
 // Topbar responsiveness
 // =============================================================================
 test.describe('topbar responsiveness', () => {
@@ -5903,7 +5724,7 @@ test.describe('resource view', () => {
 // =============================================================================
 test.describe('detail page alignment', () => {
   for (const kind of ['project', 'task']) {
-    test(`${kind} detail uses the same left alignment as Ideas`, async ({ appPage: page }) => {
+    test(`${kind} detail stays left aligned and fits the viewport`, async ({ appPage: page }) => {
       const row = kind === 'task'
         ? page.locator('.bar', { hasText: 'Migrate /users endpoints' })
         : page.locator('.left-cell.proj', { hasText: 'API Migration' });
@@ -5911,8 +5732,8 @@ test.describe('detail page alignment', () => {
       // A wide desktop exposes automatic centering beyond the content max-width.
       for (const width of [1920, 720, 390]) {
         await page.setViewportSize({ width, height: 900 });
-        await page.goto('/ideas/');
-        const reference = await page.locator('#ideas-page').evaluate(el => {
+        await page.goto('/projects/');
+        const reference = await page.locator('#project-library-page').evaluate(el => {
           const rect = el.getBoundingClientRect();
           return { x: rect.x, contentX: rect.x + parseFloat(getComputedStyle(el).paddingLeft) };
         });
@@ -5920,7 +5741,7 @@ test.describe('detail page alignment', () => {
         const detail = page.locator(`#${kind}-detail-page`);
         await expect(detail).toBeVisible();
         const bounds = await detail.boundingBox();
-        const section = await detail.locator('section').first().boundingBox();
+        const section = await detail.locator(kind === 'project' ? 'header' : 'section').first().boundingBox();
         expect(bounds.x).toBeCloseTo(reference.x, 0);
         expect(section.x).toBeCloseTo(reference.contentX, 0);
         expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
@@ -5937,7 +5758,8 @@ test.describe('detail editor checkbox layout', () => {
         : page.locator('.left-cell.proj', { hasText: 'API Migration' });
       const id = await row.getAttribute(`data-${kind}-id`);
       await page.goto(`/${kind}s/${id}/`);
-      await page.getByText(`Edit ${kind}`, { exact: true }).click();
+      if (kind === 'project') await page.getByRole('link', { name: 'Project', exact: true }).click();
+      else await page.getByText('Edit task', { exact: true }).click();
       const editor = page.locator(`#${kind}-detail-editor`);
       const group = editor.getByRole('group', { name: kind === 'task' ? 'Assignees' : 'Responsible people', exact: true });
       // Django's default widget repeats attrs.class on its outer div as well
@@ -5962,7 +5784,8 @@ test.describe('detail editor checkbox layout', () => {
       await expect(alex).toBeChecked({ checked: !initiallyChecked });
       await editor.getByRole('button', { name: `Save ${kind}`, exact: true }).click();
       await page.reload();
-      await page.getByText(`Edit ${kind}`, { exact: true }).click();
+      if (kind === 'project') await page.getByRole('link', { name: 'Project', exact: true }).click();
+      else await page.getByText('Edit task', { exact: true }).click();
       await expect(alex).toBeChecked({ checked: !initiallyChecked });
     });
   }
@@ -6022,7 +5845,7 @@ test.describe('task detail editing', () => {
     await editor.getByLabel('Milestone', { exact: true }).selectOption('');
     await editor.getByRole('button', { name: 'Save task', exact: true }).click();
     await expect(page.locator('#task-detail-page')).toContainText('No milestone');
-    await page.goto(`/projects/${projectId}/`);
+    await page.goto(`/projects/${projectId}/?tab=plan`);
     await expect(page.locator('[data-milestone-id]')).toHaveCount(2);
     await expect(page.getByRole('link', { name: 'Audit IAM policies', exact: true })).toBeVisible();
   });
@@ -6050,7 +5873,7 @@ test.describe('task detail editing', () => {
     await editor.getByRole('button', { name: 'Save task', exact: true }).click();
     await expect(page.locator('#task-detail-page > header')).toContainText('Infra hardening');
     await expect(page.locator('#task-detail-page [data-milestone-id]')).toHaveAttribute('data-milestone-id', linkedMilestone);
-    await page.goto(`/projects/${infraId}/`);
+    await page.goto(`/projects/${infraId}/?tab=plan`);
     await expect(page.locator(`[data-milestone-id="${linkedMilestone}"]`)).toContainText('v2 API beta');
   });
 
@@ -6144,33 +5967,862 @@ test.describe('task detail editing', () => {
 });
 
 
+test.describe('project detail tabs', () => {
+  test('Project is first while existing projects default to Workspace and edits stay on their own tab', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    const tabs = page.getByRole('navigation', { name: 'Project views', exact: true });
+    await expect(tabs.getByRole('link').first()).toHaveText('Project');
+    await expect(tabs.getByRole('link', { name: 'Project', exact: true }).locator('svg')).toBeVisible();
+    await expect(tabs.getByRole('link', { name: 'Workspace', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#project-detail-editor')).toHaveCount(0);
+    await tabs.getByRole('link', { name: 'Project', exact: true }).click();
+    await expect(page).toHaveURL(`/projects/${id}/?tab=project`);
+    const editor = page.locator('#project-detail-editor');
+    await expect(editor.getByLabel('Name', { exact: true })).toBeVisible();
+    await expect(page.locator('.project-journal, .project-plan, #gitlab-project')).toHaveCount(0);
+    await editor.getByLabel('Name', { exact: true }).fill('API project tab');
+    await editor.getByLabel('Description', { exact: true }).fill('Editable project properties.');
+    await editor.getByLabel('Description', { exact: true }).press('Control+Enter');
+    await expect(page).toHaveURL(`/projects/${id}/?tab=project`);
+    await expect(editor.getByLabel('Name', { exact: true })).toHaveValue('API project tab');
+    await page.reload();
+    await expect(tabs.getByRole('link', { name: 'Project', exact: true })).toHaveAttribute('aria-current', 'page');
+    await editor.getByLabel('Name', { exact: true }).fill('Do not save this');
+    await editor.getByRole('link', { name: 'Cancel', exact: true }).click();
+    await expect(tabs.getByRole('link', { name: 'Workspace', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('h1')).toHaveText('API project tab');
+    await tabs.getByRole('link', { name: 'Plan', exact: true }).click();
+    await expect(page.locator('.project-plan')).toBeVisible();
+    await expect(page.locator('#project-detail-editor, .project-journal, #gitlab-project')).toHaveCount(0);
+    await page.goto(`/projects/${id}/?tab=unknown`);
+    await expect(tabs.getByRole('link', { name: 'Workspace', exact: true })).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('GitLab is a separate tab only for the current workspace configuration, including cached disconnected issues', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const api = await fakeGitLab();
+    try {
+      await page.goto(`/projects/${id}/?tab=gitlab`);
+      const tabs = page.getByRole('navigation', { name: 'Project views', exact: true });
+      await expect(tabs.getByRole('link', { name: 'GitLab', exact: true })).toHaveCount(0);
+      await expect(page.locator('#gitlab-project')).toHaveCount(0);
+      await expect(tabs.getByRole('link', { name: 'Workspace', exact: true })).toHaveAttribute('aria-current', 'page');
+      api.issues = [api.issue(1, 'Portal: A separate execution view')];
+      await connectGitLab(page, api);
+      await bindGitLab(page, id, 'Portal');
+      await syncGitLab();
+      await page.goto(`/projects/${id}/?tab=plan`);
+      await expect(page.locator('#gitlab-project')).toHaveCount(0);
+      await expect(tabs.getByRole('link')).toHaveText(['Project', 'Workspace', 'Plan 3', 'GitLab']);
+      await tabs.getByRole('link', { name: 'GitLab', exact: true }).click();
+      await expect(page).toHaveURL(`/projects/${id}/?tab=gitlab`);
+      await expect(tabs.getByRole('link', { name: 'GitLab', exact: true }).locator('svg.gitlab-icon')).toBeVisible();
+      await expect(gitlabRows(page)).toHaveCount(1);
+      await expect(page.locator('.project-plan, .project-journal, #project-detail-editor')).toHaveCount(0);
+      await postForm(page, '/workspaces/gitlab/', { action: 'disconnect' });
+      await page.reload();
+      await expect(tabs.getByRole('link', { name: 'GitLab', exact: true })).toBeVisible();
+      await expect(page.locator('#gitlab-project')).toContainText('GitLab is disconnected. Cached issues are retained.');
+      await expect(gitlabRows(page)).toHaveCount(1);
+      await postForm(page, '/workspaces/', { name: 'No integration here' });
+      await page.goto('/projects/');
+      await page.getByLabel('Project name', { exact: true }).fill('Independent project');
+      await page.getByRole('button', { name: 'Create project', exact: true }).click();
+      await expect(tabs.getByRole('link', { name: 'GitLab', exact: true })).toHaveCount(0);
+    } finally { await api.close(); }
+  });
+
+  test('Project tab is read-only for members without project management permission', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await signInAs(page, 'member1');
+    await page.goto(`/projects/${id}/?tab=project`);
+    await expect(page.getByRole('navigation', { name: 'Project views' }).getByRole('link').first()).toHaveText('Project');
+    await expect(page.getByRole('region', { name: 'Project overview' })).toContainText('Move public API traffic');
+    await expect(page.locator('#project-detail-editor')).toHaveCount(0);
+    expect(await postForm(page, `/projects/${id}/?tab=project`, { name: 'Forbidden' })).toBe(403);
+  });
+
+  test('translated project tabs match the approved Plan layout and wrap on mobile', async ({ appPage: page }, testInfo) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await mcp.db(`
+p = Project.objects.get(pk=${id})
+GitLabConnection.objects.create(workspace=p.workspace, instance_url='https://gitlab.example.test')
+print(json.dumps(True))
+`);
+    await page.setViewportSize({ width: 2493, height: 1287 });
+    await page.goto(`/projects/${id}/?tab=plan`);
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    const tabs = page.getByRole('navigation', { name: 'Projektansichten', exact: true });
+    await expect(tabs.getByRole('link')).toHaveText(['Projekt', 'Arbeitsbereich', 'Plan 3', 'GitLab']);
+    await expect(tabs.getByRole('link', { name: 'Plan', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#gitlab-project, #project-detail-editor')).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath('approved-project-tabs-2493.png'), animations: 'disabled' });
+    await page.setViewportSize({ width: 390, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await tabs.getByRole('link', { name: 'Projekt', exact: true }).click();
+    await expect(page.getByLabel('Name', { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+});
+
+test.describe('text box submission shortcuts', () => {
+  test('Ctrl+Enter posts journal entries and Cmd+Enter submits only the focused reply form', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    const composer = page.getByLabel('Journal entry', { exact: true });
+    await composer.fill('A first thought.');
+    await composer.press('Enter');
+    await composer.press('Shift+Enter');
+    await expect(composer).toHaveValue('A first thought.\n\n');
+    await composer.press('Control+Enter');
+    const note = page.locator('[data-journal-entry]').filter({ hasText: 'A first thought.' });
+    await expect(note).toHaveCount(1);
+    await composer.fill('Leave this other draft alone.');
+    await note.locator('.journal-discussion > summary').click();
+    await note.getByLabel('Reply', { exact: true }).fill('A reply, not a new entry.');
+    await note.getByLabel('Reply', { exact: true }).press('Meta+Enter');
+    await expect(note.locator('.journal-reply')).toHaveCount(1);
+    await expect(note.locator('.journal-reply')).toContainText('A reply, not a new entry.');
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
+    await composer.fill('A second thought.');
+    await composer.press('Control+Enter');
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(2);
+  });
+
+  test('text box shortcuts respect validation, disabled actions, readonly fields, repeats and composition', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    const composer = page.getByLabel('Journal entry', { exact: true });
+    const submit = page.getByRole('button', { name: 'Post entry', exact: true });
+    const posts = [];
+    page.on('request', request => { if (request.method() === 'POST') posts.push(request.url()); });
+    await composer.press('Control+Enter');
+    expect(await composer.evaluate(el => el.validity.valid)).toBe(false);
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(0);
+    await composer.fill('Submit only when ready.');
+    await submit.evaluate(el => { el.disabled = true; });
+    await composer.press('Control+Enter');
+    await submit.evaluate(el => { el.disabled = false; });
+    await composer.evaluate(el => { el.readOnly = true; });
+    await composer.press('Control+Enter');
+    await composer.evaluate(el => { el.readOnly = false; });
+    await composer.dispatchEvent('keydown', { key: 'Enter', ctrlKey: true, repeat: true });
+    await composer.dispatchEvent('keydown', { key: 'Enter', ctrlKey: true, isComposing: true });
+    expect(posts).toHaveLength(0);
+    await composer.press('Control+Enter');
+    await expect(page.locator('[data-journal-entry]')).toContainText('Submit only when ready.');
+    expect(posts).toHaveLength(1);
+  });
+
+  test('Ctrl+Enter saves text areas and single-line text boxes in Datastar drawers', async ({ appPage: page }) => {
+    const bar = page.locator('.bar', { hasText: 'Migrate /users endpoints' });
+    const id = await bar.getAttribute('data-task-id');
+    await bar.click();
+    const drawer = page.locator('#task-popover');
+    await expect(drawer).toBeVisible();
+    await drawer.getByLabel('Description', { exact: true }).fill('Saved with the keyboard.');
+    await drawer.getByLabel('Description', { exact: true }).press('Control+Enter');
+    await expect(drawer).toHaveCount(0);
+    await page.locator(`#bar-${id}`).click();
+    await expect(drawer.getByLabel('Description', { exact: true })).toHaveValue('Saved with the keyboard.');
+    await drawer.getByLabel('Title', { exact: true }).fill('Keyboard-saved task');
+    await drawer.getByLabel('Title', { exact: true }).press('Control+Enter');
+    await expect(drawer).toHaveCount(0);
+    await expect(page.locator(`#bar-${id}`)).toContainText('Keyboard-saved task');
+  });
+
+  test('Ctrl+Enter uses the primary submitter and never falls through to a destructive secondary action', async ({ appPage: page }) => {
+    await enableRoadmap(page);
+    const description = page.getByLabel('Public roadmap description', { exact: true });
+    const form = description.locator('xpath=ancestor::form');
+    const save = form.getByRole('button', { name: 'Save', exact: true });
+    const posts = [];
+    page.on('request', request => { if (request.method() === 'POST') posts.push(request); });
+    await description.fill('A keyboard-friendly roadmap.');
+    await save.evaluate(el => { el.disabled = true; });
+    await description.press('Control+Enter');
+    expect(posts).toHaveLength(0);
+    await expect(page.locator('#public-roadmap-link')).toBeVisible();
+    await save.evaluate(el => { el.disabled = false; });
+    await description.press('Control+Enter');
+    await expect(page.locator('#public-roadmap-link')).toBeVisible();
+    await expect(description).toHaveValue('A keyboard-friendly roadmap.');
+    await expect.poll(() => posts.length).toBe(1);
+    expect(posts[0].postData()).toContain('action=save');
+    await page.reload();
+    await expect(page.locator('#public-roadmap-link')).toBeVisible();
+    await expect(description).toHaveValue('A keyboard-friendly roadmap.');
+  });
+});
+
+test.describe('project phase hold', () => {
+  for (const initiallyEmpty of [true, false]) {
+    test(`phase changes avoid missing patch targets with an ${initiallyEmpty ? 'empty' : 'existing'} journal and on the Plan tab`, async ({ appPage: page }) => {
+      const errors = [];
+      page.on('console', message => {
+        // Datastar logs this Error through console.warn rather than throwing.
+        if (message.type() === 'error' || message.text().includes('PatchElementsNoTargetsFound')) errors.push(message.text());
+      });
+      page.on('pageerror', error => errors.push(error.message));
+      const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+      await page.goto(`/projects/${id}/`);
+      if (!initiallyEmpty) {
+        await page.getByLabel('Journal entry', { exact: true }).fill('Keep the existing journal.');
+        await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+        await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
+      }
+      await expect(page.locator('.project-lifecycle-control')).toHaveAttribute('data-phase-ready', 'true');
+      for (const [index, phase] of ['discovery', 'shaping'].entries()) {
+        const button = page.locator(`.phase-step[data-phase="${phase}"]`);
+        await button.focus();
+        await page.keyboard.down('Enter');
+        await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', phase);
+        await page.keyboard.up('Enter');
+        await expect(button).toHaveAttribute('data-hold-state', 'success');
+        await expect(page.locator('[data-journal-entry]')).toHaveCount(index + (initiallyEmpty ? 1 : 2));
+        await expect(page.locator('.project-journal-empty')).not.toBeVisible();
+        expect(errors).toEqual([]);
+      }
+      await page.getByRole('link', { name: 'Plan', exact: true }).click();
+      await expect(page.locator('.journal-entries')).toHaveCount(0);
+      await expect(page.locator('.project-lifecycle-control')).toHaveAttribute('data-phase-ready', 'true');
+      const review = page.locator('.phase-step[data-phase="review"]');
+      await review.focus();
+      await page.keyboard.down('Enter');
+      await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'review');
+      await page.keyboard.up('Enter');
+      await expect(review).toHaveAttribute('data-hold-state', 'success');
+      expect(errors).toEqual([]);
+      await page.getByRole('link', { name: 'Workspace', exact: true }).click();
+      await expect(page.locator('[data-journal-entry]')).toHaveCount(initiallyEmpty ? 3 : 4);
+      await expect(page.locator('.project-journal-empty')).not.toBeVisible();
+    });
+  }
+
+  test('phase buttons cancel short presses and celebrate only after the server commits', async ({ appPage: page }, testInfo) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    const button = page.locator('.project-lifecycle button[data-phase="discovery"]');
+    await expect(button).toBeVisible();
+    await expect(page.locator('.project-lifecycle-control')).toHaveAttribute('data-hold-duration', '350');
+    const requests = [];
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    await page.route(`**/projects/${id}/phase/`, async route => {
+      requests.push(route.request());
+      await gate;
+      await route.continue();
+    });
+    await page.getByLabel('Journal entry', { exact: true }).fill('Keep this unposted thought.');
+    await button.click();
+    await expect(button).not.toHaveAttribute('data-hold-state', 'holding');
+    const box = await button.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await expect(button).toHaveAttribute('data-hold-state', 'holding');
+    await expect.poll(() => button.evaluate(el => parseFloat(el.style.getPropertyValue('--hold-progress')))).toBeGreaterThan(0.15);
+    await page.mouse.up();
+    await expect(button).not.toHaveAttribute('data-hold-state', 'holding');
+    expect(requests).toHaveLength(0);
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'delivery');
+    try {
+      await page.mouse.down();
+      await expect.poll(() => requests.length).toBe(1);
+      await page.mouse.up();
+      await expect(button).toHaveAttribute('data-hold-state', 'saving');
+      await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'delivery');
+      await page.getByLabel('Journal entry', { exact: true }).fill('Another thought for later.');
+      release();
+      await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'discovery');
+      await expect(button).toHaveAttribute('data-hold-state', 'success');
+      await expect(button).toHaveAttribute('aria-current', 'step');
+      await expect(page.getByRole('status')).toContainText('Discovery');
+      await page.screenshot({ path: testInfo.outputPath('phase-saved.png'), animations: 'disabled' });
+      await expect(page.getByLabel('Project phase', { exact: true })).toHaveCount(0);
+      await expect(page.getByLabel('Reason for phase change', { exact: true })).toHaveCount(0);
+      await expect(page.getByLabel('Journal entry', { exact: true })).toHaveValue('Another thought for later.');
+      await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
+      await expect(page.locator('[data-journal-entry]')).toContainText('Delivery → Discovery');
+      await expect(page.locator('[data-journal-entry] > .journal-body')).toHaveCount(0);
+      expect(requests).toHaveLength(1);
+      await page.reload();
+      await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'discovery');
+      await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
+    } finally { release(); }
+  });
+
+  test('phase hold supports keyboard cancellation and reduced-motion confirmation on the Plan tab', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(`/projects/${id}/?tab=plan`);
+    const button = page.locator('.project-lifecycle button[data-phase="review"]');
+    await expect(button).toBeVisible();
+    await button.focus();
+    await page.keyboard.down('Space');
+    await expect(button).toHaveAttribute('data-hold-state', 'holding');
+    await page.keyboard.press('Escape');
+    await page.keyboard.up('Space');
+    await expect(button).not.toHaveAttribute('data-hold-state', 'holding');
+    await page.keyboard.down('Enter');
+    await expect(button).toHaveAttribute('data-hold-state', 'holding');
+    await page.getByRole('link', { name: 'Workspace', exact: true }).focus();
+    await page.keyboard.up('Enter');
+    await expect(button).not.toHaveAttribute('data-hold-state', 'holding');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'delivery');
+    await button.focus();
+    await page.keyboard.down('Space');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'review');
+    await page.keyboard.up('Space');
+    await expect(button).toBeFocused();
+    await expect(button).toHaveAttribute('data-hold-state', 'success');
+    await expect(button).toHaveCSS('animation-name', 'none');
+    await expect(page).toHaveURL(`/projects/${id}/?tab=plan`);
+    await page.getByRole('link', { name: 'Workspace', exact: true }).click();
+    await expect(page.locator('[data-journal-entry]')).toContainText('Delivery → Review');
+  });
+
+  test('phase hold cancels touch scrolling and confirms a deliberate touch hold', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto(`/projects/${id}/`);
+    const button = page.locator('.project-lifecycle button[data-phase="discovery"]');
+    await expect(button).toBeVisible();
+    await button.scrollIntoViewIfNeeded();
+    const box = await button.boundingBox();
+    const touch = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    const client = await page.context().newCDPSession(page);
+    await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [touch] });
+    await expect(button).toHaveAttribute('data-hold-state', 'holding');
+    await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: touch.x + 35, y: touch.y }] });
+    await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect(button).not.toHaveAttribute('data-hold-state', 'holding');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'delivery');
+    await button.scrollIntoViewIfNeeded();
+    const next = await button.boundingBox();
+    await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: next.x + next.width / 2, y: next.y + next.height / 2 }] });
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'discovery');
+    await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await client.detach();
+  });
+
+  test('phase hold preserves filtered journals and rejects conflicting transitions without celebration', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/?kind=decision`);
+    const review = page.locator('.phase-step[data-phase="review"]');
+    await review.focus();
+    await page.keyboard.down('Enter');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'review');
+    await page.keyboard.up('Enter');
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(0);
+    await expect(page).toHaveURL(`/projects/${id}/?kind=decision`);
+    await page.goto(`/projects/${id}/`);
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
+    await mcp.db(`
+p = Project.objects.get(pk=${id})
+Project.objects.filter(pk=p.pk).update(phase='completed', completed_at=timezone.now())
+c = GitLabConnection.objects.create(workspace=p.workspace, instance_url='https://gitlab.example.test')
+other = Project.objects.filter(workspace=p.workspace).exclude(pk=p.pk).first()
+GitLabProjectBinding.objects.create(project=p, connection=c, prefix='Portal', normalized_prefix='portal', active_prefix=None)
+GitLabProjectBinding.objects.create(project=other, connection=c, prefix='Portal', normalized_prefix='portal', active_prefix='portal')
+print(json.dumps(True))
+`);
+    await page.reload();
+    const discovery = page.locator('.phase-step[data-phase="discovery"]');
+    await discovery.focus();
+    await page.keyboard.down('Enter');
+    await expect(page.getByRole('status')).toContainText('Another active project');
+    await page.keyboard.up('Enter');
+    await expect(discovery).not.toHaveAttribute('data-hold-state', 'success');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'completed');
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
+    await page.reload();
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'completed');
+  });
+
+  test('phase hold explains the interaction and confirms saved changes in German', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await expect(page.locator('.phase-step[data-phase="review"]')).toHaveAccessibleDescription(/Halte eine Phase gedrückt.*Leertaste/);
+    const button = page.locator('.phase-step[data-phase="review"]');
+    await button.click();
+    await expect(page.getByRole('status')).toContainText('Halte etwas länger gedrückt');
+    await button.focus();
+    await page.keyboard.down('Enter');
+    await expect(page.getByRole('status')).toContainText('Noch einen Moment');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'review');
+    await page.keyboard.up('Enter');
+    await expect(page.getByRole('status')).toContainText('Neue Phase: Rückblick. Alles gespeichert.');
+    await expect(page.locator('[data-journal-entry]')).toContainText('Umsetzung → Rückblick');
+  });
+
+  test('phase hold handles failed requests without celebrating or changing committed state', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    const button = page.locator('.project-lifecycle button[data-phase="discovery"]');
+    await expect(button).toBeVisible();
+    await page.route(`**/projects/${id}/phase/`, route => route.fulfill({ status: 403, body: 'Forbidden' }));
+    await button.focus();
+    await page.keyboard.down('Enter');
+    await expect(page.getByRole('status')).toContainText('Could not');
+    await page.keyboard.up('Enter');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'delivery');
+    await expect(button).not.toHaveAttribute('data-hold-state', 'success');
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(0);
+    await page.unroute(`**/projects/${id}/phase/`);
+    await page.keyboard.down('Enter');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'discovery');
+    await page.keyboard.up('Enter');
+    await signInAs(page, 'member1');
+    await page.goto(`/projects/${id}/`);
+    await expect(page.locator('.project-lifecycle button')).toHaveCount(7);
+    for (const item of await page.locator('.project-lifecycle button').all()) await expect(item).toBeDisabled();
+  });
+});
+
+test.describe('project workspace', () => {
+  test('project phase migration preserves execution projects and leaves legacy ideas untouched', async ({ workerServer }) => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'nano-project-phases-'));
+    try {
+      const { stdout } = await promisify(execFile)('uv', ['run', 'python', 'src/manage.py', 'shell', '-c', `
+import json
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.utils import timezone
+executor = MigrationExecutor(connection)
+executor.migrate([('data', '0035_project_public_roadmap_visible')])
+apps = executor.loader.project_state([('data', '0035_project_public_roadmap_visible')]).apps
+workspace = apps.get_model('data', 'Workspace').objects.create(name='Historical workspace')
+Project = apps.get_model('data', 'Project')
+active = Project.objects.create(workspace=workspace, name='Existing delivery')
+finished = Project.objects.create(workspace=workspace, name='Existing completion', completed_at=timezone.now())
+apps.get_model('data', 'Idea').objects.create(workspace=workspace, title='Leave this alone', body='Historical notes', status='parked')
+executor = MigrationExecutor(connection)
+executor.migrate([('data', '0036_project_workspace')])
+from data.models import Project, Idea
+print(json.dumps({'phases': list(Project.objects.order_by('id').values_list('phase', flat=True)), 'ideas': list(Idea.objects.values('title', 'body', 'status')), 'new_phase': Project.objects.create(workspace_id=workspace.pk, name='New possibility').phase}))
+`], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv({ DJANGO_DB_PATH: path.join(dir, 'migration.e2e.sqlite3') }) });
+      const result = JSON.parse(stdout.trim().split('\n').at(-1));
+      expect(result.phases).toEqual(['delivery', 'completed']);
+      expect(result.new_phase).toBe('idea');
+      expect(result.ideas).toEqual([{ title: 'Leave this alone', body: 'Historical notes', status: 'parked' }]);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
+  test('project workspace captures an idea through planning without conversion', async ({ appPage: page }) => {
+    expect((await page.goto('/projects/')).status()).toBe(200);
+    await page.getByLabel('Project name', { exact: true }).fill('A calmer onboarding');
+    await page.getByRole('button', { name: 'Create project', exact: true }).click();
+    await expect(page).toHaveURL(/\/projects\/\d+\/$/);
+    const projectUrl = page.url();
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'idea');
+    await expect(page.getByRole('link', { name: 'Ideas', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'A calmer onboarding', exact: true })).toBeVisible();
+    await page.getByRole('navigation', { name: 'Project views', exact: true }).getByRole('link', { name: 'Project', exact: true }).click();
+    const editor = page.locator('#project-detail-editor');
+    await editor.getByLabel('Description', { exact: true }).fill('New users reach their first success unaided.\nReview interview notes.');
+    await editor.getByRole('button', { name: 'Save project', exact: true }).click();
+    await page.getByRole('link', { name: 'Workspace', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Project overview' })).toContainText('New users reach their first success unaided.');
+    await page.getByLabel('Journal entry', { exact: true }).fill('Support mentioned that setup feels overwhelming.');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    const note = page.locator('[data-journal-entry]').filter({ hasText: 'Support mentioned' });
+    await expect(note).toContainText('demo');
+    await expect(note).toContainText('Idea');
+    await page.getByLabel('Entry type', { exact: true }).selectOption('question');
+    await page.getByLabel('Journal entry', { exact: true }).fill('Which step causes the most confusion?');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    const question = page.locator('[data-journal-entry]').filter({ hasText: 'Which step' });
+    await question.locator('.journal-discussion > summary').click();
+    await question.getByLabel('Reply', { exact: true }).fill('Ask Julia for the latest support tickets.');
+    await question.getByRole('button', { name: 'Post reply', exact: true }).click();
+    await expect(question).toContainText('Ask Julia');
+    await question.getByRole('button', { name: 'Mark answered', exact: true }).click();
+    await expect(question).toContainText('Answered');
+    await page.getByLabel('Entry type', { exact: true }).selectOption('update');
+    await page.getByLabel('Journal entry', { exact: true }).fill('The interviews confirmed the problem.');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    await expect(page.locator('[data-journal-entry]').filter({ hasText: 'The interviews confirmed' })).toBeVisible();
+    const shaping = page.locator('.phase-step[data-phase="shaping"]');
+    await shaping.scrollIntoViewIfNeeded();
+    await shaping.focus();
+    await page.keyboard.down('Enter');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'shaping');
+    await page.keyboard.up('Enter');
+    await expect(page.locator('[data-journal-entry]').filter({ hasText: 'Idea → Shaping' })).toBeVisible();
+    await page.getByLabel('Entry type', { exact: true }).selectOption('decision');
+    await page.getByLabel('Journal entry', { exact: true }).fill('Keep login unchanged because it already works well.');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    await page.getByRole('link', { name: 'Decisions', exact: true }).click();
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
+    await expect(page.locator('[data-journal-entry]')).toContainText('Keep login unchanged');
+    await page.reload();
+    await expect(page.locator('[data-journal-entry]')).toContainText('Keep login unchanged');
+    await page.getByRole('link', { name: 'Plan', exact: true }).click();
+    await expect(page.getByRole('heading', { name: /^Tasks/ })).toBeVisible();
+    await expect(page.locator('#project-detail-page')).toContainText('No tasks yet.');
+    await page.goto(projectUrl);
+    await expect(note).toBeVisible();
+    await expect(question).toContainText('Ask Julia');
+    await expect(page.getByRole('region', { name: 'Project overview' })).toContainText('Review interview notes');
+    await page.goto('/projects/?phase=shaping');
+    await expect(page.getByRole('link', { name: 'A calmer onboarding', exact: true })).toBeVisible();
+    await page.goto('/projects/?phase=idea');
+    await expect(page.getByRole('link', { name: 'A calmer onboarding', exact: true })).toHaveCount(0);
+  });
+
+  test('project workspace synchronizes completion and keeps journal phases immutable', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    await expect(page.locator('.project-phase-control')).toHaveCount(0);
+    await page.getByLabel('Journal entry', { exact: true }).fill('Before completion.');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    await expect(page.locator('[data-journal-entry]')).toContainText('Before completion.');
+    const completed = page.locator('.phase-step[data-phase="completed"]');
+    await completed.scrollIntoViewIfNeeded();
+    await completed.focus();
+    await page.keyboard.down('Enter');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'completed');
+    await page.keyboard.up('Enter');
+    await expect(completed).toHaveAttribute('data-hold-state', 'success');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'completed');
+    await page.goto('/');
+    await expect(page.locator(`#proj-${id}`)).toHaveCount(0);
+    await page.goto(`/projects/${id}/`);
+    const discovery = page.locator('.phase-step[data-phase="discovery"]');
+    await discovery.scrollIntoViewIfNeeded();
+    await discovery.focus();
+    await page.keyboard.down('Enter');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'discovery');
+    await page.keyboard.up('Enter');
+    await expect(page.locator('[data-journal-entry]').filter({ hasText: 'Before completion.' })).toContainText('Delivery');
+    await page.goto('/');
+    await expect(page.locator(`#proj-${id}`)).toBeVisible();
+  });
+
+  test('project workspace allows member discussion but protects planning and tenant boundaries', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    await page.getByLabel('Entry type', { exact: true }).selectOption('question');
+    await page.getByLabel('Journal entry', { exact: true }).fill('Private planning question');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    const entryId = await page.locator('[data-journal-entry]').getAttribute('data-journal-entry');
+    await signInAs(page, 'member1');
+    await page.goto(`/projects/${id}/`);
+    await expect(page.getByText('Edit project', { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('Project phase', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Mark answered', exact: true })).toHaveCount(0);
+    await page.getByLabel('Journal entry', { exact: true }).fill('<script>window.journalXss = true</script>');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    await expect(page.locator('[data-journal-entry]').filter({ hasText: '<script>' })).toBeVisible();
+    expect(await page.evaluate(() => window.journalXss)).toBeUndefined();
+    expect(await postForm(page, `/projects/${id}/phase/`, { phase: 'completed' })).toBe(403);
+    expect(await postForm(page, `/projects/${id}/journal/${entryId}/resolve/`, {})).toBe(403);
+    await signInAs(page, 'demo');
+    await postForm(page, '/workspaces/', { name: 'Separate workspace' });
+    expect((await page.goto(`/projects/${id}/`)).status()).toBe(404);
+    await page.goto('/');
+    expect(await postForm(page, `/projects/${id}/journal/`, { body: 'Cross tenant', kind: 'note' })).toBe(404);
+    expect((await page.goto('/ideas/')).status()).toBe(404);
+  });
+  test('project workspace validates contributions and never publishes private planning', async ({ appPage: page, browser }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    expect(await postForm(page, `/projects/${id}/journal/`, { kind: 'note', body: '   ' })).toBe(400);
+    expect(await postForm(page, `/projects/${id}/journal/`, { kind: 'phase', body: 'Fake phase event' })).toBe(400);
+    expect(await postForm(page, `/projects/${id}/phase/`, { phase: 'invalid' })).toBe(400);
+    await page.reload();
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(0);
+    await mcp.db(`
+Project.objects.filter(pk=${id}).update(outcome='Confidential success criterion', constraints='Confidential budget concern')
+print(json.dumps(True))
+`);
+    await page.getByLabel('Journal entry', { exact: true }).fill('Confidential discussion');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    const entry = await page.locator('[data-journal-entry]').getAttribute('data-journal-entry');
+    expect(await postForm(page, `/projects/${id}/journal/${entry}/reply/`, { body: ' ' })).toBe(400);
+    expect(await postForm(page, `/projects/${id}/journal/999999/reply/`, { body: 'Orphan reply' })).toBe(404);
+    const roadmap = await enableRoadmap(page);
+    const context = await browser.newContext();
+    try {
+      const visitor = await context.newPage();
+      await visitor.goto(new URL(roadmap, page.url()).href);
+      await expect(visitor.locator('body')).not.toContainText('Confidential');
+      await expect(visitor.getByRole('heading', { name: 'API Migration', exact: true })).toBeVisible();
+    } finally { await context.close(); }
+  });
+
+  test('project detail matches the approved simplified layout at the recorded viewport', async ({ appPage: page }, testInfo) => {
+    await page.setViewportSize({ width: 2493, height: 1287 });
+    await page.goto('/projects/');
+    await page.getByLabel('Project name', { exact: true }).fill('New project');
+    await page.getByRole('button', { name: 'Create project', exact: true }).click();
+    await page.getByRole('link', { name: 'Project', exact: true }).click();
+    await page.getByLabel('Description', { exact: true }).fill('A project description long enough to wrap naturally within the narrow brief card.');
+    await page.getByRole('button', { name: 'Save project', exact: true }).click();
+    await page.getByRole('link', { name: 'Workspace', exact: true }).click();
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    const detail = page.locator('#project-detail-page');
+    await expect(detail.locator('header > span, header .project-eyebrow, #project-phase-hint')).toHaveCount(0);
+    await expect(detail.locator('.project-brief > p, .project-phase-control > p, .project-composer > p, .project-journal-heading > span')).toHaveCount(0);
+    await expect(detail.locator('.phase-step[data-phase="discovery"]')).toHaveAccessibleDescription(/Halte eine Phase gedrückt.*Leertaste/);
+    await expect(detail.locator('.phase-step')).toHaveCount(7);
+    await expect(detail.locator('#project-phase-feedback')).toHaveAttribute('aria-live', 'polite');
+    const brief = detail.locator('.project-brief');
+    await expect(brief.locator('h2')).toHaveCSS('font-size', '18px');
+    await expect(brief.locator('h2')).toHaveCSS('line-height', '26px');
+    for (const label of await brief.locator('h3').all()) {
+      await expect(label).toHaveCSS('font-size', '12px');
+      await expect(label).toHaveCSS('line-height', '18px');
+    }
+    for (const body of await brief.locator('.journal-body, .brief-placeholder').all()) {
+      await expect(body).toHaveCSS('font-size', '14px');
+      await expect(body).toHaveCSS('line-height', '22px');
+    }
+    await expect(detail.locator('.project-composer h2')).toHaveCSS('font-size', '14px');
+    await expect(detail.locator('.project-phase-control, #phase-control-title')).toHaveCount(0);
+    expect((await brief.boundingBox()).width).toBe(320);
+    const title = await detail.locator('h1').boundingBox();
+    const composer = await detail.locator('.project-composer').boundingBox();
+    expect(title.x).toBeCloseTo(composer.x, 0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath('approved-project-detail-2493.png'), animations: 'disabled' });
+  });
+
+  test('compact journal keeps entries readable and opens only the requested reply thread', async ({ appPage: page }, testInfo) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    const composer = page.getByLabel('Journal entry', { exact: true });
+    await composer.fill('Keep the setup flow familiar.');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    await page.getByLabel('Entry type', { exact: true }).selectOption('question');
+    await composer.fill('Can we reuse the existing login?');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    const question = page.locator('[data-journal-entry]').filter({ hasText: 'Can we reuse' });
+    const note = page.locator('[data-journal-entry]').filter({ hasText: 'Keep the setup' });
+    await expect(question.getByLabel('Reply', { exact: true })).not.toBeVisible();
+    await expect(note.getByLabel('Reply', { exact: true })).not.toBeVisible();
+    expect((await page.locator('.project-composer').boundingBox()).height).toBeLessThan(210);
+    expect((await note.boundingBox()).height).toBeLessThan(150);
+    const summary = question.locator('.journal-discussion > summary');
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(question.getByLabel('Reply', { exact: true })).toBeVisible();
+    await question.getByLabel('Reply', { exact: true }).fill('A reply draft survives a phase change.');
+    const shaping = page.locator('.phase-step[data-phase="shaping"]');
+    await shaping.scrollIntoViewIfNeeded();
+    await shaping.focus();
+    await page.keyboard.down('Enter');
+    await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'shaping');
+    await page.keyboard.up('Enter');
+    await expect(question.getByLabel('Reply', { exact: true })).toHaveValue('A reply draft survives a phase change.');
+    await expect(note.getByLabel('Reply', { exact: true })).not.toBeVisible();
+    await question.getByRole('button', { name: 'Post reply', exact: true }).click();
+    await expect(question.locator('.journal-reply')).toBeVisible();
+    await expect(summary).toContainText('1 reply');
+    await expect(note.getByLabel('Reply', { exact: true })).not.toBeVisible();
+    await page.reload();
+    await expect(question.locator('.journal-reply')).toBeVisible();
+    await question.getByLabel('Reply', { exact: true }).fill('   ');
+    await question.getByRole('button', { name: 'Post reply', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('A reply must contain');
+    await expect(question.getByLabel('Reply', { exact: true })).toBeVisible();
+    await page.goto(`/projects/${id}/`);
+    await expect(summary).toContainText('1 reply');
+    await expect(question.locator('.journal-reply')).not.toBeVisible();
+    await expect(note.locator('.journal-body')).toHaveText('Keep the setup flow familiar.');
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme);
+      for (const width of [1440, 390, 320]) {
+        await page.setViewportSize({ width, height: 1000 });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        expect((await page.locator('.project-composer').boundingBox()).height).toBeLessThan(230);
+        expect((await note.boundingBox()).height).toBeLessThan(170);
+        await summary.click();
+        await expect(question.getByLabel('Reply', { exact: true })).toBeVisible();
+        await summary.click();
+        await expect(question.getByLabel('Reply', { exact: true })).not.toBeVisible();
+        await page.screenshot({ path: testInfo.outputPath(`compact-journal-${theme}-${width}.png`), fullPage: true, animations: 'disabled' });
+      }
+    }
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(summary).toContainText('1 Antwort');
+  });
+
+  test('journal reply disclosures preserve filters and pagination after validation', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const entryId = await mcp.db(`
+p = Project.objects.get(pk=${id})
+u = get_user_model().objects.get(username='demo')
+entries = [ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', kind='question', body=f'Question {i}', phase=p.phase) for i in range(31)]
+ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', kind='note', body='Not a question', phase=p.phase)
+print(json.dumps(entries[0].id))
+`);
+    await page.goto(`/projects/${id}/?kind=question&page=2`);
+    const entries = page.locator('[data-journal-entry]');
+    const question = page.locator(`#entry-${entryId}`);
+    await expect(entries).toHaveCount(1);
+    await question.locator('.journal-discussion > summary').click();
+    await question.getByLabel('Reply', { exact: true }).fill('   ');
+    await question.getByRole('button', { name: 'Post reply', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('A reply must contain');
+    await expect(entries).toHaveCount(1);
+    await expect(question.getByLabel('Reply', { exact: true })).toBeVisible();
+    await expect(question.getByLabel('Reply', { exact: true })).toHaveValue('   ');
+    await question.getByLabel('Reply', { exact: true }).fill('Keep this discussion on its filtered page.');
+    await question.getByRole('button', { name: 'Post reply', exact: true }).click();
+    await expect(question.locator('.journal-reply')).toBeVisible();
+    await expect(entries).toHaveCount(1);
+    const params = new URL(page.url()).searchParams;
+    expect(params.get('kind')).toBe('question');
+    expect(params.get('page')).toBe('2');
+    expect(params.get('thread')).toBe(String(entryId));
+    await expect(page.getByRole('link', { name: 'Questions', exact: true })).toHaveAttribute('aria-current', 'page');
+    await question.getByLabel('Reply', { exact: true }).fill('A second reply in the same thread.');
+    await question.getByRole('button', { name: 'Post reply', exact: true }).click();
+    await expect(question.locator('.journal-reply')).toHaveCount(2);
+    await expect(question.locator('.journal-discussion > summary')).toContainText('2 replies');
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(question.locator('.journal-discussion > summary')).toContainText('2 Antworten');
+    await expect(entries).toHaveCount(1);
+  });
+
+  test('project workspace stays usable on mobile and in both themes', async ({ appPage: page }, testInfo) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/`);
+    await page.getByLabel('Entry type', { exact: true }).selectOption('decision');
+    await page.getByLabel('Journal entry', { exact: true }).fill('Start with the smallest useful change.\nKeep the existing login so we can focus on the first session.');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme);
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 1000 });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        await page.getByLabel('Journal entry', { exact: true }).fill('A thought from a small screen.');
+        await expect(page.getByRole('button', { name: 'Post entry', exact: true })).toBeVisible();
+        await page.screenshot({ path: testInfo.outputPath(`workspace-${theme}-${width}.png`), fullPage: true, animations: 'disabled' });
+      }
+    }
+    await page.goto('/projects/');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(page.getByLabel('Project name', { exact: true })).toBeVisible();
+  });
+});
+
 test.describe('project detail editing', () => {
+  test('project brief and editor omit extra planning fields without erasing stored values', async ({ appPage: page }) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const legacy = {
+      outcome: 'Existing desired outcome', scope: 'Existing scope', constraints: 'Existing constraints',
+      checkpoint: 'Existing checkpoint', checkpoint_date: '2030-07-18',
+    };
+    await mcp.db(`
+Project.objects.filter(pk=${id}).update(**${JSON.stringify(legacy)})
+print(json.dumps(True))
+`);
+    await page.goto(`/projects/${id}/`);
+    const brief = page.getByRole('region', { name: 'Project overview', exact: true });
+    await expect(brief.locator('h3')).toHaveText(['Description', 'Responsible people']);
+    await expect(brief.locator('.project-checkpoint')).toHaveCount(0);
+    for (const text of Object.values(legacy)) await expect(brief).not.toContainText(text);
+    await page.getByRole('link', { name: 'Project', exact: true }).click();
+    const editor = page.locator('#project-detail-editor');
+    await expect(editor.locator('[name="outcome"], [name="scope"], [name="constraints"], [name="checkpoint"], [name="checkpoint_date"]')).toHaveCount(0);
+    await editor.getByLabel('Description', { exact: true }).fill('A simpler project brief.');
+    await editor.getByRole('button', { name: 'Save project', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Project saved.');
+    const stored = await mcp.db(`
+print(json.dumps(Project.objects.filter(pk=${id}).values('outcome', 'scope', 'constraints', 'checkpoint', 'checkpoint_date').get(), default=str))
+`);
+    expect(stored).toEqual(legacy);
+    await signInAs(page, 'member1');
+    await page.goto(`/projects/${id}/?tab=project`);
+    await expect(brief.locator('h3')).toHaveText(['Description', 'Responsible people']);
+    await expect(brief).toContainText('A simpler project brief.');
+    for (const text of Object.values(legacy)) await expect(brief).not.toContainText(text);
+  });
+
+  test('project color picker supports swatches keyboard and validation', async ({ appPage: page }, testInfo) => {
+    const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${id}/?tab=project`);
+    const editor = page.locator('#project-detail-editor');
+    const picker = editor.getByRole('group', { name: 'Color', exact: true });
+    await expect(picker.getByRole('radio')).toHaveCount(10);
+    await expect(editor.locator('select[name="color"]')).toHaveCount(0);
+    const blue = picker.getByRole('radio', { name: 'Blue (#3b82f6)', exact: true });
+    const green = picker.getByRole('radio', { name: 'Green (#10b981)', exact: true });
+    await expect(blue).toBeChecked();
+    await blue.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(green).toBeFocused();
+    await expect(green).toBeChecked();
+    await expect(blue).not.toBeChecked();
+    await expect(picker.locator('input:checked')).toHaveCount(1);
+    await editor.getByLabel('Name', { exact: true }).fill('   ');
+    await editor.getByRole('button', { name: 'Save project', exact: true }).click();
+    await expect(editor.getByRole('alert')).toContainText('This field is required.');
+    await expect(green).toBeChecked();
+    await editor.getByLabel('Name', { exact: true }).fill('API Migration');
+    await editor.getByRole('button', { name: 'Save project', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Project saved.');
+    await expect(green).toBeChecked();
+    await blue.check();
+    await editor.getByRole('link', { name: 'Cancel', exact: true }).click();
+    await page.goto(`/projects/${id}/?tab=project`);
+    await expect(green).toBeChecked();
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme);
+      await page.setViewportSize({ width: 320, height: 900 });
+      await picker.scrollIntoViewIfNeeded();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      const targets = await picker.locator('label').evaluateAll(labels => labels.map(label => {
+        const box = label.getBoundingClientRect();
+        return { width: box.width, height: box.height, color: getComputedStyle(label.querySelector('[data-color-chip]')).backgroundColor };
+      }));
+      expect(targets).toHaveLength(10);
+      expect(targets.every(target => target.width >= 44 && target.height >= 44)).toBe(true);
+      expect(targets[1].color).toBe('rgb(16, 185, 129)');
+      await picker.screenshot({ path: testInfo.outputPath(`color-picker-${theme}.png`), animations: 'disabled' });
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(editor.getByRole('group', { name: 'Farbe', exact: true }).getByRole('radio', { name: 'Grün (#10b981)', exact: true })).toBeChecked();
+    await page.goto('/');
+    await expect(page.locator(`#proj-${id} .swatch`)).toHaveCSS('background-color', 'rgb(16, 185, 129)');
+  });
+
   test('project detail saves name description color and responsible people in place', async ({ appPage: page }) => {
     const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
     await page.goto(`/projects/${id}/`);
-    await page.getByText('Edit project', { exact: true }).click();
+    await page.getByRole('navigation', { name: 'Project views', exact: true }).getByRole('link', { name: 'Project', exact: true }).click();
     const editor = page.locator('#project-detail-editor');
     await editor.getByLabel('Name', { exact: true }).fill('API v2 rollout');
     await editor.getByLabel('Description', { exact: true }).fill('Ship v2 safely.\nKeep migration notes here.');
-    await editor.getByLabel('Color', { exact: true }).selectOption('#10b981');
+    await editor.getByRole('group', { name: 'Color', exact: true }).getByRole('radio', { name: 'Green (#10b981)', exact: true }).check();
     await editor.getByLabel('Alex Chen', { exact: true }).check();
     await editor.getByLabel('Sam Patel', { exact: true }).check();
     await editor.getByRole('button', { name: 'Save project', exact: true }).click();
-    await expect(page).toHaveURL(`/projects/${id}/`);
+    await expect(page).toHaveURL(`/projects/${id}/?tab=project`);
     await expect(page.locator('#project-detail-page h1')).toHaveText('API v2 rollout');
     await expect(page.getByRole('status')).toHaveText('Project saved.');
-    await expect(page.locator('#project-detail-page > header .swatch')).toHaveCSS('background-color', 'rgb(16, 185, 129)');
+    await page.getByRole('link', { name: 'Workspace', exact: true }).click();
     await expect(page.locator('#project-detail-page')).toContainText('Ship v2 safely.');
     const responsible = page.getByRole('region', { name: 'Project overview' });
     await expect(responsible).toContainText('Alex Chen');
     await expect(responsible).toContainText('Sam Patel');
     await page.reload();
-    await page.getByText('Edit project', { exact: true }).click();
+    await page.getByRole('navigation', { name: 'Project views', exact: true }).getByRole('link', { name: 'Project', exact: true }).click();
     await expect(editor.getByLabel('Name', { exact: true })).toHaveValue('API v2 rollout');
+    await expect(editor.getByRole('group', { name: 'Color', exact: true }).getByRole('radio', { name: 'Green (#10b981)', exact: true })).toBeChecked();
     await expect(editor.getByLabel('Alex Chen', { exact: true })).toBeChecked();
     await editor.getByLabel('Alex Chen', { exact: true }).uncheck();
     await editor.getByLabel('Sam Patel', { exact: true }).uncheck();
     await editor.getByRole('button', { name: 'Save project', exact: true }).click();
+    await page.getByRole('link', { name: 'Workspace', exact: true }).click();
     await expect(responsible).toContainText('Nobody assigned');
     await page.goto('/');
     await expect(page.locator(`#proj-${id} .name`)).toHaveText('API v2 rollout');
@@ -6179,7 +6831,7 @@ test.describe('project detail editing', () => {
   test('project detail validates required names and supports cancelling edits', async ({ appPage: page }) => {
     const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
     await page.goto(`/projects/${id}/`);
-    await page.getByText('Edit project', { exact: true }).click();
+    await page.getByRole('navigation', { name: 'Project views', exact: true }).getByRole('link', { name: 'Project', exact: true }).click();
     const editor = page.locator('#project-detail-editor');
     await editor.getByLabel('Name', { exact: true }).fill('   ');
     await editor.getByLabel('Description', { exact: true }).fill('Do not commit this.');
@@ -6188,11 +6840,11 @@ test.describe('project detail editing', () => {
     await expect(editor.getByLabel('Description', { exact: true })).toHaveValue('Do not commit this.');
     await expect(page.locator('#project-detail-page h1')).toHaveText('API Migration');
     await page.goto(`/projects/${id}/`);
-    await page.getByText('Edit project', { exact: true }).click();
+    await page.getByRole('navigation', { name: 'Project views', exact: true }).getByRole('link', { name: 'Project', exact: true }).click();
     await editor.getByLabel('Name', { exact: true }).fill('Discard project change');
-    await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(editor).not.toHaveAttribute('open', '');
-    await page.getByText('Edit project', { exact: true }).click();
+    await editor.getByRole('link', { name: 'Cancel', exact: true }).click();
+    await expect(editor).toHaveCount(0);
+    await page.getByRole('navigation', { name: 'Project views', exact: true }).getByRole('link', { name: 'Project', exact: true }).click();
     await expect(editor.getByLabel('Name', { exact: true })).toHaveValue('API Migration');
   });
 
@@ -6200,7 +6852,7 @@ test.describe('project detail editing', () => {
     const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
     const taskId = await page.locator('.bar', { hasText: 'Cutover and deprecation' }).getAttribute('data-task-id');
     await page.goto(`/projects/${projectId}/`);
-    await page.getByText('Edit project', { exact: true }).click();
+    await page.getByRole('navigation', { name: 'Project views', exact: true }).getByRole('link', { name: 'Project', exact: true }).click();
     await page.locator('#project-detail-editor').getByLabel('Alex Chen', { exact: true }).check();
     await page.getByRole('button', { name: 'Save project', exact: true }).click();
     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
@@ -6209,7 +6861,7 @@ test.describe('project detail editing', () => {
     await page.click('button[type=submit]');
     await page.waitForURL('/');
     await page.goto(`/projects/${projectId}/`);
-    await page.getByText('Edit project', { exact: true }).click();
+    await page.getByRole('navigation', { name: 'Project views', exact: true }).getByRole('link', { name: 'Project', exact: true }).click();
     await page.locator('#project-detail-editor').getByLabel('Description', { exact: true }).fill('Managed by Alex.');
     await page.getByRole('button', { name: 'Save project', exact: true }).click();
     await expect(page.locator('#project-detail-page')).toContainText('Managed by Alex.');
@@ -6256,7 +6908,7 @@ test.describe('task detail', () => {
 
   test('task detail links from project tasks show linked milestones and related tasks', async ({ appPage: page }) => {
     const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
-    await page.goto(`/projects/${projectId}/`);
+    await page.goto(`/projects/${projectId}/?tab=plan`);
     await page.getByRole('link', { name: 'Cutover and deprecation', exact: true }).click();
     const detail = page.locator('#task-detail-page');
     await expect(detail.getByRole('heading', { name: 'Cutover and deprecation', exact: true })).toBeVisible();
@@ -7765,6 +8417,7 @@ test.describe('project & people management', () => {
     const detail = page.locator('#project-detail-page');
     await expect(detail.getByRole('heading', { name: 'API Migration', exact: true })).toBeVisible();
     await expect(detail).toContainText('Move public API traffic to the new v2 platform.');
+    await detail.getByRole('link', { name: 'Plan', exact: true }).click();
     await expect(detail.locator('[data-task-id]')).toHaveCount(3);
     await expect(detail).toContainText('Migrate /users endpoints');
     await expect(detail).toContainText('Alex Chen');
@@ -7803,10 +8456,11 @@ test.describe('project & people management', () => {
     await expect(row).toBeVisible();
     const emptyId = await row.getAttribute('data-project-id');
     await page.goto(`/projects/${emptyId}/`);
-    await expect(page.locator('#project-detail-page')).toContainText('No tasks yet.');
-    await expect(page.locator('#project-detail-page')).toContainText('No milestones yet.');
     await expect(page.locator('#project-detail-page')).toContainText('Nobody assigned');
     await expect(page.locator('#project-detail-page')).toContainText('No description yet.');
+    await page.getByRole('link', { name: 'Plan', exact: true }).click();
+    await expect(page.locator('#project-detail-page')).toContainText('No tasks yet.');
+    await expect(page.locator('#project-detail-page')).toContainText('No milestones yet.');
     await postForm(page, '/workspaces/', { name: 'Other workspace' });
     const foreign = await page.goto(`/projects/${id}/`);
     expect(foreign.status()).toBe(404);
@@ -8273,6 +8927,22 @@ test.describe('workspace isolation', () => {
     // pm2's workspace has no projects, so the chart should be empty
     await expect(page.locator('.left-cell.proj')).toHaveCount(0);
     await expect(page.locator('.bar')).toHaveCount(0);
+  });
+
+  test('workload configuration uses one translated Settings heading at the approved viewport', async ({ appPage: page }, testInfo) => {
+    await page.setViewportSize({ width: 1853, height: 1047 });
+    await page.goto('/workspaces/settings/workload/');
+    await expect(page.locator('main h2')).toHaveText(['Settings']);
+    await page.locator('.lang-btn', { hasText: 'DE' }).click();
+    await expect(page.locator('main h2')).toHaveText(['Einstellungen']);
+    const setting = page.locator('[data-workload-setting="workload_enabled"]');
+    await setting.getByRole('switch').check();
+    await expect(setting).toHaveAttribute('data-enabled', 'true');
+    await expect(page.locator('main h2')).toHaveText(['Einstellungen']);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath('approved-workload-settings-1853.png'), animations: 'disabled' });
+    await page.goto('/workspaces/settings/');
+    await expect(page.getByRole('heading', { name: 'Allgemein', exact: true })).toBeVisible();
   });
 
   test('workspace settings sub-navigation isolates sections and preserves the selected section', async ({ appPage: page }) => {
@@ -9023,7 +9693,7 @@ print(json.dumps({'existing': list(Project.objects.filter(id__in=existing_ids).v
       await visitor.goto(href);
       expect(await visitor.content()).toContain(title);
       await page.goto(`/projects/${id}/`);
-      await page.getByText('Edit project', { exact: true }).click();
+      await page.getByRole('navigation', { name: 'Project views', exact: true }).getByRole('link', { name: 'Project', exact: true }).click();
       const editor = page.locator('#project-detail-editor');
       const visibility = editor.getByLabel('Visible in public roadmap', { exact: true });
       await expect(visibility).toBeChecked();
@@ -9037,7 +9707,7 @@ print(json.dumps({'existing': list(Project.objects.filter(id__in=existing_ids).v
       expect(await postForm(visitor, `${href}projects/${id}/follow/`, { action: 'follow', teams_email: 'visitor@example.com' })).toBe(404);
 
       await page.reload();
-      await page.getByText('Edit project', { exact: true }).click();
+      await page.getByRole('navigation', { name: 'Project views', exact: true }).getByRole('link', { name: 'Project', exact: true }).click();
       await expect(visibility).not.toBeChecked();
       await visibility.check();
       await editor.getByRole('button', { name: 'Save project', exact: true }).click();

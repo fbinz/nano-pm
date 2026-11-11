@@ -1,0 +1,38 @@
+{% load i18n %}
+<c-vars entry project journal_kind="" journal_page="" />
+<article class="journal-entry journal-entry-{{ entry.kind }}" id="entry-{{ entry.id }}" data-journal-entry="{{ entry.id }}">
+  <div class="journal-entry-meta">
+    <strong>{{ entry.author_label|default:_('System') }}</strong>
+    <span class="journal-kind">{{ entry.get_kind_display }}</span>
+    {% if entry.kind != 'phase' %}<span class="journal-phase">{{ entry.get_phase_display }}</span>{% endif %}
+    <a href="#entry-{{ entry.id }}" class="journal-time"><time datetime="{{ entry.created_at|date:'c' }}">{{ entry.created_at|date:'d M Y, H:i' }}</time></a>
+  </div>
+  {% if entry.kind == 'phase' %}<p class="journal-phase-change">{{ entry.get_previous_phase_display }} → {{ entry.get_phase_display }}</p>{% endif %}
+  {% if entry.body %}<div class="journal-body">{{ entry.body|urlize }}</div>{% endif %}
+  <div class="journal-entry-footer">
+    {% if entry.kind == 'question' %}
+      {% if entry.resolved_at %}<span class="journal-answered"><c-lucide name="check" size="13" /> {% trans "Answered" %}</span>{% else %}<span class="journal-open">{% trans "Open question" %}</span>{% endif %}
+      {% if entry.can_resolve %}<form method="post" action="{% url 'project_resolve' project.id entry.id %}">{% csrf_token %}<button class="link link-hover" type="submit">{% if entry.resolved_at %}{% trans "Reopen question" %}{% else %}{% trans "Mark answered" %}{% endif %}</button></form>{% endif %}
+    {% endif %}
+    <details class="journal-discussion"{% if entry.discussion_open %} open{% endif %}>
+      <summary>
+        <c-lucide name="message-circle" size="14" />
+        {% with reply_count=entry.replies.count %}{% if reply_count %}{% blocktrans count count=reply_count %}{{ count }} reply{% plural %}{{ count }} replies{% endblocktrans %}{% else %}{% trans "Reply" %}{% endif %}{% endwith %}
+        <c-lucide name="chevron-down" size="12" class="journal-discussion-chevron" />
+      </summary>
+      <div class="journal-replies">
+        {% for reply in entry.replies.all %}
+          <div class="journal-reply"><div class="journal-reply-meta"><strong>{{ reply.author_label }}</strong><time datetime="{{ reply.created_at|date:'c' }}">{{ reply.created_at|date:'d M, H:i' }}</time></div><div class="journal-body">{{ reply.body|urlize }}</div></div>
+        {% endfor %}
+        <form method="post" action="{% url 'project_reply' project.id entry.id %}" class="journal-reply-form">
+          {% csrf_token %}
+          <input type="hidden" name="journal_kind" value="{{ journal_kind }}">
+          <input type="hidden" name="journal_page" value="{{ journal_page }}">
+          <label for="reply-{{ entry.id }}" class="sr-only">{% trans "Reply" %}</label>
+          <textarea id="reply-{{ entry.id }}" name="body" class="textarea min-h-9" rows="1" maxlength="20000" required placeholder="{% trans 'Add a thought…' %}">{{ entry.reply_draft|default_if_none:"" }}</textarea>
+          <button type="submit" class="btn btn-sm btn-ghost" aria-label="{% trans 'Post reply' %}" title="{% trans 'Post reply' %}"><c-lucide name="send" size="16" /></button>
+        </form>
+      </div>
+    </details>
+  </div>
+</article>

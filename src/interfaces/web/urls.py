@@ -25,10 +25,7 @@ from .people import (
     people_page, people_invite_link, people_create, people_update, people_delete,
     person_role_update, person_teams_update, team_create, team_update, team_delete,
 )
-from .ideas import (
-    ideas_page, idea_create, idea_detail, idea_update, idea_status,
-    idea_convert_project, idea_create_task, idea_delete,
-)
+from .project_workspace import project_new, project_phase, project_journal, project_reply, project_resolve
 from .workspaces import (
     workspace_switch, workspace_create, workspace_rename, workspace_settings,
     public_roadmap, public_roadmap_update, public_roadmap_regenerate,
@@ -105,6 +102,11 @@ urlpatterns = [
                                                                      dep_delete, name="dep_delete"),
     # Projects
     path("projects/",                                project_create,   name="project_create"),
+    path("projects/new/", project_new, name="project_new"),
+    path("projects/<int:project_id>/phase/", project_phase, name="project_phase"),
+    path("projects/<int:project_id>/journal/", project_journal, name="project_journal"),
+    path("projects/<int:project_id>/journal/<int:entry_id>/reply/", project_reply, name="project_reply"),
+    path("projects/<int:project_id>/journal/<int:entry_id>/resolve/", project_resolve, name="project_resolve"),
     path("projects/<int:project_id>/",                project_detail,   name="project_detail"),
     path("projects/<int:project_id>/popover/",       project_popover,  name="project_popover"),
     path("projects/<int:project_id>/update/",        project_update,   name="project_update"),
@@ -123,15 +125,6 @@ urlpatterns = [
                                                      person_toggle_collapse,  name="person_toggle_collapse"),
     path("resources/people/set-collapsed/",          set_all_people_collapsed, name="set_all_people_collapsed"),
     path("resources/toggle-status/",                 toggle_status_filter,     name="toggle_status_filter"),
-    # Ideas
-    path("ideas/",                                  ideas_page,       name="ideas_page"),
-    path("ideas/create/",                           idea_create,      name="idea_create"),
-    path("ideas/<int:idea_id>/",                    idea_detail,      name="idea_detail"),
-    path("ideas/<int:idea_id>/update/",             idea_update,      name="idea_update"),
-    path("ideas/<int:idea_id>/status/<str:status>/", idea_status,     name="idea_status"),
-    path("ideas/<int:idea_id>/convert/project/",    idea_convert_project, name="idea_convert_project"),
-    path("ideas/<int:idea_id>/create-task/",        idea_create_task, name="idea_create_task"),
-    path("ideas/<int:idea_id>/delete/",             idea_delete,      name="idea_delete"),
     # People
     path("people/",                                  people_page,      name="people_page"),
     path("activity/",                                activity_page,    name="activity_page"),

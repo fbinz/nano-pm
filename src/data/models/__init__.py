@@ -2,7 +2,8 @@ from data.models.mcp import MCPAccessPolicy, MCPMutationReceipt
 from data.models.gitlab import GitLabConnection, GitLabProjectBinding, GitLabIssue, GitLabIssueEvent
 from data.models.workspace import Workspace
 from data.models.membership import Membership, WorkspaceRole
-from data.models.project import Project
+from data.models.project import Project, ProjectPhase
+from data.models.project_journal import ProjectJournalEntry, JournalKind
 from data.models.team import Team
 from data.models.person import Person
 from data.models.task import Task, TaskStatus, status_for_dates
@@ -29,6 +30,9 @@ __all__ = [
     "Membership",
     "WorkspaceRole",
     "Project",
+    "ProjectPhase",
+    "ProjectJournalEntry",
+    "JournalKind",
     "Team",
     "Person",
     "Task",

@@ -1,0 +1,7 @@
+{% load i18n %}
+<c-vars project responsible_people />
+          <section class="project-brief" aria-label="{% trans 'Project overview' %}">
+            <div class="project-section-heading"><c-lucide name="compass" size="18" /><h2>{% trans "Project brief" %}</h2></div>
+            <div class="brief-field"><h3>{% trans "Description" %}</h3>{% if project.description %}<div class="journal-body">{{ project.description|urlize }}</div>{% else %}<p class="brief-placeholder">{% trans "No description yet." %}</p>{% endif %}</div>
+            <div class="brief-field"><h3>{% trans "Responsible people" %}</h3><div class="flex flex-wrap gap-2">{% for person in responsible_people %}<span class="badge badge-outline">{{ person.name }}</span>{% empty %}<p class="brief-placeholder">{% trans "Nobody assigned" %}</p>{% endfor %}</div></div>
+          </section>

@@ -1,107 +1,94 @@
-{% load i18n %}
-<c-vars project tasks milestones responsible_people form can_edit edit_label save_label user is_pm workspace workspaces has_multiple_workspaces can_view_ideas />
-<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace"
-    :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces"
-    :can_view_ideas="can_view_ideas" active_nav="projects">
-  <main id="project-detail-page" class="w-full space-y-6">
-    <nav>
-      <a class="btn btn-sm btn-ghost" href="{% url 'gantt_index' %}">
-        <c-lucide name="arrow-left" size="16" /> {% trans "Back to Projects" %}
-      </a>
+{% load static i18n %}
+<c-vars project tasks milestones responsible_people form can_edit edit_label save_label user is_pm workspace workspaces has_multiple_workspaces tab has_gitlab journal selected_kind journal_filters phase_steps phase_form entry_form reply_error open_questions gitlab_connection gitlab_binding_form gitlab_issues gitlab_destinations gitlab_summary gitlab_state />
+<c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" active_nav="projects">
+  <main id="project-detail-page" class="project-workspace w-full">
+    <nav class="project-breadcrumb">
+      <a href="{% url 'gantt_index' %}" class="link link-hover">{% trans "Back to Projects" %}</a>
+      <span aria-hidden="true">/</span>
+      <a href="/projects/" class="link link-hover">{% trans "Project library" %}</a>
+      <label for="app-drawer" class="btn btn-sm btn-ghost lg:hidden" aria-label="{% trans 'Open menu' %}"><c-lucide name="menu" size="18" /></label>
     </nav>
+    {% for message in messages %}<p class="project-flash" role="status">{{ message }}</p>{% endfor %}
 
-    {% for message in messages %}
-      <p class="text-success" role="status">{{ message }}</p>
-    {% endfor %}
-
-    <header class="flex items-start gap-3">
-      <span class="swatch size-4 rounded mt-2 shrink-0" style="background:{{ project.color }}" aria-hidden="true"></span>
-      <div class="min-w-0">
-        <h1 class="text-3xl font-semibold break-words">{{ project.name }}</h1>
-        <span class="badge badge-sm mt-2 {% if project.is_completed %}badge-success{% else %}badge-ghost{% endif %}">
-          {% if project.is_completed %}{% trans "Completed" %}{% else %}{% trans "Active" %}{% endif %}
-        </span>
+    <header class="project-heading">
+      <div class="min-w-0 flex-1">
+        <h1>{{ project.name }}</h1>
+        <div class="project-heading-meta">
+          <c-screens.projects.phase-badge :project="project" />
+          <span>{{ tasks|length }} {% trans "tasks" %}</span>
+          <span>{{ open_questions }} {% trans "open questions" %}</span>
+        </div>
       </div>
     </header>
 
-    {% if can_edit %}
-      <c-detail-editor :form="form" editor_id="project-detail-editor" :edit_label="edit_label" :save_label="save_label" />
-    {% endif %}
-
-    <section class="rounded-box border border-base-300 bg-base-100 p-5 space-y-5" aria-label="{% trans 'Project overview' %}">
-      <div>
-        <h2 class="text-lg font-semibold mb-2">{% trans "Description" %}</h2>
-        {% if project.description %}
-          <div class="whitespace-pre-wrap break-words text-base-content/80">{{ project.description }}</div>
-        {% else %}
-          <p class="text-base-content/60">{% trans "No description yet." %}</p>
-        {% endif %}
+    <div class="project-lifecycle-control" data-phase-url="{% url 'project_phase' project.id %}" data-hold-duration="350">
+      <span id="project-phase-instructions" class="sr-only">{% if can_edit %}{% trans "Hold a phase to move there. Release to cancel." %} {% trans "With a keyboard, hold Space or Enter. Escape cancels." %}{% endif %}</span>
+      <c-screens.projects.phase-steps :project="project" :phase_steps="phase_steps" :can_edit="can_edit" />
+      <div class="project-lifecycle-caption">
+        <p id="project-phase-feedback" aria-live="polite" aria-atomic="true"></p>
       </div>
-      <div>
-        <h2 class="text-lg font-semibold mb-2">{% trans "Responsible people" %}</h2>
-        <div class="flex flex-wrap gap-2">
-          {% for person in responsible_people %}
-            <span class="badge badge-outline">{{ person.name }}</span>
-          {% empty %}
-            <p class="text-base-content/60">{% trans "Nobody assigned" %}</p>
-          {% endfor %}
-        </div>
-      </div>
-    </section>
+    </div>
 
-    <c-screens.gitlab.project :project="project" :connection="gitlab_connection" :form="gitlab_binding_form" :issues="gitlab_issues" :destinations="gitlab_destinations" :summary="gitlab_summary" :selected_state="gitlab_state" :can_edit="can_edit" :is_pm="is_pm" />
+    <div class="project-toolbar">
+      <nav class="project-tabs" aria-label="{% trans 'Project views' %}">
+        <a href="?tab=project"{% if tab == 'project' %} aria-current="page"{% endif %}><c-lucide name="folder" size="16" /> {% trans "Project" %}</a>
+        <a href="?tab=workspace"{% if tab == 'workspace' %} aria-current="page"{% endif %}><c-lucide name="notebook-pen" size="16" /> {% trans "Workspace" %}</a>
+        <a href="?tab=plan"{% if tab == 'plan' %} aria-current="page"{% endif %}><c-lucide name="list-checks" size="16" /> {% trans "Plan" %} <span aria-hidden="true">{{ tasks|length }}</span></a>
+        {% if has_gitlab %}<a href="?tab=gitlab"{% if tab == 'gitlab' %} aria-current="page"{% endif %}><c-lucide name="gitlab" size="16" class="gitlab-icon" /> {% trans "GitLab" %}</a>{% endif %}
+      </nav>
+      <span class="project-private"><c-lucide name="lock" size="13" /> {% trans "Workspace members only" %}</span>
+    </div>
 
-    <section class="rounded-box border border-base-300 bg-base-100 p-5" aria-labelledby="project-tasks-title">
-      <h2 id="project-tasks-title" class="text-lg font-semibold mb-3">{% trans "Tasks" %} <span class="badge badge-ghost">{{ tasks|length }}</span></h2>
-      {% if tasks %}
-        <div class="overflow-x-auto">
-          <table class="table table-sm">
-            <thead>
-              <tr>
-                <th scope="col">{% trans "Task" %}</th>
-                <th scope="col">{% trans "Status" %}</th>
-                <th scope="col">{% trans "Start" %}</th>
-                <th scope="col">{% trans "End (exclusive)" %}</th>
-                <th scope="col">{% trans "Assignees" %}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for task in tasks %}
-                <tr data-task-id="{{ task.id }}">
-                  <th scope="row" class="font-medium">
-                    <a class="link link-hover" href="{% url 'task_detail' task.id %}">{{ task.title }}</a>
-                    {% if task.description %}<p class="font-normal text-base-content/60 whitespace-pre-wrap">{{ task.description }}</p>{% endif %}
-                  </th>
-                  <td><span class="badge badge-sm badge-ghost whitespace-nowrap">{{ task.status_label }}</span></td>
-                  <td class="whitespace-nowrap"><time datetime="{{ task.start|date:'Y-m-d' }}">{{ task.start|date:"d.m.Y" }}</time></td>
-                  <td class="whitespace-nowrap"><time datetime="{{ task.end|date:'Y-m-d' }}">{{ task.end|date:"d.m.Y" }}</time></td>
-                  <td>{% for person in task.assignees.all %}{{ person.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-base-content/60">{% trans "Nobody assigned" %}</span>{% endfor %}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+    {% if tab == 'project' %}
+      {% if can_edit %}
+        <c-detail-editor :form="form" editor_id="project-detail-editor" standalone="true" :edit_label="edit_label" :save_label="save_label" />
       {% else %}
-        <p class="text-base-content/60">{% trans "No tasks yet." %}</p>
+        <c-screens.projects.brief :project="project" :responsible_people="responsible_people" />
       {% endif %}
-    </section>
+    {% elif tab == 'plan' %}
+      <c-screens.projects.plan :project="project" :tasks="tasks" :milestones="milestones" />
+    {% elif tab == 'gitlab' %}
+      <c-screens.gitlab.project :project="project" :connection="gitlab_connection" :form="gitlab_binding_form" :issues="gitlab_issues" :destinations="gitlab_destinations" :summary="gitlab_summary" :selected_state="gitlab_state" :can_edit="can_edit" :is_pm="is_pm" />
+    {% else %}
+      <div class="project-workspace-grid">
+        <div class="project-journal">
+          <section class="project-composer" aria-labelledby="journal-composer-title">
+            <div class="project-section-heading"><c-lucide name="pen-line" size="18" /><h2 id="journal-composer-title">{% trans "What’s on your mind?" %}</h2></div>
+            <form method="post" action="{% url 'project_journal' project.id %}">
+              {% csrf_token %}
+              <label class="sr-only" for="{{ entry_form.body.id_for_label }}">{{ entry_form.body.label }}</label>
+              {{ entry_form.body }}
+              {% if entry_form.errors %}<div class="text-error" role="alert">{{ entry_form.errors }}</div>{% endif %}
+              <div class="project-composer-footer">
+                <label class="sr-only" for="{{ entry_form.kind.id_for_label }}">{{ entry_form.kind.label }}</label>
+                {{ entry_form.kind }}
+                <button type="submit" class="btn btn-sm btn-neutral"><c-lucide name="plus" size="15" /> {% trans "Post entry" %}</button>
+              </div>
+            </form>
+          </section>
 
-    <section class="rounded-box border border-base-300 bg-base-100 p-5" aria-labelledby="project-milestones-title">
-      <h2 id="project-milestones-title" class="text-lg font-semibold mb-3">{% trans "Milestones" %} <span class="badge badge-ghost">{{ milestones|length }}</span></h2>
-      <ul class="divide-y divide-base-300">
-        {% for milestone in milestones %}
-          <li class="flex items-start gap-3 py-3" data-milestone-id="{{ milestone.id }}">
-            <c-lucide name="diamond" size="18" class="mt-1 shrink-0 text-base-content/60" />
-            <div class="min-w-0 flex-1">
-              <h3 class="font-medium break-words">{{ milestone.title }}</h3>
-              <time class="text-sm text-base-content/60" datetime="{{ milestone.date|date:'Y-m-d' }}">{{ milestone.date|date:"d.m.Y" }}</time>
-              {% if milestone.description %}<p class="mt-1 text-sm text-base-content/70 whitespace-pre-wrap break-words">{{ milestone.description }}</p>{% endif %}
-            </div>
-          </li>
-        {% empty %}
-          <li class="text-base-content/60">{% trans "No milestones yet." %}</li>
-        {% endfor %}
-      </ul>
-    </section>
+          <div class="project-journal-toolbar">
+            <div class="project-journal-heading"><h2>{% trans "Project journal" %}</h2></div>
+            <nav class="journal-filters" aria-label="{% trans 'Filter journal' %}">
+              {% for value, label in journal_filters %}<a href="?kind={{ value }}"{% if selected_kind == value %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+            </nav>
+          </div>
+          {% if reply_error %}<p class="text-error" role="alert">{{ reply_error }}</p>{% endif %}
+          <div class="journal-entries">
+            {% for entry in journal %}
+              <c-screens.projects.journal-entry :entry="entry" :project="project" :journal_kind="selected_kind" :journal_page="journal.number" />
+            {% empty %}
+              <div class="project-journal-empty"><c-lucide name="notebook-pen" size="28" /><h3>{% trans "Every project starts with a thought." %}</h3><p>{% trans "Capture a conversation, ask a question, or write down what you’re considering." %}</p></div>
+            {% endfor %}
+          </div>
+          {% if journal.has_other_pages %}<nav class="project-pagination" aria-label="{% trans 'Journal pages' %}">{% if journal.has_previous %}<a class="btn btn-sm" href="?kind={{ selected_kind|urlencode }}&page={{ journal.previous_page_number }}">{% trans "Newer" %}</a>{% endif %}<span>{{ journal.number }} / {{ journal.paginator.num_pages }}</span>{% if journal.has_next %}<a class="btn btn-sm" href="?kind={{ selected_kind|urlencode }}&page={{ journal.next_page_number }}">{% trans "Older" %}</a>{% endif %}</nav>{% endif %}
+        </div>
+
+        <aside class="project-context">
+          <c-screens.projects.brief :project="project" :responsible_people="responsible_people" />
+        </aside>
+      </div>
+    {% endif %}
   </main>
+  <script type="module" src="{% static 'js/project-phase.js' %}"></script>
 </c-layouts.app-shell>

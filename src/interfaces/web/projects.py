@@ -5,8 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.shortcuts import redirect, render
-from django.utils import timezone
+from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
 
@@ -23,17 +23,16 @@ from actions.manage_projects import (
 )
 from data.models import Membership, Person, WorkspaceRole
 from data.models.project import PROJECT_COLORS
-from data.models.task import status_for_dates
 from readers import get_project
 
 from .detail_forms import ProjectDetailForm
-from .gitlab import project_context as gitlab_project_context
+from .project_workspace import render_workspace, project_library
 from actions.gitlab_matching import reopen_conflict
 from .helpers import (
     collapsed_projects, set_collapsed_projects,
     show_completed, set_show_completed, patch_chart,
     team_filter, can_manage_project, project_manager_required, request_data,
-    request_person, is_pm, workspace_context,
+    request_person,
 )
 
 
@@ -60,37 +59,25 @@ def project_detail(request: HttpRequest, project_id: int):
             actor=request.user,
         )
         messages.success(request, _("Project saved."))
-        return redirect("project_detail", project_id=project.id)
-    tasks = list(project.tasks.prefetch_related("assignees"))
-    today = timezone.localdate()
-    for task in tasks:
-        task.status_label = status_for_dates(task.start, task.end, today).label
-    return render(request, "components/screens/projects/detail.html", {
-        "project": project,
-        **gitlab_project_context(project, request.workspace, request.GET.get("gitlab_state", "")),
-        "form": form, "can_edit": can_edit,
-        "edit_label": _("Edit project"), "save_label": _("Save project"),
-        "tasks": tasks,
-        "milestones": project.milestones.all(),
-        "responsible_people": project.responsible_people.all(),
-        "is_pm": is_pm(request),
-        **workspace_context(request),
-    }, status=400 if request.method == "POST" else 200)
+        return redirect(reverse("project_detail", args=[project.id]) + "?tab=project")
+    return render_workspace(request, project, form=form, status=400 if request.method == "POST" else 200)
 
 
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 @login_required
-@datastar_response
 def project_create(request: HttpRequest):
+    if request.method == "GET":
+        return project_library(request)
     position = request.GET.get("position", "end")
     if position not in ("start", "end"):
         position = "end"
     create_project(workspace=request.workspace, position=position, actor=request.user)
-    yield patch_chart(request)
+    events = [patch_chart(request)]
     if team_filter(request):
-        yield SSE.patch_elements(render_component(
+        events.append(SSE.patch_elements(render_component(
             request, "screens/gantt/project-hidden-toast",
-        ))
+        )))
+    return DatastarResponse(events)
 
 
 @login_required

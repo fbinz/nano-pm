@@ -1286,6 +1286,29 @@
   // replaces the #grid-scroll element itself — an observer bound to the old
   // element would be orphaned. childList only (no attributes) keeps this
   // quiet during drags, which mutate style but never insert nodes.
+  // Delegate so the shortcut also works in drawers/replies inserted by SSE.
+  // requestSubmit preserves validation, submitter name/value, and Datastar's
+  // normal submit handler; form.submit() would bypass all three.
+  const textInputTypes = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
+  document.addEventListener('keydown', evt => {
+    if (evt.defaultPrevented || evt.isComposing || evt.key !== 'Enter'
+      || !(evt.ctrlKey || evt.metaKey) || evt.altKey) return;
+    const field = evt.target;
+    if (!(field instanceof HTMLTextAreaElement)
+      && !(field instanceof HTMLInputElement && textInputTypes.has(field.type))) return;
+    const form = field.form;
+    if (!form) return;
+    evt.preventDefault();
+    if (evt.repeat || field.readOnly || field.matches(':disabled')
+      || form.getAttribute('aria-busy') === 'true') return;
+    // Do not skip a disabled primary button and accidentally invoke a later
+    // destructive action (e.g. Save / Disable public roadmap).
+    const submitter = Array.from(form.elements).find(control => control.type === 'submit'
+      && control.getClientRects().length && getComputedStyle(control).visibility === 'visible');
+    if (!submitter || submitter.matches(':disabled, [aria-disabled="true"]')) return;
+    form.requestSubmit(submitter);
+  });
+
   document.addEventListener('keydown', evt => {
     if (evt.key === 'Escape') {
       clearSelection();

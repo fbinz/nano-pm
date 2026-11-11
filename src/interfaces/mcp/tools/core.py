@@ -18,7 +18,7 @@ from data.models import (
     Task,
     Team,
 )
-from permissions import has_idea_perm, is_pm, request_person
+from permissions import is_pm, request_person
 from readers import mcp as view
 
 from .. import schemas as s
@@ -103,8 +103,6 @@ def list_activity(r, p):
         "person",
         "team",
     ]
-    if has_idea_perm(r, "view"):
-        allowed.append("idea")
     qs = qs.filter(entity_type__in=allowed)
     if p.entity_type:
         qs = qs.filter(entity_type=p.entity_type)
@@ -175,6 +173,8 @@ def list_projects(r, p):
         qs = qs.filter(Q(name__icontains=p.search) | Q(description__icontains=p.search))
     if p.completed is not None:
         qs = qs.filter(completed_at__isnull=not p.completed)
+    if p.phase is not None:
+        qs = qs.filter(phase=p.phase)
     if p.responsible_person_id:
         lookup(Person, p.responsible_person_id, r.workspace)
         qs = qs.filter(responsible_people=p.responsible_person_id)
@@ -221,7 +221,7 @@ def update_project(r, p):
     obj = lookup(Project, p.id, r.workspace)
     manage_project(r, obj)
     match(p, view.project(obj))
-    values = patch(p, "name description color responsible_person_ids public_roadmap_visible")
+    values = patch(p, "name description color responsible_person_ids public_roadmap_visible outcome scope constraints checkpoint checkpoint_date")
     if "responsible_person_ids" in values:
         related(Person, values["responsible_person_ids"], r.workspace)
     obj = projects.update_project(
@@ -260,6 +260,18 @@ def set_project_completed(r, p):
             completed=p.completed,
             actor=r.user,
         )
+    return {"item": view.project(obj)}
+
+
+@tool(s.PhaseChange, cap="core.write", mutation=True, destructive=True)
+def set_project_phase(r, p):
+    """Change lifecycle phase without scheduling tasks; record an optional reason in the internal journal."""
+    obj = lookup(Project, p.id, r.workspace)
+    manage_project(r, obj)
+    match(p, view.project(obj))
+    obj = projects.set_project_phase(
+        workspace=r.workspace, project_id=obj.pk, phase=p.phase, reason=p.reason, actor=r.user,
+    )
     return {"item": view.project(obj)}
 
 

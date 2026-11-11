@@ -12,7 +12,6 @@ from datetime import date, timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -70,7 +69,7 @@ class Command(BaseCommand):
 
         p1 = Project.objects.create(
             workspace=ws,
-            name="API Migration",
+            name="API Migration", phase="delivery",
             description="Move public API traffic to the new v2 platform.",
             color="#3b82f6",
             order=1,
@@ -78,7 +77,7 @@ class Command(BaseCommand):
         )
         p2 = Project.objects.create(
             workspace=ws,
-            name="Onboarding revamp",
+            name="Onboarding revamp", phase="delivery",
             description="Improve activation for first-time customers.",
             color="#10b981",
             order=2,
@@ -86,7 +85,7 @@ class Command(BaseCommand):
         )
         p3 = Project.objects.create(
             workspace=ws,
-            name="Infra hardening",
+            name="Infra hardening", phase="delivery",
             description="Reduce production risk across core infrastructure.",
             color="#f59e0b",
             order=3,
@@ -164,17 +163,12 @@ class Command(BaseCommand):
         alex.user = member1
         alex.save()
 
-        # --- ideaeditor member with explicit Django model permissions for Ideas ---
+        # --- additional member, retained as a workload/permissions test persona ---
         ideaeditor, created = User.objects.get_or_create(username="ideaeditor")
         if created or not ideaeditor.has_usable_password():
             ideaeditor.set_password("ideaeditor")
             ideaeditor.save()
         Membership.objects.create(user=ideaeditor, workspace=ws, role=WorkspaceRole.MEMBER)
-        idea_perms = Permission.objects.filter(
-            content_type__app_label="data",
-            codename__in=["add_idea", "view_idea", "change_idea", "delete_idea"],
-        )
-        ideaeditor.user_permissions.set(idea_perms)
 
         self.stdout.write(self.style.SUCCESS(
             "Seeded 3 projects, 3 people, 3 teams, 8 tasks, 2 task-owned milestones, 6 deps for user 'demo'."

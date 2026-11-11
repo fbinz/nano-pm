@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 18:16+0100\n"
+"POT-Creation-Date: 2026-11-03 14:10+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -67,6 +67,29 @@ msgstr "später"
 #: static/js/nano.js:746
 msgid "earlier"
 msgstr "früher"
+
+#: static/js/project-phase.js:40
+msgid "No change. Take your time."
+msgstr "Unverändert. Lass dir Zeit."
+
+#: static/js/project-phase.js:53
+msgid ""
+"Could not confirm the phase change. Please try again or reload to check."
+msgstr ""
+"Der Phasenwechsel konnte nicht bestätigt werden. Versuch es erneut oder lade "
+"die Seite zur Kontrolle neu."
+
+#: static/js/project-phase.js:63
+msgid "Saving this little step…"
+msgstr "Dieser kleine Schritt wird gespeichert …"
+
+#: static/js/project-phase.js:93
+msgid "Keep holding…"
+msgstr "Noch einen Moment gedrückt halten …"
+
+#: static/js/project-phase.js:139
+msgid "Hold a little longer to change phase."
+msgstr "Halte etwas länger gedrückt, um die Phase zu ändern."
 
 #: static/js/workload.js:34
 msgid "allocated"

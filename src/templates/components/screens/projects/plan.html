@@ -1,0 +1,56 @@
+{% load i18n %}
+<c-vars project tasks milestones />
+<div class="project-plan space-y-5">
+    <section class="rounded-box border border-base-300 bg-base-100 p-5" aria-labelledby="project-tasks-title">
+      <h2 id="project-tasks-title" class="text-lg font-semibold mb-3">{% trans "Tasks" %} <span class="badge badge-ghost">{{ tasks|length }}</span></h2>
+      {% if tasks %}
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th scope="col">{% trans "Task" %}</th>
+                <th scope="col">{% trans "Status" %}</th>
+                <th scope="col">{% trans "Start" %}</th>
+                <th scope="col">{% trans "End (exclusive)" %}</th>
+                <th scope="col">{% trans "Assignees" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for task in tasks %}
+                <tr data-task-id="{{ task.id }}">
+                  <th scope="row" class="font-medium">
+                    <a class="link link-hover" href="{% url 'task_detail' task.id %}">{{ task.title }}</a>
+                    {% if task.description %}<p class="font-normal text-base-content/60 whitespace-pre-wrap">{{ task.description }}</p>{% endif %}
+                  </th>
+                  <td><span class="badge badge-sm badge-ghost whitespace-nowrap">{{ task.status_label }}</span></td>
+                  <td class="whitespace-nowrap"><time datetime="{{ task.start|date:'Y-m-d' }}">{{ task.start|date:"d.m.Y" }}</time></td>
+                  <td class="whitespace-nowrap"><time datetime="{{ task.end|date:'Y-m-d' }}">{{ task.end|date:"d.m.Y" }}</time></td>
+                  <td>{% for person in task.assignees.all %}{{ person.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-base-content/60">{% trans "Nobody assigned" %}</span>{% endfor %}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-base-content/60">{% trans "No tasks yet." %}</p>
+      {% endif %}
+    </section>
+
+    <section class="rounded-box border border-base-300 bg-base-100 p-5" aria-labelledby="project-milestones-title">
+      <h2 id="project-milestones-title" class="text-lg font-semibold mb-3">{% trans "Milestones" %} <span class="badge badge-ghost">{{ milestones|length }}</span></h2>
+      <ul class="divide-y divide-base-300">
+        {% for milestone in milestones %}
+          <li class="flex items-start gap-3 py-3" data-milestone-id="{{ milestone.id }}">
+            <c-lucide name="diamond" size="18" class="mt-1 shrink-0 text-base-content/60" />
+            <div class="min-w-0 flex-1">
+              <h3 class="font-medium break-words">{{ milestone.title }}</h3>
+              <time class="text-sm text-base-content/60" datetime="{{ milestone.date|date:'Y-m-d' }}">{{ milestone.date|date:"d.m.Y" }}</time>
+              {% if milestone.description %}<p class="mt-1 text-sm text-base-content/70 whitespace-pre-wrap break-words">{{ milestone.description }}</p>{% endif %}
+            </div>
+          </li>
+        {% empty %}
+          <li class="text-base-content/60">{% trans "No milestones yet." %}</li>
+        {% endfor %}
+      </ul>
+    </section>
+</div>

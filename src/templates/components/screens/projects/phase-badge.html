@@ -1,0 +1,3 @@
+{% load i18n %}
+<c-vars project />
+<span id="project-phase-badge" class="project-phase-badge" data-project-phase="{{ project.phase }}"><span aria-hidden="true">●</span> {{ project.get_phase_display }}</span>

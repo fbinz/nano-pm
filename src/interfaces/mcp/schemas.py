@@ -60,7 +60,11 @@ class WorkspaceUpdate(Change, kw_only=True):
     prompt_milestone_move_reason: bool = UNSET
 
 
+ProjectPhase = Literal["idea", "discovery", "shaping", "planned", "delivery", "review", "completed", "parked", "dropped"]
+
+
 class ProjectPage(SearchPage, kw_only=True):
+    phase: ProjectPhase | None = None
     completed: bool | None = None
     responsible_person_id: ID | None = None
     team_id: ID | None = None
@@ -78,6 +82,11 @@ class ProjectCreate(Mutation, kw_only=True):
 
 
 class ProjectUpdate(ObjectChange, kw_only=True):
+    outcome: Text = UNSET
+    scope: Text = UNSET
+    constraints: Text = UNSET
+    checkpoint: Annotated[str, msgspec.Meta(max_length=500)] = UNSET
+    checkpoint_date: date | None = UNSET
     name: Name = UNSET
     description: Text = UNSET
     color: Annotated[
@@ -85,6 +94,11 @@ class ProjectUpdate(ObjectChange, kw_only=True):
     ] = UNSET
     responsible_person_ids: IDs = UNSET
     public_roadmap_visible: bool = UNSET
+
+
+class PhaseChange(ObjectChange, kw_only=True):
+    phase: ProjectPhase
+    reason: Text = ""
 
 
 class Completed(ObjectChange, kw_only=True):
@@ -213,38 +227,6 @@ class RoleUpdate(ObjectChange, kw_only=True):
     role: Literal["pm", "member"]
 
 
-IdeaState = Literal["inbox", "exploring", "promising", "rejected", "converted"]
-
-
-class IdeaPage(SearchPage, kw_only=True):
-    status: IdeaState | None = None
-    tag: Search | None = None
-
-
-class IdeaCreate(Mutation, kw_only=True):
-    title: Name
-    body: Text = ""
-    tags: Annotated[str, msgspec.Meta(max_length=500)] = ""
-
-
-class IdeaUpdate(ObjectChange, kw_only=True):
-    title: Name = UNSET
-    body: Text = UNSET
-    status: IdeaState = UNSET
-    tags: Annotated[str, msgspec.Meta(max_length=500)] = UNSET
-
-
-class ConvertProject(ObjectChange, kw_only=True):
-    name: Name = UNSET
-
-
-class ConvertTask(ObjectChange, kw_only=True):
-    project_id: ID
-    start: date
-    end: date
-    title: Name = UNSET
-
-
 class ActivityPage(Page, kw_only=True):
     entity_type: (
         Literal[
@@ -256,7 +238,6 @@ class ActivityPage(Page, kw_only=True):
             "dependency",
             "person",
             "team",
-            "idea",
         ]
         | None
     ) = None

@@ -1,18 +1,13 @@
-"""People/team administration, explicit self-service roles and idea promotion."""
+"""People/team administration and explicit self-service roles."""
 
-from django.db.models import Q
-
-from actions import manage_ideas as ideas
 from actions import manage_people as people
 from actions import manage_teams as teams
-from data.models import Idea, Membership, Person, Project, Team
+from data.models import Membership, Person, Team
 from readers import mcp as view
 
 from .. import schemas as s
 from ..common import (
-    dates,
     lookup,
-    manage_project,
     match,
     name,
     page,
@@ -179,119 +174,3 @@ def create_person_invite(r, p):
             "version": view.fingerprint(invite.token),
         }
     }
-
-
-@tool(s.IdeaPage, idea_action="view")
-def list_ideas(r, p):
-    """List permitted idea summaries, optionally filtered by text/status/tag."""
-    qs = Idea.objects.filter(workspace=r.workspace).order_by("id")
-    if p.search:
-        qs = qs.filter(Q(title__icontains=p.search) | Q(body__icontains=p.search))
-    if p.status:
-        qs = qs.filter(status=p.status)
-    if p.tag:
-        qs = qs.filter(tags__icontains=p.tag)
-    return page(r, qs, p, lambda obj: view.idea(obj, False))
-
-
-@tool(s.ObjectParams, idea_action="view")
-def get_idea(r, p):
-    """Read permitted idea details and conversion references."""
-    return {"item": view.idea(lookup(Idea, p.id, r.workspace))}
-
-
-@tool(s.IdeaCreate, cap="core.write", idea_action="add", mutation=True)
-def create_idea(r, p):
-    """Create an idea with the authenticated caller as creator."""
-    obj = ideas.create_idea(
-        workspace=r.workspace, creator=r.user, title=name(p.title), actor=r.user
-    )
-    obj = ideas.update_idea(
-        workspace=r.workspace, idea_id=obj.pk, body=p.body, tags=p.tags, actor=r.user
-    )
-    return {"item": view.idea(obj)}
-
-
-@tool(s.IdeaUpdate, cap="core.write", idea_action="change", mutation=True)
-def update_idea(r, p):
-    """Patch idea content/status/tags; conversion links require the explicit conversion tools."""
-    obj = lookup(Idea, p.id, r.workspace)
-    match(p, view.idea(obj))
-    values = patch(p, "title body status tags")
-    if values.get("status") == "converted":
-        require(
-            obj.converted_project_id or obj.converted_task_id,
-            "validation_error",
-            "Use a conversion tool to create the planned object.",
-        )
-    obj = ideas.update_idea(workspace=r.workspace, idea_id=p.id, actor=r.user, **values)
-    return {"item": view.idea(obj)}
-
-
-def convertible(r, p):
-    obj = lookup(Idea, p.id, r.workspace)
-    match(p, view.idea(obj))
-    require(
-        not obj.converted_project_id
-        and not obj.converted_task_id
-        and obj.status != "converted",
-        "conflict",
-        "Idea has already been converted.",
-    )
-    return obj
-
-
-@tool(s.ConvertProject, cap="core.write", pm=True, idea_action="change", mutation=True)
-def convert_idea_to_project(r, p):
-    """Atomically promote an unconverted idea to a project and copy its body; PM only."""
-    convertible(r, p)
-    obj = ideas.convert_idea_to_project(
-        workspace=r.workspace,
-        idea_id=p.id,
-        name=None if p.name is s.UNSET else name(p.name),
-        actor=r.user,
-    )
-    return {"item": view.idea(obj), "project": view.project(obj.converted_project)}
-
-
-@tool(
-    s.ConvertTask,
-    cap="core.write",
-    idea_action="change",
-    mutation=True,
-    scheduling=True,
-)
-def convert_idea_to_task(r, p):
-    """Atomically promote an unconverted idea into a target-project task with copied body."""
-    convertible(r, p)
-    dates(p.start, p.end)
-    manage_project(r, lookup(Project, p.project_id, r.workspace))
-    obj = ideas.create_task_from_idea(
-        workspace=r.workspace,
-        idea_id=p.id,
-        project_id=p.project_id,
-        title="" if p.title is s.UNSET else name(p.title),
-        start=p.start,
-        end=p.end,
-        actor=r.user,
-    )
-    require(
-        obj.converted_task_id is not None, "validation_error", "Could not create task."
-    )
-    obj.converted_task.refresh_from_db()
-    return {"item": view.idea(obj), "task": view.task(obj.converted_task)}
-
-
-@tool(
-    s.ObjectChange,
-    cap="core.write",
-    idea_action="delete",
-    mutation=True,
-    destructive=True,
-)
-def delete_idea(r, p):
-    """Delete an idea without deleting its previously converted project/task."""
-    obj = lookup(Idea, p.id, r.workspace)
-    match(p, view.idea(obj))
-    ideas.delete_idea(workspace=r.workspace, idea_id=p.id, actor=r.user)
-    return {"deleted_ids": [p.id]}

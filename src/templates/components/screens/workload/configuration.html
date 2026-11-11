@@ -1,7 +1,7 @@
 {% load i18n %}
 <c-vars workspace options categories memberships />
 <section id="workspace-workload-settings" class="space-y-4">
-  <h2 class="text-xl font-semibold">{% trans "Workload settings" %}</h2>
+  <h2 class="text-xl font-semibold">{% trans "Settings" %}</h2>
   {% for option in options %}{% if option.name == 'workload_enabled' %}<c-screens.workload.setting-toggle :option="option" />{% endif %}{% endfor %}
   {% if workspace.workload_enabled %}
     <div class="space-y-3">

@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
@@ -213,7 +214,7 @@ def project_settings(request, project_id):
                 workspace=request.workspace, project_id=project.pk,
                 prefix=form.cleaned_data["prefix"], collect=form.cleaned_data["collect"],
             )
-            return redirect("project_detail", project_id=project.pk)
+            return redirect(reverse("project_detail", args=[project.pk]) + "?tab=gitlab")
         except ValidationError as error:
             form.add_error(None, error)
     return render(request, "components/screens/gitlab/binding-errors.html", {
@@ -234,7 +235,7 @@ def issue_transfer(request, issue_id):
     if not issue.owner or not can_manage_project(request, issue.owner) or not can_manage_project(request, target):
         return HttpResponse(status=403)
     transfer_issue(workspace=request.workspace, issue_id=issue.pk, project_id=target.pk)
-    return redirect("project_detail", project_id=target.pk)
+    return redirect(reverse("project_detail", args=[target.pk]) + "?tab=gitlab")
 
 
 @require_http_methods(["POST"])

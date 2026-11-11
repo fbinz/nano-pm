@@ -25,6 +25,12 @@ class Project(Revision):
     completed_at: str | None
     responsible_person_ids: list[int]
     public_roadmap_visible: bool
+    phase: str
+    outcome: NotRequired[str]
+    scope: NotRequired[str]
+    constraints: NotRequired[str]
+    checkpoint: NotRequired[str]
+    checkpoint_date: NotRequired[str | None]
     description: NotRequired[str]
 
 
@@ -77,17 +83,6 @@ class Membership(Revision):
     role: str
     workload_participation: str
     user_label: str
-
-
-class Idea(Revision):
-    id: int
-    title: str
-    body: NotRequired[str]
-    status: str
-    tags: str
-    creator_id: int | None
-    converted_project_id: int | None
-    converted_task_id: int | None
 
 
 class Activity(TypedDict):
@@ -155,11 +150,6 @@ class Transfer(Item[Project]):
 
 class Schedule(Page[dict[str, Any]]):
     today: str
-
-
-class IdeaConversion(Item[Idea]):
-    project: NotRequired[Project]
-    task: NotRequired[Task]
 
 
 class Category(Revision):
@@ -300,7 +290,7 @@ register("list_activity", Page[Activity])
 register("get_schedule", Schedule)
 register("list_projects", Page[Project])
 register(
-    "get_project create_project update_project claim_project set_project_completed",
+    "get_project create_project update_project claim_project set_project_completed set_project_phase",
     Item[Project],
 )
 register("reorder_projects", Revision)
@@ -317,9 +307,6 @@ register("list_teams", Page[Team])
 register("create_team update_team", Item[Team])
 register("list_memberships", Page[Membership])
 register("set_member_role set_workload_participation", Item[Membership])
-register("list_ideas", Page[Idea])
-register("get_idea create_idea update_idea", Item[Idea])
-register("convert_idea_to_project convert_idea_to_task", IdeaConversion)
 register("get_my_workload snooze_my_workload_checkin", Item[MyWorkload])
 register("submit_my_workload review_my_workload", Submitted)
 register("get_workload_overview", Overview)
@@ -345,6 +332,6 @@ register(
     "get_public_roadmap_link rotate_public_roadmap_link create_person_invite", Link
 )
 register(
-    "delete_project delete_task delete_milestone delete_dependency delete_person delete_team delete_idea delete_workload_category",
+    "delete_project delete_task delete_milestone delete_dependency delete_person delete_team delete_workload_category",
     Deleted,
 )

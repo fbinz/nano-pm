@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-02 21:52+0100\n"
+"POT-Creation-Date: 2026-11-11 22:46+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -20,7 +20,7 @@ msgid "Another active project already collects this GitLab prefix."
 msgstr ""
 "Ein anderes aktives Projekt sammelt bereits Issues mit diesem GitLab-Präfix."
 
-#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:88
+#: actions/gitlab_matching.py:42 interfaces/web/gitlab.py:89
 msgid "Enter a project prefix without a colon."
 msgstr "Gib ein Projektpräfix ohne Doppelpunkt ein."
 
@@ -241,6 +241,8 @@ msgid "workspace"
 msgstr "Arbeitsbereich"
 
 #: data/models/activity.py:84
+#: templates/components/screens/projects/detail.html:18
+#: templates/components/screens/projects/index.html:12
 msgid "tasks"
 msgstr "Aufgaben"
 
@@ -274,9 +276,9 @@ msgstr "%(actor)s hat die Dauer der Aufgabe %(label)s geändert"
 msgid "%(actor)s %(verb)s %(entity)s %(label)s"
 msgstr "%(actor)s hat %(entity)s %(label)s %(verb)s"
 
-#: data/models/activity.py:143 interfaces/web/detail_forms.py:37
+#: data/models/activity.py:143 interfaces/web/detail_forms.py:43
 #: templates/components/screens/gantt/task-popover.html:60
-#: templates/components/screens/projects/detail.html:65
+#: templates/components/screens/projects/plan.html:15
 #: templates/components/screens/tasks/detail.html:57
 msgid "Assignees"
 msgstr "Zuständige"
@@ -285,7 +287,7 @@ msgstr "Zuständige"
 msgid "Body"
 msgstr "Text"
 
-#: data/models/activity.py:145 interfaces/web/detail_forms.py:79
+#: data/models/activity.py:145 interfaces/web/detail_forms.py:86
 #: templates/components/screens/gantt/project-popover.html:68
 msgid "Color"
 msgstr "Farbe"
@@ -307,12 +309,12 @@ msgstr "Umgewandelte Aufgabe"
 msgid "Date"
 msgstr "Datum"
 
-#: data/models/activity.py:150 interfaces/web/detail_forms.py:32
-#: interfaces/web/detail_forms.py:78
+#: data/models/activity.py:150 interfaces/web/detail_forms.py:38
+#: interfaces/web/detail_forms.py:84
 #: templates/components/screens/gantt/milestone-popover.html:21
 #: templates/components/screens/gantt/project-popover.html:23
 #: templates/components/screens/gantt/task-popover.html:25
-#: templates/components/screens/projects/detail.html:33
+#: templates/components/screens/projects/brief.html:5
 #: templates/components/screens/tasks/detail.html:49
 msgid "Description"
 msgstr "Beschreibung"
@@ -322,7 +324,7 @@ msgstr "Beschreibung"
 msgid "End"
 msgstr "Ende"
 
-#: data/models/activity.py:152 interfaces/web/detail_forms.py:77
+#: data/models/activity.py:152 interfaces/web/detail_forms.py:83
 #: templates/components/screens/gantt/project-popover.html:19
 msgid "Name"
 msgstr "Name"
@@ -335,16 +337,16 @@ msgstr "Reihenfolge"
 msgid "Predecessor"
 msgstr "Vorgänger"
 
-#: data/models/activity.py:155 interfaces/web/detail_forms.py:35
+#: data/models/activity.py:155 interfaces/web/detail_forms.py:41
 #: templates/components/screens/gantt/milestone-popover.html:56
 #: templates/components/screens/gantt/task-popover.html:39
-#: templates/components/screens/ideas/detail.html:87
+#: templates/components/screens/projects/detail.html:34
 msgid "Project"
 msgstr "Projekt"
 
-#: data/models/activity.py:156 interfaces/web/detail_forms.py:81
+#: data/models/activity.py:156 interfaces/web/detail_forms.py:94
 #: templates/components/screens/gantt/project-popover.html:34
-#: templates/components/screens/projects/detail.html:41
+#: templates/components/screens/projects/brief.html:6
 #: templates/public/roadmap.html:62
 msgid "Responsible people"
 msgstr "Verantwortliche"
@@ -363,7 +365,7 @@ msgstr "Öffentliche Roadmap aktiviert"
 msgid "Public roadmap title"
 msgstr "Titel der öffentlichen Roadmap"
 
-#: data/models/activity.py:160 interfaces/web/detail_forms.py:76
+#: data/models/activity.py:160 interfaces/web/detail_forms.py:82
 #: templates/components/screens/gantt/project-popover.html:30
 msgid "Visible in public roadmap"
 msgstr "In der öffentlichen Roadmap sichtbar"
@@ -376,15 +378,15 @@ msgstr "Token der öffentlichen Roadmap"
 msgid "Require move reason"
 msgstr "Begründung beim Verschieben erforderlich"
 
-#: data/models/activity.py:163 interfaces/web/detail_forms.py:33
+#: data/models/activity.py:163 interfaces/web/detail_forms.py:39
 #: templates/components/screens/gantt/task-popover.html:30
-#: templates/components/screens/projects/detail.html:63
+#: templates/components/screens/projects/plan.html:13
 #: templates/components/screens/tasks/detail.html:36
 msgid "Start"
 msgstr "Start"
 
 #: data/models/activity.py:164
-#: templates/components/screens/projects/detail.html:62
+#: templates/components/screens/projects/plan.html:12
 msgid "Status"
 msgstr "Status"
 
@@ -393,7 +395,6 @@ msgid "Successor"
 msgstr "Nachfolger"
 
 #: data/models/activity.py:166
-#: templates/components/screens/ideas/detail.html:53
 msgid "Tags"
 msgstr "Tags"
 
@@ -421,13 +422,14 @@ msgstr "Beim Verschieben von Meilensteinen eine Begründung anbieten"
 msgid "Allowed domains for public followers"
 msgstr "Erlaubte Domains für öffentliche Abonnements"
 
-#: data/models/activity.py:172 interfaces/web/detail_forms.py:31
+#: data/models/activity.py:172 interfaces/web/detail_forms.py:37
 #: templates/components/screens/gantt/milestone-popover.html:17
 #: templates/components/screens/gantt/task-popover.html:21
 msgid "Title"
 msgstr "Titel"
 
 #: data/models/activity.py:173
+#: templates/components/screens/projects/detail.html:35
 msgid "Workspace"
 msgstr "Arbeitsbereich"
 
@@ -490,7 +492,7 @@ msgstr "In Prüfung"
 msgid "Promising"
 msgstr "Vielversprechend"
 
-#: data/models/idea.py:10
+#: data/models/idea.py:10 data/models/project.py:33
 msgid "Parked"
 msgstr "Geparkt"
 
@@ -528,7 +530,8 @@ msgstr "Einbezogen"
 #: data/models/membership.py:32
 #: templates/components/screens/people/people-list.html:97
 #: templates/components/screens/workload/configuration.html:40
-#: templates/components/screens/workload/overview.html:36
+#: templates/components/screens/workload/heatmap.html:14
+#: templates/components/screens/workload/overview.html:45
 #: templates/components/screens/workload/participation-row.html:30
 msgid "Exempt"
 msgstr "Ausgenommen"
@@ -553,9 +556,57 @@ msgstr "Meilenstein zwischen Projekten verschoben"
 msgid "Milestone deleted"
 msgstr "Meilenstein gelöscht"
 
-#: data/models/task.py:8
+#: data/models/project.py:26
+msgid "Idea"
+msgstr "Idee"
+
+#: data/models/project.py:27
+msgid "Discovery"
+msgstr "Erkundung"
+
+#: data/models/project.py:28
+msgid "Shaping"
+msgstr "Ausarbeitung"
+
+#: data/models/project.py:29 data/models/task.py:8
 msgid "Planned"
 msgstr "Geplant"
+
+#: data/models/project.py:30
+msgid "Delivery"
+msgstr "Umsetzung"
+
+#: data/models/project.py:31
+msgid "Review"
+msgstr "Rückblick"
+
+#: data/models/project.py:32
+msgid "Completed"
+msgstr "Abgeschlossen"
+
+#: data/models/project.py:34
+msgid "Dropped"
+msgstr "Verworfen"
+
+#: data/models/project_journal.py:11
+msgid "Note"
+msgstr "Notiz"
+
+#: data/models/project_journal.py:12
+msgid "Question"
+msgstr "Frage"
+
+#: data/models/project_journal.py:13
+msgid "Decision"
+msgstr "Entscheidung"
+
+#: data/models/project_journal.py:14
+msgid "Update"
+msgstr "Neuigkeit"
+
+#: data/models/project_journal.py:15
+msgid "Phase change"
+msgstr "Phasenwechsel"
 
 #: data/models/teams.py:35
 msgid "Pending"
@@ -642,82 +693,152 @@ msgstr "Wähle mindestens einen Arbeitsbereich."
 msgid "The requested MCP resource does not match this site."
 msgstr "Die angeforderte MCP-Ressource gehört nicht zu dieser Website."
 
-#: interfaces/web/detail_forms.py:34
-#: templates/components/screens/projects/detail.html:64
+#: interfaces/web/detail_forms.py:40
+#: templates/components/screens/projects/plan.html:14
 #: templates/components/screens/tasks/detail.html:40
 msgid "End (exclusive)"
 msgstr "Ende (exklusiv)"
 
-#: interfaces/web/detail_forms.py:41
+#: interfaces/web/detail_forms.py:47
 #: templates/components/screens/gantt/task-popover.html:47
 #: templates/components/screens/tasks/detail.html:69
 msgid "Milestone"
 msgstr "Meilenstein"
 
-#: interfaces/web/detail_forms.py:42
+#: interfaces/web/detail_forms.py:48
 #: templates/components/screens/gantt/task-popover.html:49
 #: templates/components/screens/tasks/detail.html:80
 msgid "No milestone"
 msgstr "Kein Meilenstein"
 
-#: interfaces/web/detail_forms.py:68
+#: interfaces/web/detail_forms.py:74
 msgid "End must be after start."
 msgstr "Das Ende muss nach dem Start liegen."
 
-#: interfaces/web/detail_forms.py:71
+#: interfaces/web/detail_forms.py:77
 msgid "Choose a milestone from the selected project."
 msgstr "Wähle einen Meilenstein aus dem ausgewählten Projekt."
 
-#: interfaces/web/gitlab.py:25
+#: interfaces/web/detail_forms.py:88
+msgid "Blue"
+msgstr "Blau"
+
+#: interfaces/web/detail_forms.py:88
+msgid "Green"
+msgstr "Grün"
+
+#: interfaces/web/detail_forms.py:88
+msgid "Amber"
+msgstr "Bernsteingelb"
+
+#: interfaces/web/detail_forms.py:88
+msgid "Violet"
+msgstr "Violett"
+
+#: interfaces/web/detail_forms.py:88
+msgid "Pink"
+msgstr "Pink"
+
+#: interfaces/web/detail_forms.py:89
+msgid "Cyan"
+msgstr "Türkis"
+
+#: interfaces/web/detail_forms.py:89
+msgid "Red"
+msgstr "Rot"
+
+#: interfaces/web/detail_forms.py:89
+msgid "Lime"
+msgstr "Limettengrün"
+
+#: interfaces/web/detail_forms.py:89
+msgid "Orange"
+msgstr "Orange"
+
+#: interfaces/web/detail_forms.py:89
+msgid "Sky blue"
+msgstr "Himmelblau"
+
+#: interfaces/web/detail_forms.py:110
+msgid "Project name"
+msgstr "Projektname"
+
+#: interfaces/web/detail_forms.py:114
+msgid "Project phase"
+msgstr "Projektphase"
+
+#: interfaces/web/detail_forms.py:115
+msgid "Reason for phase change"
+msgstr "Grund für den Phasenwechsel"
+
+#: interfaces/web/detail_forms.py:123
+msgid "Entry type"
+msgstr "Art des Eintrags"
+
+#: interfaces/web/detail_forms.py:124
+msgid "Journal entry"
+msgstr "Journaleintrag"
+
+#: interfaces/web/detail_forms.py:124
+msgid "A thought, a conversation, something worth remembering…"
+msgstr "Ein Gedanke, ein Gespräch, etwas, das du festhalten möchtest …"
+
+#: interfaces/web/detail_forms.py:133
+#: templates/components/screens/projects/journal-entry.html:20
+#: templates/components/screens/projects/journal-entry.html:31
+msgid "Reply"
+msgstr "Antwort"
+
+#: interfaces/web/gitlab.py:26
 msgid "GitLab instance URL"
 msgstr "URL der GitLab-Instanz"
 
-#: interfaces/web/gitlab.py:26
+#: interfaces/web/gitlab.py:27
 msgid "GitLab API token"
 msgstr "GitLab-API-Token"
 
-#: interfaces/web/gitlab.py:28
+#: interfaces/web/gitlab.py:29
 msgid "GitLab project IDs"
 msgstr "GitLab-Projekt-IDs"
 
-#: interfaces/web/gitlab.py:29
+#: interfaces/web/gitlab.py:30
 msgid "GitLab group IDs"
 msgstr "GitLab-Gruppen-IDs"
 
-#: interfaces/web/gitlab.py:37
+#: interfaces/web/gitlab.py:38
 msgid "Enter numeric GitLab IDs separated by commas."
 msgstr "Gib numerische GitLab-IDs durch Kommas getrennt ein."
 
-#: interfaces/web/gitlab.py:49
+#: interfaces/web/gitlab.py:50
 msgid "Choose at least one GitLab project or group to search."
 msgstr ""
 "Wähle mindestens ein GitLab-Projekt oder eine Gruppe für die Suche aus."
 
-#: interfaces/web/gitlab.py:54
+#: interfaces/web/gitlab.py:55
 msgid "In-progress labels"
 msgstr "Labels für „In Bearbeitung“"
 
-#: interfaces/web/gitlab.py:55
+#: interfaces/web/gitlab.py:56
 msgid "Done labels"
 msgstr "Labels für „Erledigt“"
 
-#: interfaces/web/gitlab.py:56
+#: interfaces/web/gitlab.py:57
 msgid "Not-started labels"
 msgstr "Labels für „Noch nicht begonnen“"
 
-#: interfaces/web/gitlab.py:57
+#: interfaces/web/gitlab.py:58
 msgid "Unmatched issue state"
 msgstr "Status ohne passendes Label"
 
-#: interfaces/web/gitlab.py:82
+#: interfaces/web/gitlab.py:83
 msgid "GitLab title prefix"
 msgstr "GitLab-Titelpräfix"
 
-#: interfaces/web/gitlab.py:83
+#: interfaces/web/gitlab.py:84
 msgid "Collect matching GitLab issues"
 msgstr "Passende GitLab-Issues sammeln"
 
-#: interfaces/web/gitlab.py:133
+#: interfaces/web/gitlab.py:134
 msgid ""
 "Disconnecting does not reset ownership. Use a new workspace for a different "
 "GitLab instance."
@@ -725,32 +846,14 @@ msgstr ""
 "Das Trennen setzt die Zuordnungen nicht zurück. Verwende für eine andere "
 "GitLab-Instanz einen neuen Arbeitsbereich."
 
-#: interfaces/web/gitlab.py:135
+#: interfaces/web/gitlab.py:136
 msgid "Enter a GitLab API token."
 msgstr "Gib ein GitLab-API-Token ein."
 
-#: interfaces/web/ideas.py:116
-msgid "Idea saved."
-msgstr "Idee gespeichert."
-
-#: interfaces/web/ideas.py:144
-msgid "Idea converted to a project."
-msgstr "Idee in ein Projekt umgewandelt."
-
-#: interfaces/web/ideas.py:169
-msgid "Idea converted to a task."
-msgstr "Idee in eine Aufgabe umgewandelt."
-
-#: interfaces/web/ideas.py:180
-msgid "Idea deleted."
-msgstr "Idee gelöscht."
-
 #: interfaces/web/people.py:52
 #: templates/components/screens/people/people-content.html:11
-#, fuzzy
-#| msgid "Add a person…"
 msgid "Add a team…"
-msgstr "Person hinzufügen…"
+msgstr "Team hinzufügen …"
 
 #: interfaces/web/profile.py:23 interfaces/web/public_subscriptions.py:34
 msgid "Teams email address"
@@ -792,19 +895,31 @@ msgstr "Profil gespeichert."
 msgid "Password changed."
 msgstr "Passwort geändert."
 
-#: interfaces/web/projects.py:62
-msgid "Project saved."
-msgstr "Projekt gespeichert."
-
-#: interfaces/web/projects.py:72
+#: interfaces/web/project_workspace.py:97
 msgid "Edit project"
 msgstr "Projekt bearbeiten"
 
-#: interfaces/web/projects.py:72
+#: interfaces/web/project_workspace.py:97
 msgid "Save project"
 msgstr "Projekt speichern"
 
-#: interfaces/web/projects.py:234
+#: interfaces/web/project_workspace.py:101
+msgid "All entries"
+msgstr "Alle Einträge"
+
+#: interfaces/web/project_workspace.py:101
+msgid "Decisions"
+msgstr "Entscheidungen"
+
+#: interfaces/web/project_workspace.py:101
+msgid "Questions"
+msgstr "Fragen"
+
+#: interfaces/web/project_workspace.py:101
+msgid "Updates"
+msgstr "Neuigkeiten"
+
+#: interfaces/web/project_workspace.py:136 interfaces/web/projects.py:221
 msgid ""
 "Another active project already collects this GitLab prefix. Disable "
 "collection or change its prefix before reopening."
@@ -812,6 +927,19 @@ msgstr ""
 "Ein anderes aktives Projekt sammelt bereits Issues mit diesem GitLab-Präfix. "
 "Deaktiviere das Sammeln oder ändere das Präfix, bevor du das Projekt wieder "
 "öffnest."
+
+#: interfaces/web/project_workspace.py:160
+#, python-format
+msgid "Now in %(phase)s. All saved."
+msgstr "Neue Phase: %(phase)s. Alles gespeichert."
+
+#: interfaces/web/project_workspace.py:203
+msgid "A reply must contain between 1 and 20,000 characters."
+msgstr "Eine Antwort muss zwischen 1 und 20.000 Zeichen enthalten."
+
+#: interfaces/web/projects.py:61
+msgid "Project saved."
+msgstr "Projekt gespeichert."
 
 #: interfaces/web/public_subscriptions.py:25
 msgid ""
@@ -852,11 +980,11 @@ msgstr ""
 "Füge die URL aus deinem Teams-Workflow ein. Behandle sie wie ein Passwort; "
 "gespeicherte URLs werden nicht angezeigt."
 
-#: interfaces/web/workload.py:46
+#: interfaces/web/workload.py:47
 msgid "Invalid identifier."
 msgstr "Ungültige Kennung."
 
-#: interfaces/web/workload.py:57
+#: interfaces/web/workload.py:58
 msgid ""
 "Show a dialog when an estimate is missing or due for renewal. Manual updates "
 "remain available."
@@ -864,43 +992,43 @@ msgstr ""
 "Zeige einen Dialog, wenn eine Schätzung fehlt oder erneut abgefragt werden "
 "soll. Du kannst deine Schätzung weiterhin jederzeit selbst aktualisieren."
 
-#: interfaces/web/workload.py:62
+#: interfaces/web/workload.py:63
 msgid "Enable workload reporting"
 msgstr "Meldung der Arbeitsverteilung aktivieren"
 
-#: interfaces/web/workload.py:63
+#: interfaces/web/workload.py:64
 msgid "Include members by default"
 msgstr "Mitglieder standardmäßig einbeziehen"
 
-#: interfaces/web/workload.py:64
+#: interfaces/web/workload.py:65
 msgid "Include PMs by default"
 msgstr "PMs standardmäßig einbeziehen"
 
-#: interfaces/web/workload.py:65
+#: interfaces/web/workload.py:66
 msgid "Show automatic workload check-in dialogs"
 msgstr "Automatisch zur Aktualisierung der Arbeitsverteilung auffordern"
 
-#: interfaces/web/workload.py:109
+#: interfaces/web/workload.py:110
 msgid "Unknown setting."
 msgstr "Unbekannte Einstellung."
 
-#: interfaces/web/workload.py:134
+#: interfaces/web/workload.py:135
 msgid "Workload check-in interval"
 msgstr "Abfrageintervall der Arbeitsverteilung"
 
-#: interfaces/web/workload.py:378
+#: interfaces/web/workload.py:379
 msgid "Unknown action."
 msgstr "Unbekannte Aktion."
 
-#: interfaces/web/workload.py:387
+#: interfaces/web/workload.py:388
 msgid "Review date refreshed."
 msgstr "Überprüfungsdatum aktualisiert."
 
-#: interfaces/web/workload.py:387
+#: interfaces/web/workload.py:388
 msgid "Estimate saved."
 msgstr "Schätzung gespeichert."
 
-#: interfaces/web/workload.py:424
+#: interfaces/web/workload.py:425
 msgid "We’ll remind you next week."
 msgstr "Wir erinnern dich nächste Woche."
 
@@ -1144,7 +1272,7 @@ msgstr "Anmelden — nano-pm"
 
 #: templates/accounts/login.html:8
 msgid "Login"
-msgstr ""
+msgstr "Anmelden"
 
 #: templates/accounts/login.html:9
 msgid "Sign in to your projects."
@@ -1172,7 +1300,7 @@ msgid "Assistant connections"
 msgstr "Assistenten-Verbindungen"
 
 #: templates/accounts/mcp-connections.html:5
-#: templates/components/layouts/app-shell.html:105
+#: templates/components/layouts/app-shell.html:100
 #: templates/components/screens/profile/index.html:5
 #: templates/components/screens/profile/password.html:4
 #: templates/components/screens/workload/index.html:4
@@ -1206,7 +1334,8 @@ msgstr "Verbindung trennen"
 msgid "No assistant connections."
 msgstr "Keine Assistenten-Verbindungen."
 
-#: templates/components/detail-editor.html:36
+#: templates/components/detail-editor.html:43
+#: templates/components/detail-editor.html:46
 #: templates/components/screens/gantt/milestone-popover.html:67
 #: templates/components/screens/gantt/project-popover.html:123
 #: templates/components/screens/gantt/task-popover.html:120
@@ -1262,103 +1391,98 @@ msgstr "Projekte"
 msgid "Resources"
 msgstr "Ressourcen"
 
-#: templates/components/layouts/app-shell.html:61
-#: templates/components/screens/ideas/index.html:9
-msgid "Ideas"
-msgstr "Ideen"
-
-#: templates/components/layouts/app-shell.html:65
+#: templates/components/layouts/app-shell.html:60
 #: templates/components/screens/people/index.html:8
 #: templates/components/screens/people/people-content.html:18
 msgid "People"
 msgstr "Personen"
 
-#: templates/components/layouts/app-shell.html:69
+#: templates/components/layouts/app-shell.html:64
 #: templates/components/screens/teams/settings.html:4
 msgid "Teams notifications"
 msgstr "Teams-Benachrichtigungen"
 
-#: templates/components/layouts/app-shell.html:76
+#: templates/components/layouts/app-shell.html:71
 #: templates/components/screens/activity/index.html:9
 msgid "Activity"
 msgstr "Aktivität"
 
-#: templates/components/layouts/app-shell.html:79
+#: templates/components/layouts/app-shell.html:74
 msgid "My Profile"
 msgstr "Mein Profil"
 
-#: templates/components/layouts/app-shell.html:87
-#: templates/components/layouts/app-shell.html:89
-#: templates/components/layouts/app-shell.html:90
+#: templates/components/layouts/app-shell.html:82
+#: templates/components/layouts/app-shell.html:84
+#: templates/components/layouts/app-shell.html:85
 msgid "Switch to dark mode"
 msgstr "In den Dunkelmodus wechseln"
 
-#: templates/components/layouts/app-shell.html:88
+#: templates/components/layouts/app-shell.html:83
 msgid "Switch to light mode"
 msgstr "In den Hellmodus wechseln"
 
-#: templates/components/layouts/app-shell.html:93
+#: templates/components/layouts/app-shell.html:88
 msgid "Theme"
 msgstr "Design"
 
-#: templates/components/layouts/app-shell.html:108
+#: templates/components/layouts/app-shell.html:103
 msgid "Sign out"
 msgstr "Abmelden"
 
-#: templates/components/layouts/app-shell.html:123
+#: templates/components/layouts/app-shell.html:118
 #: templates/components/screens/workload/checkin.html:7
 #: templates/public/roadmap.html:181
 msgid "Close"
 msgstr "Schließen"
 
-#: templates/components/layouts/app-shell.html:141
+#: templates/components/layouts/app-shell.html:136
 msgid "Why is this milestone moving?"
 msgstr "Warum wird dieser Meilenstein verschoben?"
 
-#: templates/components/layouts/app-shell.html:152
+#: templates/components/layouts/app-shell.html:147
 #: templates/components/screens/activity/index.html:36
 #: templates/components/screens/activity/index.html:49
 #: templates/components/screens/gantt/milestone-history.html:15
 msgid "Reason"
 msgstr "Begründung"
 
-#: templates/components/layouts/app-shell.html:152
+#: templates/components/layouts/app-shell.html:147
 msgid "(optional)"
 msgstr "(optional)"
 
-#: templates/components/layouts/app-shell.html:158
+#: templates/components/layouts/app-shell.html:153
 msgid "Briefly explain what changed…"
 msgstr "Kurz erklären, was sich geändert hat…"
 
-#: templates/components/layouts/app-shell.html:162
+#: templates/components/layouts/app-shell.html:157
 msgid "Common reasons"
 msgstr "Häufige Gründe"
 
-#: templates/components/layouts/app-shell.html:163
+#: templates/components/layouts/app-shell.html:158
 msgid "Dependency delayed"
 msgstr "Abhängigkeit verzögert"
 
-#: templates/components/layouts/app-shell.html:164
+#: templates/components/layouts/app-shell.html:159
 msgid "Scope changed"
 msgstr "Umfang geändert"
 
-#: templates/components/layouts/app-shell.html:165
+#: templates/components/layouts/app-shell.html:160
 msgid "Resource availability"
 msgstr "Ressourcenverfügbarkeit"
 
-#: templates/components/layouts/app-shell.html:166
+#: templates/components/layouts/app-shell.html:161
 msgid "External commitment"
 msgstr "Externe Verpflichtung"
 
-#: templates/components/layouts/app-shell.html:167
+#: templates/components/layouts/app-shell.html:162
 msgid "Waiting for feedback"
 msgstr "Rückmeldung ausstehend"
 
-#: templates/components/layouts/app-shell.html:171
+#: templates/components/layouts/app-shell.html:166
 msgid "Keep original date"
 msgstr "Ursprüngliches Datum behalten"
 
-#: templates/components/layouts/app-shell.html:172
+#: templates/components/layouts/app-shell.html:167
 msgid "Move milestone"
 msgstr "Meilenstein verschieben"
 
@@ -1398,11 +1522,13 @@ msgstr "Seitennavigation für Aktivitäten"
 
 #: templates/components/screens/activity/index.html:70
 #: templates/components/screens/activity/index.html:72
+#: templates/components/screens/projects/index.html:15
 msgid "Previous"
 msgstr "Zurück"
 
 #: templates/components/screens/activity/index.html:86
 #: templates/components/screens/activity/index.html:88
+#: templates/components/screens/projects/index.html:15
 msgid "Next"
 msgstr "Weiter"
 
@@ -1506,27 +1632,35 @@ msgstr "Quelle nicht verfügbar"
 
 #: templates/components/screens/gantt/index.html:7
 #: templates/components/screens/gantt/resource_index.html:7
+#: templates/components/screens/projects/detail.html:9
+#: templates/components/screens/projects/index.html:5
 #: templates/components/screens/workload/overview.html:5
 #: templates/components/screens/workspaces/settings.html:5
 msgid "Open menu"
 msgstr "Menü öffnen"
 
-#: templates/components/screens/gantt/index.html:13
+#: templates/components/screens/gantt/index.html:12
+#: templates/components/screens/projects/detail.html:8
+#: templates/components/screens/projects/index.html:6
+msgid "Project library"
+msgstr "Projektbibliothek"
+
+#: templates/components/screens/gantt/index.html:14
 #: templates/components/screens/gantt/resource_index.html:13
 msgid "Zoom"
 msgstr "Zoom"
 
-#: templates/components/screens/gantt/index.html:26
+#: templates/components/screens/gantt/index.html:27
 #: templates/components/screens/gantt/resource_index.html:26
 msgid "Jump to today (T)"
 msgstr "Zu heute springen (T)"
 
-#: templates/components/screens/gantt/index.html:26
+#: templates/components/screens/gantt/index.html:27
 #: templates/components/screens/gantt/resource_index.html:26
 msgid "Today"
 msgstr "Heute"
 
-#: templates/components/screens/gantt/index.html:32
+#: templates/components/screens/gantt/index.html:33
 #: templates/components/screens/gantt/resource_index.html:32
 msgid "Drag to resize sidebar"
 msgstr "Ziehen, um die Größe der Seitenleiste zu ändern"
@@ -1603,8 +1737,8 @@ msgstr "Teamfilter löschen"
 
 #: templates/components/screens/gantt/project-popover.html:36
 #: templates/components/screens/gantt/task-popover.html:62
-#: templates/components/screens/projects/detail.html:46
-#: templates/components/screens/projects/detail.html:78
+#: templates/components/screens/projects/brief.html:6
+#: templates/components/screens/projects/plan.html:28
 #: templates/components/screens/tasks/detail.html:62
 #: templates/public/roadmap.html:67
 msgid "Nobody assigned"
@@ -1673,7 +1807,7 @@ msgstr ""
 "Issue-Daten werden nicht mitgenommen."
 
 #: templates/components/screens/gantt/project-popover.html:105
-#: templates/components/screens/gantt/project-popover.html:109
+#: templates/components/screens/gantt/project-popover.html:110
 msgid "Move to workspace"
 msgstr "In anderen Arbeitsbereich verschieben"
 
@@ -1984,135 +2118,6 @@ msgstr "GitLab-Issue-Übersicht"
 msgid "All issues (%(count)s)"
 msgstr "Alle Issues (%(count)s)"
 
-#: templates/components/screens/ideas/detail.html:10
-#: templates/components/screens/ideas/detail.html:12
-msgid "Back to Ideas"
-msgstr "Zurück zu Ideen"
-
-#: templates/components/screens/ideas/detail.html:26
-msgid "Converted to project"
-msgstr "In Projekt umgewandelt"
-
-#: templates/components/screens/ideas/detail.html:31
-msgid "Converted to task"
-msgstr "In Aufgabe umgewandelt"
-
-#: templates/components/screens/ideas/detail.html:37
-msgid "You need the Django change idea permission to edit this idea."
-msgstr ""
-"Du benötigst die Django-Berechtigung change_idea, um diese Idee zu "
-"bearbeiten."
-
-#: templates/components/screens/ideas/detail.html:45
-msgid "Idea status"
-msgstr "Ideenstatus"
-
-#: templates/components/screens/ideas/detail.html:55
-msgid "client, roadmap, quick-win"
-msgstr "Kunde, Roadmap, Quick-Win"
-
-#: templates/components/screens/ideas/detail.html:59
-msgid "Markdown notes"
-msgstr "Markdown-Notizen"
-
-#: templates/components/screens/ideas/detail.html:61
-msgid "Brainstorm goals, open questions, links, pros and cons…"
-msgstr "Ziele, offene Fragen, Links, Vor- und Nachteile brainstormen…"
-
-#: templates/components/screens/ideas/detail.html:66
-msgid "Save idea"
-msgstr "Idee speichern"
-
-#: templates/components/screens/ideas/detail.html:72
-msgid "Idea actions"
-msgstr "Ideenaktionen"
-
-#: templates/components/screens/ideas/detail.html:76
-msgid "Promote to project"
-msgstr "Zum Projekt machen"
-
-#: templates/components/screens/ideas/detail.html:77
-msgid "Create a project using this idea title and notes."
-msgstr "Erstellt ein Projekt aus Titel und Notizen dieser Idee."
-
-#: templates/components/screens/ideas/detail.html:78
-msgid "Convert to project"
-msgstr "In Projekt umwandeln"
-
-#: templates/components/screens/ideas/detail.html:83
-msgid "Create task"
-msgstr "Aufgabe erstellen"
-
-#: templates/components/screens/ideas/detail.html:84
-msgid "Turn this idea into a scheduled task in an existing project."
-msgstr ""
-"Diese Idee in eine geplante Aufgabe in einem bestehenden Projekt umwandeln."
-
-#: templates/components/screens/ideas/detail.html:85
-msgid "Task title"
-msgstr "Aufgabentitel"
-
-#: templates/components/screens/ideas/detail.html:92
-msgid "Start date"
-msgstr "Startdatum"
-
-#: templates/components/screens/ideas/detail.html:93
-msgid "End date"
-msgstr "Enddatum"
-
-#: templates/components/screens/ideas/detail.html:95
-msgid "Create task from idea"
-msgstr "Aufgabe aus Idee erstellen"
-
-#: templates/components/screens/ideas/detail.html:99
-msgid "Triage"
-msgstr "Einordnen"
-
-#: templates/components/screens/ideas/detail.html:100
-msgid "Move the idea out of active exploration without deleting it."
-msgstr "Die Idee aus der aktiven Prüfung nehmen, ohne sie zu löschen."
-
-#: templates/components/screens/ideas/detail.html:104
-msgid "Park"
-msgstr "Parken"
-
-#: templates/components/screens/ideas/detail.html:108
-msgid "Reject"
-msgstr "Ablehnen"
-
-#: templates/components/screens/ideas/detail.html:115
-#: templates/components/screens/ideas/detail.html:119
-msgid "Delete idea"
-msgstr "Idee löschen"
-
-#: templates/components/screens/ideas/detail.html:117
-msgid "Danger zone"
-msgstr "Gefahrenbereich"
-
-#: templates/components/screens/ideas/detail.html:118
-msgid "Delete this idea permanently."
-msgstr "Diese Idee dauerhaft löschen."
-
-#: templates/components/screens/ideas/index.html:10
-msgid "Capture rough project thoughts before they become scheduled work."
-msgstr "Grobe Projektgedanken erfassen, bevor sie geplante Arbeit werden."
-
-#: templates/components/screens/ideas/index.html:16
-msgid "Sketch a new idea…"
-msgstr "Neue Idee skizzieren…"
-
-#: templates/components/screens/ideas/index.html:17
-msgid "Add idea"
-msgstr "Idee hinzufügen"
-
-#: templates/components/screens/ideas/index.html:22
-msgid "Ideas by status"
-msgstr "Ideen nach Status"
-
-#: templates/components/screens/ideas/index.html:36
-msgid "No ideas here yet."
-msgstr "Hier gibt es noch keine Ideen."
-
 #: templates/components/screens/people/index.html:9
 msgid "Team members you can assign to tasks."
 msgstr "Teammitglieder, die du Aufgaben zuweisen kannst."
@@ -2134,34 +2139,30 @@ msgstr "Person hinzufügen…"
 #: templates/components/screens/people/people-list.html:31
 #, python-format
 msgid "Remove %(person_name)s from %(team_name)s?"
-msgstr ""
+msgstr "%(person_name)s aus %(team_name)s entfernen?"
 
 #: templates/components/screens/people/people-list.html:32
 #, python-format
 msgid "Remove %(person_name)s from %(team_name)s"
-msgstr ""
+msgstr "%(person_name)s aus %(team_name)s entfernen"
 
 #: templates/components/screens/people/people-list.html:33
 msgid "Remove from team"
-msgstr ""
+msgstr "Aus Team entfernen"
 
 #: templates/components/screens/people/people-list.html:41
-#, fuzzy
-#| msgid "No teams yet."
 msgid "No teams"
-msgstr "Noch keine Teams."
+msgstr "Keine Teams"
 
 #: templates/components/screens/people/people-list.html:46
 #: templates/components/screens/people/people-list.html:49
 #, python-format
 msgid "Add team for %(name)s"
-msgstr ""
+msgstr "Team für %(name)s hinzufügen"
 
 #: templates/components/screens/people/people-list.html:62
-#, fuzzy
-#| msgid "No teams yet."
 msgid "No teams available."
-msgstr "Noch keine Teams."
+msgstr "Keine Teams verfügbar."
 
 #: templates/components/screens/people/people-list.html:73
 msgid "Manager"
@@ -2194,10 +2195,9 @@ msgid "Remove"
 msgstr "Entfernen"
 
 #: templates/components/screens/people/teams-list.html:20
-#, fuzzy, python-format
-#| msgid "Remove &quot;%(name)s&quot;?"
+#, python-format
 msgid "Remove team &quot;%(name)s&quot;?"
-msgstr "&quot;%(name)s&quot; entfernen?"
+msgstr "Team &quot;%(name)s&quot; entfernen?"
 
 #: templates/components/screens/profile/index.html:6
 msgid ""
@@ -2230,50 +2230,219 @@ msgstr "Meine Arbeitsverteilung"
 msgid "Change password"
 msgstr "Passwort ändern"
 
-#: templates/components/screens/projects/detail.html:9
-#: templates/components/screens/tasks/detail.html:12
-msgid "Back to Projects"
-msgstr "Zurück zu Projekten"
-
-#: templates/components/screens/projects/detail.html:22
-msgid "Completed"
-msgstr "Abgeschlossen"
-
-#: templates/components/screens/projects/detail.html:22
-#: templates/components/screens/workload/category-new-row.html:15
-#: templates/components/screens/workload/category-row.html:28
-#: templates/components/screens/workload/configuration.html:19
-msgid "Active"
-msgstr "Aktiv"
-
-#: templates/components/screens/projects/detail.html:31
+#: templates/components/screens/projects/brief.html:3
 msgid "Project overview"
 msgstr "Projektübersicht"
 
-#: templates/components/screens/projects/detail.html:37
+#: templates/components/screens/projects/brief.html:4
+msgid "Project brief"
+msgstr "Projektsteckbrief"
+
+#: templates/components/screens/projects/brief.html:5
 #: templates/components/screens/tasks/detail.html:53
 #: templates/public/roadmap.html:59
 msgid "No description yet."
 msgstr "Noch keine Beschreibung."
 
-#: templates/components/screens/projects/detail.html:55
+#: templates/components/screens/projects/detail.html:6
+#: templates/components/screens/projects/index.html:5
+#: templates/components/screens/tasks/detail.html:12
+msgid "Back to Projects"
+msgstr "Zurück zu Projekten"
+
+#: templates/components/screens/projects/detail.html:19
+msgid "open questions"
+msgstr "offene Fragen"
+
+#: templates/components/screens/projects/detail.html:25
+msgid "Hold a phase to move there. Release to cancel."
+msgstr "Halte eine Phase gedrückt, um zu wechseln. Lass los, um abzubrechen."
+
+#: templates/components/screens/projects/detail.html:25
+msgid "With a keyboard, hold Space or Enter. Escape cancels."
+msgstr ""
+"Halte auf der Tastatur die Leertaste oder Eingabetaste gedrückt. Escape "
+"bricht ab."
+
+#: templates/components/screens/projects/detail.html:33
+msgid "Project views"
+msgstr "Projektansichten"
+
+#: templates/components/screens/projects/detail.html:36
+msgid "Plan"
+msgstr "Plan"
+
+#: templates/components/screens/projects/detail.html:37
+msgid "GitLab"
+msgstr "GitLab"
+
+#: templates/components/screens/projects/detail.html:39
+msgid "Workspace members only"
+msgstr "Nur für Mitglieder des Arbeitsbereichs"
+
+#: templates/components/screens/projects/detail.html:56
+msgid "What’s on your mind?"
+msgstr "Was geht dir durch den Kopf?"
+
+#: templates/components/screens/projects/detail.html:65
+msgid "Post entry"
+msgstr "Eintrag hinzufügen"
+
+#: templates/components/screens/projects/detail.html:71
+msgid "Project journal"
+msgstr "Projektjournal"
+
+#: templates/components/screens/projects/detail.html:72
+msgid "Filter journal"
+msgstr "Journal filtern"
+
+#: templates/components/screens/projects/detail.html:81
+msgid "Every project starts with a thought."
+msgstr "Jedes Projekt beginnt mit einem Gedanken."
+
+#: templates/components/screens/projects/detail.html:81
+msgid ""
+"Capture a conversation, ask a question, or write down what you’re "
+"considering."
+msgstr ""
+"Halte ein Gespräch fest, stelle eine Frage oder schreib auf, was du "
+"überlegst."
+
+#: templates/components/screens/projects/detail.html:84
+msgid "Journal pages"
+msgstr "Journalseiten"
+
+#: templates/components/screens/projects/detail.html:84
+msgid "Newer"
+msgstr "Neuere"
+
+#: templates/components/screens/projects/detail.html:84
+msgid "Older"
+msgstr "Ältere"
+
+#: templates/components/screens/projects/index.html:6
+msgid "Room for what comes next"
+msgstr "Raum für das, was kommt"
+
+#: templates/components/screens/projects/index.html:6
+msgid ""
+"Every project belongs here, from a first idea to a finished piece of work."
+msgstr ""
+"Hier ist Platz für jedes Projekt, von der ersten Idee bis zur fertigen "
+"Arbeit."
+
+#: templates/components/screens/projects/index.html:8
+msgid "Start with an idea"
+msgstr "Beginne mit einer Idee"
+
+#: templates/components/screens/projects/index.html:8
+msgid "Just a name for now. No dates, no commitments."
+msgstr "Erst einmal nur ein Name. Ohne Termine, ohne Verpflichtungen."
+
+#: templates/components/screens/projects/index.html:8
+msgid "Create project"
+msgstr "Projekt erstellen"
+
+#: templates/components/screens/projects/index.html:10
+msgid "Search projects"
+msgstr "Projekte suchen"
+
+#: templates/components/screens/projects/index.html:10
+msgid "Search projects…"
+msgstr "Projekte suchen …"
+
+#: templates/components/screens/projects/index.html:10
+msgid "Filter by phase"
+msgstr "Nach Phase filtern"
+
+#: templates/components/screens/projects/index.html:10
+msgid "All phases"
+msgstr "Alle Phasen"
+
+#: templates/components/screens/projects/index.html:10
+#: templates/components/screens/workload/overview.html:26
+msgid "Filter"
+msgstr "Filtern"
+
+#: templates/components/screens/projects/index.html:11
+msgid "All projects"
+msgstr "Alle Projekte"
+
+#: templates/components/screens/projects/index.html:12
+msgid "Space for a new possibility."
+msgstr "Platz für eine neue Möglichkeit."
+
+#: templates/components/screens/projects/index.html:13
+msgid "A little room to think."
+msgstr "Ein bisschen Raum zum Nachdenken."
+
+#: templates/components/screens/projects/index.html:13
+msgid "No projects match this view. Start something new or try another filter."
+msgstr ""
+"Keine Projekte in dieser Ansicht. Beginne etwas Neues oder versuch einen "
+"anderen Filter."
+
+#: templates/components/screens/projects/index.html:15
+msgid "Project pages"
+msgstr "Projektseiten"
+
+#: templates/components/screens/projects/journal-entry.html:5
+msgid "System"
+msgstr "System"
+
+#: templates/components/screens/projects/journal-entry.html:14
+msgid "Answered"
+msgstr "Beantwortet"
+
+#: templates/components/screens/projects/journal-entry.html:14
+msgid "Open question"
+msgstr "Offene Frage"
+
+#: templates/components/screens/projects/journal-entry.html:15
+msgid "Reopen question"
+msgstr "Frage wieder öffnen"
+
+#: templates/components/screens/projects/journal-entry.html:15
+msgid "Mark answered"
+msgstr "Als beantwortet markieren"
+
+#: templates/components/screens/projects/journal-entry.html:20
+#, python-format
+msgid "%(count)s reply"
+msgid_plural "%(count)s replies"
+msgstr[0] "%(count)s Antwort"
+msgstr[1] "%(count)s Antworten"
+
+#: templates/components/screens/projects/journal-entry.html:32
+msgid "Add a thought…"
+msgstr "Füge einen Gedanken hinzu …"
+
+#: templates/components/screens/projects/journal-entry.html:33
+msgid "Post reply"
+msgstr "Antwort hinzufügen"
+
+#: templates/components/screens/projects/phase-steps.html:3
+msgid "Project lifecycle"
+msgstr "Projektverlauf"
+
+#: templates/components/screens/projects/plan.html:5
 msgid "Tasks"
 msgstr "Aufgaben"
 
-#: templates/components/screens/projects/detail.html:61
+#: templates/components/screens/projects/plan.html:11
 msgid "Task"
 msgstr "Aufgabe"
 
-#: templates/components/screens/projects/detail.html:85
+#: templates/components/screens/projects/plan.html:35
 msgid "No tasks yet."
 msgstr "Noch keine Aufgaben."
 
-#: templates/components/screens/projects/detail.html:90
+#: templates/components/screens/projects/plan.html:40
 #: templates/components/screens/workspaces/settings-general.html:12
 msgid "Milestones"
 msgstr "Meilensteine"
 
-#: templates/components/screens/projects/detail.html:102
+#: templates/components/screens/projects/plan.html:52
 msgid "No milestones yet."
 msgstr "Noch keine Meilensteine."
 
@@ -2387,6 +2556,7 @@ msgstr "Webhook speichern"
 #: templates/components/screens/workload/allocation-bar.html:3
 #: templates/components/screens/workload/donut.html:4
 #: templates/components/screens/workload/history.html:6
+#: templates/components/screens/workload/timeline.html:12
 msgid "Workload allocation"
 msgstr "Arbeitsverteilung"
 
@@ -2420,6 +2590,12 @@ msgstr "Neue Kategorie"
 #: templates/components/screens/workload/category-new-row.html:9
 msgid "Add category"
 msgstr "Kategorie hinzufügen"
+
+#: templates/components/screens/workload/category-new-row.html:15
+#: templates/components/screens/workload/category-row.html:28
+#: templates/components/screens/workload/configuration.html:19
+msgid "Active"
+msgstr "Aktiv"
 
 #: templates/components/screens/workload/category-new-row.html:19
 #: templates/components/screens/workload/category-row.html:33
@@ -2471,8 +2647,8 @@ msgid "Remind me next week"
 msgstr "Nächste Woche erinnern"
 
 #: templates/components/screens/workload/configuration.html:4
-msgid "Workload settings"
-msgstr "Arbeitsverteilung – Einstellungen"
+msgid "Settings"
+msgstr "Einstellungen"
 
 #: templates/components/screens/workload/configuration.html:12
 msgid "Categories"
@@ -2488,7 +2664,8 @@ msgid "Participation overrides"
 msgstr "Individuelle Teilnahme-Einstellungen"
 
 #: templates/components/screens/workload/configuration.html:37
-#: templates/components/screens/workload/overview.html:19
+#: templates/components/screens/workload/heatmap.html:7
+#: templates/components/screens/workload/overview.html:20
 msgid "Person"
 msgstr "Person"
 
@@ -2618,9 +2795,35 @@ msgstr "Letzte Schätzungen"
 msgid "allocated"
 msgstr "zugewiesen"
 
+#: templates/components/screens/workload/heatmap.html:3
+msgid "People and categories"
+msgstr "Personen und Kategorien"
+
+#: templates/components/screens/workload/heatmap.html:4
+msgid "Workload by person and category"
+msgstr "Arbeitsverteilung nach Person und Kategorie"
+
+#: templates/components/screens/workload/heatmap.html:8
+msgid "Last reviewed"
+msgstr "Zuletzt überprüft"
+
+#: templates/components/screens/workload/heatmap.html:15
 #: templates/components/screens/workload/history-row.html:7
 msgid "Outdated estimate (over 90 days)"
 msgstr "Veraltete Schätzung (über 90 Tage)"
+
+#: templates/components/screens/workload/heatmap.html:15
+#: templates/components/screens/workload/overview.html:46
+msgid "Not reported"
+msgstr "Noch nicht gemeldet"
+
+#: templates/components/screens/workload/heatmap.html:18
+msgid "Not recorded"
+msgstr "Nicht erfasst"
+
+#: templates/components/screens/workload/heatmap.html:21
+msgid "No people match these filters."
+msgstr "Keine Personen entsprechen diesen Filtern."
 
 #: templates/components/screens/workload/history.html:6
 msgid "Reviewed"
@@ -2650,31 +2853,31 @@ msgstr ""
 "Die Meldung ist deaktiviert. Frühere Schätzungen bleiben erhalten; derzeit "
 "nehmen keine Mitglieder teil."
 
-#: templates/components/screens/workload/overview.html:12
+#: templates/components/screens/workload/overview.html:13
 msgid "Team"
 msgstr "Team"
 
-#: templates/components/screens/workload/overview.html:14
+#: templates/components/screens/workload/overview.html:15
 msgid "All teams"
 msgstr "Alle Teams"
 
-#: templates/components/screens/workload/overview.html:21
+#: templates/components/screens/workload/overview.html:22
 msgid "All people"
 msgstr "Alle Personen"
 
-#: templates/components/screens/workload/overview.html:25
-msgid "Filter"
-msgstr "Filtern"
+#: templates/components/screens/workload/overview.html:32
+msgid "Selected person's recent history"
+msgstr "Letzte Schätzungen der ausgewählten Person"
 
-#: templates/components/screens/workload/overview.html:28
+#: templates/components/screens/workload/overview.html:33
+msgid "No estimates recorded."
+msgstr "Keine Schätzungen erfasst."
+
+#: templates/components/screens/workload/overview.html:37
 msgid "Average workload mix"
 msgstr "Durchschnittliche Arbeitsverteilung"
 
-#: templates/components/screens/workload/overview.html:37
-msgid "Not reported"
-msgstr "Noch nicht gemeldet"
-
-#: templates/components/screens/workload/overview.html:44
+#: templates/components/screens/workload/overview.html:53
 msgid "Recent workspace estimate history (including former members)"
 msgstr ""
 "Letzte Schätzungen im Arbeitsbereich (einschließlich ehemaliger Mitglieder)"
@@ -2688,8 +2891,43 @@ msgid "Workload settings saved."
 msgstr "Einstellungen zur Arbeitsverteilung gespeichert."
 
 #: templates/components/screens/workload/summary.html:18
+#: templates/components/screens/workload/timeline.html:23
 msgid "No reports from participating members."
 msgstr "Keine Schätzungen von teilnehmenden Mitgliedern."
+
+#: templates/components/screens/workload/timeline.html:3
+msgid "Workload mix over time"
+msgstr "Arbeitsverteilung im Zeitverlauf"
+
+#: templates/components/screens/workload/timeline.html:4
+msgid "Highlight a category"
+msgstr "Eine Kategorie hervorheben"
+
+#: templates/components/screens/workload/timeline.html:11
+msgid "So far"
+msgstr "Bisher"
+
+#: templates/components/screens/workload/timeline.html:13
+msgid "No reports"
+msgstr "Keine Schätzungen"
+
+#: templates/components/screens/workload/timeline.html:15
+#, python-format
+msgid "%(reported)s/%(participating)s reported"
+msgstr "%(reported)s/%(participating)s gemeldet"
+
+#: templates/components/screens/workload/timeline.html:15
+#, python-format
+msgid "%(outdated)s outdated"
+msgstr "%(outdated)s veraltet"
+
+#: templates/components/screens/workload/timeline.html:20
+msgid "Category"
+msgstr "Kategorie"
+
+#: templates/components/screens/workload/timeline.html:20
+msgid "Average share"
+msgstr "Durchschnittlicher Anteil"
 
 #: templates/components/screens/workspaces/settings-general.html:19
 msgid ""
@@ -2871,6 +3109,209 @@ msgid ""
 msgstr ""
 "Deine E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
 "Roadmap gespeichert."
+
+#~ msgid ""
+#~ "Latest estimates. Darker cells mean a larger share; numbers give the "
+#~ "exact percentage. Select a category heading to sort, or a person to see "
+#~ "their history."
+#~ msgstr ""
+#~ "Aktuelle Schätzungen. Dunklere Zellen bedeuten einen größeren Anteil; die "
+#~ "Zahlen zeigen den genauen Prozentsatz. Wähle eine Kategorieüberschrift "
+#~ "zum Sortieren oder eine Person, um ihren Verlauf zu sehen."
+
+#~ msgid ""
+#~ "Latest estimate per person at each month-end; the current month is shown "
+#~ "so far. Estimates carry forward until replaced. Select a month for exact "
+#~ "shares."
+#~ msgstr ""
+#~ "Jeweils die letzte Schätzung pro Person zum Monatsende; der aktuelle "
+#~ "Monat zeigt den bisherigen Stand. Schätzungen gelten weiter, bis sie "
+#~ "ersetzt werden. Wähle einen Monat für die genauen Anteile."
+
+#~ msgid ""
+#~ "Unweighted respondent averages, not hours or team capacity. Missing "
+#~ "reports are not zero. Outdated means over 90 days at that point in time; "
+#~ "these estimates remain included. Respondent counts can change the mix."
+#~ msgstr ""
+#~ "Ungewichtete Durchschnitte der meldenden Personen, keine Stunden oder "
+#~ "Teamkapazität. Fehlende Schätzungen zählen nicht als null. Veraltet "
+#~ "bedeutet zum jeweiligen Zeitpunkt über 90 Tage alt; diese Schätzungen "
+#~ "bleiben enthalten. Eine veränderte Zahl meldender Personen kann die "
+#~ "Verteilung beeinflussen."
+
+#~ msgid ""
+#~ "Historical views use today's membership, team assignments and "
+#~ "participation settings; historical staffing changes are not recorded."
+#~ msgstr ""
+#~ "Historische Ansichten verwenden die heutigen Mitgliedschaften, "
+#~ "Teamzuordnungen und Teilnahmeeinstellungen; frühere Personaländerungen "
+#~ "werden nicht erfasst."
+
+#~ msgid "Desired outcome"
+#~ msgstr "Gewünschtes Ergebnis"
+
+#~ msgid "Scope"
+#~ msgstr "Umfang"
+
+#~ msgid "Constraints"
+#~ msgstr "Rahmenbedingungen"
+
+#~ msgid "Next checkpoint"
+#~ msgstr "Nächster Orientierungspunkt"
+
+#~ msgid "Checkpoint date"
+#~ msgstr "Datum des Orientierungspunkts"
+
+#~ msgid "What would success look like?"
+#~ msgstr "Wie würde Erfolg aussehen?"
+
+#~ msgid "What’s in, and what’s deliberately out?"
+#~ msgstr "Was gehört dazu, und was bewusst nicht?"
+
+#~ msgid "What do we need to work around?"
+#~ msgstr "Welche Einschränkungen müssen wir berücksichtigen?"
+
+#~ msgid "No checkpoint set. Explore at your own pace."
+#~ msgstr "Noch kein Orientierungspunkt. Erkunde die Idee in deinem Tempo."
+
+#~ msgid "Where are we now?"
+#~ msgstr "Wo stehen wir gerade?"
+
+#~ msgid "Update phase"
+#~ msgstr "Phase ändern"
+
+#~ msgid "Workload settings"
+#~ msgstr "Arbeitsverteilung – Einstellungen"
+
+#~ msgid "From first thought to final outcome"
+#~ msgstr "Vom ersten Gedanken bis zum Ergebnis"
+
+#~ msgid "A small thought is worth keeping. It doesn’t have to be a task."
+#~ msgstr ""
+#~ "Auch ein kleiner Gedanke ist es wert, festgehalten zu werden. Er muss "
+#~ "keine Aufgabe sein."
+
+#~ msgid "The thinking behind the work"
+#~ msgstr "Die Gedanken hinter der Arbeit"
+
+#~ msgid ""
+#~ "The current picture. Keep it short; let the journal hold the history."
+#~ msgstr ""
+#~ "Der aktuelle Stand. Halte ihn kurz; die Geschichte bleibt im Journal."
+
+#~ msgid "Move forward, go back, or take a pause. No gates to pass."
+#~ msgstr ""
+#~ "Geh vorwärts, einen Schritt zurück oder mach eine Pause. Ohne "
+#~ "Pflichtschritte."
+
+#~ msgid "Idea saved."
+#~ msgstr "Idee gespeichert."
+
+#~ msgid "Idea converted to a project."
+#~ msgstr "Idee in ein Projekt umgewandelt."
+
+#~ msgid "Idea converted to a task."
+#~ msgstr "Idee in eine Aufgabe umgewandelt."
+
+#~ msgid "Idea deleted."
+#~ msgstr "Idee gelöscht."
+
+#~ msgid "Back to Ideas"
+#~ msgstr "Zurück zu Ideen"
+
+#~ msgid "Converted to project"
+#~ msgstr "In Projekt umgewandelt"
+
+#~ msgid "Converted to task"
+#~ msgstr "In Aufgabe umgewandelt"
+
+#~ msgid "You need the Django change idea permission to edit this idea."
+#~ msgstr ""
+#~ "Du benötigst die Django-Berechtigung change_idea, um diese Idee zu "
+#~ "bearbeiten."
+
+#~ msgid "Idea status"
+#~ msgstr "Ideenstatus"
+
+#~ msgid "client, roadmap, quick-win"
+#~ msgstr "Kunde, Roadmap, Quick-Win"
+
+#~ msgid "Markdown notes"
+#~ msgstr "Markdown-Notizen"
+
+#~ msgid "Brainstorm goals, open questions, links, pros and cons…"
+#~ msgstr "Ziele, offene Fragen, Links, Vor- und Nachteile brainstormen…"
+
+#~ msgid "Save idea"
+#~ msgstr "Idee speichern"
+
+#~ msgid "Idea actions"
+#~ msgstr "Ideenaktionen"
+
+#~ msgid "Promote to project"
+#~ msgstr "Zum Projekt machen"
+
+#~ msgid "Create a project using this idea title and notes."
+#~ msgstr "Erstellt ein Projekt aus Titel und Notizen dieser Idee."
+
+#~ msgid "Convert to project"
+#~ msgstr "In Projekt umwandeln"
+
+#~ msgid "Create task"
+#~ msgstr "Aufgabe erstellen"
+
+#~ msgid "Turn this idea into a scheduled task in an existing project."
+#~ msgstr ""
+#~ "Diese Idee in eine geplante Aufgabe in einem bestehenden Projekt "
+#~ "umwandeln."
+
+#~ msgid "Task title"
+#~ msgstr "Aufgabentitel"
+
+#~ msgid "Start date"
+#~ msgstr "Startdatum"
+
+#~ msgid "End date"
+#~ msgstr "Enddatum"
+
+#~ msgid "Create task from idea"
+#~ msgstr "Aufgabe aus Idee erstellen"
+
+#~ msgid "Triage"
+#~ msgstr "Einordnen"
+
+#~ msgid "Move the idea out of active exploration without deleting it."
+#~ msgstr "Die Idee aus der aktiven Prüfung nehmen, ohne sie zu löschen."
+
+#~ msgid "Park"
+#~ msgstr "Parken"
+
+#~ msgid "Reject"
+#~ msgstr "Ablehnen"
+
+#~ msgid "Delete idea"
+#~ msgstr "Idee löschen"
+
+#~ msgid "Danger zone"
+#~ msgstr "Gefahrenbereich"
+
+#~ msgid "Delete this idea permanently."
+#~ msgstr "Diese Idee dauerhaft löschen."
+
+#~ msgid "Capture rough project thoughts before they become scheduled work."
+#~ msgstr "Grobe Projektgedanken erfassen, bevor sie geplante Arbeit werden."
+
+#~ msgid "Sketch a new idea…"
+#~ msgstr "Neue Idee skizzieren…"
+
+#~ msgid "Add idea"
+#~ msgstr "Idee hinzufügen"
+
+#~ msgid "Ideas by status"
+#~ msgstr "Ideen nach Status"
+
+#~ msgid "No ideas here yet."
+#~ msgstr "Hier gibt es noch keine Ideen."
 
 #, fuzzy, python-format
 #~| msgid "Delete project &quot;%(name)s&quot; and all its tasks?"
@@ -3090,65 +3531,3 @@ msgstr ""
 
 #~ msgid "Only the creator or PMs can edit this idea."
 #~ msgstr "Nur der Ersteller oder PMs können diese Idee bearbeiten."
-
-#: templates/components/screens/workload/timeline.html:16
-#, python-format
-msgid "%(outdated)s outdated"
-msgstr "%(outdated)s veraltet"
-
-#: templates/components/screens/workload/timeline.html:16
-#, python-format
-msgid "%(reported)s/%(participating)s reported"
-msgstr "%(reported)s/%(participating)s gemeldet"
-
-#: templates/components/screens/workload/timeline.html:21
-msgid "Average share"
-msgstr "Durchschnittlicher Anteil"
-
-#: templates/components/screens/workload/timeline.html:21
-msgid "Category"
-msgstr "Kategorie"
-
-#: templates/components/screens/workload/timeline.html:5
-msgid "Highlight a category"
-msgstr "Eine Kategorie hervorheben"
-
-#: templates/components/screens/workload/heatmap.html:9
-msgid "Last reviewed"
-msgstr "Zuletzt überprüft"
-
-#: templates/components/screens/workload/overview.html:33
-msgid "No estimates recorded."
-msgstr "Keine Schätzungen erfasst."
-
-#: templates/components/screens/workload/heatmap.html:22
-msgid "No people match these filters."
-msgstr "Keine Personen entsprechen diesen Filtern."
-
-#: templates/components/screens/workload/timeline.html:14
-msgid "No reports"
-msgstr "Keine Schätzungen"
-
-#: templates/components/screens/workload/heatmap.html:19
-msgid "Not recorded"
-msgstr "Nicht erfasst"
-
-#: templates/components/screens/workload/heatmap.html:3
-msgid "People and categories"
-msgstr "Personen und Kategorien"
-
-#: templates/components/screens/workload/overview.html:32
-msgid "Selected person's recent history"
-msgstr "Letzte Schätzungen der ausgewählten Person"
-
-#: templates/components/screens/workload/timeline.html:12
-msgid "So far"
-msgstr "Bisher"
-
-#: templates/components/screens/workload/heatmap.html:5
-msgid "Workload by person and category"
-msgstr "Arbeitsverteilung nach Person und Kategorie"
-
-#: templates/components/screens/workload/timeline.html:3
-msgid "Workload mix over time"
-msgstr "Arbeitsverteilung im Zeitverlauf"

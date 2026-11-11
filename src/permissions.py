@@ -34,7 +34,3 @@ def can_manage_task(request, task):
         or not task.assignees.exists()
         or is_assigned(request, task)
     )
-
-
-def has_idea_perm(request, action):
-    return is_pm(request) or request.user.has_perm(f"data.{action}_idea")

@@ -15,7 +15,7 @@ from django_mcpz.server import ToolError
 
 from data.models import Invitation, MCPMutationReceipt, Workspace
 from .auth import policy_for
-from permissions import has_idea_perm, is_pm
+from permissions import is_pm
 from readers.mcp import fingerprint, schedule_effects, schedule_state
 
 from .common import fail, has_cap, replay_guards, require, scope, visible
@@ -67,7 +67,6 @@ def tool(
     global_=False,
     destructive=False,
     scheduling=False,
-    idea_action=None,
     anycaps=(),
     extra_caps=(),
     participant=False,
@@ -81,7 +80,7 @@ def tool(
                 return False
             if global_:
                 return any(has_cap(request, c) for c in caps) if cap else True
-            return visible(request, caps, pm, idea_action)
+            return visible(request, caps, pm)
 
         @wraps(func)
         @sensitive_variables()
@@ -99,8 +98,6 @@ def tool(
                         scope(request, params.workspace_id)
                         if pm:
                             require(is_pm(request))
-                        if idea_action:
-                            require(has_idea_perm(request, idea_action))
                         if participant:
                             require(
                                 request.membership.can_report_workload,

@@ -13,7 +13,11 @@ class IdeaStatus(models.TextChoices):
 
 
 class Idea(models.Model):
-    """A lightweight workspace-scoped sketch before work becomes planned."""
+    """Retired feature: retain historical records only, without UI or API access.
+
+    New ideas are Projects in the idea phase. Existing records are deliberately
+    neither copied nor deleted.
+    """
 
     workspace = models.ForeignKey(
         "data.Workspace",

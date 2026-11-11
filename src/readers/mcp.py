@@ -51,7 +51,7 @@ def ordering(workspace):
 
 
 def project(obj, detail=True):
-    data = fields(obj, "id workspace_id name color order completed_at public_roadmap_visible")
+    data = fields(obj, "id workspace_id name color order phase completed_at public_roadmap_visible")
     data["responsible_person_ids"] = list(
         obj.responsible_people.order_by("id").values_list("id", flat=True)
     )
@@ -70,11 +70,14 @@ def project(obj, detail=True):
                 "id", "date", "task_id", "require_move_reason"
             )
         ),
+        list(obj.journal.order_by("id").values_list("id", "resolved_at")),
     ]
-    revision_data = {**data, "description": obj.description}
+    brief = fields(obj, "description outcome scope constraints checkpoint checkpoint_date")
+    revision_data = {**data, **brief}
     result = dto(revision_data, children)
     if not detail:
-        result.pop("description")
+        for field in brief:
+            result.pop(field)
     return result
 
 
@@ -149,18 +152,6 @@ def membership(obj):
             "user_label": obj.user.get_username(),
         }
     )
-
-
-def idea(obj, detail=True):
-    result = dto(
-        fields(
-            obj,
-            "id title body status tags creator_id converted_project_id converted_task_id",
-        )
-    )
-    if not detail:
-        result.pop("body")
-    return result
 
 
 def category(obj):

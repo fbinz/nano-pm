@@ -1,0 +1,10 @@
+<c-vars field />
+<div id="{{ field.auto_id }}" class="color-picker">
+  {% for choice in field %}
+    <label class="color-picker-swatch" style="--swatch-color: {{ choice.data.value }};" title="{{ choice.choice_label }} ({{ choice.data.value }})">
+      {{ choice.tag }}
+      <span class="color-picker-chip" data-color-chip aria-hidden="true"><c-lucide name="check" size="18" class="color-picker-check" /></span>
+      <span class="sr-only">{{ choice.choice_label }} ({{ choice.data.value }})</span>
+    </label>
+  {% endfor %}
+</div>

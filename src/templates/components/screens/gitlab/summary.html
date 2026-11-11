@@ -3,11 +3,11 @@
 <nav class="gitlab-status-summary" aria-label="{% trans 'GitLab issue summary' %}"
      data-gitlab-summary="{{ project_id }}" data-total="{{ summary.total }}">
   {% if show_all %}
-    <a href="{% url 'project_detail' project_id %}#gitlab-issues"
+    <a href="{% url 'project_detail' project_id %}?tab=gitlab#gitlab-issues"
        {% if not selected_state %}aria-current="page"{% endif %}>{% blocktrans with count=summary.total %}All issues ({{ count }}){% endblocktrans %}</a>
   {% endif %}
   {% for item in summary.counts %}
-    <a href="{% url 'project_detail' project_id %}?gitlab_state={{ item.state }}#gitlab-issues"
+    <a href="{% url 'project_detail' project_id %}?tab=gitlab&gitlab_state={{ item.state }}#gitlab-issues"
        data-state="{{ item.state }}" data-count="{{ item.count }}"
        {% if selected_state == item.state %}aria-current="page"{% endif %}>{{ item.text }}</a>
   {% endfor %}

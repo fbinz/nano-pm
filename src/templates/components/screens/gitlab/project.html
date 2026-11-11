@@ -6,7 +6,7 @@
     <div>
       <h2 class="text-xl font-semibold">{% trans "GitLab issues" %}</h2>
     </div>
-    <a class="btn btn-ghost text-base font-normal" href="{% url 'project_detail' project.id %}{% if selected_state %}?gitlab_state={{ selected_state }}{% endif %}#gitlab-issues">{% trans "Refresh GitLab issues" %}</a>
+    <a class="btn btn-ghost text-base font-normal" href="{% url 'project_detail' project.id %}?tab=gitlab{% if selected_state %}&gitlab_state={{ selected_state }}{% endif %}#gitlab-issues">{% trans "Refresh GitLab issues" %}</a>
   </header>
   {% if connection.last_success %}<p class="text-base-content/75">{% trans "Last successful sync" %}: {{ connection.last_success|date:"d.m.Y H:i" }}</p>{% endif %}
   {% if not connection.enabled %}<p role="status">{% trans "GitLab is disconnected. Cached issues are retained." %}</p>{% endif %}
