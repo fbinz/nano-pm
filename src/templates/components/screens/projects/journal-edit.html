@@ -1,0 +1,17 @@
+{% load i18n %}
+<c-vars item project edit_form journal_kind="" journal_page="" />
+<form id="journal-body-{{ item.id }}" class="journal-edit" method="post" action="{% url 'project_journal_edit' project.id item.id %}"
+      data-on:submit__prevent="@post('{% url 'project_journal_edit' project.id item.id %}', { contentType: 'form' })">
+  {% csrf_token %}
+  <input type="hidden" name="journal_kind" value="{{ journal_kind }}">
+  <input type="hidden" name="journal_page" value="{{ journal_page }}">
+  <label for="journal-edit-{{ item.id }}" class="sr-only">{% if item.parent_id %}{% trans "Edit reply" %}{% else %}{% trans "Edit entry" %}{% endif %}</label>
+  <textarea id="journal-edit-{{ item.id }}" name="body" class="textarea w-full" rows="2" maxlength="20000" required
+            data-init="el.focus({ preventScroll: true })"{% if edit_form.body.errors %} aria-invalid="true" aria-describedby="journal-edit-error-{{ item.id }}"{% endif %}>{{ edit_form.body.value|default_if_none:"" }}</textarea>
+  {% if edit_form.body.errors %}<div id="journal-edit-error-{{ item.id }}" class="text-error" role="alert">{{ edit_form.body.errors }}</div>{% endif %}
+  <div class="flex justify-end gap-2 mt-2">
+    <button type="button" class="btn btn-sm btn-ghost"
+            data-on:click="@get('{% url 'project_journal_edit' project.id item.id %}?cancel=1&amp;journal_kind={{ journal_kind|urlencode }}&amp;journal_page={{ journal_page }}')">{% trans "Cancel" %}</button>
+    <button type="submit" class="btn btn-sm btn-neutral">{% trans "Save changes" %}</button>
+  </div>
+</form>

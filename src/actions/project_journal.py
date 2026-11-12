@@ -22,6 +22,20 @@ def add_entry(*, workspace, project_id, actor, body, kind=JournalKind.NOTE, pare
     )
 
 
+@transaction.atomic
+def edit_entry(*, workspace, project_id, entry_id, body):
+    project = Project.objects.select_for_update().get(id=project_id, workspace=workspace)
+    entry = project.journal.select_for_update().get(id=entry_id)
+    body = body.strip()
+    if not body or len(body) > 20000 or entry.kind == JournalKind.PHASE:
+        raise ValidationError("Invalid journal entry.")
+    if body != entry.body:
+        entry.body = body
+        entry.updated_at = timezone.now()
+        entry.save(update_fields=["body", "updated_at"])
+    return entry
+
+
 def resolve_question(*, workspace, project_id, entry_id):
     entry = ProjectJournalEntry.objects.get(
         id=entry_id, project_id=project_id, project__workspace=workspace,

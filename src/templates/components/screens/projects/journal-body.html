@@ -1,0 +1,7 @@
+{% load journal_markdown %}
+<c-vars item project="" edit_form="" journal_kind="" journal_page="" />
+{% if edit_form and item.can_edit_body %}
+<c-screens.projects.journal-edit :item="item" :project="project" :edit_form="edit_form" :journal_kind="journal_kind" :journal_page="journal_page" />
+{% else %}
+<div id="journal-body-{{ item.id }}" class="journal-body journal-markdown">{{ item.body|journal_markdown }}</div>
+{% endif %}

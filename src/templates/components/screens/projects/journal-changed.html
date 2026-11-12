@@ -1,0 +1,3 @@
+{% load i18n %}
+<c-vars item />
+<span id="journal-changed-{{ item.id }}" class="journal-changed"{% if not item.updated_at %} hidden{% endif %}>{% if item.updated_at %}{% trans "Last changed" %} <time datetime="{{ item.updated_at|date:'c' }}">{{ item.updated_at|date:'d M Y, H:i' }}</time>{% endif %}</span>

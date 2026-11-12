@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 22:46+0100\n"
+"POT-Creation-Date: 2026-11-12 08:50+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -136,11 +136,11 @@ msgid "Use an HTTPS Microsoft Teams or Power Automate webhook URL."
 msgstr ""
 "Verwende eine HTTPS-Webhook-URL von Microsoft Teams oder Power Automate."
 
-#: config/settings.py:239
+#: config/settings.py:240
 msgid "English"
 msgstr "Englisch"
 
-#: config/settings.py:240
+#: config/settings.py:241
 msgid "German"
 msgstr "Deutsch"
 
@@ -784,8 +784,8 @@ msgid "A thought, a conversation, something worth remembering…"
 msgstr "Ein Gedanke, ein Gespräch, etwas, das du festhalten möchtest …"
 
 #: interfaces/web/detail_forms.py:133
-#: templates/components/screens/projects/journal-entry.html:20
-#: templates/components/screens/projects/journal-entry.html:31
+#: templates/components/screens/projects/journal-entry.html:22
+#: templates/components/screens/projects/journal-entry.html:37
 msgid "Reply"
 msgstr "Antwort"
 
@@ -895,31 +895,31 @@ msgstr "Profil gespeichert."
 msgid "Password changed."
 msgstr "Passwort geändert."
 
-#: interfaces/web/project_workspace.py:97
+#: interfaces/web/project_workspace.py:104
 msgid "Edit project"
 msgstr "Projekt bearbeiten"
 
-#: interfaces/web/project_workspace.py:97
+#: interfaces/web/project_workspace.py:104
 msgid "Save project"
 msgstr "Projekt speichern"
 
-#: interfaces/web/project_workspace.py:101
+#: interfaces/web/project_workspace.py:108
 msgid "All entries"
 msgstr "Alle Einträge"
 
-#: interfaces/web/project_workspace.py:101
+#: interfaces/web/project_workspace.py:108
 msgid "Decisions"
 msgstr "Entscheidungen"
 
-#: interfaces/web/project_workspace.py:101
+#: interfaces/web/project_workspace.py:108
 msgid "Questions"
 msgstr "Fragen"
 
-#: interfaces/web/project_workspace.py:101
+#: interfaces/web/project_workspace.py:108
 msgid "Updates"
 msgstr "Neuigkeiten"
 
-#: interfaces/web/project_workspace.py:136 interfaces/web/projects.py:221
+#: interfaces/web/project_workspace.py:143 interfaces/web/projects.py:221
 msgid ""
 "Another active project already collects this GitLab prefix. Disable "
 "collection or change its prefix before reopening."
@@ -928,7 +928,7 @@ msgstr ""
 "Deaktiviere das Sammeln oder ändere das Präfix, bevor du das Projekt wieder "
 "öffnest."
 
-#: interfaces/web/project_workspace.py:160
+#: interfaces/web/project_workspace.py:167
 #, python-format
 msgid "Now in %(phase)s. All saved."
 msgstr "Neue Phase: %(phase)s. Alles gespeichert."
@@ -1340,6 +1340,7 @@ msgstr "Keine Assistenten-Verbindungen."
 #: templates/components/screens/gantt/project-popover.html:123
 #: templates/components/screens/gantt/task-popover.html:120
 #: templates/components/screens/gitlab/issue-actions.html:33
+#: templates/components/screens/projects/journal-edit.html:14
 #: templates/components/screens/teams/settings.html:99
 #: templates/public/roadmap.html:170
 msgid "Cancel"
@@ -2386,38 +2387,56 @@ msgstr ""
 msgid "Project pages"
 msgstr "Projektseiten"
 
+#: templates/components/screens/projects/journal-changed.html:3
+msgid "Last changed"
+msgstr "Zuletzt geändert"
+
+#: templates/components/screens/projects/journal-edit-button.html:9
+#: templates/components/screens/projects/journal-edit.html:8
+msgid "Edit reply"
+msgstr "Antwort bearbeiten"
+
+#: templates/components/screens/projects/journal-edit-button.html:9
+#: templates/components/screens/projects/journal-edit.html:8
+msgid "Edit entry"
+msgstr "Eintrag bearbeiten"
+
+#: templates/components/screens/projects/journal-edit.html:15
+msgid "Save changes"
+msgstr "Änderungen speichern"
+
 #: templates/components/screens/projects/journal-entry.html:5
 msgid "System"
 msgstr "System"
 
-#: templates/components/screens/projects/journal-entry.html:14
+#: templates/components/screens/projects/journal-entry.html:16
 msgid "Answered"
 msgstr "Beantwortet"
 
-#: templates/components/screens/projects/journal-entry.html:14
+#: templates/components/screens/projects/journal-entry.html:16
 msgid "Open question"
 msgstr "Offene Frage"
 
-#: templates/components/screens/projects/journal-entry.html:15
+#: templates/components/screens/projects/journal-entry.html:17
 msgid "Reopen question"
 msgstr "Frage wieder öffnen"
 
-#: templates/components/screens/projects/journal-entry.html:15
+#: templates/components/screens/projects/journal-entry.html:17
 msgid "Mark answered"
 msgstr "Als beantwortet markieren"
 
-#: templates/components/screens/projects/journal-entry.html:20
+#: templates/components/screens/projects/journal-entry.html:22
 #, python-format
 msgid "%(count)s reply"
 msgid_plural "%(count)s replies"
 msgstr[0] "%(count)s Antwort"
 msgstr[1] "%(count)s Antworten"
 
-#: templates/components/screens/projects/journal-entry.html:32
+#: templates/components/screens/projects/journal-entry.html:38
 msgid "Add a thought…"
 msgstr "Füge einen Gedanken hinzu …"
 
-#: templates/components/screens/projects/journal-entry.html:33
+#: templates/components/screens/projects/journal-entry.html:39
 msgid "Post reply"
 msgstr "Antwort hinzufügen"
 

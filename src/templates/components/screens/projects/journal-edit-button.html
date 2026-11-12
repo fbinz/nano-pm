@@ -1,0 +1,13 @@
+{% load i18n %}
+<c-vars item project edit_form="" journal_kind="" journal_page="" focus_button="" />
+{% if item.can_edit_body %}
+<div id="journal-editor-{{ item.id }}" class="journal-edit-actions">
+  {% if not edit_form %}
+  <button type="button" class="link link-hover inline-flex min-h-8 items-center gap-1"
+          {% if focus_button %}data-init="el.focus({ preventScroll: true })"{% endif %}
+          data-on:click="@get('{% url 'project_journal_edit' project.id item.id %}?journal_kind={{ journal_kind|urlencode }}&amp;journal_page={{ journal_page }}')">
+    <c-lucide name="pencil" size="12" />{% if item.parent_id %}{% trans "Edit reply" %}{% else %}{% trans "Edit entry" %}{% endif %}
+  </button>
+  {% endif %}
+</div>
+{% endif %}

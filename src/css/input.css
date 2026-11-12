@@ -1005,8 +1005,12 @@ html, body { height: 100%; }
   .journal-discussion[open] .journal-discussion-chevron { transform: rotate(180deg); }
   .journal-replies { @apply pt-2 pb-1 space-y-3; }
   .journal-reply { @apply pl-3 border-l-2 border-base-300; }
-  .journal-reply-meta { @apply flex gap-3 items-baseline text-[10px] text-base-content/50 mb-1; }
+  .journal-reply-meta { @apply flex flex-wrap gap-x-3 gap-y-1 items-baseline text-[10px] text-base-content/50 mb-1; }
   .journal-reply-meta strong { @apply font-medium text-base-content/75; }
+  .journal-changed { @apply text-[10px] text-base-content/50; }
+  .journal-edit, .journal-edit-actions { @apply text-xs text-base-content/60; }
+  .journal-entry > .journal-edit { @apply mt-2; }
+  .journal-edit textarea { @apply min-h-16 text-sm leading-relaxed; field-sizing: content; }
   .journal-reply-form { @apply flex gap-2 items-end; }
   .journal-reply-form textarea { @apply min-w-0 flex-1 text-xs bg-transparent min-h-9 resize-y py-2; field-sizing: content; }
   .project-journal-empty { @apply flex flex-col items-center text-center gap-2 px-4 py-6 text-base-content/40; }
