@@ -1,0 +1,21 @@
+{% load i18n %}
+<c-vars entry project reply_form="" journal_kind="" journal_page="" focus_button="" />
+<div id="journal-reply-composer-{{ entry.id }}" class="journal-reply-composer">
+  {% if reply_form %}
+    {% if reply_form.errors %}<div id="reply-error-{{ entry.id }}" class="text-error text-xs mt-2" role="alert">{% trans "A reply must contain between 1 and 20,000 characters." %}</div>{% endif %}
+    <form method="post" action="{% url 'project_reply' project.id entry.id %}" class="journal-reply-form"
+          data-on:submit__prevent="@post('{% url 'project_reply' project.id entry.id %}', { contentType: 'form' })">
+      {% csrf_token %}
+      <input type="hidden" name="journal_kind" value="{{ journal_kind }}">
+      <input type="hidden" name="journal_page" value="{{ journal_page }}">
+      <label for="reply-{{ entry.id }}" class="sr-only">{% trans "Reply" %}</label>
+      <textarea id="reply-{{ entry.id }}" name="body" class="textarea min-h-9" rows="1" maxlength="20000" required
+                placeholder="{% trans 'Add a thought…' %}" data-init="el.focus({ preventScroll: true })"{% if reply_form.errors %} aria-invalid="true" aria-describedby="reply-error-{{ entry.id }}"{% endif %}>{{ reply_form.body.value|default_if_none:"" }}</textarea>
+      <button type="button" class="btn btn-sm btn-ghost"
+              data-on:click="@get('{% url 'project_reply' project.id entry.id %}?cancel=1&amp;journal_kind={{ journal_kind|urlencode }}&amp;journal_page={{ journal_page }}')">{% trans "Cancel" %}</button>
+      <button type="submit" class="btn btn-sm btn-ghost" aria-label="{% trans 'Post reply' %}" title="{% trans 'Post reply' %}"><c-lucide name="send" size="16" /></button>
+    </form>
+  {% else %}
+    <c-screens.projects.journal-reply-action :entry="entry" :project="project" :journal_kind="journal_kind" :journal_page="journal_page" :focus_button="focus_button" />
+  {% endif %}
+</div>

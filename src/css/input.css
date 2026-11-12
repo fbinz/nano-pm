@@ -971,8 +971,9 @@ html, body { height: 100%; }
   .journal-entry-phase { @apply bg-base-200/30; }
   .journal-entry-meta { @apply flex flex-wrap items-center gap-2 text-xs text-base-content/50; }
   .journal-entry-meta > strong { @apply font-medium text-base-content/80; }
-  .journal-kind { @apply rounded bg-base-200/70 px-1.5 py-0.5 text-[10px] font-medium; }
-  .journal-time { @apply ml-auto text-[10px] hover:underline; }
+  .journal-kind { @apply font-normal text-base-content/50; }
+  .journal-meta-actions { @apply ml-auto inline-flex min-w-0 max-w-full items-center gap-1; }
+  .journal-time { @apply min-w-0 text-right text-xs hover:underline; }
   .journal-body { @apply whitespace-pre-wrap break-words text-sm leading-relaxed text-base-content/80; overflow-wrap: anywhere; }
   .journal-body a { @apply underline decoration-base-content/25 underline-offset-2; }
   .journal-markdown { @apply whitespace-normal; }
@@ -997,18 +998,21 @@ html, body { height: 100%; }
   .journal-phase { @apply inline-flex rounded-full border border-base-300 px-2 py-0.5 text-[10px] text-base-content/60; }
   .journal-answered { @apply inline-flex items-center gap-1 text-success; }
   .journal-open { @apply text-warning; }
-  .journal-discussion { @apply min-w-0; }
-  .journal-discussion[open] { @apply w-full; }
-  .journal-discussion > summary { @apply flex w-fit min-h-8 items-center gap-1.5 rounded cursor-pointer list-none hover:text-base-content; }
-  .journal-discussion > summary::-webkit-details-marker { display: none; }
-  .journal-discussion > summary:focus-visible { @apply outline-2 outline-primary outline-offset-2; }
-  .journal-discussion[open] .journal-discussion-chevron { transform: rotate(180deg); }
+  .journal-reply-composer { @apply mt-1 text-xs text-base-content/60; }
+  @media (hover: hover) and (pointer: fine) {
+    .journal-edit-trigger { @apply opacity-0 pointer-events-none; }
+    .journal-entry:hover > .journal-entry-meta .journal-edit-trigger,
+    .journal-entry:focus-within > .journal-entry-meta .journal-edit-trigger,
+    .journal-reply:hover > .journal-reply-meta .journal-edit-trigger,
+    .journal-reply:focus-within > .journal-reply-meta .journal-edit-trigger { @apply opacity-100 pointer-events-auto; }
+  }
   .journal-replies { @apply pt-2 pb-1 space-y-3; }
+  .journal-replies:empty { display: none; }
   .journal-reply { @apply pl-3 border-l-2 border-base-300; }
-  .journal-reply-meta { @apply flex flex-wrap gap-x-3 gap-y-1 items-baseline text-[10px] text-base-content/50 mb-1; }
+  .journal-reply-meta { @apply flex flex-wrap gap-x-3 gap-y-1 items-center text-xs text-base-content/50 mb-1; }
   .journal-reply-meta strong { @apply font-medium text-base-content/75; }
-  .journal-changed { @apply text-[10px] text-base-content/50; }
   .journal-edit, .journal-edit-actions { @apply text-xs text-base-content/60; }
+  .journal-edit-actions { @apply size-8 shrink-0; }
   .journal-entry > .journal-edit { @apply mt-2; }
   .journal-edit textarea { @apply min-h-16 text-sm leading-relaxed; field-sizing: content; }
   .journal-reply-form { @apply flex gap-2 items-end; }
@@ -1023,9 +1027,7 @@ html, body { height: 100%; }
   .project-brief .brief-placeholder { @apply text-sm leading-[22px] text-base-content/40; }
   .project-flash { @apply rounded-lg bg-success/10 text-success text-sm p-3; }
   .project-pagination { @apply flex items-center justify-center gap-4 mt-6 text-xs text-base-content/50; }
-  .project-library-heading { @apply mb-6; }
-  .project-capture { @apply rounded-xl border border-base-300 bg-base-200/40 p-5 mb-6; }
-  .project-capture form { @apply flex gap-3 mt-4; }
+  .project-library-heading { @apply flex flex-wrap items-start justify-between gap-4 mb-6; }
   .project-library-filters { @apply flex gap-3 mb-5; }
   .project-library-filters input { @apply flex-1 min-w-0; }
   .project-library-filters select { @apply w-auto; }
@@ -1049,7 +1051,6 @@ html, body { height: 100%; }
     .project-private { @apply pb-2; }
     .project-composer, .project-brief { @apply p-4; }
     .journal-entry { @apply px-3 py-3; }
-    .project-capture form { @apply flex-col; }
     .project-library-filters { @apply flex-wrap; }
     .project-library-filters input { @apply w-full flex-auto; }
     .project-library-filters select { @apply flex-1; }

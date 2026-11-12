@@ -1,0 +1,9 @@
+{% load i18n %}
+<c-vars reply project journal_kind="" journal_page="" />
+<div id="journal-reply-{{ reply.id }}" class="journal-reply">
+  <div class="journal-reply-meta">
+    <strong>{{ reply.author_label }}</strong>
+    <c-screens.projects.journal-meta-actions :item="reply" :project="project" :edit_form="reply.edit_form" :journal_kind="journal_kind" :journal_page="journal_page" />
+  </div>
+  <c-screens.projects.journal-body :item="reply" :project="project" :edit_form="reply.edit_form" :journal_kind="journal_kind" :journal_page="journal_page" />
+</div>

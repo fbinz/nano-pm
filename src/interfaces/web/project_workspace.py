@@ -18,7 +18,7 @@ from datastar_py.django import DatastarResponse, ServerSentEventGenerator as SSE
 from django_cotton import render_component
 
 from actions.manage_projects import create_project, set_project_phase
-from actions.project_journal import add_entry, edit_entry, resolve_question
+from actions.project_journal import add_entry, edit_entry, delete_entry, resolve_question
 from data.models import GitLabConnection, JournalKind, Project, ProjectJournalEntry, ProjectPhase
 from data.models.task import status_for_dates
 from readers import get_project
@@ -66,7 +66,22 @@ def project_new(request):
     return redirect("project_detail", project_id=project.id)
 
 
-def render_workspace(request, project, *, form=None, entry_form=None, phase_form=None, reply_error="", reply_entry_id=None, reply_form=None, edit_entry_id=None, edit_form=None, status=200):
+def journal_page(request, project, kind, page, *, can_edit, reply_entry_id=None, reply_form=None, edit_entry_id=None, edit_form=None):
+    entries = project.journal.filter(parent__isnull=True)
+    if kind in JournalKind.values:
+        entries = entries.filter(kind=kind)
+    entries = entries.prefetch_related(Prefetch("replies", queryset=ProjectJournalEntry.objects.order_by("created_at", "id")))
+    journal = Paginator(entries, 30).get_page(page)
+    for entry in journal:
+        entry.can_resolve = can_edit or entry.author_id == request.user.id
+        entry.reply_form = reply_form if entry.id == reply_entry_id else None
+        for item in [entry, *entry.replies.all()]:
+            item.can_edit_body = item.kind != JournalKind.PHASE and (can_edit or item.author_id == request.user.id)
+            item.edit_form = edit_form if item.id == edit_entry_id else None
+    return journal
+
+
+def render_workspace(request, project, *, form=None, entry_form=None, phase_form=None, reply_entry_id=None, reply_form=None, edit_entry_id=None, edit_form=None, status=200):
     can_edit = can_manage_project(request, project)
     if form is None and can_edit:
         form = ProjectDetailForm(project=project, workspace=request.workspace)
@@ -78,20 +93,10 @@ def render_workspace(request, project, *, form=None, entry_form=None, phase_form
     kind = request.POST.get("journal_kind", "") if journal_submission else request.GET.get("kind", "")
     page = request.POST.get("journal_page", "") if journal_submission else request.GET.get("page")
     kind = kind if kind in JournalKind.values else ""
-    entries = project.journal.filter(parent__isnull=True)
-    if kind in JournalKind.values:
-        entries = entries.filter(kind=kind)
-    entries = entries.prefetch_related(Prefetch("replies", queryset=ProjectJournalEntry.objects.order_by("created_at", "id")))
-    journal = Paginator(entries, 30).get_page(page)
-    for entry in journal:
-        entry.can_resolve = can_edit or entry.author_id == request.user.id
-        entry.discussion_open = str(entry.id) == request.GET.get("thread") or entry.id == reply_entry_id
-        entry.reply_draft = reply_form["body"].value() if reply_form is not None and entry.id == reply_entry_id else ""
-        for item in [entry, *entry.replies.all()]:
-            item.can_edit_body = item.kind != JournalKind.PHASE and (can_edit or item.author_id == request.user.id)
-            item.edit_form = edit_form if item.id == edit_entry_id else None
-            if item.edit_form is not None and item.parent_id:
-                entry.discussion_open = True
+    journal = journal_page(
+        request, project, kind, page, can_edit=can_edit,
+        reply_entry_id=reply_entry_id, reply_form=reply_form, edit_entry_id=edit_entry_id, edit_form=edit_form,
+    )
     has_gitlab = GitLabConnection.objects.filter(workspace=request.workspace).exists()
     tab = request.GET.get("tab", "workspace")
     if tab not in {"project", "workspace", "plan", "gitlab"} or (tab == "gitlab" and not has_gitlab):
@@ -109,7 +114,6 @@ def render_workspace(request, project, *, form=None, entry_form=None, phase_form
         "phase_steps": phase_steps(),
         "phase_form": phase_form if phase_form is not None else ProjectPhaseForm(initial={"phase": project.phase}),
         "entry_form": entry_form if entry_form is not None else JournalEntryForm(initial={"kind": JournalKind.NOTE}),
-        "reply_error": reply_error,
         "open_questions": project.journal.filter(kind=JournalKind.QUESTION, resolved_at__isnull=True, parent__isnull=True).count(),
         "is_pm": is_pm(request), **workspace_context(request),
     }
@@ -190,19 +194,47 @@ def project_journal(request, project_id):
     return render_workspace(request, project, entry_form=form, status=400)
 
 
-@require_POST
+def journal_options(data):
+    kind = data.get("journal_kind", "")
+    page = data.get("journal_page", "")
+    return {
+        "journal_kind": kind if kind in JournalKind.values else "",
+        "journal_page": page if isinstance(page, str) and page.isascii() and page.isdecimal() and len(page) <= 8 else "",
+    }
+
+
+def reply_composer_events(request, context, form=None, *, focus_button=False):
+    return [SSE.patch_elements(render_component(
+        request, "screens/projects/journal-reply-composer", **context, reply_form=form, focus_button=focus_button,
+    ))]
+
+
+@require_http_methods(["GET", "POST"])
 @login_required
 def project_reply(request, project_id, entry_id):
     project = workspace_project(request, project_id)
-    get_object_or_404(project.journal, id=entry_id, parent__isnull=True)
-    form = JournalReplyForm(request.POST)
+    entry = get_object_or_404(project.journal, id=entry_id, parent__isnull=True)
+    data = request.POST if request.method == "POST" else request.GET
+    context = {"entry": entry, "project": project, **journal_options(data)}
+    form = JournalReplyForm(request.POST if request.method == "POST" else None)
+    if request.method == "GET":
+        cancel = request.GET.get("cancel") == "1"
+        return DatastarResponse(reply_composer_events(request, context, None if cancel else form, focus_button=cancel))
     if form.is_valid():
-        add_entry(workspace=request.workspace, project_id=project.id, actor=request.user, parent_id=entry_id, **form.cleaned_data)
+        reply = add_entry(workspace=request.workspace, project_id=project.id, actor=request.user, parent_id=entry_id, **form.cleaned_data)
+        if request.headers.get("Datastar-Request") == "true":
+            reply.can_edit_body = True
+            reply.edit_form = None
+            return DatastarResponse([
+                SSE.patch_elements(render_component(
+                    request, "screens/projects/journal-reply", reply=reply, project=project, **journal_options(data),
+                ), selector=f"#journal-replies-{entry.id}", mode="append"),
+                *reply_composer_events(request, context, focus_button=True),
+            ])
         return journal_redirect(request, project, entry_id, thread_id=entry_id)
-    return render_workspace(
-        request, project, reply_error=_("A reply must contain between 1 and 20,000 characters."),
-        reply_entry_id=entry_id, reply_form=form, status=400,
-    )
+    if request.headers.get("Datastar-Request") == "true":
+        return DatastarResponse(reply_composer_events(request, context, form))
+    return render_workspace(request, project, reply_entry_id=entry_id, reply_form=form, status=400)
 
 
 def journal_redirect(request, project, entry_id, *, thread_id=None):
@@ -228,13 +260,7 @@ def project_journal_edit(request, project_id, entry_id):
         return HttpResponse(status=403)
     entry.can_edit_body = True
     data = request.POST if request.method == "POST" else request.GET
-    kind = data.get("journal_kind", "")
-    page = data.get("journal_page", "")
-    context = {
-        "item": entry, "project": project,
-        "journal_kind": kind if kind in JournalKind.values else "",
-        "journal_page": page if page.isascii() and page.isdecimal() and len(page) <= 8 else "",
-    }
+    context = {"item": entry, "project": project, **journal_options(data)}
     form = JournalReplyForm(request.POST if request.method == "POST" else None, initial={"body": entry.body})
     if request.method == "GET":
         cancel = request.GET.get("cancel") == "1"
@@ -252,7 +278,7 @@ def project_journal_edit(request, project_id, entry_id):
         if request.headers.get("Datastar-Request") == "true":
             return DatastarResponse([
                 SSE.patch_elements(render_component(request, "screens/projects/journal-body", item=saved)),
-                SSE.patch_elements(render_component(request, "screens/projects/journal-changed", item=saved)),
+                SSE.patch_elements(render_component(request, "screens/projects/journal-time", item=saved)),
                 SSE.patch_elements(render_component(request, "screens/projects/journal-edit-button", **context, focus_button=True)),
             ])
         return journal_redirect(request, project, entry.parent_id or entry.id, thread_id=entry.parent_id)
@@ -261,6 +287,44 @@ def project_journal_edit(request, project_id, entry_id):
             request, "screens/projects/journal-body", **context, edit_form=form,
         ))])
     return render_workspace(request, project, edit_entry_id=entry.id, edit_form=form, status=400)
+
+
+@require_POST
+@login_required
+def project_journal_delete(request, project_id, entry_id):
+    project = workspace_project(request, project_id)
+    entry = get_object_or_404(project.journal, id=entry_id)
+    can_edit = can_manage_project(request, project)
+    if entry.kind == JournalKind.PHASE or not (can_edit or entry.author_id == request.user.id):
+        return HttpResponse(status=403)
+    parent_id = entry.parent_id
+    options = journal_options(request_data(request))
+    delete_entry(workspace=request.workspace, project_id=project.id, entry_id=entry.id)
+    if request.headers.get("Datastar-Request") != "true":
+        return journal_redirect(request, project, parent_id or entry_id, thread_id=parent_id)
+    if parent_id is not None:
+        return DatastarResponse([
+            SSE.remove_elements(f"#journal-reply-{entry_id}"),
+            SSE.execute_script(f"document.querySelector('#entry-{parent_id} .journal-time')?.focus({{ preventScroll: true }})"),
+        ])
+    page = options["journal_page"]
+    journal = journal_page(request, project, options["journal_kind"], page, can_edit=can_edit)
+    if page and int(page) > journal.paginator.num_pages:
+        # A now-empty final page has no remaining entry drafts to overwrite.
+        entries_event = SSE.patch_elements(render_component(
+            request, "screens/projects/journal-entries", project=project, journal=journal, journal_kind=options["journal_kind"],
+        ))
+    else:
+        entries_event = SSE.remove_elements(f"#entry-{entry_id}")
+    return DatastarResponse([
+        entries_event,
+        SSE.patch_elements(render_component(request, "screens/projects/journal-pagination", journal=journal, journal_kind=options["journal_kind"])),
+        SSE.patch_elements(render_component(
+            request, "screens/projects/journal-open-questions",
+            count=project.journal.filter(kind=JournalKind.QUESTION, resolved_at__isnull=True, parent__isnull=True).count(),
+        )),
+        SSE.execute_script("document.querySelector('.project-composer textarea')?.focus({ preventScroll: true })"),
+    ])
 
 
 @require_POST

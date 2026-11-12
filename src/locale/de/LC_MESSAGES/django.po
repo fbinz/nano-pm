@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-pm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 08:50+0100\n"
+"POT-Creation-Date: 2026-11-12 23:22+0100\n"
 "PO-Revision-Date: 2026-05-30 13:00+0200\n"
 "Last-Translator: nano-pm\n"
 "Language-Team: German\n"
@@ -242,7 +242,7 @@ msgstr "Arbeitsbereich"
 
 #: data/models/activity.py:84
 #: templates/components/screens/projects/detail.html:18
-#: templates/components/screens/projects/index.html:12
+#: templates/components/screens/projects/index.html:38
 msgid "tasks"
 msgstr "Aufgaben"
 
@@ -781,11 +781,10 @@ msgstr "Journaleintrag"
 
 #: interfaces/web/detail_forms.py:124
 msgid "A thought, a conversation, something worth remembering…"
-msgstr "Ein Gedanke, ein Gespräch, etwas, das du festhalten möchtest …"
+msgstr "Ein Gedanke, ein Gespräch, etwas, das du festhalten möchtest…"
 
 #: interfaces/web/detail_forms.py:133
-#: templates/components/screens/projects/journal-entry.html:22
-#: templates/components/screens/projects/journal-entry.html:37
+#: templates/components/screens/projects/journal-reply-composer.html:11
 msgid "Reply"
 msgstr "Antwort"
 
@@ -895,31 +894,31 @@ msgstr "Profil gespeichert."
 msgid "Password changed."
 msgstr "Passwort geändert."
 
-#: interfaces/web/project_workspace.py:104
+#: interfaces/web/project_workspace.py:109
 msgid "Edit project"
 msgstr "Projekt bearbeiten"
 
-#: interfaces/web/project_workspace.py:104
+#: interfaces/web/project_workspace.py:109
 msgid "Save project"
 msgstr "Projekt speichern"
 
-#: interfaces/web/project_workspace.py:108
+#: interfaces/web/project_workspace.py:113
 msgid "All entries"
 msgstr "Alle Einträge"
 
-#: interfaces/web/project_workspace.py:108
+#: interfaces/web/project_workspace.py:113
 msgid "Decisions"
 msgstr "Entscheidungen"
 
-#: interfaces/web/project_workspace.py:108
+#: interfaces/web/project_workspace.py:113
 msgid "Questions"
 msgstr "Fragen"
 
-#: interfaces/web/project_workspace.py:108
+#: interfaces/web/project_workspace.py:113
 msgid "Updates"
 msgstr "Neuigkeiten"
 
-#: interfaces/web/project_workspace.py:143 interfaces/web/projects.py:221
+#: interfaces/web/project_workspace.py:147 interfaces/web/projects.py:221
 msgid ""
 "Another active project already collects this GitLab prefix. Disable "
 "collection or change its prefix before reopening."
@@ -928,14 +927,10 @@ msgstr ""
 "Deaktiviere das Sammeln oder ändere das Präfix, bevor du das Projekt wieder "
 "öffnest."
 
-#: interfaces/web/project_workspace.py:167
+#: interfaces/web/project_workspace.py:171
 #, python-format
 msgid "Now in %(phase)s. All saved."
 msgstr "Neue Phase: %(phase)s. Alles gespeichert."
-
-#: interfaces/web/project_workspace.py:203
-msgid "A reply must contain between 1 and 20,000 characters."
-msgstr "Eine Antwort muss zwischen 1 und 20.000 Zeichen enthalten."
 
 #: interfaces/web/projects.py:61
 msgid "Project saved."
@@ -1340,7 +1335,9 @@ msgstr "Keine Assistenten-Verbindungen."
 #: templates/components/screens/gantt/project-popover.html:123
 #: templates/components/screens/gantt/task-popover.html:120
 #: templates/components/screens/gitlab/issue-actions.html:33
-#: templates/components/screens/projects/journal-edit.html:14
+#: templates/components/screens/projects/index.html:29
+#: templates/components/screens/projects/journal-edit.html:17
+#: templates/components/screens/projects/journal-reply-composer.html:15
 #: templates/components/screens/teams/settings.html:99
 #: templates/public/roadmap.html:170
 msgid "Cancel"
@@ -1523,13 +1520,13 @@ msgstr "Seitennavigation für Aktivitäten"
 
 #: templates/components/screens/activity/index.html:70
 #: templates/components/screens/activity/index.html:72
-#: templates/components/screens/projects/index.html:15
+#: templates/components/screens/projects/index.html:41
 msgid "Previous"
 msgstr "Zurück"
 
 #: templates/components/screens/activity/index.html:86
 #: templates/components/screens/activity/index.html:88
-#: templates/components/screens/projects/index.html:15
+#: templates/components/screens/projects/index.html:41
 msgid "Next"
 msgstr "Weiter"
 
@@ -1558,6 +1555,8 @@ msgstr "Zeitachse"
 
 #: templates/components/screens/gantt/chart.html:40
 #: templates/components/screens/gantt/chart.html:136
+#: templates/components/screens/projects/index.html:14
+#: templates/components/screens/projects/index.html:22
 msgid "Add Project"
 msgstr "Projekt hinzufügen"
 
@@ -1642,7 +1641,7 @@ msgstr "Menü öffnen"
 
 #: templates/components/screens/gantt/index.html:12
 #: templates/components/screens/projects/detail.html:8
-#: templates/components/screens/projects/index.html:6
+#: templates/components/screens/projects/index.html:8
 msgid "Project library"
 msgstr "Projektbibliothek"
 
@@ -2251,10 +2250,6 @@ msgstr "Noch keine Beschreibung."
 msgid "Back to Projects"
 msgstr "Zurück zu Projekten"
 
-#: templates/components/screens/projects/detail.html:19
-msgid "open questions"
-msgstr "offene Fragen"
-
 #: templates/components/screens/projects/detail.html:25
 msgid "Hold a phase to move there. Release to cancel."
 msgstr "Halte eine Phase gedrückt, um zu wechseln. Lass los, um abzubrechen."
@@ -2297,11 +2292,88 @@ msgstr "Projektjournal"
 msgid "Filter journal"
 msgstr "Journal filtern"
 
-#: templates/components/screens/projects/detail.html:81
+#: templates/components/screens/projects/index.html:30
+msgid "Create project"
+msgstr "Projekt erstellen"
+
+#: templates/components/screens/projects/index.html:36
+msgid "Search projects"
+msgstr "Projekte suchen"
+
+#: templates/components/screens/projects/index.html:36
+msgid "Search projects…"
+msgstr "Projekte suchen …"
+
+#: templates/components/screens/projects/index.html:36
+msgid "Filter by phase"
+msgstr "Nach Phase filtern"
+
+#: templates/components/screens/projects/index.html:36
+msgid "All phases"
+msgstr "Alle Phasen"
+
+#: templates/components/screens/projects/index.html:36
+#: templates/components/screens/workload/overview.html:26
+msgid "Filter"
+msgstr "Filtern"
+
+#: templates/components/screens/projects/index.html:37
+msgid "All projects"
+msgstr "Alle Projekte"
+
+#: templates/components/screens/projects/index.html:38
+msgid "Space for a new possibility."
+msgstr "Platz für eine neue Möglichkeit."
+
+#: templates/components/screens/projects/index.html:39
+msgid "A little room to think."
+msgstr "Ein bisschen Raum zum Nachdenken."
+
+#: templates/components/screens/projects/index.html:39
+msgid "No projects match this view. Start something new or try another filter."
+msgstr ""
+"Keine Projekte in dieser Ansicht. Beginne etwas Neues oder versuch einen "
+"anderen Filter."
+
+#: templates/components/screens/projects/index.html:41
+msgid "Project pages"
+msgstr "Projektseiten"
+
+#: templates/components/screens/projects/journal-edit-button.html:4
+#: templates/components/screens/projects/journal-edit.html:9
+msgid "Edit reply"
+msgstr "Antwort bearbeiten"
+
+#: templates/components/screens/projects/journal-edit-button.html:4
+#: templates/components/screens/projects/journal-edit.html:9
+msgid "Edit entry"
+msgstr "Eintrag bearbeiten"
+
+#: templates/components/screens/projects/journal-edit.html:3
+msgid "Delete this reply?"
+msgstr "Möchtest du diese Antwort löschen?"
+
+#: templates/components/screens/projects/journal-edit.html:3
+msgid "Delete this entry and all its replies?"
+msgstr "Möchtest du diesen Eintrag und alle Antworten löschen?"
+
+#: templates/components/screens/projects/journal-edit.html:15
+msgid "Delete reply"
+msgstr "Antwort löschen"
+
+#: templates/components/screens/projects/journal-edit.html:15
+msgid "Delete entry"
+msgstr "Eintrag löschen"
+
+#: templates/components/screens/projects/journal-edit.html:18
+msgid "Save changes"
+msgstr "Änderungen speichern"
+
+#: templates/components/screens/projects/journal-entries.html:7
 msgid "Every project starts with a thought."
 msgstr "Jedes Projekt beginnt mit einem Gedanken."
 
-#: templates/components/screens/projects/detail.html:81
+#: templates/components/screens/projects/journal-entries.html:7
 msgid ""
 "Capture a conversation, ask a question, or write down what you’re "
 "considering."
@@ -2309,136 +2381,78 @@ msgstr ""
 "Halte ein Gespräch fest, stelle eine Frage oder schreib auf, was du "
 "überlegst."
 
-#: templates/components/screens/projects/detail.html:84
-msgid "Journal pages"
-msgstr "Journalseiten"
-
-#: templates/components/screens/projects/detail.html:84
-msgid "Newer"
-msgstr "Neuere"
-
-#: templates/components/screens/projects/detail.html:84
-msgid "Older"
-msgstr "Ältere"
-
-#: templates/components/screens/projects/index.html:6
-msgid "Room for what comes next"
-msgstr "Raum für das, was kommt"
-
-#: templates/components/screens/projects/index.html:6
-msgid ""
-"Every project belongs here, from a first idea to a finished piece of work."
-msgstr ""
-"Hier ist Platz für jedes Projekt, von der ersten Idee bis zur fertigen "
-"Arbeit."
-
-#: templates/components/screens/projects/index.html:8
-msgid "Start with an idea"
-msgstr "Beginne mit einer Idee"
-
-#: templates/components/screens/projects/index.html:8
-msgid "Just a name for now. No dates, no commitments."
-msgstr "Erst einmal nur ein Name. Ohne Termine, ohne Verpflichtungen."
-
-#: templates/components/screens/projects/index.html:8
-msgid "Create project"
-msgstr "Projekt erstellen"
-
-#: templates/components/screens/projects/index.html:10
-msgid "Search projects"
-msgstr "Projekte suchen"
-
-#: templates/components/screens/projects/index.html:10
-msgid "Search projects…"
-msgstr "Projekte suchen …"
-
-#: templates/components/screens/projects/index.html:10
-msgid "Filter by phase"
-msgstr "Nach Phase filtern"
-
-#: templates/components/screens/projects/index.html:10
-msgid "All phases"
-msgstr "Alle Phasen"
-
-#: templates/components/screens/projects/index.html:10
-#: templates/components/screens/workload/overview.html:26
-msgid "Filter"
-msgstr "Filtern"
-
-#: templates/components/screens/projects/index.html:11
-msgid "All projects"
-msgstr "Alle Projekte"
-
-#: templates/components/screens/projects/index.html:12
-msgid "Space for a new possibility."
-msgstr "Platz für eine neue Möglichkeit."
-
-#: templates/components/screens/projects/index.html:13
-msgid "A little room to think."
-msgstr "Ein bisschen Raum zum Nachdenken."
-
-#: templates/components/screens/projects/index.html:13
-msgid "No projects match this view. Start something new or try another filter."
-msgstr ""
-"Keine Projekte in dieser Ansicht. Beginne etwas Neues oder versuch einen "
-"anderen Filter."
-
-#: templates/components/screens/projects/index.html:15
-msgid "Project pages"
-msgstr "Projektseiten"
-
-#: templates/components/screens/projects/journal-changed.html:3
-msgid "Last changed"
-msgstr "Zuletzt geändert"
-
-#: templates/components/screens/projects/journal-edit-button.html:9
-#: templates/components/screens/projects/journal-edit.html:8
-msgid "Edit reply"
-msgstr "Antwort bearbeiten"
-
-#: templates/components/screens/projects/journal-edit-button.html:9
-#: templates/components/screens/projects/journal-edit.html:8
-msgid "Edit entry"
-msgstr "Eintrag bearbeiten"
-
-#: templates/components/screens/projects/journal-edit.html:15
-msgid "Save changes"
-msgstr "Änderungen speichern"
-
 #: templates/components/screens/projects/journal-entry.html:5
 msgid "System"
 msgstr "System"
 
-#: templates/components/screens/projects/journal-entry.html:16
+#: templates/components/screens/projects/journal-entry.html:14
 msgid "Answered"
 msgstr "Beantwortet"
 
-#: templates/components/screens/projects/journal-entry.html:16
+#: templates/components/screens/projects/journal-entry.html:14
 msgid "Open question"
 msgstr "Offene Frage"
 
-#: templates/components/screens/projects/journal-entry.html:17
+#: templates/components/screens/projects/journal-entry.html:15
 msgid "Reopen question"
 msgstr "Frage wieder öffnen"
 
-#: templates/components/screens/projects/journal-entry.html:17
+#: templates/components/screens/projects/journal-entry.html:15
 msgid "Mark answered"
 msgstr "Als beantwortet markieren"
 
-#: templates/components/screens/projects/journal-entry.html:22
-#, python-format
-msgid "%(count)s reply"
-msgid_plural "%(count)s replies"
-msgstr[0] "%(count)s Antwort"
-msgstr[1] "%(count)s Antworten"
+#: templates/components/screens/projects/journal-open-questions.html:3
+msgid "open questions"
+msgstr "offene Fragen"
 
-#: templates/components/screens/projects/journal-entry.html:38
+#: templates/components/screens/projects/journal-pagination.html:4
+msgid "Journal pages"
+msgstr "Journalseiten"
+
+#: templates/components/screens/projects/journal-pagination.html:4
+msgid "Newer"
+msgstr "Neuere"
+
+#: templates/components/screens/projects/journal-pagination.html:4
+msgid "Older"
+msgstr "Ältere"
+
+#: templates/components/screens/projects/journal-reply-action.html:8
+msgctxt "journal action"
+msgid "Reply"
+msgstr "Antworten"
+
+#: templates/components/screens/projects/journal-reply-composer.html:5
+msgid "A reply must contain between 1 and 20,000 characters."
+msgstr "Eine Antwort muss zwischen 1 und 20.000 Zeichen enthalten."
+
+#: templates/components/screens/projects/journal-reply-composer.html:13
 msgid "Add a thought…"
 msgstr "Füge einen Gedanken hinzu …"
 
-#: templates/components/screens/projects/journal-entry.html:39
+#: templates/components/screens/projects/journal-reply-composer.html:16
 msgid "Post reply"
 msgstr "Antwort hinzufügen"
+
+#: templates/components/screens/projects/journal-time.html:7
+#, python-format
+msgid "Created: %(date)s"
+msgstr "Erstellt: %(date)s"
+
+#: templates/components/screens/projects/journal-time.html:7
+#, python-format
+msgid "Last changed: %(date)s"
+msgstr "Zuletzt geändert: %(date)s"
+
+#: templates/components/screens/projects/journal-time.html:7
+#, python-format
+msgid "Phase at creation: %(phase)s"
+msgstr "Phase beim Erstellen: %(phase)s"
+
+#: templates/components/screens/projects/journal-time.html:8
+msgctxt "journal timestamp"
+msgid "edited"
+msgstr "bearbeitet"
 
 #: templates/components/screens/projects/phase-steps.html:3
 msgid "Project lifecycle"
@@ -3129,6 +3143,27 @@ msgstr ""
 "Deine E-Mail-Adresse wird in diesem Browser für weitere Abonnements dieser "
 "Roadmap gespeichert."
 
+#, python-format
+#~ msgid "%(count)s reply"
+#~ msgid_plural "%(count)s replies"
+#~ msgstr[0] "%(count)s Antwort"
+#~ msgstr[1] "%(count)s Antworten"
+
+#~ msgid "Room for what comes next"
+#~ msgstr "Raum für das, was kommt"
+
+#~ msgid ""
+#~ "Every project belongs here, from a first idea to a finished piece of work."
+#~ msgstr ""
+#~ "Hier ist Platz für jedes Projekt, von der ersten Idee bis zur fertigen "
+#~ "Arbeit."
+
+#~ msgid "Start with an idea"
+#~ msgstr "Beginne mit einer Idee"
+
+#~ msgid "Just a name for now. No dates, no commitments."
+#~ msgstr "Erst einmal nur ein Name. Ohne Termine, ohne Verpflichtungen."
+
 #~ msgid ""
 #~ "Latest estimates. Darker cells mean a larger share; numbers give the "
 #~ "exact percentage. Select a category heading to sort, or a person to see "
@@ -3276,9 +3311,6 @@ msgstr ""
 #~ msgid "Convert to project"
 #~ msgstr "In Projekt umwandeln"
 
-#~ msgid "Create task"
-#~ msgstr "Aufgabe erstellen"
-
 #~ msgid "Turn this idea into a scheduled task in an existing project."
 #~ msgstr ""
 #~ "Diese Idee in eine geplante Aufgabe in einem bestehenden Projekt "
@@ -3307,9 +3339,6 @@ msgstr ""
 
 #~ msgid "Reject"
 #~ msgstr "Ablehnen"
-
-#~ msgid "Delete idea"
-#~ msgstr "Idee löschen"
 
 #~ msgid "Danger zone"
 #~ msgstr "Gefahrenbereich"

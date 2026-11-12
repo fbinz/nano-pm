@@ -1,0 +1,5 @@
+{% load i18n %}
+<c-vars journal journal_kind="" />
+<div id="journal-pagination">
+  {% if journal.has_other_pages %}<nav class="project-pagination" aria-label="{% trans 'Journal pages' %}">{% if journal.has_previous %}<a class="btn btn-sm" href="?kind={{ journal_kind|urlencode }}&page={{ journal.previous_page_number }}">{% trans "Newer" %}</a>{% endif %}<span>{{ journal.number }} / {{ journal.paginator.num_pages }}</span>{% if journal.has_next %}<a class="btn btn-sm" href="?kind={{ journal_kind|urlencode }}&page={{ journal.next_page_number }}">{% trans "Older" %}</a>{% endif %}</nav>{% endif %}
+</div>

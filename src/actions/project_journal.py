@@ -36,6 +36,15 @@ def edit_entry(*, workspace, project_id, entry_id, body):
     return entry
 
 
+@transaction.atomic
+def delete_entry(*, workspace, project_id, entry_id):
+    project = Project.objects.select_for_update().get(id=project_id, workspace=workspace)
+    entry = project.journal.select_for_update().get(id=entry_id)
+    if entry.kind == JournalKind.PHASE:
+        raise ValidationError("Phase history cannot be deleted.")
+    entry.delete()
+
+
 def resolve_question(*, workspace, project_id, entry_id):
     entry = ProjectJournalEntry.objects.get(
         id=entry_id, project_id=project_id, project__workspace=workspace,

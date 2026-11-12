@@ -1,0 +1,8 @@
+{% load i18n %}
+<c-vars project journal journal_kind="" />
+<div id="journal-entries" class="journal-entries">
+  {% for entry in journal %}
+    <c-screens.projects.journal-entry :entry="entry" :project="project" :journal_kind="journal_kind" :journal_page="journal.number" />
+  {% endfor %}
+  <div class="project-journal-empty"><c-lucide name="notebook-pen" size="28" /><h3>{% trans "Every project starts with a thought." %}</h3><p>{% trans "Capture a conversation, ask a question, or write down what you’re considering." %}</p></div>
+</div>

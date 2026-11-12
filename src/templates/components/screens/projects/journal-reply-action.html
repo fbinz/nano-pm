@@ -1,0 +1,10 @@
+{% load i18n %}
+<c-vars entry project journal_kind="" journal_page="" focus_button="" />
+<div id="journal-reply-action-{{ entry.id }}">
+  <button type="button" class="journal-reply-trigger link link-hover inline-flex min-h-8 items-center gap-1"
+          aria-controls="journal-reply-composer-{{ entry.id }}" aria-expanded="false"
+          {% if focus_button %}data-init="el.focus({ preventScroll: true })"{% endif %}
+          data-on:click="@get('{% url 'project_reply' project.id entry.id %}?journal_kind={{ journal_kind|urlencode }}&amp;journal_page={{ journal_page }}')">
+    <c-lucide name="message-circle" size="14" />{% trans "Reply" context "journal action" %}
+  </button>
+</div>

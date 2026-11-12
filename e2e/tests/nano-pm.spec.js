@@ -89,6 +89,16 @@ async function postForm(page, url, fields) {
   }, { url, fields });
 }
 
+async function openJournalEdit(item, label) {
+  await item.locator(':scope > .journal-entry-meta, :scope > .journal-reply-meta').hover();
+  await item.getByRole('button', { name: label, exact: true }).click();
+}
+
+async function openJournalReply(entry) {
+  await entry.locator('> .journal-reply-composer').hover();
+  await entry.getByRole('button', { name: 'Reply', exact: true }).click();
+}
+
 async function enableRoadmap(page) {
   await page.goto('/workspaces/settings/sharing/');
   await page.getByRole('button', { name: 'Enable public roadmap' }).click();
@@ -6027,6 +6037,7 @@ test.describe('project detail tabs', () => {
       await expect(gitlabRows(page)).toHaveCount(1);
       await postForm(page, '/workspaces/', { name: 'No integration here' });
       await page.goto('/projects/');
+      await page.getByRole('button', { name: 'Add Project', exact: true }).click();
       await page.getByLabel('Project name', { exact: true }).fill('Independent project');
       await page.getByRole('button', { name: 'Create project', exact: true }).click();
       await expect(tabs.getByRole('link', { name: 'GitLab', exact: true })).toHaveCount(0);
@@ -6066,6 +6077,497 @@ print(json.dumps(True))
   });
 });
 
+test.describe('project library actions', () => {
+  test('project library has a clean heading and opens project creation from its top-right button', async ({ appPage: page }) => {
+    await page.setViewportSize({ width: 2493, height: 1287 });
+    await page.goto('/projects/');
+    await expect(page.locator('.project-library-heading p, .project-capture')).toHaveCount(0);
+    const header = page.locator('.project-library-heading');
+    const add = header.getByRole('button', { name: 'Add Project', exact: true });
+    await expect(add).toBeVisible();
+    const headerBox = await header.boundingBox();
+    const buttonBox = await add.boundingBox();
+    expect(buttonBox.x + buttonBox.width).toBeCloseTo(headerBox.x + headerBox.width, 0);
+    expect(buttonBox.y).toBeCloseTo(headerBox.y, 0);
+    const dialog = page.getByRole('dialog', { name: 'Add Project', exact: true });
+    const name = page.locator('#project-create-dialog input[name="name"]');
+    await expect(dialog).toBeHidden();
+    await add.click();
+    await expect(dialog).toBeVisible();
+    await expect(name).toBeFocused();
+    await name.fill('A cancelled draft');
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(add).toBeFocused();
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    const germanAdd = header.getByRole('button', { name: 'Projekt hinzufügen', exact: true });
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await germanAdd.click();
+      await expect(name).toBeFocused();
+      await expect(name).toHaveValue('');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await name.press('Escape');
+      await expect(name).toBeHidden();
+      await expect(germanAdd).toBeFocused();
+    }
+    await germanAdd.click();
+    await name.fill('Ein neues Projekt');
+    await name.press('Enter');
+    await expect(page.getByRole('heading', { name: 'Ein neues Projekt', exact: true })).toBeVisible();
+  });
+
+  test('project creation dialog reopens with the submitted draft after server validation', async ({ appPage: page }) => {
+    await page.goto('/projects/');
+    await page.getByRole('button', { name: 'Add Project', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Add Project', exact: true });
+    await dialog.getByLabel('Project name', { exact: true }).fill('   ');
+    await dialog.getByRole('button', { name: 'Create project', exact: true }).click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('alert')).toBeVisible();
+    await expect(dialog.getByLabel('Project name', { exact: true })).toHaveValue('   ');
+    await expect(page.locator('.project-library-heading p, .project-capture')).toHaveCount(0);
+    await dialog.getByLabel('Project name', { exact: true }).fill('A valid project');
+    await dialog.getByRole('button', { name: 'Create project', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'A valid project', exact: true })).toBeVisible();
+  });
+
+  test('project library add button respects project creation permissions', async ({ appPage: page }) => {
+    await signInAs(page, 'member1');
+    await page.goto('/projects/');
+    await expect(page.locator('.project-library-heading').getByRole('button', { name: 'Add Project', exact: true })).toHaveCount(0);
+    await expect(page.locator('#project-create-dialog')).toHaveCount(0);
+    expect(await postForm(page, '/projects/new/', { name: 'Not allowed' })).toBe(403);
+  });
+});
+
+test.describe('journal answer actions', () => {
+  test('journal edit pencils sit beside timestamps and reveal on hover or keyboard focus while Reply stays visible', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const ids = await mcp.db(`
+p = Project.objects.get(pk=${projectId})
+u = get_user_model().objects.get(username='demo')
+ids = []
+for i in range(2):
+    e = ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', phase=p.phase, body=f'Discussion {i}')
+    ProjectJournalEntry.objects.create(project=p, parent=e, author=u, author_label='demo', phase=p.phase, body=f'Answer {i}')
+    ids.append(e.pk)
+print(json.dumps(ids))
+`);
+    await page.goto(`/projects/${projectId}/`);
+    const first = page.locator(`#entry-${ids[0]}`);
+    const second = page.locator(`#entry-${ids[1]}`);
+    const edit = first.locator('> .journal-entry-meta').getByRole('button', { name: 'Edit entry', exact: true });
+    const answer = first.locator('.journal-reply');
+    const editReply = answer.locator('> .journal-reply-meta').getByRole('button', { name: 'Edit reply', exact: true });
+    await expect(edit).toHaveText('');
+    await expect(edit).toHaveAttribute('title', 'Edit entry');
+    await expect(edit.locator('svg')).toHaveCount(1);
+    await expect(editReply).toHaveText('');
+    await expect(editReply).toHaveAttribute('title', 'Edit reply');
+    await first.scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+    await expect(edit).toHaveCSS('opacity', '0');
+    await expect(editReply).toHaveCSS('opacity', '0');
+    await expect(first.getByRole('button', { name: 'Reply', exact: true })).toHaveCSS('opacity', '1');
+    const timestamp = first.locator('> .journal-entry-meta .journal-time');
+    const beforeHover = await timestamp.boundingBox();
+    for (const [meta, pencil] of [[first.locator('> .journal-entry-meta'), edit], [answer.locator('> .journal-reply-meta'), editReply]]) {
+      const pencilBox = await pencil.boundingBox();
+      const timeBox = await meta.locator('.journal-time').boundingBox();
+      const metaBox = await meta.boundingBox();
+      expect(pencilBox.x + pencilBox.width).toBeLessThanOrEqual(timeBox.x);
+      expect(timeBox.x + timeBox.width).toBeCloseTo(metaBox.x + metaBox.width, 0);
+    }
+    const height = await first.evaluate(el => el.getBoundingClientRect().height);
+    await first.locator('> .journal-body').hover();
+    await expect(edit).toHaveCSS('opacity', '1');
+    await expect(editReply).toHaveCSS('opacity', '0');
+    await expect(second.getByRole('button', { name: 'Edit entry', exact: true })).toHaveCSS('opacity', '0');
+    await answer.hover();
+    await expect(editReply).toHaveCSS('opacity', '1');
+    expect(await first.evaluate(el => el.getBoundingClientRect().height)).toBe(height);
+    expect(await timestamp.boundingBox()).toEqual(beforeHover);
+    await page.mouse.move(0, 0);
+    await expect(edit).toHaveCSS('opacity', '0');
+    await first.locator('> .journal-entry-meta .journal-time').focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(edit).toBeFocused();
+    await expect(edit).toHaveCSS('opacity', '1');
+    await page.keyboard.press('Enter');
+    await expect(first.getByRole('textbox', { name: 'Edit entry', exact: true })).toBeFocused();
+    await first.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(edit).toBeFocused();
+    await page.mouse.move(0, 0);
+    await page.keyboard.press('Tab');
+    await expect(first.locator('> .journal-entry-meta .journal-time')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(editReply).toBeFocused();
+    await expect(editReply).toHaveCSS('opacity', '1');
+    await page.keyboard.press('Enter');
+    await expect(answer.getByRole('textbox', { name: 'Edit reply', exact: true })).toBeFocused();
+    await answer.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.getByLabel('Journal entry', { exact: true }).focus();
+    await page.mouse.move(0, 0);
+    await expect(edit).toHaveCSS('opacity', '0');
+    await expect(editReply).toHaveCSS('opacity', '0');
+    await expect(first.getByRole('button', { name: 'Reply', exact: true })).toHaveCSS('opacity', '1');
+    await expect(answer).toBeVisible();
+  });
+
+  test('journal edit pencils and Reply remain visible and usable on touch devices', async ({ appPage: page, browser }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${projectId}/`);
+    await page.getByLabel('Journal entry', { exact: true }).fill('A touch-friendly discussion.');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    const context = await browser.newContext({ baseURL: new URL(page.url()).origin, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    try {
+      await context.addCookies(await page.context().cookies());
+      const touchPage = await context.newPage();
+      await touchPage.goto(`/projects/${projectId}/`);
+      expect(await touchPage.evaluate(() => matchMedia('(hover: none)').matches)).toBe(true);
+      const entry = touchPage.locator('[data-journal-entry]');
+      const edit = entry.locator('> .journal-entry-meta').getByRole('button', { name: 'Edit entry', exact: true });
+      await expect(edit).toHaveCSS('opacity', '1');
+      await edit.tap();
+      await entry.getByRole('textbox', { name: 'Edit entry', exact: true }).fill('An entry edited with touch.');
+      await entry.getByRole('button', { name: 'Save changes', exact: true }).tap();
+      await expect(entry.locator('> .journal-body')).toHaveText('An entry edited with touch.');
+      const reply = entry.getByRole('button', { name: 'Reply', exact: true });
+      await expect(reply).toHaveCSS('opacity', '1');
+      await reply.tap();
+      await entry.getByLabel('Reply', { exact: true }).fill('Posted with touch.');
+      await entry.getByRole('button', { name: 'Post reply', exact: true }).tap();
+      const answer = entry.locator('.journal-reply');
+      await expect(answer).toContainText('Posted with touch.');
+      const editReply = answer.locator('> .journal-reply-meta').getByRole('button', { name: 'Edit reply', exact: true });
+      await expect(editReply).toHaveCSS('opacity', '1');
+      await editReply.tap();
+      await answer.getByRole('textbox', { name: 'Edit reply', exact: true }).fill('An answer edited with touch.');
+      await answer.getByRole('button', { name: 'Save changes', exact: true }).tap();
+      await expect(answer.locator('> .journal-body')).toHaveText('An answer edited with touch.');
+      expect(await touchPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await expect(reply).toHaveCSS('opacity', '1');
+    } finally { await context.close(); }
+  });
+
+  test('reply button is replaced in place by the reply input below the existing answers', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const entryId = await mcp.db(`
+p = Project.objects.get(pk=${projectId})
+u = get_user_model().objects.get(username='demo')
+e = ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', phase=p.phase, body='A discussion')
+ProjectJournalEntry.objects.create(project=p, parent=e, author=u, author_label='demo', phase=p.phase, body='An existing answer')
+print(json.dumps(e.pk))
+`);
+    await page.goto(`/projects/${projectId}/`);
+    const entry = page.locator(`#entry-${entryId}`);
+    const slot = entry.locator(`#journal-reply-composer-${entryId}`);
+    const trigger = slot.getByRole('button', { name: 'Reply', exact: true });
+    await expect(trigger).toBeVisible();
+    await expect(entry.locator('.journal-entry-footer').getByRole('button', { name: 'Reply', exact: true })).toHaveCount(0);
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await trigger.scrollIntoViewIfNeeded();
+      const buttonBox = await trigger.boundingBox();
+      const answerBox = await entry.locator('.journal-reply').boundingBox();
+      expect(buttonBox.y).toBeGreaterThanOrEqual(answerBox.y + answerBox.height);
+      await openJournalReply(entry);
+      const input = slot.getByLabel('Reply', { exact: true });
+      await expect(input).toBeVisible();
+      await expect(trigger).toHaveCount(0);
+      const inputBox = await input.boundingBox();
+      expect(inputBox.x).toBeCloseTo(buttonBox.x, 0);
+      expect(Math.abs(inputBox.y - buttonBox.y)).toBeLessThan(2);
+      await slot.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(trigger).toBeFocused();
+      await expect(slot.locator('textarea')).toHaveCount(0);
+      await expect(entry.locator('.journal-reply')).toBeVisible();
+    }
+  });
+
+  test('existing answers stay visible while reply forms load, save and cancel independently via Datastar', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const ids = await mcp.db(`
+p = Project.objects.get(pk=${projectId})
+u = get_user_model().objects.get(username='demo')
+ids = []
+for i in range(2):
+    e = ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', kind='question', phase=p.phase, body=f'Question {i}')
+    ProjectJournalEntry.objects.create(project=p, parent=e, author=u, author_label='demo', phase=p.phase, body=f'Existing answer {i}')
+    ids.append(e.pk)
+print(json.dumps(ids))
+`);
+    await page.goto(`/projects/${projectId}/?thread=${ids[0]}#entry-${ids[0]}`);
+    const first = page.locator(`#entry-${ids[0]}`);
+    const second = page.locator(`#entry-${ids[1]}`);
+    await expect(page.locator('.journal-discussion, .journal-reply-form, .journal-reply-count')).toHaveCount(0);
+    for (const entry of [first, second]) await expect(entry.locator('.journal-reply')).toBeVisible();
+    const url = page.url();
+    await page.getByLabel('Journal entry', { exact: true }).fill('Keep my new-entry draft.');
+    const loaded = page.waitForResponse(response => response.url().includes(`/journal/${ids[0]}/reply/`) && response.request().method() === 'GET');
+    await openJournalReply(first);
+    expect((await loaded).headers()['content-type']).toContain('text/event-stream');
+    await expect(first.getByLabel('Reply', { exact: true })).toBeFocused();
+    await expect(first.getByRole('button', { name: 'Reply', exact: true })).toHaveCount(0);
+    await first.getByLabel('Reply', { exact: true }).fill('Discard only this draft.');
+    await openJournalReply(second);
+    await second.getByLabel('Reply', { exact: true }).fill('Keep the other reply draft.');
+    await first.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(first.locator('.journal-reply-form')).toHaveCount(0);
+    await expect(first.getByRole('button', { name: 'Reply', exact: true })).toBeFocused();
+    await expect(first.locator('.journal-reply')).toBeVisible();
+    await expect(second.getByLabel('Reply', { exact: true })).toHaveValue('Keep the other reply draft.');
+    await openJournalReply(first);
+    await expect(first.getByLabel('Reply', { exact: true })).toHaveValue('');
+    await first.getByLabel('Reply', { exact: true }).fill('A **new answer**.');
+    await first.getByRole('button', { name: 'Post reply', exact: true }).click();
+    await expect(first.locator('.journal-reply')).toHaveCount(2);
+    await expect(first.locator('.journal-reply .journal-body strong')).toHaveText('new answer');
+    await expect(first.locator('.journal-reply-form')).toHaveCount(0);
+    await expect(first.locator('.journal-reply-count')).toHaveCount(0);
+    await expect(second.getByLabel('Reply', { exact: true })).toHaveValue('Keep the other reply draft.');
+    await expect(page.getByLabel('Journal entry', { exact: true })).toHaveValue('Keep my new-entry draft.');
+    await expect(page).toHaveURL(url);
+    await page.goto(`/projects/${projectId}/`);
+    await expect(first.locator('.journal-reply')).toHaveCount(2);
+    await expect(first.locator('.journal-reply').last()).toBeVisible();
+    await expect(second.locator('.journal-reply')).toBeVisible();
+    await expect(page.locator('.journal-reply-form')).toHaveCount(0);
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(first.getByRole('button', { name: 'Antworten', exact: true })).toBeVisible();
+    await expect(first.locator('.journal-reply-count')).toHaveCount(0);
+  });
+
+  test('server-loaded reply forms allow members but enforce project and workspace boundaries', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const ids = await mcp.db(`
+p = Project.objects.get(pk=${projectId})
+u = get_user_model().objects.get(username='demo')
+e = ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', phase=p.phase, body='A shared discussion')
+r = ProjectJournalEntry.objects.create(project=p, parent=e, author=u, author_label='demo', phase=p.phase, body='An existing answer')
+print(json.dumps({'entry': e.pk, 'reply': r.pk, 'other': Project.objects.filter(workspace=p.workspace).exclude(pk=p.pk).first().pk}))
+`);
+    await signInAs(page, 'member1');
+    await page.goto(`/projects/${projectId}/`);
+    const entry = page.locator(`#entry-${ids.entry}`);
+    await expect(entry.locator('.journal-reply')).toBeVisible();
+    const url = `/projects/${projectId}/journal/${ids.entry}/reply/`;
+    expect((await page.request.get(`/projects/${ids.other}/journal/${ids.entry}/reply/`)).status()).toBe(404);
+    expect((await page.request.get(`/projects/${projectId}/journal/${ids.reply}/reply/`)).status()).toBe(404);
+    expect((await page.request.get(`/projects/${projectId}/journal/999999/reply/`)).status()).toBe(404);
+    expect(await postForm(page, `/projects/${projectId}/journal/${ids.reply}/reply/`, { body: 'A nested answer' })).toBe(404);
+    expect(await postForm(page, url, { body: 'x'.repeat(20001) })).toBe(400);
+    await openJournalReply(entry);
+    await expect(entry.getByLabel('Reply', { exact: true })).toHaveValue('');
+    await entry.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(entry.locator('.journal-reply-form')).toHaveCount(0);
+    await expect(entry.locator('.journal-reply')).toHaveCount(1);
+    await openJournalReply(entry);
+    await entry.getByLabel('Reply', { exact: true }).fill('A member **answer**. <script>window.replyXss = true</script>');
+    await entry.getByRole('button', { name: 'Post reply', exact: true }).click();
+    const reply = entry.locator('.journal-reply').last();
+    await expect(entry.locator('.journal-reply')).toHaveCount(2);
+    await expect(reply.locator('.journal-reply-meta strong')).toHaveText('member1');
+    await expect(reply.locator('.journal-body strong')).toHaveText('answer');
+    await expect(reply.locator('script')).toHaveCount(0);
+    expect(await page.evaluate(() => window.replyXss)).toBeUndefined();
+    await expect(reply.getByRole('button', { name: 'Edit reply', exact: true })).toBeVisible();
+    await signInAs(page, 'pm2');
+    await page.goto('/');
+    expect((await page.request.get(url)).status()).toBe(404);
+    expect(await postForm(page, url, { body: 'A foreign answer' })).toBe(404);
+  });
+});
+
+test.describe('project journal deletion', () => {
+  test('delete is available only while editing and confirms before removing replies or entire threads', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const ids = await mcp.db(`
+p = Project.objects.get(pk=${projectId})
+u = get_user_model().objects.get(username='demo')
+e = ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', kind='question', phase=p.phase, body='A removable question')
+r = [ProjectJournalEntry.objects.create(project=p, parent=e, author=u, author_label='demo', phase=p.phase, body=f'Answer {i}') for i in range(2)]
+other = ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', phase=p.phase, body='Another discussion')
+print(json.dumps({'entry': e.pk, 'replies': [v.pk for v in r], 'other': other.pk}))
+`);
+    await page.goto(`/projects/${projectId}/`);
+    const entry = page.locator(`#entry-${ids.entry}`);
+    const other = page.locator(`#entry-${ids.other}`);
+    await expect(page.getByRole('button', { name: /^Delete (entry|reply)$/ })).toHaveCount(0);
+    await page.getByLabel('Journal entry', { exact: true }).fill('Keep the new-entry draft.');
+    await openJournalReply(other);
+    await other.getByLabel('Reply', { exact: true }).fill('Keep the other reply draft.');
+    const reply = entry.locator('.journal-reply').first();
+    await openJournalEdit(reply, 'Edit reply');
+    await expect(reply.getByRole('button', { name: 'Delete reply', exact: true })).toBeVisible();
+    await reply.getByRole('textbox', { name: 'Edit reply', exact: true }).fill('An unsaved edit.');
+    let confirmation;
+    const deletions = [];
+    page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/delete/')) deletions.push(request.url()); });
+    page.once('dialog', dialog => { confirmation = dialog.message(); return dialog.dismiss(); });
+    await reply.getByRole('button', { name: 'Delete reply', exact: true }).click();
+    expect(confirmation).toBe('Delete this reply?');
+    expect(deletions).toHaveLength(0);
+    await expect(reply.getByRole('textbox', { name: 'Edit reply', exact: true })).toHaveValue('An unsaved edit.');
+    page.once('dialog', dialog => dialog.accept());
+    await reply.getByRole('button', { name: 'Delete reply', exact: true }).click();
+    await expect(entry.locator('.journal-reply')).toHaveCount(1);
+    await expect(entry.locator('.journal-reply-count')).toHaveCount(0);
+    await expect(other.getByLabel('Reply', { exact: true })).toHaveValue('Keep the other reply draft.');
+    await openJournalEdit(entry, 'Edit entry');
+    page.once('dialog', dialog => { confirmation = dialog.message(); return dialog.accept(); });
+    await entry.getByRole('button', { name: 'Delete entry', exact: true }).click();
+    expect(confirmation).toBe('Delete this entry and all its replies?');
+    await expect(entry).toHaveCount(0);
+    await expect(page.locator('#project-open-questions')).toHaveText('0 open questions');
+    await expect(other.getByLabel('Reply', { exact: true })).toHaveValue('Keep the other reply draft.');
+    await expect(page.getByLabel('Journal entry', { exact: true })).toHaveValue('Keep the new-entry draft.');
+    expect(await mcp.db(`print(json.dumps(ProjectJournalEntry.objects.filter(pk__in=[${ids.entry}, ${ids.replies.join(', ')}]).count()))`)).toBe(0);
+    await openJournalEdit(other, 'Edit entry');
+    page.once('dialog', dialog => dialog.accept());
+    await other.getByRole('button', { name: 'Delete entry', exact: true }).click();
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(0);
+    await expect(page.locator('.project-journal-empty')).toBeVisible();
+    await expect(page.getByLabel('Journal entry', { exact: true })).toHaveValue('Keep the new-entry draft.');
+    await page.reload();
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(0);
+  });
+
+  test('German journal delete controls fit a narrow editor and use an informal confirmation', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    await page.goto(`/projects/${projectId}/`);
+    await page.getByLabel('Journal entry', { exact: true }).fill('A small-screen discussion.');
+    await page.getByRole('button', { name: 'Post entry', exact: true }).click();
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await page.setViewportSize({ width: 320, height: 844 });
+    const entry = page.locator('[data-journal-entry]');
+    await openJournalEdit(entry, 'Eintrag bearbeiten');
+    const remove = entry.getByRole('button', { name: 'Eintrag löschen', exact: true });
+    await expect(remove).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    let confirmation;
+    page.once('dialog', dialog => { confirmation = dialog.message(); return dialog.dismiss(); });
+    await remove.click();
+    expect(confirmation).toBe('Möchtest du diesen Eintrag und alle Antworten löschen?');
+    await expect(entry.getByRole('textbox', { name: 'Eintrag bearbeiten', exact: true })).toHaveValue('A small-screen discussion.');
+  });
+
+  test('journal deletion checks authorship, project management, CSRF and workspace boundaries', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const ids = await mcp.db(`
+p = Project.objects.get(pk=${projectId})
+u = get_user_model().objects.get(username='demo')
+m = get_user_model().objects.get(username='member1')
+e = ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', phase=p.phase, body='Manager-owned entry')
+a = [ProjectJournalEntry.objects.create(project=p, author=m, author_label='member1', phase=p.phase, body=f'Member entry {i}') for i in range(2)]
+s = ProjectJournalEntry.objects.create(project=p, kind='phase', phase='delivery', previous_phase='planned')
+print(json.dumps({'manager': e.pk, 'member': [v.pk for v in a], 'phase': s.pk, 'other': Project.objects.filter(workspace=p.workspace).exclude(pk=p.pk).first().pk}))
+`);
+    const url = id => `/projects/${projectId}/journal/${id}/delete/`;
+    await signInAs(page, 'member1');
+    await page.goto(`/projects/${projectId}/`);
+    expect(await postForm(page, url(ids.manager), {})).toBe(403);
+    expect((await page.request.get(url(ids.member[0]))).status()).toBe(405);
+    expect((await page.request.post(url(ids.member[0]), { data: {} })).status()).toBe(403);
+    expect(await postForm(page, `/projects/${ids.other}/journal/${ids.member[0]}/delete/`, {})).toBe(404);
+    expect(await postForm(page, url(999999), {})).toBe(404);
+    expect(await postForm(page, url(ids.member[0]), {})).toBe(200);
+    expect(await mcp.db(`print(json.dumps(ProjectJournalEntry.objects.filter(pk=${ids.member[0]}).exists()))`)).toBe(false);
+    await signInAs(page, 'demo');
+    await page.goto(`/projects/${projectId}/`);
+    expect(await postForm(page, url(ids.phase), {})).toBe(403);
+    expect(await postForm(page, url(ids.member[1]), {})).toBe(200);
+    await signInAs(page, 'pm2');
+    await page.goto('/');
+    expect(await postForm(page, url(ids.manager), {})).toBe(404);
+  });
+
+  test('deleting the last entry on a filtered page clamps pagination without losing the composer draft', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const entryId = await mcp.db(`
+p = Project.objects.get(pk=${projectId})
+u = get_user_model().objects.get(username='demo')
+entries = [ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', kind='question', phase=p.phase, body=f'Question {i}') for i in range(31)]
+ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', phase=p.phase, body='Not a question')
+print(json.dumps(entries[0].pk))
+`);
+    await page.goto(`/projects/${projectId}/?kind=question&page=2`);
+    await page.getByLabel('Journal entry', { exact: true }).fill('Keep this draft across deletion.');
+    const entry = page.locator(`#entry-${entryId}`);
+    await openJournalEdit(entry, 'Edit entry');
+    await entry.getByRole('textbox', { name: 'Edit entry', exact: true }).fill('');
+    page.once('dialog', dialog => dialog.accept());
+    await entry.getByRole('button', { name: 'Delete entry', exact: true }).click();
+    await expect(entry).toHaveCount(0);
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(30);
+    await expect(page.locator('#journal-pagination .project-pagination')).toHaveCount(0);
+    await expect(page.locator('#project-open-questions')).toHaveText('30 open questions');
+    await expect(page.getByRole('link', { name: 'Questions', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByLabel('Journal entry', { exact: true })).toHaveValue('Keep this draft across deletion.');
+    await page.reload();
+    await expect(page.locator('[data-journal-entry]')).toHaveCount(30);
+  });
+});
+
+test.describe('project journal metadata', () => {
+  test('journal metadata uses plain entry types and one compact timestamp with full historical details on hover', async ({ appPage: page }) => {
+    const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
+    const ids = await mcp.db(`
+p = Project.objects.get(pk=${projectId})
+u = get_user_model().objects.get(username='demo')
+created = timezone.localtime().replace(month=1, day=15, hour=9, minute=30, second=0, microsecond=0)
+old = created.replace(year=created.year - 1)
+changed = created.replace(month=2, day=20, hour=11, minute=45)
+def entry(body, date, updated=None, parent=None):
+    e = ProjectJournalEntry.objects.create(project=p, author=u, author_label='demo', kind='question' if parent is None else 'note', phase='delivery', body=body, parent=parent)
+    ProjectJournalEntry.objects.filter(pk=e.pk).update(created_at=date, updated_at=updated)
+    return e
+edited = entry('An edited question', old, changed)
+reply = entry('An edited answer', old, changed, edited)
+plain = entry('A current-year question', created)
+older = entry('An older question', old)
+print(json.dumps({'edited': edited.pk, 'reply': reply.pk, 'plain': plain.pk, 'older': older.pk, 'year': created.year, 'old_year': old.year, 'created': old.isoformat(), 'changed': changed.isoformat()}))
+`);
+    await page.goto(`/projects/${projectId}/`);
+    const entry = page.locator(`#entry-${ids.edited}`);
+    const meta = entry.locator('> .journal-entry-meta');
+    const timestamp = meta.locator('.journal-time');
+    await expect(meta.locator('time')).toHaveCount(1);
+    await expect(meta.locator('.journal-phase')).toHaveCount(0);
+    await expect(meta.locator('.journal-kind')).toHaveText('Question');
+    await expect(meta.locator('.journal-kind')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(meta.locator('.journal-kind')).toHaveCSS('font-size', '12px');
+    await expect(timestamp).toHaveText('edited 20 Feb, 11:45');
+    await expect(timestamp).toHaveAttribute('data-created', ids.created);
+    const title = await timestamp.getAttribute('title');
+    expect(title).toContain(`Created: 15 Jan ${ids.old_year}, 09:30`);
+    expect(title).toContain(`Last changed: 20 Feb ${ids.year}, 11:45`);
+    expect(title).toContain('Phase at creation: Delivery');
+    const plain = page.locator(`#entry-${ids.plain} > .journal-entry-meta .journal-time`);
+    await expect(plain).toHaveText('15 Jan, 09:30');
+    await expect(page.locator(`#entry-${ids.older} > .journal-entry-meta .journal-time`)).toHaveText(`15 Jan ${ids.old_year}, 09:30`);
+    const replyMeta = entry.locator('.journal-reply-meta');
+    await expect(replyMeta.locator('time')).toHaveCount(1);
+    await expect(replyMeta.locator('.journal-time')).toHaveText('edited 20 Feb, 11:45');
+    await expect(replyMeta.locator('.journal-time')).toHaveAttribute('href', `#journal-reply-${ids.reply}`);
+    await openJournalEdit(entry, 'Edit entry');
+    await entry.getByRole('textbox', { name: 'Edit entry', exact: true }).fill('A fresh edit.');
+    await entry.getByRole('button', { name: 'Save changes', exact: true }).click();
+    await expect(entry.locator('> .journal-body')).toHaveText('A fresh edit.');
+    await expect(meta.locator('time')).toHaveCount(1);
+    await expect(timestamp).toHaveAttribute('data-created', ids.created);
+    await expect(timestamp).not.toHaveAttribute('data-updated', ids.changed);
+    await expect(timestamp).toHaveAttribute('data-updated', await timestamp.locator('time').getAttribute('datetime'));
+    await expect(replyMeta.locator('.journal-time')).toHaveText('edited 20 Feb, 11:45');
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await expect(timestamp).toContainText('bearbeitet');
+    expect(await timestamp.getAttribute('title')).toContain('Erstellt:');
+    await page.setViewportSize({ width: 320, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+});
+
 test.describe('project journal editing', () => {
   test('journal editing replaces entry and reply text in place and cancel restores it', async ({ appPage: page }) => {
     const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
@@ -6073,15 +6575,15 @@ test.describe('project journal editing', () => {
     await page.getByLabel('Journal entry', { exact: true }).fill('Original **entry**.');
     await page.getByRole('button', { name: 'Post entry', exact: true }).click();
     const entry = page.locator('[data-journal-entry]');
-    await entry.locator('.journal-discussion > summary').click();
+    await openJournalReply(entry);
     await entry.getByLabel('Reply', { exact: true }).fill('Original *reply*.');
     await entry.getByRole('button', { name: 'Post reply', exact: true }).click();
     for (const [item, label, original] of [
       [entry, 'Edit entry', 'Original entry.'],
       [entry.locator('.journal-reply'), 'Edit reply', 'Original reply.'],
     ]) {
-      await item.getByRole('button', { name: label, exact: true }).click();
-      const textarea = item.getByLabel(label, { exact: true });
+      await openJournalEdit(item, label);
+      const textarea = item.getByRole('textbox', { name: label, exact: true });
       await expect(textarea).toBeVisible();
       await expect(item.locator('> .journal-body')).toHaveCount(0);
       expect(await textarea.evaluate(el => el.closest('form').previousElementSibling.matches('.journal-entry-meta, .journal-reply-meta'))).toBe(true);
@@ -6103,7 +6605,7 @@ test.describe('project journal editing', () => {
     await expect(entry.locator('.journal-edit textarea')).toHaveCount(0);
     await expect(entry.getByRole('button', { name: 'Edit entry', exact: true })).toBeVisible();
     await page.getByLabel('Journal entry', { exact: true }).fill('Keep my unposted entry.');
-    await entry.locator('.journal-discussion > summary').click();
+    await openJournalReply(entry);
     await entry.getByLabel('Reply', { exact: true }).fill('Keep my unposted reply.');
     await mcp.db(`
 ProjectJournalEntry.objects.filter(pk=${entryId}).update(body='Fresh server text.')
@@ -6111,11 +6613,11 @@ print(json.dumps(True))
 `);
     const url = page.url();
     const loaded = page.waitForResponse(response => response.url().includes(`/journal/${entryId}/edit/`) && response.request().method() === 'GET');
-    await entry.getByRole('button', { name: 'Edit entry', exact: true }).click();
+    await openJournalEdit(entry, 'Edit entry');
     expect((await loaded).headers()['content-type']).toContain('text/event-stream');
     const editor = entry.locator('> [id^="journal-body-"]');
-    await expect(editor.getByLabel('Edit entry', { exact: true })).toHaveValue('Fresh server text.');
-    await editor.getByLabel('Edit entry', { exact: true }).fill('Saved **without navigation**.');
+    await expect(editor.getByRole('textbox', { name: 'Edit entry', exact: true })).toHaveValue('Fresh server text.');
+    await editor.getByRole('textbox', { name: 'Edit entry', exact: true }).fill('Saved **without navigation**.');
     await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect(entry.locator('> .journal-body strong')).toHaveText('without navigation');
     await expect(editor.locator('textarea')).toHaveCount(0);
@@ -6133,38 +6635,39 @@ print(json.dumps(True))
     await page.getByRole('button', { name: 'Post entry', exact: true }).click();
     const entry = page.locator('[data-journal-entry]');
     const entryId = await entry.getAttribute('data-journal-entry');
-    const created = await entry.locator('.journal-time time').getAttribute('datetime');
-    await expect(entry.locator('.journal-changed')).toBeHidden();
-    await entry.getByRole('button', { name: 'Edit entry', exact: true }).click();
+    const timestamp = entry.locator('> .journal-entry-meta .journal-time');
+    const created = await timestamp.getAttribute('data-created');
+    await expect(timestamp).toHaveAttribute('data-updated', '');
+    await openJournalEdit(entry, 'Edit entry');
     const editor = entry.locator('> [id^="journal-body-"]');
-    const textarea = editor.getByLabel('Edit entry', { exact: true });
+    const textarea = editor.getByRole('textbox', { name: 'Edit entry', exact: true });
     await expect(textarea).toHaveValue('An original **question**.');
     const initialHeight = await textarea.evaluate(el => el.clientHeight);
     await textarea.fill(Array(15).fill('A longer draft.').join('\n'));
     expect(await textarea.evaluate(el => el.clientHeight)).toBeGreaterThan(initialHeight + 100);
     await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(editor.locator('textarea')).toHaveCount(0);
-    await entry.getByRole('button', { name: 'Edit entry', exact: true }).click();
+    await openJournalEdit(entry, 'Edit entry');
     await expect(textarea).toHaveValue('An original **question**.');
     await textarea.fill('An edited **question** with `code`.');
     await textarea.press('Control+Enter');
     await expect(entry.locator('> .journal-body')).toHaveText('An edited question with code.');
     await expect(entry.locator('> .journal-body strong')).toHaveText('question');
-    await expect(entry.locator('.journal-time time')).toHaveAttribute('datetime', created);
-    const changed = entry.locator('> .journal-entry-meta .journal-changed');
-    await expect(changed).toContainText('Last changed');
+    await expect(timestamp).toHaveAttribute('data-created', created);
+    const changed = timestamp;
+    await expect(changed).toContainText('edited');
     const firstChange = await changed.locator('time').getAttribute('datetime');
     expect(Date.parse(firstChange)).toBeGreaterThanOrEqual(Date.parse(created));
-    await entry.locator('.journal-discussion > summary').click();
+    await openJournalReply(entry);
     await entry.getByLabel('Reply', { exact: true }).fill('Original reply.');
     await entry.getByRole('button', { name: 'Post reply', exact: true }).click();
     const reply = entry.locator('.journal-reply');
-    await expect(reply.locator('.journal-changed')).toBeHidden();
-    await reply.getByRole('button', { name: 'Edit reply', exact: true }).click();
-    await reply.getByLabel('Edit reply', { exact: true }).fill('An edited *reply*.');
+    await expect(reply.locator('.journal-time')).toHaveAttribute('data-updated', '');
+    await openJournalEdit(reply, 'Edit reply');
+    await reply.getByRole('textbox', { name: 'Edit reply', exact: true }).fill('An edited *reply*.');
     await reply.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect(reply.locator('.journal-body em')).toHaveText('reply');
-    await expect(reply.locator('.journal-changed')).toContainText('Last changed');
+    await expect(reply.locator('.journal-time')).toContainText('edited');
     await expect(changed.locator('time')).toHaveAttribute('datetime', firstChange);
     await page.reload();
     await expect(reply.locator('.journal-body')).toHaveText('An edited reply.');
@@ -6174,7 +6677,8 @@ print(json.dumps({'author': e.author_label, 'kind': e.kind, 'phase': e.phase, 'p
 `);
     expect(saved).toEqual({ author: 'demo', kind: 'question', phase: 'delivery', parent: null });
     await page.locator('.lang-btn', { hasText: 'DE' }).click();
-    await expect(entry.locator('> .journal-entry-meta .journal-changed')).toContainText('Zuletzt geändert');
+    await expect(timestamp).toContainText('bearbeitet');
+    await expect(timestamp).toHaveAttribute('title', /Zuletzt geändert:/);
   });
 
   test('journal edits enforce authorship, project management and workspace boundaries', async ({ appPage: page }) => {
@@ -6185,15 +6689,15 @@ print(json.dumps({'author': e.author_label, 'kind': e.kind, 'phase': e.phase, 'p
     const managerId = await page.locator('[data-journal-entry]').getAttribute('data-journal-entry');
     await signInAs(page, 'member1');
     await page.goto(`/projects/${id}/`);
-    await expect(page.getByText('Edit entry', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Edit entry', exact: true })).toHaveCount(0);
     expect((await page.request.get(`/projects/${id}/journal/${managerId}/edit/`)).status()).toBe(403);
     expect(await postForm(page, `/projects/${id}/journal/${managerId}/edit/`, { body: 'Unauthorized' })).toBe(403);
     await page.getByLabel('Journal entry', { exact: true }).fill('Member entry.');
     await page.getByRole('button', { name: 'Post entry', exact: true }).click();
     const own = page.locator('[data-journal-entry]').filter({ hasText: 'Member entry.' });
     const ownId = await own.getAttribute('data-journal-entry');
-    await own.getByRole('button', { name: 'Edit entry', exact: true }).click();
-    await own.getByLabel('Edit entry', { exact: true }).fill('Edited by author.');
+    await openJournalEdit(own, 'Edit entry');
+    await own.getByRole('textbox', { name: 'Edit entry', exact: true }).fill('Edited by author.');
     await own.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect(page.locator(`#entry-${ownId} > .journal-body`)).toHaveText('Edited by author.');
     await signInAs(page, 'demo');
@@ -6227,28 +6731,29 @@ print(json.dumps(p.journal.order_by('created_at', 'id').first().pk))
 `);
     await page.goto(`/projects/${id}/?kind=decision&page=2`);
     const entry = page.locator(`#entry-${entryId}`);
-    await entry.getByRole('button', { name: 'Edit entry', exact: true }).click();
+    await openJournalEdit(entry, 'Edit entry');
     const editor = entry.locator('> [id^="journal-body-"]');
     await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect(page).toHaveURL(/kind=decision.*page=2/);
-    await expect(entry.locator('.journal-changed')).toBeHidden();
+    await expect(entry.locator('> .journal-entry-meta .journal-time')).toHaveAttribute('data-updated', '');
     await expect(entry.getByRole('button', { name: 'Edit entry', exact: true })).toBeVisible();
     expect(await postForm(page, `/projects/${id}/journal/${entryId}/edit/`, { body: ' ', journal_kind: 'decision', journal_page: '2' })).toBe(400);
     expect(await postForm(page, `/projects/${id}/journal/${entryId}/edit/`, { body: 'x'.repeat(20001), journal_kind: 'decision', journal_page: '2' })).toBe(400);
-    await entry.getByRole('button', { name: 'Edit entry', exact: true }).click();
-    await editor.getByLabel('Edit entry', { exact: true }).fill('Invalid draft');
+    await openJournalEdit(entry, 'Edit entry');
+    await editor.getByRole('textbox', { name: 'Edit entry', exact: true }).fill('Invalid draft');
     await editor.locator('textarea').evaluate(el => { el.required = false; el.value = '   '; });
     await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
-    await expect(editor.getByLabel('Edit entry', { exact: true })).toBeVisible();
+    await expect(editor.getByRole('textbox', { name: 'Edit entry', exact: true })).toBeVisible();
     await expect(editor.getByRole('alert')).toBeVisible();
     await expect(entry.locator('> .journal-body')).toHaveCount(0);
-    await expect(editor.getByLabel('Edit entry', { exact: true })).toHaveValue('   ');
+    await expect(editor.getByRole('textbox', { name: 'Edit entry', exact: true })).toHaveValue('   ');
     await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
-    await editor.getByLabel('Edit entry', { exact: true }).fill('A corrected **decision**.');
+    await editor.getByRole('textbox', { name: 'Edit entry', exact: true }).fill('A corrected **decision**.');
     await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect(page).toHaveURL(/kind=decision.*page=2/);
     await expect(entry.locator('> .journal-body strong')).toHaveText('decision');
-    await expect(entry.locator('.journal-changed')).toHaveCount(1);
+    await expect(entry.locator('> .journal-entry-meta time')).toHaveCount(1);
+    await expect(entry.locator('> .journal-entry-meta .journal-time')).toContainText('edited');
   });
 });
 
@@ -6279,7 +6784,7 @@ test.describe('project journal Markdown and textareas', () => {
     await expect(body.locator('script, img, [onerror], a[href^="javascript:"]')).toHaveCount(0);
     await expect(body).toContainText('<script>');
     expect(await page.evaluate(() => window.journalXss)).toBeUndefined();
-    await entry.locator('.journal-discussion > summary').click();
+    await openJournalReply(entry);
     await entry.getByLabel('Reply', { exact: true }).fill('A **Markdown reply** with `inline code`.\n\n1. Next step');
     await entry.getByRole('button', { name: 'Post reply', exact: true }).click();
     await expect(entry.locator('.journal-reply strong').last()).toHaveText('Markdown reply');
@@ -6306,7 +6811,7 @@ test.describe('project journal Markdown and textareas', () => {
     await checkGrowth(composer);
     await page.getByRole('button', { name: 'Post entry', exact: true }).click();
     await expect(page.locator('[data-journal-entry]')).toHaveCount(1);
-    await page.locator('.journal-discussion > summary').click();
+    await openJournalReply(page.locator('[data-journal-entry]'));
     await checkGrowth(page.getByLabel('Reply', { exact: true }));
     await page.setViewportSize({ width: 390, height: 844 });
     await checkGrowth(composer);
@@ -6327,7 +6832,7 @@ test.describe('text box submission shortcuts', () => {
     const note = page.locator('[data-journal-entry]').filter({ hasText: 'A first thought.' });
     await expect(note).toHaveCount(1);
     await composer.fill('Leave this other draft alone.');
-    await note.locator('.journal-discussion > summary').click();
+    await openJournalReply(note);
     await note.getByLabel('Reply', { exact: true }).fill('A reply, not a new entry.');
     await note.getByLabel('Reply', { exact: true }).press('Meta+Enter');
     await expect(note.locator('.journal-reply')).toHaveCount(1);
@@ -6662,6 +7167,7 @@ print(json.dumps({'phases': list(Project.objects.order_by('id').values_list('pha
 
   test('project workspace captures an idea through planning without conversion', async ({ appPage: page }) => {
     expect((await page.goto('/projects/')).status()).toBe(200);
+    await page.getByRole('button', { name: 'Add Project', exact: true }).click();
     await page.getByLabel('Project name', { exact: true }).fill('A calmer onboarding');
     await page.getByRole('button', { name: 'Create project', exact: true }).click();
     await expect(page).toHaveURL(/\/projects\/\d+\/$/);
@@ -6679,12 +7185,12 @@ print(json.dumps({'phases': list(Project.objects.order_by('id').values_list('pha
     await page.getByRole('button', { name: 'Post entry', exact: true }).click();
     const note = page.locator('[data-journal-entry]').filter({ hasText: 'Support mentioned' });
     await expect(note).toContainText('demo');
-    await expect(note).toContainText('Idea');
+    await expect(note.locator('> .journal-entry-meta .journal-time')).toHaveAttribute('data-phase', 'idea');
     await page.getByLabel('Entry type', { exact: true }).selectOption('question');
     await page.getByLabel('Journal entry', { exact: true }).fill('Which step causes the most confusion?');
     await page.getByRole('button', { name: 'Post entry', exact: true }).click();
     const question = page.locator('[data-journal-entry]').filter({ hasText: 'Which step' });
-    await question.locator('.journal-discussion > summary').click();
+    await openJournalReply(question);
     await question.getByLabel('Reply', { exact: true }).fill('Ask Julia for the latest support tickets.');
     await question.getByRole('button', { name: 'Post reply', exact: true }).click();
     await expect(question).toContainText('Ask Julia');
@@ -6746,7 +7252,7 @@ print(json.dumps({'phases': list(Project.objects.order_by('id').values_list('pha
     await page.keyboard.down('Enter');
     await expect(page.locator('[data-project-phase]')).toHaveAttribute('data-project-phase', 'discovery');
     await page.keyboard.up('Enter');
-    await expect(page.locator('[data-journal-entry]').filter({ hasText: 'Before completion.' })).toContainText('Delivery');
+    await expect(page.locator('[data-journal-entry]').filter({ hasText: 'Before completion.' }).locator('> .journal-entry-meta .journal-time')).toHaveAttribute('data-phase', 'delivery');
     await page.goto('/');
     await expect(page.locator(`#proj-${id}`)).toBeVisible();
   });
@@ -6806,6 +7312,7 @@ print(json.dumps(True))
   test('project detail matches the approved simplified layout at the recorded viewport', async ({ appPage: page }, testInfo) => {
     await page.setViewportSize({ width: 2493, height: 1287 });
     await page.goto('/projects/');
+    await page.getByRole('button', { name: 'Add Project', exact: true }).click();
     await page.getByLabel('Project name', { exact: true }).fill('New project');
     await page.getByRole('button', { name: 'Create project', exact: true }).click();
     await page.getByRole('link', { name: 'Project', exact: true }).click();
@@ -6840,7 +7347,7 @@ print(json.dumps(True))
     await page.screenshot({ path: testInfo.outputPath('approved-project-detail-2493.png'), animations: 'disabled' });
   });
 
-  test('compact journal keeps entries readable and opens only the requested reply thread', async ({ appPage: page }, testInfo) => {
+  test('compact journal keeps answers visible and opens only the requested reply form', async ({ appPage: page }, testInfo) => {
     const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
     await page.goto(`/projects/${id}/`);
     const composer = page.getByLabel('Journal entry', { exact: true });
@@ -6855,8 +7362,9 @@ print(json.dumps(True))
     await expect(note.getByLabel('Reply', { exact: true })).not.toBeVisible();
     expect((await page.locator('.project-composer').boundingBox()).height).toBeLessThan(210);
     expect((await note.boundingBox()).height).toBeLessThan(150);
-    const summary = question.locator('.journal-discussion > summary');
-    await summary.focus();
+    const replyButton = question.getByRole('button', { name: 'Reply', exact: true });
+    const replyCount = question.locator('.journal-reply-count');
+    await replyButton.focus();
     await page.keyboard.press('Enter');
     await expect(question.getByLabel('Reply', { exact: true })).toBeVisible();
     await question.getByLabel('Reply', { exact: true }).fill('A reply draft survives a phase change.');
@@ -6874,17 +7382,19 @@ print(json.dumps(True))
     await expect(note.getByLabel('Reply', { exact: true })).not.toBeVisible();
     await question.getByRole('button', { name: 'Post reply', exact: true }).click();
     await expect(question.locator('.journal-reply')).toBeVisible();
-    await expect(summary).toContainText('1 reply');
+    await expect(replyCount).toHaveCount(0);
     await expect(note.getByLabel('Reply', { exact: true })).not.toBeVisible();
     await page.reload();
     await expect(question.locator('.journal-reply')).toBeVisible();
+    await openJournalReply(question);
     await question.getByLabel('Reply', { exact: true }).fill('   ');
     await question.getByRole('button', { name: 'Post reply', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('A reply must contain');
     await expect(question.getByLabel('Reply', { exact: true })).toBeVisible();
     await page.goto(`/projects/${id}/`);
-    await expect(summary).toContainText('1 reply');
-    await expect(question.locator('.journal-reply')).not.toBeVisible();
+    await expect(replyCount).toHaveCount(0);
+    await expect(question.locator('.journal-reply')).toBeVisible();
+    await expect(question.locator('.journal-reply-form')).toHaveCount(0);
     await expect(note.locator('.journal-body')).toHaveText('Keep the setup flow familiar.');
     for (const theme of ['light', 'dark']) {
       await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme);
@@ -6893,19 +7403,20 @@ print(json.dumps(True))
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         expect((await page.locator('.project-composer').boundingBox()).height).toBeLessThan(230);
         expect((await note.boundingBox()).height).toBeLessThan(170);
-        await summary.click();
+        await openJournalReply(question);
         await expect(question.getByLabel('Reply', { exact: true })).toBeVisible();
-        await summary.click();
+        await question.getByRole('button', { name: 'Cancel', exact: true }).click();
         await expect(question.getByLabel('Reply', { exact: true })).not.toBeVisible();
+        await expect(question.locator('.journal-reply')).toBeVisible();
         await page.screenshot({ path: testInfo.outputPath(`compact-journal-${theme}-${width}.png`), fullPage: true, animations: 'disabled' });
       }
     }
     await page.setViewportSize({ width: 1280, height: 1000 });
     await page.getByRole('button', { name: 'DE', exact: true }).click();
-    await expect(summary).toContainText('1 Antwort');
+    await expect(replyCount).toHaveCount(0);
   });
 
-  test('journal reply disclosures preserve filters and pagination after validation', async ({ appPage: page }) => {
+  test('journal reply forms preserve filters and pagination after validation', async ({ appPage: page }) => {
     const id = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
     const entryId = await mcp.db(`
 p = Project.objects.get(pk=${id})
@@ -6918,7 +7429,7 @@ print(json.dumps(entries[0].id))
     const entries = page.locator('[data-journal-entry]');
     const question = page.locator(`#entry-${entryId}`);
     await expect(entries).toHaveCount(1);
-    await question.locator('.journal-discussion > summary').click();
+    await openJournalReply(question);
     await question.getByLabel('Reply', { exact: true }).fill('   ');
     await question.getByRole('button', { name: 'Post reply', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('A reply must contain');
@@ -6932,14 +7443,15 @@ print(json.dumps(entries[0].id))
     const params = new URL(page.url()).searchParams;
     expect(params.get('kind')).toBe('question');
     expect(params.get('page')).toBe('2');
-    expect(params.get('thread')).toBe(String(entryId));
+    expect(params.get('thread')).toBeNull();
     await expect(page.getByRole('link', { name: 'Questions', exact: true })).toHaveAttribute('aria-current', 'page');
+    await openJournalReply(question);
     await question.getByLabel('Reply', { exact: true }).fill('A second reply in the same thread.');
     await question.getByRole('button', { name: 'Post reply', exact: true }).click();
     await expect(question.locator('.journal-reply')).toHaveCount(2);
-    await expect(question.locator('.journal-discussion > summary')).toContainText('2 replies');
+    await expect(question.locator('.journal-reply-count')).toHaveCount(0);
     await page.getByRole('button', { name: 'DE', exact: true }).click();
-    await expect(question.locator('.journal-discussion > summary')).toContainText('2 Antworten');
+    await expect(question.locator('.journal-reply-count')).toHaveCount(0);
     await expect(entries).toHaveCount(1);
   });
 
@@ -6961,6 +7473,7 @@ print(json.dumps(entries[0].id))
     }
     await page.goto('/projects/');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole('button', { name: 'Add Project', exact: true }).click();
     await expect(page.getByLabel('Project name', { exact: true })).toBeVisible();
   });
 });

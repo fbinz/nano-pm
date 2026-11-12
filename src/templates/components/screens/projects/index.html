@@ -3,9 +3,35 @@
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" active_nav="projects">
   <main id="project-library-page" class="w-full">
     <nav class="project-breadcrumb"><a class="link link-hover" href="/">{% trans "Back to Projects" %}</a><label for="app-drawer" class="btn btn-sm btn-ghost lg:hidden" aria-label="{% trans 'Open menu' %}"><c-lucide name="menu" size="18" /></label></nav>
-    <header class="project-library-heading"><p class="project-eyebrow">{% trans "Room for what comes next" %}</p><h1>{% trans "Project library" %}</h1><p class="project-muted">{% trans "Every project belongs here, from a first idea to a finished piece of work." %}</p></header>
+    <header class="project-library-heading">
+      <div class="min-w-0 flex-1 basis-64">
+        <h1>{% trans "Project library" %}</h1>
+      </div>
+      {% if is_pm %}
+        <button id="project-create-trigger" type="button" class="btn btn-neutral shrink-0 ml-auto"
+                aria-haspopup="dialog" aria-controls="project-create-dialog"
+                data-on:click="document.getElementById('project-create-dialog').showModal()">
+          <c-lucide name="plus" size="16" />{% trans "Add Project" %}
+        </button>
+      {% endif %}
+    </header>
     {% if is_pm %}
-      <section class="project-capture" aria-labelledby="project-capture-title"><div class="project-section-heading"><c-lucide name="lightbulb" size="20" /><h2 id="project-capture-title">{% trans "Start with an idea" %}</h2></div><p class="project-muted">{% trans "Just a name for now. No dates, no commitments." %}</p><form action="{% url 'project_new' %}" method="post">{% csrf_token %}<label class="sr-only" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>{{ form.name }}<button class="btn btn-neutral" type="submit"><c-lucide name="plus" size="16" />{% trans "Create project" %}</button></form>{% if form.errors %}<div class="text-error" role="alert">{{ form.errors }}</div>{% endif %}</section>
+      <dialog id="project-create-dialog" class="modal" aria-labelledby="project-create-title"
+              data-on:close="el.querySelector('form').reset(); document.getElementById('project-create-trigger').focus({ preventScroll: true })"{% if form.errors %} data-init="el.showModal()"{% endif %}>
+        <div class="modal-box">
+          <h2 id="project-create-title" class="text-xl font-semibold">{% trans "Add Project" %}</h2>
+          <form action="{% url 'project_new' %}" method="post" class="mt-5">
+            {% csrf_token %}
+            <label class="block mb-2 font-medium" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+            {{ form.name }}
+            {% if form.errors %}<div class="text-error mt-2" role="alert">{{ form.errors }}</div>{% endif %}
+            <div class="modal-action flex-wrap">
+              <button type="button" class="btn btn-ghost" data-on:click="el.closest('dialog').close()">{% trans "Cancel" %}</button>
+              <button class="btn btn-neutral" type="submit"><c-lucide name="plus" size="16" />{% trans "Create project" %}</button>
+            </div>
+          </form>
+        </div>
+      </dialog>
     {% endif %}
     <form method="get" class="project-library-filters" role="search"><label class="sr-only" for="project-search">{% trans "Search projects" %}</label><input class="input" id="project-search" type="search" name="q" maxlength="200" value="{{ search }}" placeholder="{% trans 'Search projects…' %}"><label class="sr-only" for="project-phase-filter">{% trans "Filter by phase" %}</label><select class="select" id="project-phase-filter" name="phase"><option value="">{% trans "All phases" %}</option>{% for value, label in phases %}<option value="{{ value }}"{% if selected_phase == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select><button type="submit" class="btn btn-ghost">{% trans "Filter" %}</button></form>
     <section class="project-library-grid" aria-label="{% trans 'All projects' %}">

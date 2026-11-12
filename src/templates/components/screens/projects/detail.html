@@ -1,5 +1,5 @@
 {% load static i18n %}
-<c-vars project tasks milestones responsible_people form can_edit edit_label save_label user is_pm workspace workspaces has_multiple_workspaces tab has_gitlab journal selected_kind journal_filters phase_steps phase_form entry_form reply_error open_questions gitlab_connection gitlab_binding_form gitlab_issues gitlab_destinations gitlab_summary gitlab_state />
+<c-vars project tasks milestones responsible_people form can_edit edit_label save_label user is_pm workspace workspaces has_multiple_workspaces tab has_gitlab journal selected_kind journal_filters phase_steps phase_form entry_form open_questions gitlab_connection gitlab_binding_form gitlab_issues gitlab_destinations gitlab_summary gitlab_state />
 <c-layouts.app-shell :user="user" :is_pm="is_pm" :workspace="workspace" :workspaces="workspaces" :has_multiple_workspaces="has_multiple_workspaces" active_nav="projects">
   <main id="project-detail-page" class="project-workspace w-full">
     <nav class="project-breadcrumb">
@@ -16,7 +16,7 @@
         <div class="project-heading-meta">
           <c-screens.projects.phase-badge :project="project" />
           <span>{{ tasks|length }} {% trans "tasks" %}</span>
-          <span>{{ open_questions }} {% trans "open questions" %}</span>
+          <c-screens.projects.journal-open-questions :count="open_questions" />
         </div>
       </div>
     </header>
@@ -73,15 +73,8 @@
               {% for value, label in journal_filters %}<a href="?kind={{ value }}"{% if selected_kind == value %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
             </nav>
           </div>
-          {% if reply_error %}<p class="text-error" role="alert">{{ reply_error }}</p>{% endif %}
-          <div class="journal-entries">
-            {% for entry in journal %}
-              <c-screens.projects.journal-entry :entry="entry" :project="project" :journal_kind="selected_kind" :journal_page="journal.number" />
-            {% empty %}
-              <div class="project-journal-empty"><c-lucide name="notebook-pen" size="28" /><h3>{% trans "Every project starts with a thought." %}</h3><p>{% trans "Capture a conversation, ask a question, or write down what you’re considering." %}</p></div>
-            {% endfor %}
-          </div>
-          {% if journal.has_other_pages %}<nav class="project-pagination" aria-label="{% trans 'Journal pages' %}">{% if journal.has_previous %}<a class="btn btn-sm" href="?kind={{ selected_kind|urlencode }}&page={{ journal.previous_page_number }}">{% trans "Newer" %}</a>{% endif %}<span>{{ journal.number }} / {{ journal.paginator.num_pages }}</span>{% if journal.has_next %}<a class="btn btn-sm" href="?kind={{ selected_kind|urlencode }}&page={{ journal.next_page_number }}">{% trans "Older" %}</a>{% endif %}</nav>{% endif %}
+          <c-screens.projects.journal-entries :project="project" :journal="journal" :journal_kind="selected_kind" />
+          <c-screens.projects.journal-pagination :journal="journal" :journal_kind="selected_kind" />
         </div>
 
         <aside class="project-context">

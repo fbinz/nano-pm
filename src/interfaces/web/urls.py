@@ -25,7 +25,7 @@ from .people import (
     people_page, people_invite_link, people_create, people_update, people_delete,
     person_role_update, person_teams_update, team_create, team_update, team_delete,
 )
-from .project_workspace import project_new, project_phase, project_journal, project_journal_edit, project_reply, project_resolve
+from .project_workspace import project_new, project_phase, project_journal, project_journal_edit, project_journal_delete, project_reply, project_resolve
 from .workspaces import (
     workspace_switch, workspace_create, workspace_rename, workspace_settings,
     public_roadmap, public_roadmap_update, public_roadmap_regenerate,
@@ -106,6 +106,7 @@ urlpatterns = [
     path("projects/<int:project_id>/phase/", project_phase, name="project_phase"),
     path("projects/<int:project_id>/journal/", project_journal, name="project_journal"),
     path("projects/<int:project_id>/journal/<int:entry_id>/edit/", project_journal_edit, name="project_journal_edit"),
+    path("projects/<int:project_id>/journal/<int:entry_id>/delete/", project_journal_delete, name="project_journal_delete"),
     path("projects/<int:project_id>/journal/<int:entry_id>/reply/", project_reply, name="project_reply"),
     path("projects/<int:project_id>/journal/<int:entry_id>/resolve/", project_resolve, name="project_resolve"),
     path("projects/<int:project_id>/",                project_detail,   name="project_detail"),

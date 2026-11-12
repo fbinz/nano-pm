@@ -1,0 +1,10 @@
+{% load i18n %}
+<c-vars item />
+{% now "Y" as current_year %}
+{% with timestamp=item.updated_at|default:item.created_at %}
+<a id="journal-time-{{ item.id }}" class="journal-time" href="{% if item.parent_id %}#journal-reply-{{ item.id }}{% else %}#entry-{{ item.id }}{% endif %}"
+   data-created="{{ item.created_at|date:'c' }}" data-updated="{{ item.updated_at|date:'c' }}" data-phase="{{ item.phase }}"
+   title="{% blocktrans with date=item.created_at|date:'d M Y, H:i' %}Created: {{ date }}{% endblocktrans %}{% if item.updated_at %}&#10;{% blocktrans with date=item.updated_at|date:'d M Y, H:i' %}Last changed: {{ date }}{% endblocktrans %}{% endif %}&#10;{% blocktrans with phase=item.get_phase_display %}Phase at creation: {{ phase }}{% endblocktrans %}">
+  {% if item.updated_at %}{% trans "edited" context "journal timestamp" %} {% endif %}<time datetime="{{ timestamp|date:'c' }}">{% if timestamp|date:'Y' == current_year %}{{ timestamp|date:'d M, H:i' }}{% else %}{{ timestamp|date:'d M Y, H:i' }}{% endif %}</time>
+</a>
+{% endwith %}
