@@ -18,13 +18,13 @@ from actions.manage_tasks import (
     create_task, update_task, delete_task, move_task, move_many_tasks,
     resize_start, resize_end,
 )
-from data.models import Dependency, Milestone
+from data.models import Dependency, Milestone, Person, Project
 from data.models.task import status_for_dates
-from readers import get_chart_state, get_task
+from readers import get_task
 
 from .detail_forms import TaskDetailForm
 from .helpers import (
-    can_manage_task, is_pm, parse_iso, patch_chart, request_data, request_person,
+    can_manage_task, is_pm, parse_iso, patch_chart, patch_created_task, request_data, request_person,
     workspace_context,
 )
 
@@ -77,7 +77,8 @@ def render_task_popover(request: HttpRequest, task_id: int, *, is_initial: bool 
     task = get_task(request.workspace, task_id)
     if task is None:
         return None
-    state = get_chart_state(request.workspace)
+    projects = list(Project.objects.filter(workspace=request.workspace).only("id", "name"))
+    people = list(Person.objects.filter(workspace=request.workspace).prefetch_related("teams"))
     preds = list(
         Dependency.objects.filter(successor=task)
         .select_related("predecessor")
@@ -98,7 +99,7 @@ def render_task_popover(request: HttpRequest, task_id: int, *, is_initial: bool 
     current_person = request_person(request)
     return render_component(
         request, "screens/gantt/task-popover",
-        task=task, projects=state.projects, people=state.people,
+        task=task, projects=projects, people=people,
         milestone_options=milestone_options,
         preds=preds, succs=succs, can_edit=can_edit,
         current_person=current_person,
@@ -218,7 +219,7 @@ def task_create(request: HttpRequest):
     )
     if task is None:
         return
-    yield patch_chart(request)
+    yield patch_created_task(request, task.project_id, data.get("chart_context"))
     fragment = render_task_popover(request, task.id, is_initial=True)
     if fragment is not None:
         yield SSE.patch_elements(fragment)

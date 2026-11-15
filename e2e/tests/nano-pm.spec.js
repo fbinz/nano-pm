@@ -8929,6 +8929,190 @@ test.describe('project & people management', () => {
     await expect(firstProj).toContainText('New project');
   });
 
+  test('task creation patches only its project in a large workspace', async ({ appPage: page }) => {
+    test.setTimeout(60000);
+    await notificationDB(`
+from data.models import Project, Task
+workspace = Project.objects.first().workspace
+start = Task.objects.first().start
+end = Task.objects.first().end
+projects = Project.objects.bulk_create([
+    Project(workspace=workspace, name=f'Unrelated performance project {i}', order=100 + i)
+    for i in range(80)
+])
+Task.objects.bulk_create([
+    Task(project=project, title=f'Unrelated task {i}', start=start, end=end)
+    for project in projects for i in range(4)
+])
+print('ready')
+`);
+    await page.reload();
+    const project = page.locator('.project-group').first();
+    const projectId = await project.getAttribute('data-project-id');
+    const barsBefore = await page.locator('.bar').count();
+    const arrowBefore = await page.locator('#arrows path.hit').evaluateAll(paths => paths.map(p => p.getAttribute('d')));
+    // Keyboard creation uses today's preview, inside the existing date extent.
+    await project.getByRole('button', { name: 'Add task' }).click();
+    const row = project.locator('.task-creation-timeline');
+    const responsePromise = page.waitForResponse(r => r.url().endsWith('/tasks/create/'));
+    const started = Date.now();
+    await row.press('Enter');
+    const response = await responsePromise;
+    const payload = await response.text();
+    await expect(page.locator('.bar')).toHaveCount(barsBefore + 1);
+    await expect(page.locator('#task-popover')).toBeVisible();
+    const timing = response.request().timing();
+    console.log(`task creation: ${Date.now() - started}ms including Playwright action, ${Math.round(timing.responseEnd - timing.requestStart)}ms request, ${Buffer.byteLength(payload)} SSE bytes`);
+    // The project selector still contains all choices, but no unrelated chart rows are sent.
+    expect(payload.includes('id="grid-scroll"'), 'creation must not send the whole chart').toBe(false);
+    expect(payload).toContain(`id="project-group-${projectId}"`);
+    expect(payload).not.toContain('Unrelated task');
+    await expect(page.locator('#task-project option')).toHaveCount(83);
+    await expect(page.locator('#task-assignees option')).toHaveCount(4);
+    await expect.poll(() => page.locator('#arrows path.hit').evaluateAll(paths => paths.map(p => p.getAttribute('d')))).not.toEqual(arrowBefore);
+    const arrows = await page.locator('#arrows path.hit').evaluateAll(paths => paths.map(path => {
+      const [from, to] = path.dataset.dep.split('-');
+      const numbers = path.getAttribute('d').match(/-?\d+(?:\.\d+)?/g).map(Number);
+      const a = document.querySelector(`.bar[data-task-id="${from}"]`).getBoundingClientRect();
+      const b = document.querySelector(`.bar[data-task-id="${to}"]`).getBoundingClientRect();
+      const svg = path.closest('svg').getBoundingClientRect();
+      return [numbers[1] - (a.y + a.height / 2 - svg.y), numbers.at(-1) - (b.y + b.height / 2 - svg.y)];
+    }));
+    for (const [fromDelta, toDelta] of arrows) {
+      expect(Math.abs(fromDelta)).toBeLessThanOrEqual(1);
+      expect(Math.abs(toDelta)).toBeLessThanOrEqual(1);
+    }
+    // A small response alone is insufficient: guard against loading all tasks
+    // and throwing most away. Exercise the real streaming endpoints with the
+    // same worker DB, recording which ORM objects they materialise.
+    const context = await page.locator('#grid-scroll').evaluate(el => ({
+      start: el.dataset.chartStart, end: el.dataset.chartEnd,
+      zoom: el.dataset.zoom, ppd: Number(el.dataset.pxPerDay),
+    }));
+    const newTaskId = await page.locator('#task-popover').getAttribute('data-discard-url');
+    const loaded = JSON.parse(await notificationDB(`
+from unittest.mock import patch
+from django.contrib.auth import get_user_model
+from django.test import Client
+from data.models import Task
+client = Client(HTTP_HOST='localhost')
+client.force_login(get_user_model().objects.get(username='demo'))
+project_id = ${projectId}
+task_id = ${Number(newTaskId.split('/')[2])}
+original = Task.from_db
+seen = []
+def track(*args, **kwargs):
+    task = original(*args, **kwargs)
+    seen.append(task.project_id)
+    return task
+with patch.object(Task, 'from_db', side_effect=track):
+    response = client.get(f'/tasks/{task_id}/popover/')
+    b''.join(response.streaming_content)
+    editor = list(seen)
+    seen.clear()
+    with patch('actions.manage_tasks.cascade_workspace', side_effect=AssertionError('Unconnected creation must not cascade')):
+        response = client.post('/tasks/create/', data=json.dumps({
+            'project_id': project_id, 'title': 'Scoped read check',
+            'start': Task.objects.get(pk=task_id).start.isoformat(),
+            'end': Task.objects.get(pk=task_id).end.isoformat(),
+            'chart_context': json.loads('${JSON.stringify(context)}'),
+        }), content_type='application/json')
+        payload = b''.join(response.streaming_content).decode()
+        assert 'id="grid-scroll"' not in payload
+    creation = list(seen)
+print(json.dumps({'editor': editor, 'creation': creation}))
+`));
+    expect(loaded.editor).toEqual([Number(projectId)]);
+    expect(new Set(loaded.creation)).toEqual(new Set([Number(projectId)]));
+  });
+
+  for (const scenario of ['collapsed project', 'team filter', 'hidden project date bounds']) {
+    test(`project task patches preserve ${scenario}`, async ({ appPage: page }) => {
+      if (scenario === 'hidden project date bounds') {
+        await notificationDB(`
+from datetime import timedelta
+from data.models import Project, Task, Milestone, Workspace
+workspace = Project.objects.first().workspace
+project = Project.objects.create(workspace=workspace, name='Hidden date bounds', completed_at=timezone.now())
+Task.objects.create(project=project, title='Hidden early task', start=timezone.localdate() - timedelta(days=200), end=timezone.localdate())
+Milestone.objects.create(project=project, title='Hidden late milestone', date=timezone.localdate() + timedelta(days=400))
+foreign = Project.objects.create(workspace=Workspace.objects.exclude(pk=workspace.pk).first(), name='Foreign date bounds')
+Task.objects.create(project=foreign, title='Foreign task', start='1900-01-01', end='2100-01-01')
+print('ready')
+`);
+        await page.reload();
+        await expect(page.locator('.project-group')).toHaveCount(3);
+      }
+      if (scenario === 'team filter') {
+        await page.locator('#team-filter summary').click();
+        await page.locator('#team-filter .team-filter-option', { hasText: 'Design' }).click();
+        await expect(page.locator('.project-group')).toHaveCount(2);
+      }
+      const project = page.locator('.project-group').first();
+      const projectId = await project.getAttribute('data-project-id');
+      const rowsBefore = await page.locator('.left-cell.task:visible').count();
+      if (scenario === 'collapsed project') {
+        const saved = page.waitForResponse(r => r.url().endsWith(`/projects/${projectId}/toggle-collapse/`));
+        await project.locator('.collapse-toggle').click();
+        await saved;
+        await expect(project.locator('.left-cell.task:visible')).toHaveCount(0);
+      }
+      const responsePromise = page.waitForResponse(r => r.url().endsWith('/tasks/create/'));
+      await project.getByRole('button', { name: 'Add task' }).click();
+      await project.locator('.task-creation-timeline').press('Enter');
+      const response = await responsePromise;
+      const payload = await response.text();
+      expect(payload.includes('id="grid-scroll"')).toBe(false);
+      expect(payload).toContain(`id="project-group-${projectId}"`);
+      await expect(page.locator('#task-popover')).toBeVisible();
+      if (scenario === 'collapsed project') {
+        await expect(project.locator('.left-cell.task:visible')).toHaveCount(0);
+        await expect(project.locator('.bar', { hasText: 'New task' })).toHaveCount(1);
+      } else if (scenario === 'team filter') {
+        // New tasks are unassigned; the active team filter must still exclude them.
+        await expect(page.locator('.left-cell.task:visible')).toHaveCount(rowsBefore);
+        await expect(project.locator('.bar', { hasText: 'New task' })).toHaveCount(0);
+      } else {
+        await expect(project.locator('.bar', { hasText: 'New task' })).toHaveCount(1);
+      }
+    });
+  }
+
+  for (const scenario of ['earlier dates', 'later dates', 'missing context', 'stale zoom', 'stale density', 'resource view']) {
+    test(`task creation falls back to a full chart for ${scenario}`, async ({ appPage: page }) => {
+      const projectId = Number(await page.locator('.project-group').first().getAttribute('data-project-id'));
+      if (scenario === 'resource view') await page.goto('/resources/');
+      const before = await page.locator('#grid-scroll').evaluate(el => ({ start: el.dataset.chartStart, end: el.dataset.chartEnd }));
+      const responsePromise = page.waitForResponse(r => r.url().endsWith('/tasks/create/'));
+      await page.evaluate(({ projectId, scenario }) => {
+        const sc = document.getElementById('grid-scroll');
+        const iso = date => date.toISOString().slice(0, 10);
+        const addDays = (date, days) => new Date(Date.parse(date) + days * 86400000);
+        const today = iso(new Date());
+        const payload = {
+          project_id: projectId, title: 'Fallback task', start: today, end: iso(addDays(today, 7)),
+          chart_context: { start: sc.dataset.chartStart, end: sc.dataset.chartEnd, zoom: sc.dataset.zoom, ppd: Number(sc.dataset.pxPerDay) },
+        };
+        if (scenario === 'earlier dates') payload.start = iso(addDays(sc.dataset.chartStart, -40));
+        if (scenario === 'later dates') payload.end = iso(addDays(sc.dataset.chartEnd, 40));
+        if (scenario === 'missing context') delete payload.chart_context;
+        if (scenario === 'stale zoom') payload.chart_context.zoom = 'unknown';
+        if (scenario === 'stale density') payload.chart_context.ppd += 1;
+        window.dispatchEvent(new CustomEvent('nano-commit', { detail: { url: '/tasks/create/', data: payload } }));
+      }, { projectId, scenario });
+      const response = await responsePromise;
+      expect(response.status()).toBe(200);
+      expect((await response.text()).includes('id="grid-scroll"')).toBe(true);
+      await expect(page.locator('#task-popover')).toBeVisible();
+      if (scenario === 'earlier dates') await expect(page.locator('#grid-scroll')).not.toHaveAttribute('data-chart-start', before.start);
+      if (scenario === 'later dates') await expect(page.locator('#grid-scroll')).not.toHaveAttribute('data-chart-end', before.end);
+      // An unassigned task is absent from resource rows but remains editable.
+      if (scenario !== 'resource view') await expect(page.locator('.bar', { hasText: 'Fallback task' })).toHaveCount(1);
+      await page.reload();
+      if (scenario !== 'resource view') await expect(page.locator('.bar', { hasText: 'Fallback task' })).toHaveCount(1);
+    });
+  }
+
   test('explicit creation controls distinguish a new task row from milestone placement', async ({ appPage: page }) => {
     const project = page.locator('.project-group').first();
     const projectRow = project.locator('.chart-row.proj');

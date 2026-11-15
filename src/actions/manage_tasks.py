@@ -1,4 +1,4 @@
-"""Write operations for tasks (incl. drag/move/resize). Each call runs auto_cascade."""
+"""Task writes. Date-changing edits cascade; unconnected task creation does not."""
 
 from datetime import date, timedelta
 
@@ -97,8 +97,9 @@ def create_task(
         entity=t,
         changes=created_changes(_task_values(t)),
     )
-    cascaded = cascade_workspace(workspace, actor=actor)
-    return t, cascaded
+    # A newly inserted task has neither dependencies nor a linked milestone.
+    # It cannot move existing tasks; do not scan/repair the entire workspace.
+    return t, set()
 
 
 @transaction.atomic

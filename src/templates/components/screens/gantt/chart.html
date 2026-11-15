@@ -3,6 +3,8 @@
 <c-vars vm is_pm="False" />
 <div
   id="grid-scroll"
+  data-zoom="{{ vm.zoom }}"
+  data-view-mode="project"
   data-px-per-day="{{ vm.px_per_day }}"
   data-chart-start="{{ vm.chart_start_iso }}"
   data-chart-end="{{ vm.chart_end_iso }}"
@@ -42,93 +44,7 @@
     <div class="chart-row add-project-spacer" style="width:{{ vm.chart_width }}px;"></div>
 
     {% for rg in vm.row_groups %}
-      <div class="project-group{% if rg.completed %} completed{% endif %}" data-project-id="{{ rg.id }}">
-      <div class="left-cell proj{% if rg.completed %} completed{% endif %}"
-           id="proj-{{ rg.id }}"
-           data-project-id="{{ rg.id }}"
-           style="--project-color: {{ rg.color }};"
-           data-signals:_collapsed.{{ rg.id }}__ifmissing="{{ rg.collapsed|yesno:'true,false' }}"
-           data-on:click="!nano.projectSortModeActive() && nano.openProjectPopover({{ rg.id }})">
-        <button type="button" class="project-drag-handle"
-                aria-label="{% trans 'Drag to reorder project' %}"
-                data-on:click__stop="evt.preventDefault()">
-          <c-lucide name="grip-vertical" size="16" />
-        </button>
-        <button type="button" class="collapse-toggle"
-                data-on:click__stop="$_collapsed.{{ rg.id }} = !$_collapsed.{{ rg.id }}; nano.onCollapseChanged({{ rg.id }})">
-          <span data-show="$_collapsed.{{ rg.id }}" {% if not rg.collapsed %}style="display:none"{% endif %}><c-lucide name="chevron-right" size="16" /></span>
-          <span data-show="!$_collapsed.{{ rg.id }}" {% if rg.collapsed %}style="display:none"{% endif %}><c-lucide name="chevron-down" size="16" /></span>
-        </button>
-        <span class="swatch" style="background:{{ rg.color }}"></span>
-        <span class="name" title="{{ rg.name }}">{{ rg.name }}</span>
-        {% if rg.assignees %}<span class="project-assignees">{{ rg.assignees }}</span>{% endif %}
-        {% if rg.missing_future_milestone %}
-          <span class="future-milestone-warning" role="img"
-                aria-label="{% trans 'No future milestone' %}"
-                title="{% trans 'No future milestone' %}">
-            <c-lucide name="triangle-alert" size="14" />
-          </span>
-        {% endif %}
-        {% if rg.completed %}<span class="done-badge">{% trans "Done" %}</span>{% endif %}
-        <div class="project-create-actions">
-          {% if rg.gitlab_issues %}<c-screens.gitlab.project-summary :rg="rg" />{% endif %}
-          <a class="project-detail-link" href="{% url 'project_detail' rg.id %}"
-             aria-label="{% trans 'Open project details' %}" title="{% trans 'Open project details' %}"
-             data-on:click="evt.stopPropagation()">
-            <c-lucide name="maximize-2" size="14" />
-          </a>
-          <button type="button" class="project-create-btn"
-                  data-project-id="{{ rg.id }}" data-creation-type="task"
-                  aria-label="{% trans 'Add task' %}" aria-pressed="false"
-                  title="{% trans 'Add a highlighted row for a new task' %}"
-                  data-on:click__stop="evt.preventDefault(); nano.setCreationMode('task', {{ rg.id }})">
-            <c-lucide name="list-plus" size="14" />
-          </button>
-          <button type="button" class="project-create-btn"
-                  data-project-id="{{ rg.id }}" data-creation-type="milestone"
-                  aria-label="{% trans 'Add milestone' %}" aria-pressed="false"
-                  title="{% trans 'Add milestone, then place it on the timeline' %}"
-                  data-on:click__stop="evt.preventDefault(); nano.setCreationMode('milestone', {{ rg.id }})">
-            <c-lucide name="diamond-plus" size="14" />
-          </button>
-        </div>
-      </div>
-      <div class="chart-row proj{% if rg.completed %} completed{% endif %}"
-           data-project-id="{{ rg.id }}"
-           style="--project-color: {{ rg.color }}; width:{{ vm.chart_width }}px;"
-           title="{% trans 'Choose Milestone beside the project, then place it here. Shift-click and Shift-drag are shortcuts.' %}"
-           data-on:pointerdown="nano.projectRowMouseDown(evt, {{ rg.id }})">
-        {% for tile in vm.weekend_tiles %}
-          <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
-        {% endfor %}
-        {% for m in rg.milestones %}
-          <c-screens.gantt.milestone :m="m" />
-        {% endfor %}
-      </div>
-      {% for bar in rg.tasks %}
-          <div class="left-cell task{% if rg.completed %} completed{% endif %}" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
-               style="--project-color: {{ rg.color }};{% if rg.collapsed %}display:none;{% endif %}"
-               data-show="!$_collapsed.{{ rg.id }}"
-               data-on:click="nano.focusTask({{ bar.id }})">
-            <span class="title">{{ bar.title }}</span>
-            <span class="assignees">{{ bar.assignees }}</span>
-            <a class="task-detail-link" href="{% url 'task_detail' bar.id %}"
-               aria-label="{% trans 'Open task details' %}" title="{% trans 'Open task details' %}"
-               data-on:click="evt.stopPropagation()">
-              <c-lucide name="maximize-2" size="14" />
-            </a>
-          </div>
-          <div class="chart-row{% if rg.completed %} completed{% endif %}" data-task-id="{{ bar.id }}" data-project-id="{{ rg.id }}"
-               style="--project-color: {{ rg.color }};{% if rg.collapsed %}display:none;{% endif %}width:{{ vm.chart_width }}px;"
-               data-show="!$_collapsed.{{ rg.id }}">
-            {% for tile in vm.weekend_tiles %}
-              <div class="weekend-tile" style="left:{{ tile.x }}px;width:{{ tile.w }}px;"></div>
-            {% endfor %}
-            <c-screens.gantt.bar :bar="bar" />
-          </div>
-        {% endfor %}
-      <c-screens.gantt.gitlab :rg="rg" :vm="vm" />
-      </div>
+      <c-screens.gantt.project-group :rg="rg" :vm="vm" />
     {% endfor %}
 
     <div class="left-cell add-project-row"

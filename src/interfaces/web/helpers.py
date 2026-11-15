@@ -244,6 +244,44 @@ def patch_chart(request: HttpRequest, active_zoom: str | None = None):
     )
 
 
+def patch_created_task(request: HttpRequest, project_id: int, chart_context):
+    """Patch a visible project after an unconnected task insertion.
+
+    Client context is only a rendering hint, never an authorization scope.
+    Unknown/stale geometry and non-project views use the normal full patch.
+    """
+    from readers.gitlab import expanded_projects
+
+    resolved_zoom = zoom(request)
+    px_per_day = ppd(request, resolved_zoom)
+    if (
+        view_mode(request) != "project"
+        or not isinstance(chart_context, dict)
+        or chart_context.get("zoom") != resolved_zoom
+        or chart_context.get("ppd") != px_per_day
+    ):
+        return patch_chart(request)
+    state = get_chart_state(request.workspace, project_id=project_id)
+    if (
+        chart_context.get("start") != state.chart_start.isoformat()
+        or chart_context.get("end") != state.chart_end.isoformat()
+    ):
+        return patch_chart(request)
+    vm = build_chart_vm(
+        state, resolved_zoom, px_per_day=px_per_day,
+        collapsed_project_ids=collapsed_projects(request),
+        gitlab_expanded_ids=expanded_projects(request),
+        show_completed=show_completed(request),
+        is_pm=is_pm(request),
+        team_filter=team_filter(request),
+    )
+    if not vm.row_groups:
+        return patch_chart(request)
+    return SSE.patch_elements(render_component(
+        request, "screens/gantt/project-group", rg=vm.row_groups[0], vm=vm,
+    ))
+
+
 def request_data(request: HttpRequest) -> dict:
     """Return command payload data from Datastar JSON, falling back to form POST.
 

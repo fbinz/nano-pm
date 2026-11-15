@@ -498,10 +498,23 @@
     row.addEventListener('pointermove', milestoneCreationHover);
   }
 
+  function taskCreationChartContext(projectId) {
+    const sc = chartScroll();
+    if (sc?.dataset.viewMode !== 'project'
+      || !document.getElementById(`project-group-${projectId}`)) return null;
+    return {
+      start: sc.dataset.chartStart,
+      end: sc.dataset.chartEnd,
+      zoom: sc.dataset.zoom,
+      ppd: Number(sc.dataset.pxPerDay),
+    };
+  }
+
   function commitTaskRange(projectId, startDay, endDay) {
     const cs = chartStartDate();
     finishCreationMode();
     commit('/tasks/create/', {
+      chart_context: taskCreationChartContext(projectId),
       project_id: projectId,
       title: 'New task',
       start: fmt(addDays(cs, startDay)),
@@ -696,6 +709,7 @@
       } else {
         commit('/tasks/create/', {
           project_id: projectId,
+          chart_context: taskCreationChartContext(projectId),
           title: 'New task',
           start: fmt(addDays(cs, range.loDay)),
           end: fmt(addDays(cs, range.hiDay)),
