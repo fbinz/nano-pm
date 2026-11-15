@@ -468,7 +468,7 @@
     const clampedDay = Math.max(0, Math.min(maxDay, day));
     const preview = row.querySelector('.creation-milestone-preview');
     if (!preview) return;
-    preview.style.left = `${clampedDay * ppd}px`;
+    preview.style.left = `${(clampedDay + 0.5) * ppd}px`;
     preview.querySelector('.creation-date-tooltip').textContent =
       displayDate(fmt(addDays(chartStartDate(), clampedDay)));
     if (creationMode?.type === 'milestone') creationMode.previewDay = clampedDay;

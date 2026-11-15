@@ -8412,21 +8412,30 @@ test.describe('project & people management', () => {
     expect(Math.abs(visual.right - visual.expectedRight)).toBeLessThan(1);
   });
 
-  test('task-linked milestone diamond visually aligns with the owning task end', async ({ appPage: page }) => {
-    const milestone = page.locator('.milestone[data-task-id]').first();
-    const taskId = await milestone.getAttribute('data-task-id');
-    const bar = page.locator(`#bar-${taskId}`);
+  test('milestone diamonds are centered in their date cells at every density', async ({ appPage: page }) => {
+    for (const density of [36, 37, 72]) {
+      await page.locator('#zoom-slider').evaluate((el, value) => {
+        el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }, density);
+      await expect(page.locator('#grid-scroll')).toHaveAttribute('data-px-per-day', String(density));
 
-    const visual = await page.evaluate((id) => {
-      const ms = document.querySelector(`.milestone[data-task-id="${id}"]`);
-      const task = document.querySelector(`#bar-${id}`);
-      return {
-        milestoneCenter: parseFloat(ms.style.left) + 7,
-        taskRight: parseFloat(task.style.left) + parseFloat(task.style.width),
-      };
-    }, taskId);
-
-    expect(Math.abs(visual.milestoneCenter - visual.taskRight)).toBeLessThan(1);
+      const positions = await page.locator('.milestone').evaluateAll(markers => {
+        const grid = document.querySelector('#grid-scroll');
+        const start = Date.parse(`${grid.dataset.chartStart}T00:00:00Z`);
+        const ppd = Number(grid.dataset.pxPerDay);
+        return markers.map(marker => ({
+          center: parseFloat(getComputedStyle(marker).left) + 7,
+          expected: ((Date.parse(`${marker.dataset.date}T00:00:00Z`) - start) / 86400000 + 0.5) * ppd,
+          label: parseFloat(getComputedStyle(marker.nextElementSibling).left),
+        }));
+      });
+      expect(positions.length).toBeGreaterThan(0);
+      for (const position of positions) {
+        expect(position.center).toBeCloseTo(position.expected, 1);
+        expect(position.label).toBeCloseTo(position.center + 12, 1);
+      }
+    }
   });
 
   test('milestones offer an optional move explanation by default', async ({ appPage: page }) => {

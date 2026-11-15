@@ -1,8 +1,9 @@
+{% load l10n %}
 <c-vars m />
 <div
   id="ms-{{ m.id }}"
   class="milestone{% if m.overdue %} overdue{% endif %}"
-  style="left:{{ m.x|add:'-7' }}px;background:{{ m.color }};"
+  style="left:{{ m.diamond_left|unlocalize }}px;background:{{ m.color }};"
   data-milestone-id="{{ m.id }}"
   data-title="{{ m.title }}"
   data-requires-move-reason="{{ m.require_move_reason|yesno:'true,false' }}"
@@ -16,6 +17,6 @@
   aria-label="{{ m.title }} {{ m.date_display }}"
   data-on:keydown="if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); nano.openMilestonePopover({{ m.id }}) }"
 ></div>
-<nano-milestone-label id="ms-label-{{ m.id }}" class="milestone-label" style="left:{{ m.x|add:'12' }}px;">
+<nano-milestone-label id="ms-label-{{ m.id }}" class="milestone-label" style="left:{{ m.label_left|unlocalize }}px;">
   <span data-preserve-attr="style">{{ m.title }}</span>
 </nano-milestone-label>

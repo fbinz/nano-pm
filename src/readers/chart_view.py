@@ -82,6 +82,14 @@ class MilestoneVM:
     require_move_reason: bool
 
     @property
+    def diamond_left(self) -> float:
+        return self.x - 7
+
+    @property
+    def label_left(self) -> float:
+        return self.x + 12
+
+    @property
     def date_display(self) -> str:
         return date.fromisoformat(self.date_iso).strftime("%d.%m.%Y")
 
@@ -471,7 +479,7 @@ def build_chart_vm(
             ):
                 continue
             milestone_date = task.end if task is not None else m.date
-            milestone_x = x_of(milestone_date)
+            milestone_x = x_of(milestone_date) + ppd / 2
             miles.append(MilestoneVM(
                 id=m.id,
                 task_id=task.id if task is not None else None,
