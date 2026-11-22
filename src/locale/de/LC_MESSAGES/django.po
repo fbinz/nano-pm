@@ -1340,6 +1340,7 @@ msgstr "Keine Assistenten-Verbindungen."
 #: templates/components/screens/projects/journal-reply-composer.html:15
 #: templates/components/screens/teams/settings.html:99
 #: templates/public/roadmap.html:170
+#: templates/components/layouts/app-shell.html:112
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -1348,7 +1349,6 @@ msgid "Close sidebar"
 msgstr "Seitenleiste schließen"
 
 #: templates/components/layouts/app-shell.html:14
-#: templates/components/layouts/app-shell.html:35
 #: templates/components/screens/workspaces/settings.html:6
 msgid "Workspace settings"
 msgstr "Arbeitsbereich – Einstellungen"
@@ -1361,21 +1361,21 @@ msgstr "Arbeitsbereich wechseln"
 msgid "Workspaces"
 msgstr "Arbeitsbereiche"
 
-#: templates/components/layouts/app-shell.html:40
+#: templates/components/layouts/app-shell.html:109
 #: templates/components/screens/workspaces/settings-general.html:5
 msgid "Workspace name"
 msgstr "Arbeitsbereichsname"
 
-#: templates/components/layouts/app-shell.html:41
 #: templates/components/screens/workspaces/settings-general.html:8
 msgid "Rename"
 msgstr "Umbenennen"
 
-#: templates/components/layouts/app-shell.html:47
-msgid "Create workspace"
-msgstr "Arbeitsbereich erstellen"
+#: templates/components/layouts/app-shell.html:37
+#: templates/components/layouts/app-shell.html:106
+msgid "Create new workspace"
+msgstr "Neuen Arbeitsbereich erstellen"
 
-#: templates/components/layouts/app-shell.html:48
+#: templates/components/layouts/app-shell.html:113
 msgid "Create"
 msgstr "Erstellen"
 

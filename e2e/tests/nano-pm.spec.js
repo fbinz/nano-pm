@@ -99,6 +99,20 @@ async function openJournalReply(entry) {
   await entry.getByRole('button', { name: 'Reply', exact: true }).click();
 }
 
+async function openWorkspaceCreation(page) {
+  await page.getByRole('button', { name: 'Switch workspace', exact: true }).click();
+  await page.getByRole('button', { name: 'Create new workspace', exact: true }).click();
+  return page.getByRole('dialog', { name: 'Create new workspace', exact: true });
+}
+
+async function createWorkspace(page, name) {
+  const dialog = await openWorkspaceCreation(page);
+  const nameInput = dialog.getByLabel('Workspace name', { exact: true });
+  await nameInput.fill(name);
+  await nameInput.press('Enter');
+  await expect(page.locator('#workspace-name')).toHaveText(name);
+}
+
 async function enableRoadmap(page) {
   await page.goto('/workspaces/settings/sharing/');
   await page.getByRole('button', { name: 'Enable public roadmap' }).click();
@@ -3487,10 +3501,7 @@ print(membership.user_id)
     await submitWorkloadExample(page);
     await page.goto('/');
     await signInAs(page, 'demo');
-    await page.locator('.ws-chevron-btn').click();
-    await page.fill('#workspace-create-name', 'Workload destination');
-    await page.locator('#workspace-create-name').press('Enter');
-    await expect(page.locator('#workspace-name')).toHaveText('Workload destination');
+    await createWorkspace(page, 'Workload destination');
     await enableWorkload(page);
     const destinationId = await page.locator('#workspace-menu form', { has: page.locator('.workspace-item', { hasText: 'Workload destination' }) }).getAttribute('action').then(action => action.match(/\d+/)[0]);
     await page.locator('.ws-chevron-btn').click();
@@ -3775,10 +3786,7 @@ test.describe('self-service profile', () => {
   test('profile Teams email stays workspace-specific and rejects stale workspace submissions', async ({ appPage: page }) => {
     await saveTeamsIdentity(page, 'original@example.com');
     const sourceWorkspace = await page.locator('#profile-form input[name=workspace_id]').inputValue();
-    await page.locator('.ws-chevron-btn').click();
-    await page.locator('#workspace-create-name').fill('Another workspace');
-    await page.locator('#workspace-menu button', { hasText: 'Create' }).click();
-    await page.waitForURL('/');
+    await createWorkspace(page, 'Another workspace');
     await page.goto('/profile/');
     await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('');
     expect(await postForm(page, '/profile/', { workspace_id: sourceWorkspace, teams_upn: 'wrong@example.com', first_name: 'Stale' })).toBe(200);
@@ -9955,14 +9963,11 @@ test.describe('workspace isolation', () => {
     await expect(selector).toHaveValue('/workspaces/settings/integrations/');
   });
 
-  test('workspace settings are reachable from the name cog and picker and gate workload configuration', async ({ appPage: page }) => {
+  test('workspace settings are reachable from the name cog and gate workload configuration', async ({ appPage: page }) => {
     const cog = page.locator('.sidebar-workspace-display').getByRole('link', { name: 'Workspace settings', exact: true });
     await expect(cog).toBeVisible();
     await expect(cog).toHaveAttribute('href', '/workspaces/settings/');
-    await page.locator('.ws-chevron-btn').click();
-    const picker = page.locator('#workspace-menu');
-    await expect(picker.getByRole('button', { name: 'Enable public roadmap', exact: true })).toHaveCount(0);
-    await picker.getByRole('link', { name: 'Workspace settings', exact: true }).click();
+    await cog.click();
     await expect(page).toHaveURL(/\/workspaces\/settings\/$/);
     await expect(page.getByRole('heading', { name: 'Workspace settings', exact: true })).toBeVisible();
     await page.locator('main').getByLabel('Workspace name', { exact: true }).fill('Planning');
@@ -10028,10 +10033,7 @@ test.describe('workspace isolation', () => {
   });
 
   test('workspace settings are PM-only and scoped to the active workspace', async ({ appPage: page }) => {
-    await page.locator('.ws-chevron-btn').click();
-    await page.fill('#workspace-create-name', 'Settings sandbox');
-    await page.locator('#workspace-create-name').press('Enter');
-    await page.waitForURL('/');
+    await createWorkspace(page, 'Settings sandbox');
     await page.goto('/workspaces/settings/workload/');
     await page.getByLabel('Enable workload reporting', { exact: true }).check();
     await expect(page.locator('[data-workload-setting="workload_enabled"]')).toHaveAttribute('data-enabled', 'true');
@@ -10077,7 +10079,7 @@ test.describe('workspace isolation', () => {
     // Open workspace switcher and pick the other workspace
     await page.locator('.ws-chevron-btn').click();
     await expect(page.locator('#workspace-menu')).toBeVisible();
-    // Two workspaces listed (excluding the create form)
+    // Two workspaces listed (excluding the create button)
     await expect(page.locator('#workspace-menu .workspace-item')).toHaveCount(2);
 
     // Click the second workspace (pm2's)
@@ -10088,38 +10090,38 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('#workspace-name')).toHaveText("pm2's workspace");
   });
 
-  test('user can create a new workspace from the switcher', async ({ appPage: page }) => {
-    // demo starts with one workspace — no dropdown yet, just the name
+  test('user can create a new workspace in a modal from the switcher', async ({ appPage: page }) => {
+    const switcher = page.getByRole('button', { name: 'Switch workspace', exact: true });
+    const menu = page.locator('#workspace-menu');
+    await switcher.click();
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole('link', { name: 'Workspace settings', exact: true })).toHaveCount(0);
+    await expect(menu.getByRole('button', { name: 'Rename', exact: true })).toHaveCount(0);
+    await expect(menu.getByRole('textbox')).toHaveCount(0);
+
+    const dialog = page.getByRole('dialog', { name: 'Create new workspace', exact: true });
+    await menu.getByRole('button', { name: 'Create new workspace', exact: true }).click();
+    await expect(dialog).toBeVisible();
+    await expect(menu).toBeHidden();
+    const name = dialog.getByLabel('Workspace name', { exact: true });
+    await expect(name).toBeFocused();
+    await name.fill('Discarded draft');
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(switcher).toBeFocused();
     await expect(page.locator('#workspace-name')).toHaveText("demo's workspace");
 
-    // Click the chevron to open the switcher
-    await page.locator('.ws-chevron-btn').click();
-    await expect(page.locator('#workspace-menu')).toBeVisible();
+    await openWorkspaceCreation(page);
+    await expect(name).toHaveValue('');
+    await name.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(switcher).toBeFocused();
 
-    // Type the name into the "Create workspace" input and press Enter
-    await page.fill('#workspace-create-name', 'Side project');
-    await page.locator('#workspace-create-name').press('Enter');
-    await page.waitForURL('/');
-
-    // Now in the new empty workspace
+    await openWorkspaceCreation(page);
+    await name.fill('Side project');
+    await dialog.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('#workspace-name')).toHaveText('Side project');
     await expect(page.locator('.left-cell.proj')).toHaveCount(0);
-  });
-
-  test('PM can rename the current workspace from the switcher', async ({ appPage: page }) => {
-    await expect(page.locator('#workspace-name')).toHaveText("demo's workspace");
-
-    await page.locator('.ws-chevron-btn').click();
-    await expect(page.locator('#workspace-menu')).toBeVisible();
-
-    await page.fill('#workspace-rename-name', 'Roadmap HQ');
-    await page.locator('#workspace-rename-name').press('Enter');
-    await page.waitForURL('/');
-
-    await expect(page.locator('#workspace-name')).toHaveText('Roadmap HQ');
-
-    await page.locator('.ws-chevron-btn').click();
-    await expect(page.locator('#workspace-menu .workspace-item.active')).toContainText('Roadmap HQ');
   });
 
   test('PM can enable and revoke a public roadmap generated from milestones', async ({ appPage: page, request }) => {
@@ -10749,11 +10751,7 @@ print(json.dumps({'existing': list(Project.objects.filter(id__in=existing_ids).v
 
   test('PM can move a project to another workspace after confirmation', async ({ appPage: page }) => {
     // Create a second workspace owned by demo; creation switches into it.
-    await page.locator('.ws-chevron-btn').click();
-    await page.fill('#workspace-create-name', 'Side project');
-    await page.locator('#workspace-create-name').press('Enter');
-    await page.waitForURL('/');
-    await expect(page.locator('#workspace-name')).toHaveText('Side project');
+    await createWorkspace(page, 'Side project');
     await expect(page.locator('.left-cell.proj')).toHaveCount(0);
 
     // Switch back to the seeded workspace and open the project editor.
@@ -11062,10 +11060,7 @@ test.describe('app sidebar', () => {
     const workspaceMenu = page.locator('#workspace-menu');
     await expect(workspaceMenu.locator('.workspace-menu-header').first()).toHaveCSS('font-size', '16px');
     await expect(workspaceMenu.locator('.workspace-item').first()).toHaveCSS('font-size', '16px');
-    await expect(workspaceMenu.locator('#workspace-rename-name')).toHaveCSS('font-size', '16px');
-    await expect(workspaceMenu.locator('#workspace-create-name')).toHaveCSS('font-size', '16px');
-    await expect(workspaceMenu.getByRole('button', { name: 'Rename' })).toHaveCSS('font-size', '16px');
-    await expect(workspaceMenu.getByRole('link', { name: 'Workspace settings', exact: true })).toHaveCSS('font-size', '16px');
+    await expect(workspaceMenu.getByRole('button', { name: 'Create new workspace', exact: true })).toHaveCSS('font-size', '16px');
 
     // Projects link is active on the main page
     await expect(nav.locator('a', { hasText: 'Projects' })).toHaveClass(/menu-active/);
@@ -11199,6 +11194,14 @@ test.describe('i18n (German)', () => {
     // Switch back to English.
     await page.locator('.lang-btn', { hasText: 'EN' }).click();
     await expect(page.locator('.drawer-side .menu a', { hasText: 'Projects' })).toBeVisible();
+  });
+
+  test('workspace creation uses the German button and dialog label', async ({ appPage: page }) => {
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    await page.getByRole('button', { name: 'Arbeitsbereich wechseln', exact: true }).click();
+    await page.getByRole('button', { name: 'Neuen Arbeitsbereich erstellen', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Neuen Arbeitsbereich erstellen', exact: true });
+    await expect(dialog.getByLabel('Arbeitsbereichsname', { exact: true })).toBeFocused();
   });
 
   test('day zoom axis labels are translated', async ({ appPage: page }) => {

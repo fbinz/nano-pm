@@ -13,7 +13,7 @@
             {% if is_pm %}
               <a class="ws-settings-link" href="{% url 'workspace_settings' %}" aria-label="{% trans 'Workspace settings' %}" title="{% trans 'Workspace settings' %}"><c-lucide name="settings" size="14" /></a>
             {% endif %}
-            <button type="button" class="ws-chevron-btn"
+            <button id="workspace-menu-trigger" type="button" class="ws-chevron-btn"
                     aria-label="{% trans 'Switch workspace' %}"
                     popovertarget="workspace-menu">
               <c-lucide name="chevrons-up-down" size="14" />
@@ -31,22 +31,12 @@
                 </button>
               </form>
             {% endfor %}
-            {% if is_pm %}
-              <a class="workspace-item" href="{% url 'workspace_settings' %}"><span>{% trans "Workspace settings" %}</span><c-lucide name="settings" size="14" /></a>
-              <form method="post" action="/workspaces/rename/" class="workspace-create">
-                {% csrf_token %}
-                <c-lucide name="pencil" size="14" />
-                <input id="workspace-rename-name" class="input input-sm w-full" type="text" name="name"
-                       value="{{ workspace.name }}" maxlength="200" aria-label="{% trans 'Workspace name' %}" required>
-                <button type="submit" class="btn btn-sm btn-neutral workspace-create-btn">{% trans "Rename" %}</button>
-              </form>
-            {% endif %}
-            <form method="post" action="/workspaces/" class="workspace-create">
-              {% csrf_token %}
-              <c-lucide name="plus-circle" size="14" />
-              <input id="workspace-create-name" class="input input-sm w-full" type="text" name="name" placeholder="{% trans 'Create workspace' %}" required>
-              <button type="submit" class="btn btn-sm btn-neutral workspace-create-btn">{% trans "Create" %}</button>
-            </form>
+            <button type="button" class="workspace-create-trigger"
+                    aria-haspopup="dialog" aria-controls="workspace-create-dialog"
+                    data-on:click="el.closest('[popover]').hidePopover(); document.getElementById('workspace-create-dialog').showModal()">
+              <span>{% trans "Create new workspace" %}</span>
+              <c-lucide name="plus-circle" size="14" class="shrink-0" />
+            </button>
           </div>
         </div>
         <ul class="menu gap-0 w-full p-0 rounded-none">
@@ -110,8 +100,24 @@
     </div>
   </div>
 
+  <dialog id="workspace-create-dialog" class="modal" aria-labelledby="workspace-create-title"
+          data-on:close="el.querySelector('form').reset(); document.getElementById('workspace-menu-trigger').focus({ preventScroll: true })">
+    <div class="modal-box">
+      <h2 id="workspace-create-title" class="text-xl font-semibold">{% trans "Create new workspace" %}</h2>
+      <form method="post" action="{% url 'workspace_create' %}" class="mt-5">
+        {% csrf_token %}
+        <label for="workspace-create-name" class="block mb-2 font-medium">{% trans "Workspace name" %}</label>
+        <input id="workspace-create-name" class="input w-full" type="text" name="name" maxlength="200" required autofocus>
+        <div class="modal-action flex-wrap">
+          <button type="button" class="btn btn-ghost" data-on:click="el.closest('dialog').close()">{% trans "Cancel" %}</button>
+          <button type="submit" class="btn btn-neutral">{% trans "Create" %}</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
   <aside id="drawer"
-         data-on:keydown__window="evt.key === 'Escape' && !document.getElementById('milestone-move-dialog').open && nano.discardDrawer()">
+         data-on:keydown__window="evt.key === 'Escape' && !document.getElementById('milestone-move-dialog').open && !document.getElementById('workspace-create-dialog').open && nano.discardDrawer()">
     <header class="drawer-header">
       <button class="drawer-close"
               type="button"

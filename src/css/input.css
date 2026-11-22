@@ -65,20 +65,11 @@ html, body { height: 100%; }
   .workspace-menu-header {
     @apply px-3 py-2 text-xs uppercase tracking-wider text-base-content/60 border-b border-base-300;
   }
-  .workspace-item {
-    @apply flex! items-center justify-between w-full text-left px-3 py-2 bg-transparent border-0 cursor-pointer text-base-content hover:bg-base-200;
+  .workspace-item, .workspace-create-trigger {
+    @apply flex! items-center justify-between w-full text-left px-3 py-2 bg-transparent cursor-pointer text-base-content hover:bg-base-200;
   }
   .workspace-item.active { @apply font-medium; }
-  .workspace-create {
-    @apply flex! items-center gap-2 px-3 py-2 border-t border-base-300;
-  }
-  .workspace-create > svg { @apply text-base-content/80 flex-shrink-0; }
-  .workspace-create input {
-    @apply flex-1 min-w-0;
-  }
-  .workspace-create-btn {
-    @apply flex-shrink-0;
-  }
+  .workspace-create-trigger { @apply gap-2 border-t border-base-300; }
 
   #zoom-controls { @apply join border border-base-300 rounded-md overflow-hidden; }
   #zoom-controls a,
