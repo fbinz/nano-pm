@@ -51,6 +51,7 @@ urlpatterns = [
          {"section": "workload"}, name="workspace_settings_workload"),
     path("workspaces/settings/integrations/", workspace_settings,
          {"section": "integrations"}, name="workspace_settings_integrations"),
+    path("workspaces/settings/teams/", teams_settings, name="workspace_settings_teams"),
     path("workspaces/settings/sharing/", workspace_settings,
          {"section": "sharing"}, name="workspace_settings_sharing"),
     path("workspaces/workload/", workload_settings, name="workload_settings"),
@@ -76,7 +77,7 @@ urlpatterns = [
     path("accounts/password/change/", ProfilePasswordChangeView.as_view(), name="password_change"),
     path("roadmap/<slug:token>/", public_roadmap, name="public_roadmap"),
     path("roadmap/<slug:token>/projects/<int:project_id>/follow/", roadmap_subscription, name="roadmap_subscription"),
-    path("workspaces/teams/", teams_settings, name="teams_settings"),
+    path("workspaces/teams/", teams_settings, {"legacy": True}, name="teams_settings"),
     path("zoom/", zoom_set, name="zoom_set"),
     path("ui/sidebar-width/", sidebar_width_set, name="sidebar_width_set"),
     # Tasks

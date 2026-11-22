@@ -6,11 +6,11 @@ for (const [name, viewport] of Object.entries({
 })) {
   test(`Teams settings and roadmap subscriptions at ${name} width`, async ({ appPage: page }, testInfo) => {
     await page.setViewportSize(viewport);
-    await page.goto('/workspaces/teams/');
+    await page.goto('/workspaces/settings/teams/');
     await expect(page.getByRole('heading', { name: 'Teams notifications', exact: true })).toBeVisible();
     await expect(page.getByLabel('Teams email address', { exact: true })).toHaveCount(0);
     await expect(page.getByText('One channel per workspace. Follow projects on the roadmap to be mentioned when milestones change.', { exact: true })).toHaveCount(0);
-    await expect(page.locator('main a')).toHaveCount(0);
+    await expect(page.locator('main a:not(nav a)')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Workspace channel', exact: true })).toBeVisible();
     await expect(page.locator('#teams-connection-status')).toHaveClass(/\bbadge\b.*\bbadge-ghost\b/);
     await expect(page.getByRole('heading', { name: 'Recent deliveries', exact: true })).toBeVisible();

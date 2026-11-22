@@ -31,6 +31,8 @@
         <c-screens.workload.configuration :workspace="workspace" :options="options" :categories="categories" :memberships="memberships" />
       {% elif settings_section == "integrations" %}
         <c-screens.gitlab.settings :connection="gitlab_connection" :connection_form="gitlab_connection_form" :workflow_form="gitlab_workflow_form" />
+      {% elif settings_section == "teams" %}
+        {% include "components/screens/teams/settings.html" %}
       {% elif settings_section == "sharing" %}
         {% include "components/screens/workspaces/settings-sharing.html" %}
       {% endif %}

@@ -3,7 +3,7 @@
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.cache import never_cache
@@ -14,8 +14,9 @@ from actions.teams_delivery import validate_webhook_url
 from data.models import Membership, Project, Workspace
 from data.models.project import TEAMS_NOTIFY_EVENT_CHOICES
 
-from .helpers import is_pm, workspace_context
+from .helpers import pm_required
 from .public_subscriptions import PublicFollowerDomainsForm, public_subscription, unfollow_public_subscription
+from .workspaces import render_workspace_settings
 
 
 class WorkspaceTeamsForm(forms.Form):
@@ -40,10 +41,11 @@ class WebhookForm(forms.Form):
 
 @require_http_methods(["GET", "POST"])
 @login_required
+@pm_required
 @sensitive_post_parameters("teams_webhook_url")
-def teams_settings(request):
-    if not is_pm(request):
-        return HttpResponse(status=403)
+def teams_settings(request, legacy=False):
+    if legacy and request.method == "GET":
+        return redirect("workspace_settings_teams")
     workspace = request.workspace
     workspace_form = WorkspaceTeamsForm(
         initial={"teams_notify_events": workspace.teams_notify_events},
@@ -75,14 +77,14 @@ def teams_settings(request):
             # Each action changes only its own fields; connection changes must
             # never overwrite event preferences (or vice versa).
             update_settings(workspace=workspace, actor=request.user, values=updates)
-            return redirect("teams_settings")
-    return render(request, "components/screens/teams/settings.html", {
-        **workspace_context(request), "user": request.user, "is_pm": is_pm(request),
-        "workspace_form": workspace_form, "webhook_form": webhook_form,
-        "public_followers_form": public_followers_form,
-        "deliveries": workspace.teams_deliveries.order_by("-created_at", "-id")[:20],
-        "notification_batches": workspace.notification_batches.filter(status="open").order_by("send_after", "id"),
-    })
+            return redirect("workspace_settings_teams")
+    return render_workspace_settings(
+        request, "teams",
+        workspace_form=workspace_form, webhook_form=webhook_form,
+        public_followers_form=public_followers_form,
+        deliveries=workspace.teams_deliveries.order_by("-created_at", "-id")[:20],
+        notification_batches=workspace.notification_batches.filter(status="open").order_by("send_after", "id"),
+    )
 
 
 @require_http_methods(["POST"])

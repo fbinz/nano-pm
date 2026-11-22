@@ -52,7 +52,7 @@ with sqlite3.connect(os.environ['DJANGO_DB_PATH'], timeout=10) as connection:
 }
 
 async function configureTeams(page, url, events = ['milestone.moved', 'milestone.updated']) {
-  const response = await page.goto('/workspaces/teams/');
+  const response = await page.goto('/workspaces/settings/teams/');
   expect(response.status()).toBe(200);
   await page.getByRole('button', { name: 'Set up new webhook', exact: true }).click();
   await page.getByLabel('Microsoft Teams webhook URL').fill(url);
@@ -3741,7 +3741,7 @@ test.describe('self-service profile', () => {
     await expect(page.getByLabel('First name', { exact: true })).toHaveValue('');
     await expect(page.getByLabel('Last name', { exact: true })).toHaveValue('');
     await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('');
-    await page.goto('/workspaces/teams/');
+    await page.goto('/workspaces/settings/teams/');
     await expect(page.getByLabel('Teams email address', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Set up new webhook', exact: true })).toBeVisible();
     await expect(page.getByLabel('Microsoft Teams webhook URL')).not.toBeVisible();
@@ -3769,9 +3769,9 @@ test.describe('self-service profile', () => {
     await expect(page.getByLabel('First name', { exact: true })).toHaveValue('Member');
     await expect(page.getByLabel('Teams email address', { exact: true })).toHaveValue('member@teams.example.com');
     for (const action of ['workspace', 'webhook', 'disconnect', 'public_subscribers']) {
-      expect(await postForm(page, '/workspaces/teams/', { action, teams_webhook_url: 'https://example.com' })).toBe(403);
+      expect(await postForm(page, '/workspaces/settings/teams/', { action, teams_webhook_url: 'https://example.com' })).toBe(403);
     }
-    const denied = await page.goto('/workspaces/teams/');
+    const denied = await page.goto('/workspaces/settings/teams/');
     expect(denied.status()).toBe(403);
     const otherContext = await browser.newContext();
     try {
@@ -3885,7 +3885,7 @@ assert TeamsDelivery.objects.count() == 0`);
       expect(await postForm(page, `/milestones/${secondId}/update/`, { title: 'Second milestone', description: 'Details' })).toBe(200);
       // Creation is disabled, but subsequent detail edits are enabled.
       expect(await postForm(page, `/milestones/${secondId}/update/`, { title: 'Second final title' })).toBe(200);
-      await page.goto('/workspaces/teams/');
+      await page.goto('/workspaces/settings/teams/');
       await expect(page.locator('#notification-batches')).toContainText('API Migration');
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(1);
@@ -4100,7 +4100,7 @@ assert NotificationBatch.objects.filter(status='open').count() == 1`);
     } finally { await webhook.close(); }
   });
   test('anonymous followers remember a validated email for subsequent follows in the same roadmap', async ({ appPage: page, browser }) => {
-    await page.goto('/workspaces/teams/');
+    await page.goto('/workspaces/settings/teams/');
     await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
     await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
     const roadmap = await enableRoadmap(page);
@@ -4142,7 +4142,7 @@ assert NotificationBatch.objects.filter(status='open').count() == 1`);
   });
 
   test('cached anonymous email addresses are still checked against current domain restrictions', async ({ appPage: page, browser }) => {
-    await page.goto('/workspaces/teams/');
+    await page.goto('/workspaces/settings/teams/');
     await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
     await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
     const roadmap = await enableRoadmap(page);
@@ -4204,7 +4204,7 @@ assert NotificationBatch.objects.filter(status='open').count() == 1`);
     const visitor = await context.newPage();
     const other = await otherContext.newPage();
     try {
-      await page.goto('/workspaces/teams/');
+      await page.goto('/workspaces/settings/teams/');
       await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
       await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
       await expect(page.getByLabel('Allowed domains for public followers')).toHaveValue('mycompany.com');
@@ -4257,7 +4257,7 @@ assert NotificationBatch.objects.filter(status='open').count() == 1`);
       expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Unrestricted public follow' })).toBe(200);
       await deliverTeamsNotifications();
       expect(webhook.requests[0].json.attachments[0].content.msteams.entities.map(e => e.mentioned.id)).toEqual(['visitor@othercompany.com']);
-      await page.goto('/workspaces/teams/');
+      await page.goto('/workspaces/settings/teams/');
       for (const domain of ['*.mycompany.com', 'https://mycompany.com', '@mycompany.com']) {
         await page.getByLabel('Allowed domains for public followers').fill(domain);
         await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
@@ -4294,7 +4294,7 @@ assert NotificationBatch.objects.filter(status='open').count() == 1`);
       const projectId = await page.locator('.left-cell.proj', { hasText: 'API Migration' }).getAttribute('data-project-id');
       await page.goto('/profile/');
       const sourceId = await page.locator('#profile-form input[name=workspace_id]').inputValue();
-      await page.goto('/workspaces/teams/');
+      await page.goto('/workspaces/settings/teams/');
       await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
       await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
       const sourceRoadmap = await enableRoadmap(page);
@@ -4304,7 +4304,7 @@ assert NotificationBatch.objects.filter(status='open').count() == 1`);
       expect(await postForm(page, '/workspaces/', { name: 'Another public channel' })).toBe(200);
       await page.goto('/profile/');
       const targetId = await page.locator('#profile-form input[name=workspace_id]').inputValue();
-      await page.goto('/workspaces/teams/');
+      await page.goto('/workspaces/settings/teams/');
       await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
       await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
       const targetRoadmap = await enableRoadmap(page);
@@ -4326,7 +4326,7 @@ assert NotificationBatch.objects.filter(status='open').count() == 1`);
     const replacement = await startWebhookServer();
     try {
       const milestoneId = await page.locator('.milestone').first().getAttribute('data-milestone-id');
-      await page.goto('/workspaces/teams/');
+      await page.goto('/workspaces/settings/teams/');
       const setup = page.getByRole('button', { name: 'Set up new webhook', exact: true });
       await expect(setup).toBeVisible();
       await expect(page.getByLabel('Microsoft Teams webhook URL')).not.toBeVisible();
@@ -4397,11 +4397,11 @@ assert NotificationBatch.objects.filter(status='open').count() == 1`);
       await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
       await expect(page.locator('#teams-connection-status')).toHaveText('Webhook configured');
       // Event preferences cannot implicitly replace or disconnect the webhook.
-      expect(await postForm(page, '/workspaces/teams/', {
+      expect(await postForm(page, '/workspaces/settings/teams/', {
         action: 'workspace', teams_notify_events: 'milestone.updated',
         teams_webhook_url: 'https://example.com', disconnect: 'on',
       })).toBe(200);
-      await page.goto('/workspaces/teams/');
+      await page.goto('/workspaces/settings/teams/');
       await expect(page.getByLabel('Milestone details changed', { exact: true })).toBeChecked();
       expect(await postForm(page, `/milestones/${milestoneId}/update/`, { title: 'Original connection retained' })).toBe(200);
       await deliverTeamsNotifications();
@@ -4410,7 +4410,7 @@ assert NotificationBatch.objects.filter(status='open').count() == 1`);
   });
 
   test('Teams webhook actions use clear German labels', async ({ appPage: page }) => {
-    await page.goto('/workspaces/teams/');
+    await page.goto('/workspaces/settings/teams/');
     await page.locator('.lang-btn', { hasText: 'DE' }).click();
     await page.getByRole('button', { name: 'Neuen Webhook einrichten', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Neuen Webhook einrichten', exact: true });
@@ -4433,8 +4433,8 @@ with sqlite3.connect(os.environ['DJANGO_DB_PATH']) as connection:
     connection.execute('UPDATE data_project SET teams_webhook_url = ? WHERE id = ?',
                        ('https://legacy.logic.azure.com/workflows/test?sig=legacy-test-secret', sys.argv[1]))
 `, projectId], { cwd: path.resolve(__dirname, '../..'), env: djangoEnv() });
-    await page.goto('/workspaces/teams/');
-    expect(await postForm(page, '/workspaces/teams/', { action: 'workspace', legacy_project: projectId })).toBe(200);
+    await page.goto('/workspaces/settings/teams/');
+    expect(await postForm(page, '/workspaces/settings/teams/', { action: 'workspace', legacy_project: projectId })).toBe(200);
     await page.reload();
     await expect(page.locator('#teams-connection-status')).toHaveText('No webhook configured');
     await expect(page.locator('[name=legacy_project]')).toHaveCount(0);
@@ -4536,9 +4536,9 @@ with sqlite3.connect(os.environ['DJANGO_DB_PATH']) as connection:
     await page.locator('input[name=password]').fill('member1');
     await page.locator('button[type=submit]').click();
     await page.waitForURL('/');
-    expect((await page.goto('/workspaces/teams/')).status()).toBe(403);
+    expect((await page.goto('/workspaces/settings/teams/')).status()).toBe(403);
     await page.goto('/profile/');
-    expect(await postForm(page, '/workspaces/teams/', { teams_webhook_url: 'https://example.com', action: 'workspace' })).toBe(403);
+    expect(await postForm(page, '/workspaces/settings/teams/', { teams_webhook_url: 'https://example.com', action: 'workspace' })).toBe(403);
     await saveTeamsIdentity(page, 'member@example.com');
     await page.goto(roadmap);
     await page.locator('[data-project-subscription]', { hasText: 'API Migration' }).getByRole('button', { name: 'Follow', exact: true }).click();
@@ -4652,7 +4652,7 @@ with sqlite3.connect(os.environ['DJANGO_DB_PATH']) as connection:
       await page.goto('/');
       const id = await page.locator('.milestone').first().getAttribute('data-milestone-id');
       expect(await postForm(page, `/milestones/${id}/update/`, { title: 'Never send this' })).toBe(200);
-      await page.goto('/workspaces/teams/');
+      await page.goto('/workspaces/settings/teams/');
       await page.getByRole('button', { name: 'Disconnect webhook', exact: true }).click();
       await expect(page.locator('#teams-connection-status')).toHaveText('No webhook configured');
       await deliverTeamsNotifications();
@@ -4684,7 +4684,7 @@ with sqlite3.connect(os.environ['DJANGO_DB_PATH']) as connection:
         expect(webhook.requests).toHaveLength(1);
         await deliverTeamsNotifications();
         expect(webhook.requests).toHaveLength(1);
-        await page.goto('/workspaces/teams/');
+        await page.goto('/workspaces/settings/teams/');
         await expect(page.locator('#teams-deliveries')).toContainText('Sent (1)');
       } finally {
         if (lock) await lock.done;
@@ -4702,7 +4702,7 @@ with sqlite3.connect(os.environ['DJANGO_DB_PATH']) as connection:
       expect(await postForm(page, `/milestones/${id}/update/`, { title: 'Retry notification' })).toBe(200);
       await deliverTeamsNotifications();
       expect(webhook.requests).toHaveLength(1);
-      await page.goto('/workspaces/teams/');
+      await page.goto('/workspaces/settings/teams/');
       await expect(page.locator('#teams-deliveries')).toContainText('Pending');
       await expect.poll(async () => {
         await deliverTeamsNotifications();
@@ -9946,13 +9946,31 @@ test.describe('workspace isolation', () => {
     await expect(page.locator('main').getByLabel('Workspace name', { exact: true })).toHaveValue('Focused settings');
   });
 
+  test('Teams notifications has its own workspace settings tab instead of a sidebar entry', async ({ appPage: page }) => {
+    await page.getByRole('button', { name: 'DE', exact: true }).click();
+    const sidebar = page.locator('.drawer-side');
+    await expect(sidebar.getByRole('link', { name: 'Teams-Benachrichtigungen', exact: true })).toHaveCount(0);
+    await sidebar.locator('.ws-settings-link').click();
+    const teamsTab = page.locator('main nav').getByRole('link', { name: 'Teams-Benachrichtigungen', exact: true });
+    await expect(page.locator('#teams-workspace-form')).toHaveCount(0);
+    await teamsTab.click();
+    await expect(page).toHaveURL('/workspaces/settings/teams/');
+    await expect(teamsTab).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { name: 'Teams-Benachrichtigungen', exact: true })).toBeVisible();
+    await expect(page.locator('#teams-workspace-form')).toBeVisible();
+    await expect(page.locator('#workspace-settings-name, #workspace-workload-settings, #workspace-gitlab-settings, #workspace-roadmap-settings')).toHaveCount(0);
+    await page.goto('/workspaces/teams/');
+    await expect(page).toHaveURL('/workspaces/settings/teams/');
+    await expect(teamsTab).toHaveAttribute('aria-current', 'page');
+  });
+
   test('workspace settings mobile selector navigates to bookmarkable sections', async ({ appPage: page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/workspaces/settings/');
     const selector = page.getByLabel('Settings section', { exact: true });
     await expect(selector).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Settings sections', exact: true })).not.toBeVisible();
-    for (const section of ['workload', 'integrations', 'sharing']) {
+    for (const section of ['workload', 'integrations', 'teams', 'sharing']) {
       await selector.selectOption(`/workspaces/settings/${section}/`);
       await expect(page).toHaveURL(`/workspaces/settings/${section}/`);
       await page.reload();
@@ -9960,7 +9978,7 @@ test.describe('workspace isolation', () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     }
     await page.goBack();
-    await expect(selector).toHaveValue('/workspaces/settings/integrations/');
+    await expect(selector).toHaveValue('/workspaces/settings/teams/');
   });
 
   test('workspace settings are reachable from the name cog and gate workload configuration', async ({ appPage: page }) => {

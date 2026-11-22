@@ -5,7 +5,7 @@ for (const [name, viewport] of Object.entries({
   mobile: { width: 390, height: 844 },
 })) {
   test(`anonymous roadmap follow dialog in German at ${name} width`, async ({ appPage: page, browser }, testInfo) => {
-    await page.goto('/workspaces/teams/');
+    await page.goto('/workspaces/settings/teams/');
     await page.getByLabel('Allowed domains for public followers').fill('mycompany.com');
     await page.getByRole('button', { name: 'Save public follower settings', exact: true }).click();
     await expect(page.getByLabel('Allowed domains for public followers')).toHaveValue('mycompany.com');

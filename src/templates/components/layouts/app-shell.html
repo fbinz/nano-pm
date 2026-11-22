@@ -50,11 +50,6 @@
             <c-lucide name="user-cog" size="18" /> {% trans "People" %}
           </a></li>
           {% if is_pm %}
-            <li><a href="/workspaces/teams/"{% if active_nav == "teams-notifications" %} class="menu-active"{% endif %}>
-              <c-lucide name="bell" size="18" /> {% trans "Teams notifications" %}
-            </a></li>
-          {% endif %}
-          {% if is_pm %}
             <c-screens.workload.overview-nav :workspace="workspace" :active_nav="active_nav" />
           {% endif %}
           <li><a href="/activity/"{% if active_nav == "activity" %} class="menu-active"{% endif %}>
