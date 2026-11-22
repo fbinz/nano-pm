@@ -428,8 +428,17 @@
     applyCreationMode();
   }
 
-  function dateAtX(x, ppd, chartStart) {
-    return addDays(chartStart, Math.round(x / ppd));
+  function dayAnchor(day, ppd) {
+    return (day + 0.5) * ppd;
+  }
+
+  function clampDay(day, width, ppd) {
+    return Math.max(0, Math.min(Math.round(width / ppd) - 1, day));
+  }
+
+  function dayAtX(x, width, ppd) {
+    // The whole day cell selects its center anchor, including its right half.
+    return clampDay(Math.floor(x / ppd), width, ppd);
   }
 
   function addDateTooltip(parent, text) {
@@ -447,31 +456,27 @@
     ) / ONE_DAY);
   }
 
-  function positionTaskCreationGhost(row, startDay, endDay = startDay + DEFAULT_TASK_DAYS) {
-    const ppd = pxPerDay();
-    const cs = chartStartDate();
-    const maxDay = Math.max(0, Math.round(row.offsetWidth / ppd));
-    const loDay = Math.max(0, Math.min(maxDay - 1, startDay));
-    const hiDay = Math.max(loDay + 1, Math.min(maxDay, endDay));
-    const ghost = row.querySelector('.task-creation-ghost');
-    if (!ghost) return;
-    ghost.style.left = `${loDay * ppd}px`;
-    ghost.style.width = `${(hiDay - loDay) * ppd}px`;
+  function positionTaskRange(ghost, startDay, endDay, ppd, chartStart) {
+    ghost.style.left = `${dayAnchor(startDay, ppd)}px`;
+    ghost.style.width = `${(endDay - startDay) * ppd}px`;
     ghost.querySelector('.creation-date-tooltip').textContent =
-      `${displayDate(fmt(addDays(cs, loDay)))} – ${displayDate(fmt(addDays(cs, hiDay)))}`;
-    if (creationMode?.type === 'task') creationMode.previewStartDay = loDay;
+      `${displayDate(fmt(addDays(chartStart, startDay)))} – ${displayDate(fmt(addDays(chartStart, endDay)))}`;
   }
 
-  function positionMilestoneCreationGhost(row, day) {
-    const ppd = pxPerDay();
-    const maxDay = Math.max(0, Math.round(row.offsetWidth / ppd));
-    const clampedDay = Math.max(0, Math.min(maxDay, day));
+  function positionTaskCreationGhost(row, day, ppd) {
+    const ghost = row.querySelector('.task-creation-ghost');
+    if (!ghost) return;
+    positionTaskRange(ghost, day, day + DEFAULT_TASK_DAYS, ppd, chartStartDate());
+    creationMode.previewStartDay = day;
+  }
+
+  function positionMilestoneCreationGhost(row, day, ppd) {
     const preview = row.querySelector('.creation-milestone-preview');
     if (!preview) return;
-    preview.style.left = `${(clampedDay + 0.5) * ppd}px`;
+    preview.style.left = `${dayAnchor(day, ppd)}px`;
     preview.querySelector('.creation-date-tooltip').textContent =
-      displayDate(fmt(addDays(chartStartDate(), clampedDay)));
-    if (creationMode?.type === 'milestone') creationMode.previewDay = clampedDay;
+      displayDate(fmt(addDays(chartStartDate(), day)));
+    creationMode.previewDay = day;
   }
 
   function milestoneCreationHover(evt) {
@@ -479,8 +484,8 @@
     const row = evt.currentTarget;
     if (Number(row.dataset.projectId) !== creationMode.projectId) return;
     const rect = row.getBoundingClientRect();
-    const x = Math.max(0, Math.min(rect.width, evt.clientX - rect.left));
-    positionMilestoneCreationGhost(row, Math.round(x / pxPerDay()));
+    const ppd = pxPerDay();
+    positionMilestoneCreationGhost(row, dayAtX(evt.clientX - rect.left, rect.width, ppd), ppd);
   }
 
   function insertMilestoneCreationGhost() {
@@ -494,7 +499,8 @@
     row.appendChild(preview);
     const initialDay = creationMode.previewDay
       ?? daysBetween(chartStartDate(), new Date());
-    positionMilestoneCreationGhost(row, initialDay);
+    const ppd = pxPerDay();
+    positionMilestoneCreationGhost(row, clampDay(initialDay, row.offsetWidth, ppd), ppd);
     row.addEventListener('pointermove', milestoneCreationHover);
   }
 
@@ -568,12 +574,12 @@
 
     const initialDay = creationMode.previewStartDay
       ?? daysBetween(chartStartDate(), new Date());
-    positionTaskCreationGhost(row, initialDay);
+    const ppd = pxPerDay();
+    positionTaskCreationGhost(row, clampDay(initialDay, row.offsetWidth, ppd), ppd);
     row.addEventListener('pointermove', evt => {
       if (creationGestureCleanup || creationMode?.type !== 'task') return;
       const rect = row.getBoundingClientRect();
-      const day = Math.round(Math.max(0, Math.min(rect.width, evt.clientX - rect.left)) / pxPerDay());
-      positionTaskCreationGhost(row, day);
+      positionTaskCreationGhost(row, dayAtX(evt.clientX - rect.left, rect.width, ppd), ppd);
     });
     row.addEventListener('pointerdown', evt => projectRowMouseDown(evt, projectId));
     row.addEventListener('keydown', evt => {
@@ -606,20 +612,16 @@
     const startXLocal = clampX(evt.clientX);
     const ppd = pxPerDay();
     const cs = chartStartDate();
+    const startDay = dayAtX(startXLocal, rect.width, ppd);
     let cleaned = false;
 
     if (explicitType === 'milestone') {
       const preview = row.querySelector('.creation-milestone-preview');
-      const tooltip = preview.querySelector('.creation-date-tooltip');
 
       function position(clientX) {
-        const x = clampX(clientX);
-        const day = Math.round(x / ppd);
-        const date = dateAtX(x, ppd, cs);
-        preview.style.left = `${day * ppd}px`;
-        tooltip.textContent = displayDate(fmt(date));
-        creationMode.previewDay = day;
-        return date;
+        const day = dayAtX(clientX - rect.left, rect.width, ppd);
+        positionMilestoneCreationGhost(row, day, ppd);
+        return addDays(cs, day);
       }
       position(evt.clientX);
 
@@ -657,28 +659,22 @@
     rb.id = 'rubber-band';
     rb.classList.add('placing');
     if (!isDraftRow) {
-      rb.style.left = `${startXLocal}px`;
       rb.style.top = '4px';
       rb.style.height = `${row.offsetHeight - 8}px`;
-      rb.style.width = '0px';
       addDateTooltip(rb, '');
       row.appendChild(rb);
     }
-    const tooltip = rb.querySelector('.creation-date-tooltip');
     let moved = false;
 
     function rangeAt(clientX) {
       const x = clampX(clientX);
       if (Math.abs(x - startXLocal) > 4) moved = true;
-      const startDay = Math.round(startXLocal / ppd);
-      const currentDay = Math.round(x / ppd);
+      const currentDay = dayAtX(x, rect.width, ppd);
       const loDay = Math.min(startDay, currentDay);
       const hiDay = Math.max(startDay, currentDay);
-      const shownEndDay = moved ? Math.max(loDay + 1, hiDay) : loDay + DEFAULT_TASK_DAYS;
-      rb.style.left = `${loDay * ppd}px`;
-      rb.style.width = `${(shownEndDay - loDay) * ppd}px`;
-      tooltip.textContent = `${displayDate(fmt(addDays(cs, loDay)))} – ${displayDate(fmt(addDays(cs, shownEndDay)))}`;
-      return { loDay, hiDay: shownEndDay };
+      const endDay = moved ? Math.max(loDay + 1, hiDay) : loDay + DEFAULT_TASK_DAYS;
+      positionTaskRange(rb, loDay, endDay, ppd, cs);
+      return { loDay, hiDay: endDay };
     }
     rangeAt(evt.clientX);
 
@@ -701,7 +697,7 @@
       const range = rangeAt(ev.clientX);
       cleanup();
       if (isShortcut && !moved) {
-        addMilestone(projectId, fmt(addDays(cs, Math.round(clampX(ev.clientX) / ppd))));
+        addMilestone(projectId, fmt(addDays(cs, dayAtX(clampX(ev.clientX), rect.width, ppd))));
         return;
       }
       if (explicitType) {

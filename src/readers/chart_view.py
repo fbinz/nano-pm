@@ -214,6 +214,7 @@ def _add_months(d: date, n: int) -> date:
 class _GridContext:
     zoom: str
     ppd: int
+    chart_start: date
     chart_width: float
     today_x: float
     show_today: bool
@@ -225,8 +226,10 @@ class _GridContext:
     axis_days: list[AxisTick]
     weekend_tiles: list[AxisTick]
 
-    def x_of(self, d: date, chart_start: date) -> float:
-        return (d - chart_start).days * self.ppd
+    def date_anchor(self, d: date) -> float:
+        # Date-only tasks and milestones use cell centers; the axis and
+        # time-of-day markers still use the full cell as a time span.
+        return ((d - self.chart_start).days + 0.5) * self.ppd
 
 
 def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
@@ -374,7 +377,8 @@ def _build_grid_context(state: ChartState, zoom: str, ppd: int) -> _GridContext:
             d += timedelta(days=7)
 
     return _GridContext(
-        zoom=zoom, ppd=ppd, chart_width=chart_width, today_x=today_x,
+        zoom=zoom, ppd=ppd, chart_start=state.chart_start,
+        chart_width=chart_width, today_x=today_x,
         show_today=show_today, axis_majors=axis_majors, axis_minors=axis_minors,
         axis_years=axis_years, axis_months=axis_months,
         axis_weeks=axis_weeks, axis_days=axis_days,
@@ -419,9 +423,6 @@ def build_chart_vm(
     team_ids = team_filter or set()
     g = _build_grid_context(state, zoom, ppd)
 
-    def x_of(d: date) -> float:
-        return (d - state.chart_start).days * ppd
-
     # Row groups, with bars and milestones. When completed projects are revealed,
     # keep active projects in their manual order and move completed ones below them.
     row_groups: list[ProjectRowVM] = []
@@ -449,8 +450,8 @@ def build_chart_vm(
                 and not _task_matches_team_filter(t, team_ids)
             ):
                 continue
-            x = x_of(t.start)
-            xe = x_of(t.end)
+            x = g.date_anchor(t.start)
+            xe = g.date_anchor(t.end)
             assignees = ", ".join(p.name.split(" ")[0] for p in t.assignees.all())
             status = status_for_dates(t.start, t.end, state.today)
             bars.append(BarVM(
@@ -479,14 +480,13 @@ def build_chart_vm(
             ):
                 continue
             milestone_date = task.end if task is not None else m.date
-            milestone_x = x_of(milestone_date) + ppd / 2
             miles.append(MilestoneVM(
                 id=m.id,
                 task_id=task.id if task is not None else None,
                 project_id=proj.id,
                 title=m.title,
                 date_iso=milestone_date.isoformat(),
-                x=milestone_x,
+                x=g.date_anchor(milestone_date),
                 color=proj.color,
                 overdue=(milestone_date < state.today),
                 require_move_reason=m.require_move_reason,
@@ -593,9 +593,6 @@ def build_resource_vm(
     team_ids = team_filter or set()
     g = _build_grid_context(state, zoom, ppd)
 
-    def x_of(d: date) -> float:
-        return (d - state.chart_start).days * ppd
-
     # Group bars by person (duplicate for multi-assignee tasks)
     person_bars: dict[int | None, list[BarVM]] = {}
     for person in state.people:
@@ -613,7 +610,7 @@ def build_resource_vm(
                 id=t.id,
                 project_id=proj.id,
                 title=t.title,
-                x=x_of(t.start), w=max(2.0, x_of(t.end) - x_of(t.start)),
+                x=g.date_anchor(t.start), w=max(2.0, (t.end - t.start).days * ppd),
                 color=proj.color,
                 text_color=text_color,
                 text_dark=text_dark,

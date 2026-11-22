@@ -1,8 +1,9 @@
+{% load l10n %}
 <c-vars bar />
 <div
   id="bar-{{ bar.id }}"
   class="bar {{ bar.status }}{% if bar.overdue %} overdue{% endif %}{% if bar.text_dark %} dark-text{% endif %}"
-  style="left:{{ bar.x }}px;width:{{ bar.w }}px;--bar-bg:{{ bar.color }};color:{{ bar.text_color }};"
+  style="left:{{ bar.x|unlocalize }}px;width:{{ bar.w|unlocalize }}px;--bar-bg:{{ bar.color }};color:{{ bar.text_color }};"
   data-task-id="{{ bar.id }}"
   data-project-id="{{ bar.project_id }}"
   data-start="{{ bar.start_iso }}"

@@ -8404,21 +8404,37 @@ test.describe('project & people management', () => {
     await expect(milestone).toHaveAttribute('data-task-id', taskId);
   });
 
-  test('task bars visually end at the start of their end date', async ({ appPage: page }) => {
-    const bar = page.locator('.bar', { hasText: 'Cutover and deprecation' });
-    const visual = await bar.evaluate((el) => {
-      const grid = document.getElementById('grid-scroll');
-      const dayMs = 24 * 60 * 60 * 1000;
-      const end = new Date(`${el.dataset.end}T00:00:00Z`);
-      const chartStart = new Date(`${grid.dataset.chartStart}T00:00:00Z`);
-      return {
-        right: parseFloat(el.style.left) + parseFloat(el.style.width),
-        expectedRight: ((end - chartStart) / dayMs) * parseFloat(grid.dataset.pxPerDay),
-      };
+  for (const [view, url] of [['project', '/'], ['resource', '/resources/']]) {
+    test(`task bars use day-center date anchors in ${view} view`, async ({ appPage: page }) => {
+      await page.goto(url);
+      await page.locator('#zoom-slider').evaluate(el => {
+        el.value = 37;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await expect(page.locator('#grid-scroll')).toHaveAttribute('data-px-per-day', '37');
+      const positions = await page.locator('.bar').evaluateAll(bars => {
+        const grid = document.getElementById('grid-scroll');
+        const start = Date.parse(grid.dataset.chartStart);
+        const ppd = Number(grid.dataset.pxPerDay);
+        const anchor = date => ((Date.parse(date) - start) / 86400000 + 0.5) * ppd;
+        return bars.map(bar => {
+          const style = getComputedStyle(bar);
+          const left = parseFloat(style.left);
+          return {
+            left,
+            right: left + parseFloat(style.width),
+            expectedLeft: anchor(bar.dataset.start),
+            expectedRight: anchor(bar.dataset.end),
+          };
+        });
+      });
+      expect(positions.length).toBeGreaterThan(0);
+      for (const position of positions) {
+        expect(position.left).toBeCloseTo(position.expectedLeft, 1);
+        expect(position.right).toBeCloseTo(position.expectedRight, 1);
+      }
     });
-
-    expect(Math.abs(visual.right - visual.expectedRight)).toBeLessThan(1);
-  });
+  }
 
   test('milestone diamonds are centered in their date cells at every density', async ({ appPage: page }) => {
     for (const density of [36, 37, 72]) {
@@ -8432,16 +8448,21 @@ test.describe('project & people management', () => {
         const grid = document.querySelector('#grid-scroll');
         const start = Date.parse(`${grid.dataset.chartStart}T00:00:00Z`);
         const ppd = Number(grid.dataset.pxPerDay);
-        return markers.map(marker => ({
-          center: parseFloat(getComputedStyle(marker).left) + 7,
-          expected: ((Date.parse(`${marker.dataset.date}T00:00:00Z`) - start) / 86400000 + 0.5) * ppd,
-          label: parseFloat(getComputedStyle(marker.nextElementSibling).left),
-        }));
+        return markers.map(marker => {
+          const bar = document.getElementById(`bar-${marker.dataset.taskId}`);
+          return {
+            center: parseFloat(getComputedStyle(marker).left) + 7,
+            expected: ((Date.parse(`${marker.dataset.date}T00:00:00Z`) - start) / 86400000 + 0.5) * ppd,
+            label: parseFloat(getComputedStyle(marker.nextElementSibling).left),
+            taskRight: bar ? parseFloat(bar.style.left) + parseFloat(bar.style.width) : null,
+          };
+        });
       });
-      expect(positions.length).toBeGreaterThan(0);
+      expect(positions.some(position => position.taskRight !== null)).toBe(true);
       for (const position of positions) {
         expect(position.center).toBeCloseTo(position.expected, 1);
         expect(position.label).toBeCloseTo(position.center + 12, 1);
+        if (position.taskRight !== null) expect(position.center).toBeCloseTo(position.taskRight, 1);
       }
     }
   });
@@ -9124,7 +9145,6 @@ print('ready')
   test('explicit creation controls distinguish a new task row from milestone placement', async ({ appPage: page }) => {
     const project = page.locator('.project-group').first();
     const projectRow = project.locator('.chart-row.proj');
-    const projectRowBox = await projectRow.boundingBox();
     const sidebar = await project.locator('.left-cell.proj').boundingBox();
     const barsBefore = await page.locator('.bar').count();
     const milestonesBefore = await page.locator('.chart-row.proj .milestone').count();
@@ -9144,13 +9164,22 @@ print('ready')
     await expect(page.locator('#creation-hint')).toContainText('new task row');
 
     const draftBox = await draftRow.boundingBox();
-    const chartX = sidebar.x + sidebar.width + 80;
+    const ppd = Number(await page.locator('#grid-scroll').getAttribute('data-px-per-day'));
+    // Deliberately click the right half of a day cell: it still selects that day.
+    const draftOffset = sidebar.x + sidebar.width + 80 - draftBox.x;
+    const taskAnchor = (Math.floor(draftOffset / ppd) + 0.5) * ppd;
     const draftY = draftBox.y + draftBox.height / 2;
-    await page.mouse.click(chartX, draftY);
+    await page.mouse.move(draftBox.x + taskAnchor + ppd / 4, draftY);
+    const taskGhost = draftRow.locator('.task-creation-ghost');
+    await expect(taskGhost).toHaveCSS('left', `${taskAnchor}px`);
+    await page.mouse.down();
+    await expect(taskGhost).toHaveCSS('left', `${taskAnchor}px`);
+    await page.mouse.up();
 
     await expect(page.locator('.bar')).toHaveCount(barsBefore + 1);
     await expect(page.locator('#task-popover')).toBeVisible();
     const newTask = page.locator('.bar', { hasText: 'New task' });
+    await expect(newTask).toHaveCSS('left', `${taskAnchor}px`);
     const taskDates = await newTask.evaluate(el => ({ start: el.dataset.start, end: el.dataset.end }));
     const duration = (Date.parse(taskDates.end) - Date.parse(taskDates.start)) / 86400000;
     expect(duration).toBe(7);
@@ -9165,18 +9194,20 @@ print('ready')
     const milestoneGhost = projectRow.locator('.creation-milestone-preview');
     await expect(milestoneGhost).toBeVisible();
     await expect(milestoneGhost.locator('.creation-date-tooltip')).toHaveText(/\d{2}\.\d{2}\.\d{4}/);
-    const initialGhostLeft = await milestoneGhost.evaluate(el => el.style.left);
-
-    const chartXForMilestone = sidebar.x + sidebar.width + 180;
-    const chartYForMilestone = projectRowBox.y + projectRowBox.height / 2;
-    await page.mouse.move(chartXForMilestone, chartYForMilestone);
-    await expect.poll(() => milestoneGhost.evaluate(el => el.style.left)).not.toBe(initialGhostLeft);
+    const currentRowBox = await projectRow.boundingBox();
+    const milestoneOffset = sidebar.x + sidebar.width + 180 - currentRowBox.x;
+    const milestoneAnchor = (Math.floor(milestoneOffset / ppd) + 0.5) * ppd;
+    await page.mouse.move(
+      currentRowBox.x + milestoneAnchor + ppd / 4,
+      currentRowBox.y + currentRowBox.height / 2,
+    );
+    await expect(milestoneGhost).toHaveCSS('left', `${milestoneAnchor}px`);
     await page.mouse.down();
-    await expect(page.locator('.creation-milestone-preview')).toBeVisible();
-    await expect(page.locator('.creation-milestone-preview .creation-date-tooltip')).toHaveText(/\d{2}\.\d{2}\.\d{4}/);
+    await expect(milestoneGhost).toHaveCSS('left', `${milestoneAnchor}px`);
     await page.mouse.up();
 
     await expect(page.locator('.chart-row.proj .milestone')).toHaveCount(milestonesBefore + 1);
+    await expect(projectRow.locator('.milestone[data-title="New milestone"]')).toHaveCSS('left', `${milestoneAnchor - 7}px`);
     await expect(page.locator('#milestone-popover')).toBeVisible();
     await expect(addMilestone).toHaveAttribute('aria-pressed', 'false');
   });
